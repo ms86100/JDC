@@ -45,8 +45,13 @@ public class SprintService {
 
     @Transactional(readOnly = true)
     public List<SprintResponse> getSprintsByProject(UUID projectId) {
-        return sprintRepository.findByProjectIdOrderByCreatedAtDesc(projectId)
-                .stream()
+        List<Sprint> sprints;
+        if (projectId != null) {
+            sprints = sprintRepository.findByProjectIdOrderByCreatedAtDesc(projectId);
+        } else {
+            sprints = sprintRepository.findAll();
+        }
+        return sprints.stream()
                 .map(sprint -> enrichSprintResponse(SprintResponse.from(sprint)))
                 .collect(Collectors.toList());
     }

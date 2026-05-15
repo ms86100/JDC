@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -34,5 +36,11 @@ public class AuthController {
     public ResponseEntity<AuthResponse> refresh(@RequestBody java.util.Map<String, String> body) {
         String refreshToken = body.get("refreshToken");
         return ResponseEntity.ok(authService.refreshToken(refreshToken));
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "Get current user info")
+    public ResponseEntity<UserDto> getCurrentUser(@RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(authService.getUserById(userId));
     }
 }

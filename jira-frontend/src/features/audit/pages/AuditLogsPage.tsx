@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { auditApi, AuditLogResponse, AuditSearchParams } from '../../../api/serviceApi';
 import { format } from 'date-fns';
 
@@ -10,18 +10,12 @@ const AuditLogsPage: React.FC = () => {
   });
   const [selectedLog, setSelectedLog] = useState<AuditLogResponse | null>(null);
 
-  const { data, isLoading, error, fetchNextPage, hasNextPage, refetch } = useInfiniteQuery({
+  const { data, isLoading, refetch } = useQuery<{ content: AuditLogResponse[]; totalElements: number }>({
     queryKey: ['audit-logs', filters],
-    queryFn: async ({ pageParam = 0 }) => {
-      const params = { ...filters, page: pageParam };
-      const response = await auditApi.getLogs(params);
+    queryFn: async () => {
+      const response = await auditApi.getLogs(filters);
       return response.data;
     },
-    getNextPageParam: (lastPage) =>
-      lastPage.totalPages > (filters.page || 0) + 1
-        ? { ...filters, page: (filters.page || 0) + 1 }
-        : undefined,
-    initialPageParam: 0,
   });
 
   const actionColors: Record<string, string> = {
@@ -138,50 +132,48 @@ const AuditLogsPage: React.FC = () => {
                     Loading audit logs...
                   </td>
                 </tr>
-              ) : data?.pages[0]?.content?.length === 0 ? (
+              ) : data?.content?.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     No audit logs found matching your criteria.
                   </td>
                 </tr>
               ) : (
-                data?.pages.flatMap((page) =>
-                  page.content?.map((log) => (
-                    <tr
-                      key={log.id}
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setSelectedLog(log)}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {format(new Date(log.createdAt), 'MMM d, yyyy HH:mm:ss')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {log.username || log.userId}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            actionColors[log.action] || 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {log.action}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {log.entityType}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">
-                        {log.entityId.substring(0, 8)}...
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {log.serviceName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                        <button className="text-jira-blue hover:underline">View</button>
-                      </td>
-                    </tr>
-                  ))
-                )
+                data?.content?.map((log) => (
+                  <tr
+                    key={log.id}
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => setSelectedLog(log)}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {format(new Date(log.createdAt), 'MMM d, yyyy HH:mm:ss')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {log.username || log.userId}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          actionColors[log.action] || 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {log.action}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {log.entityType}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">
+                      {log.entityId.substring(0, 8)}...
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {log.serviceName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                      <button className="text-jira-blue hover:underline">View</button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -190,15 +182,21 @@ const AuditLogsPage: React.FC = () => {
         {/* Pagination */}
         <div className="px-6 py-4 flex items-center justify-between border-t">
           <div className="text-sm text-gray-500">
-            Showing {data?.pages[0]?.content?.length || 0} of {data?.pages[0]?.totalElements || 0} logs
+            Showing {data?.content?.length || 0} of {data?.totalElements || 0} logs
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => fetchNextPage()}
-              disabled={!hasNextPage}
+              onClick={() => setFilters(f => ({ ...f, page: f.page ? f.page - 1 : 0 }))}
+              disabled={!filters.page || filters.page === 0}
               className="px-4 py-2 bg-jira-blue text-white rounded disabled:opacity-50"
             >
-              Load More
+              Previous
+            </button>
+            <button
+              onClick={() => setFilters(f => ({ ...f, page: f.page + 1 }))}
+              className="px-4 py-2 bg-jira-blue text-white rounded"
+            >
+              Next
             </button>
           </div>
         </div>

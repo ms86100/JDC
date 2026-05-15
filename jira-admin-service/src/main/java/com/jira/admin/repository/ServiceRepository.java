@@ -8,5 +8,5 @@ import java.util.Optional;
 @Repository
 public interface ServiceRepository extends JpaRepository<ServiceEntity, String> {
     Optional<ServiceEntity> findByServiceId(String serviceId);
-    Optional<ServiceEntity> findByServiceKey(String serviceKey);
+    Optional<ServiceEntity> findByServiceName(String serviceName);
 }

@@ -28,13 +28,17 @@ export default function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [draggedIssue, setDraggedIssue] = useState<IssueResponse | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
-  const { data: issues, isLoading } = useQuery<IssueResponse[]>({
+  const { data: issues = [], isLoading } = useQuery<IssueResponse[]>({
     queryKey: ['issues-kanban', projectId],
     queryFn: async () => {
       const params: Record<string, string> = {};
       if (projectId) params['projectId'] = projectId;
       const response = await issueApi.getAll(params);
-      return response.data || [];
+      const data = response.data;
+      if (data && 'content' in data) {
+        return data.content || [];
+      }
+      return [];
     },
   });
 

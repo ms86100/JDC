@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { projectApi, Project } from '../../../api/issueApi';
+import { projectApi, ProjectResponse } from '../../../api/projectApi';
 import CreateProjectWizard from '../components/CreateProjectWizard';
 import './ProjectsPage.css';
 
@@ -14,29 +14,26 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateWizard, setShowCreateWizard] = useState(false);
 
-  const { data: projectsData, isLoading } = useQuery({
+  const { data: projects = [], isLoading } = useQuery<ProjectResponse[]>({
     queryKey: ['projects', filter, searchQuery],
     queryFn: async () => {
-      const params: any = {};
+      const params: Record<string, string> = {};
       if (filter === 'archived') params.archived = 'true';
-      const response = await projectApi.getAll(params);
-      return response.data;
+      return await projectApi.getAll(params);
     },
   });
-
-  const projects = projectsData?.content || [];
 
   const filteredProjects = projects.filter(project => {
     if (filter === 'software' && project.projectType !== 'SOFTWARE') return false;
     if (filter === 'business' && project.projectType !== 'BUSINESS') return false;
-    if (filter === 'archived' && !project.isArchived) return false;
-    if (filter === 'all' && project.isArchived) return false;
+    if (filter === 'archived' && !project.archived) return false;
+    if (filter === 'all' && project.archived) return false;
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
         project.name.toLowerCase().includes(query) ||
-        project.key.toLowerCase().includes(query) ||
+        project.projectKey.toLowerCase().includes(query) ||
         project.description?.toLowerCase().includes(query)
       );
     }
@@ -216,7 +213,7 @@ export default function ProjectsPage() {
                 </div>
                 <div className="project-card-body">
                   <h3 className="project-name">{project.name}</h3>
-                  <div className="project-key">{project.key}</div>
+                  <div className="project-key">{project.projectKey}</div>
                   {project.description && (
                     <p className="project-description">{project.description}</p>
                   )}
@@ -268,7 +265,7 @@ export default function ProjectsPage() {
                 const classBadge = getClassificationBadge(project.classification);
 
                 return (
-                  <tr key={project.id} className={project.isArchived ? 'archived-row' : ''}>
+                  <tr key={project.id} className={project.archived ? 'archived-row' : ''}>
                     <td>
                       <Link to={`/projects/${project.id}`} className="project-link">
                         <div className="project-link-avatar">
@@ -282,7 +279,7 @@ export default function ProjectsPage() {
                       </Link>
                     </td>
                     <td>
-                      <span className="project-key-badge">{project.key}</span>
+                      <span className="project-key-badge">{project.projectKey}</span>
                     </td>
                     <td>
                       {typeBadge && (

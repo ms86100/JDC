@@ -111,8 +111,13 @@ export const sprintApi = {
     apiClient.post<SprintResponse>('/api/sprints', data),
 
   getAll: (projectId?: string) =>
-    apiClient.get<SprintResponse[]>('/api/sprints', {
+    apiClient.get<{ content: SprintResponse[] } | SprintResponse[]>('/api/sprints', {
       params: projectId ? { projectId } : {},
+    }).then(response => {
+      const data = response.data;
+      // Handle both array and paginated response
+      if (Array.isArray(data)) return data;
+      return data?.content ?? [];
     }),
 
   getById: (sprintId: string) =>

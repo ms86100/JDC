@@ -31,8 +31,10 @@ public class ProgramController {
     }
 
     @PostMapping
-    public ResponseEntity<ProgramResponse> createProgram(@Valid @RequestBody CreateProgramRequest request) {
-        ProgramResponse response = programService.createProgram(request);
+    public ResponseEntity<ProgramResponse> createProgram(
+            @Valid @RequestBody CreateProgramRequest request,
+            @RequestHeader("X-User-Id") UUID userId) {
+        ProgramResponse response = programService.createProgram(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

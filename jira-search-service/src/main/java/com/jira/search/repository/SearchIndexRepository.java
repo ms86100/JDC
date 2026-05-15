@@ -23,11 +23,11 @@ public interface SearchIndexRepository extends JpaRepository<SearchIndex, UUID> 
 
     @Query(value = "SELECT s.*, ts_rank(s.search_vector, to_tsquery('english', :query)) AS rank " +
             "FROM jira_search.search_index s " +
-            "WHERE s.search_vector @@ to_tsquery('english', :query) " +
+            "WHERE s.search_vector IS NOT NULL AND s.search_vector @@ to_tsquery('english', :query) " +
             "AND (:entityType IS NULL OR s.entity_type = :entityType) " +
             "ORDER BY rank DESC",
             countQuery = "SELECT count(*) FROM jira_search.search_index s " +
-                    "WHERE s.search_vector @@ to_tsquery('english', :query) " +
+                    "WHERE s.search_vector IS NOT NULL AND s.search_vector @@ to_tsquery('english', :query) " +
                     "AND (:entityType IS NULL OR s.entity_type = :entityType)",
             nativeQuery = true)
     Page<SearchIndex> fullTextSearch(

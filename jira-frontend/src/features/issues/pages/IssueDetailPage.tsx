@@ -24,7 +24,6 @@ interface FullIssueResponse extends IssueResponse {
   votes?: number;
   watchers?: string[];
   linkedIssues?: Array<{ type: string; key: string; title: string }>;
-  classification?: string;
   labels?: string[];
 }
 

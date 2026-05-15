@@ -154,7 +154,12 @@ export const projectApi = {
   create: (data: { name: string; description?: string; leadUserId?: string }) =>
     apiClient.post<ProjectResponse>('/api/projects', data),
   getAll: (params?: { search?: string; archived?: boolean; page?: number; size?: number }) =>
-    apiClient.get<{ content: ProjectResponse[]; totalElements: number }>('/api/projects', { params }),
+    apiClient.get<ProjectResponse[] | { content: ProjectResponse[] }>('/api/projects', { params })
+      .then(response => {
+        const data = response.data;
+        if (Array.isArray(data)) return data;
+        return data?.content ?? [];
+      }),
   getById: (id: string) => apiClient.get<ProjectResponse>(`/api/projects/${id}`),
   update: (id: string, data: Partial<{ name: string; description?: string; leadUserId?: string }>) =>
     apiClient.put<ProjectResponse>(`/api/projects/${id}`, data),
@@ -164,8 +169,8 @@ export const projectApi = {
   addMember: (id: string, userId: string, projectRoleName: string) =>
     apiClient.post(`/api/projects/${id}/members`, { userId, projectRoleName }),
   getMembers: (id: string) => apiClient.get<ProjectMemberResponse[]>(`/api/projects/${id}/members`),
-  getVersions: (projectId: string) => apiClient.get(`/api/projects/${projectId}/versions`),
-  getComponents: (projectId: string) => apiClient.get(`/api/projects/${projectId}/components`),
+  getVersions: (projectId: string) => apiClient.get<Version[]>(`/api/projects/${projectId}/versions`),
+  getComponents: (projectId: string) => apiClient.get<Component[]>(`/api/projects/${projectId}/components`),
   getSprints: (projectId: string) => apiClient.get(`/api/projects/${projectId}/sprints`),
 
   // Wizard endpoints

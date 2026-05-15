@@ -75,5 +75,5 @@ logging:
 
 notification:
   email:
-    enabled: ${EMAIL_ENABLED:true}
+    enabled: ${EMAIL_ENABLED:false}
     from: ${EMAIL_FROM:noreply@jira.local}

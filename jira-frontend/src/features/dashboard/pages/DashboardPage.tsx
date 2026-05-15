@@ -4,20 +4,24 @@ import { issueApi, IssueResponse } from '../../../api/issueApi';
 import { Link } from 'react-router-dom';
 
 export default function DashboardPage() {
-  const { data: projects } = useQuery<ProjectResponse[]>({
+  const { data: projects = [] } = useQuery<ProjectResponse[]>({
     queryKey: ['dashboard-projects'],
     queryFn: async () => {
-      const response = await projectApi.getAll();
-      return response.data || [];
+      // projectApi.getAll() returns Promise<ProjectResponse[]> after transformation
+      return await projectApi.getAll();
     },
     staleTime: 30000,
   });
 
-  const { data: recentIssues } = useQuery<IssueResponse[]>({
+  const { data: recentIssues = [] } = useQuery<IssueResponse[]>({
     queryKey: ['dashboard-recent-issues'],
     queryFn: async () => {
       const response = await issueApi.getAll();
-      return response.data || [];
+      // Handle paginated response - issueApi returns { content: IssueResponse[] }
+      if (response && response.data && 'content' in response.data) {
+        return response.data.content || [];
+      }
+      return [];
     },
     staleTime: 30000,
   });

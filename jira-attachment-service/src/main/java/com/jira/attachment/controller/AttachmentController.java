@@ -54,6 +54,16 @@ public class AttachmentController {
         return ResponseEntity.ok(attachmentService.getAttachmentsByIssue(issueId));
     }
 
+    @GetMapping
+    @Operation(summary = "List attachments", description = "Get all attachments or filter by issue")
+    public ResponseEntity<List<AttachmentResponse>> listAttachments(
+            @Parameter(description = "Issue ID filter") @RequestParam(required = false) UUID issueId) {
+        if (issueId != null) {
+            return ResponseEntity.ok(attachmentService.getAttachmentsByIssue(issueId));
+        }
+        return ResponseEntity.ok(List.of());
+    }
+
     @GetMapping("/{attachmentId}")
     @Operation(summary = "Get attachment", description = "Get attachment metadata by ID")
     @ApiResponses({

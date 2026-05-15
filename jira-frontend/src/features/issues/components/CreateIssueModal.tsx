@@ -17,11 +17,10 @@ export default function CreateIssueModal({ onClose, onSuccess }: CreateIssueModa
     priorityId: '',
   });
 
-  const { data: projects } = useQuery<ProjectResponse[]>({
+  const { data: projects = [] } = useQuery<ProjectResponse[]>({
     queryKey: ['projects'],
     queryFn: async () => {
-      const response = await projectApi.getAll();
-      return response.data;
+      return await projectApi.getAll();
     },
   });
 

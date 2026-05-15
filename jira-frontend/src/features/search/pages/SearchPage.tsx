@@ -38,15 +38,14 @@ export default function SearchPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
 
-  const { data: projects } = useQuery<ProjectResponse[]>({
+  const { data: projects = [] } = useQuery<ProjectResponse[]>({
     queryKey: ['projects'],
     queryFn: async () => {
-      const response = await projectApi.getAll();
-      return response.data || [];
+      return await projectApi.getAll();
     },
   });
 
-  const { data: issues, isLoading } = useQuery<IssueResponse[]>({
+  const { data: issues = [], isLoading } = useQuery<IssueResponse[]>({
     queryKey: ['search-issues', filters],
     queryFn: async () => {
       const params: Record<string, string> = {};
@@ -58,7 +57,11 @@ export default function SearchPage() {
       if (filters.type) params['type'] = filters.type;
 
       const response = await issueApi.getAll(params);
-      return response.data || [];
+      const data = response.data;
+      if (data && 'content' in data) {
+        return data.content || [];
+      }
+      return [];
     },
   });
 

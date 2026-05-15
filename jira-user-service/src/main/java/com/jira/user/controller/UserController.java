@@ -64,6 +64,13 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/organizations")
+    public ResponseEntity<List<OrganizationResponse>> getAllOrganizations() {
+        log.info("GET /api/users/organizations - Fetching all organizations");
+        List<OrganizationResponse> response = userService.getAllOrganizations();
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/organizations/{orgId}/members")
     public ResponseEntity<OrganizationMemberResponse> addMemberToOrganization(
             @PathVariable UUID orgId,

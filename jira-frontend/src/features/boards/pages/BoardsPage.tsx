@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { sprintApi } from '../../../api/sprintApi';
+import { sprintApi, SprintResponse } from '../../../api/sprintApi';
 import EnhancedKanbanBoard from '../components/EnhancedKanbanBoard';
 
 const BoardsPage: React.FC = () => {
@@ -9,11 +9,10 @@ const BoardsPage: React.FC = () => {
   const [form, setForm] = useState({ name: '', goal: '', startDate: '', endDate: '' });
   const queryClient = useQueryClient();
 
-  const { data: sprints, isLoading } = useQuery({
+  const { data: sprints = [], isLoading } = useQuery<SprintResponse[]>({
     queryKey: ['sprints'],
     queryFn: async () => {
-      const response = await sprintApi.getAll();
-      return response.data || [];
+      return await sprintApi.getAll();
     },
   });
 

@@ -10,7 +10,7 @@ interface BulkOperationsModalProps {
 
 type OperationStep = 'select' | 'configure' | 'preview' | 'result';
 
-const OPERATIONS: { type: BulkOperationType; label: string; icon: string; description: string }[] = [
+const OPERATIONS: { type: BulkOperationType; label: string; icon: string; description: string; danger?: boolean }[] = [
   { type: 'UPDATE_STATUS', label: 'Change Status', icon: '🔄', description: 'Change the status of selected issues' },
   { type: 'UPDATE_FIELDS', label: 'Edit Fields', icon: '✏️', description: 'Update assignee, priority, or other fields' },
   { type: 'CLONE', label: 'Clone Issues', icon: '📋', description: 'Create copies of selected issues' },
@@ -190,7 +190,7 @@ export default function BulkOperationsModal({ issues, onClose }: BulkOperationsM
   };
 
   const renderResultStep = () => {
-    const result = executeMutation.data;
+    const result = executeMutation.data?.data;
     if (!result) return null;
 
     const getStatusColor = (status: string) => {

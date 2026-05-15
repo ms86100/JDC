@@ -48,6 +48,8 @@ export default function AppLayout() {
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
+  const isAdminArea = location.pathname.startsWith('/admin');
+
   return (
     <div className="ab-jira-root ab-app-shell">
       <header className="ab-jira-topnav">
@@ -114,7 +116,8 @@ export default function AppLayout() {
         </div>
       </header>
 
-      <div className="ab-jira-body">
+      <div className={`ab-jira-body ${isAdminArea ? 'ab-jira-body-admin' : ''}`}>
+        {!isAdminArea && (
         <aside className={`ab-project-sidebar ab-app-sidebar ${sidebarCollapsed ? 'ab-app-sidebar-collapsed' : ''}`}>
           <div className="ab-sidebar-project-header">
             <div className="ab-project-avatar">JP</div>
@@ -178,9 +181,10 @@ export default function AppLayout() {
             </button>
           </div>
         </aside>
+        )}
 
-        <main className="ab-main-content ab-app-main">
-          <div className="ab-content-scroll ab-app-page">
+        <main className={`ab-main-content ab-app-main ${isAdminArea ? 'ab-app-main-admin' : ''}`}>
+          <div className={`ab-content-scroll ${isAdminArea ? 'ab-app-page-admin' : 'ab-app-page'}`}>
             <Outlet />
           </div>
         </main>

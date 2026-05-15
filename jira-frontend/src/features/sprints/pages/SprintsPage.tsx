@@ -21,8 +21,8 @@ export default function SprintsPage({ projectId }: SprintsPageProps) {
   const { data: sprints, isLoading } = useQuery<SprintResponse[]>({
     queryKey: ['sprints', projectId],
     queryFn: async () => {
-      const response = await sprintApi.getAll(projectId);
-      return response.data || [];
+      const data = await sprintApi.getAll(projectId);
+      return data;
     },
   });
 

@@ -1143,6 +1143,28 @@
   min-height: 100%;
 }
 
+/* Admin area: single admin sidebar inside app shell (no global nav sidebar) */
+.ab-jira-body-admin {
+  flex: 1;
+  min-height: 0;
+}
+
+.ab-app-main-admin {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ab-app-page-admin {
+  padding: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .ab-app-sidebar .ab-sidebar-project-header {
   min-height: 56px;
 }

@@ -123,7 +123,7 @@ export default function BurndownChart({ burndown, sprint }: BurndownChartProps) 
           <span className="ab-stat-label">Completed</span>
         </div>
         <div className="ab-burndown-stat">
-          <span className="ab-stat-value">{burndown.remainingIssues}</span>
+          <span className="ab-stat-value">{burndown.totalIssues - burndown.completedIssues}</span>
           <span className="ab-stat-label">Remaining</span>
         </div>
       </div>

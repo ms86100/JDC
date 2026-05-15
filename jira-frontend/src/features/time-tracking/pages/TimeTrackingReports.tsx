@@ -28,9 +28,9 @@ export default function TimeTrackingReports() {
   const [selectedProject, setSelectedProject] = useState<string>('');
 
   // Fetch projects for filter dropdown
-  const { data: projects } = useQuery({
+  const { data: projects = [] } = useQuery({
     queryKey: ['projects'],
-    queryFn: () => projectApi.getAll().then(res => res.data || []),
+    queryFn: () => projectApi.getAll(),
   });
 
   // Fetch all worklogs (in real implementation, this would be filtered by date range and project)

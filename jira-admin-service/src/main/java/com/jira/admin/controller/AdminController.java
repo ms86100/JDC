@@ -50,47 +50,11 @@ public class AdminController {
 
     // ==================== User Management ====================
 
-    @GetMapping("/users")
-    @Operation(summary = "Get all users")
-    public ResponseEntity<List<UserEntity>> getUsers(
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String role) {
-        return ResponseEntity.ok(adminService.getUsers(search, status, role));
-    }
+    // NOTE: User management endpoints are in UserManagementController at /api/admin/users
 
-    @GetMapping("/users/{userId}")
-    @Operation(summary = "Get user by ID")
-    public ResponseEntity<UserEntity> getUser(@PathVariable String userId) {
-        return adminService.getUser(userId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @PostMapping("/users")
-    @Operation(summary = "Create a new user")
-    public ResponseEntity<UserEntity> createUser(@RequestBody Map<String, Object> data) {
-        return ResponseEntity.ok(adminService.createUser(data));
-    }
-
-    @PutMapping("/users/{userId}")
-    @Operation(summary = "Update user")
-    public ResponseEntity<UserEntity> updateUser(
-            @PathVariable String userId,
-            @RequestBody Map<String, Object> updates) {
-        return ResponseEntity.ok(adminService.updateUser(userId, updates));
-    }
-
-    @DeleteMapping("/users/{userId}")
-    @Operation(summary = "Delete user")
-    public ResponseEntity<Void> deleteUser(@PathVariable String userId) {
-        adminService.deleteUser(userId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/users/statistics")
-    @Operation(summary = "Get user statistics")
-    public ResponseEntity<Map<String, Object>> getUserStatistics() {
+    @GetMapping("/statistics")
+    @Operation(summary = "Get platform statistics")
+    public ResponseEntity<Map<String, Object>> getPlatformStatistics() {
         return ResponseEntity.ok(adminService.getUserStatistics());
     }
 

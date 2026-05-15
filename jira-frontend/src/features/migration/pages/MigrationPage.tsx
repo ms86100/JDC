@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMigrationJob } from '../hooks/useMigrationJob';
 import { useValidation } from '../hooks/useValidation';
 import CsvUploader from '../components/CsvUploader';
@@ -109,9 +109,11 @@ export default function MigrationPage() {
   });
 
   // Projects query for target selection
-  const { data: projects } = useQuery({
+  const { data: projects = [] } = useQuery({
     queryKey: ['projects'],
-    queryFn: () => projectApi.getAll().then((res) => res.data),
+    queryFn: async () => {
+      return await projectApi.getAll();
+    },
     enabled: state.importType === 'csv' || state.importType === 'project-import',
   });
 
@@ -223,7 +225,9 @@ export default function MigrationPage() {
     if (!state.selectedFile || !state.importType) return;
 
     try {
-      const job = await startImport(state.importType, {
+      // Map importType to API-expected type
+      const apiImportType = state.importType === 'project-import' ? 'project' : state.importType;
+      const job = await startImport(apiImportType as 'csv' | 'jira-dc' | 'project', {
         file: state.selectedFile,
         targetProjectId,
       });

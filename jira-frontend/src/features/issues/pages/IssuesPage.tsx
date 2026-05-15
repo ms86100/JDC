@@ -13,13 +13,15 @@ export default function IssuesPage() {
   const [filter] = useState<'all' | 'my'>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { data: issues, isLoading } = useQuery<IssueResponse[]>({
+  const { data: issuesResponse, isLoading } = useQuery<{ content: IssueResponse[]; totalElements: number }>({
     queryKey: ['issues', filter],
     queryFn: async () => {
       const response = await issueApi.getAll();
       return response.data;
     },
   });
+
+  const issues = issuesResponse?.content ?? [];
 
   const handleIssueCreated = () => {
     queryClient.invalidateQueries({ queryKey: ['issues'] });

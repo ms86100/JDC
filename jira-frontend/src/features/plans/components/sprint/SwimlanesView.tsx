@@ -98,7 +98,7 @@ export default function SwimlanesView({
       const columnName = column.name.toLowerCase();
 
       if (columnName === 'done') return isCompleted;
-      if (columnName === 'in progress') return !isCompleted && issue.completionStatus === 'IN_PROGRESS';
+      if (columnName === 'in progress') return !isCompleted && issue.completionStatus === 'UNCOMPLETED';
       return !isCompleted;
     });
   };

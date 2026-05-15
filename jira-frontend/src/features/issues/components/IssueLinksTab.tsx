@@ -67,7 +67,9 @@ export default function IssueLinksTab({ issueId }: IssueLinksTabProps) {
     // First, find the issue by key
     try {
       const response = await issueApi.getAll({ projectId: '', search: targetIssueKey });
-      const foundIssue = response.data?.find(
+      const data = response.data;
+      const issues = 'content' in data ? data.content || [] : [];
+      const foundIssue = issues.find(
         (i: any) => i.issueKey?.toLowerCase() === targetIssueKey.toLowerCase()
       );
 

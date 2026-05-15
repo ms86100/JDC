@@ -14,11 +14,15 @@ export default function ProjectDetailPage() {
     },
   });
 
-  const { data: issues } = useQuery<IssueResponse[]>({
+  const { data: issues = [] } = useQuery<IssueResponse[]>({
     queryKey: ['projectIssues', projectId],
     queryFn: async () => {
       const response = await issueApi.getAll({ projectId: projectId || '' });
-      return response.data;
+      const data = response.data;
+      if (data && 'content' in data) {
+        return data.content || [];
+      }
+      return [];
     },
     enabled: !!projectId,
   });
@@ -63,10 +67,10 @@ export default function ProjectDetailPage() {
 
       <div className="ab-card">
         <div className="ab-card-header">
-          <h3 className="ab-card-title">Issues ({issues?.length || 0})</h3>
+          <h3 className="ab-card-title">Issues ({issues.length})</h3>
         </div>
         <div className="ab-card-body">
-          {issues && issues.length > 0 ? (
+          {issues.length > 0 ? (
             <table className="ab-table">
               <thead>
                 <tr>

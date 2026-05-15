@@ -106,21 +106,24 @@ export default function EnhancedSearchPage() {
   const effectiveJql = isJqlMode ? jqlQuery : buildJqlFromBasicFilters();
 
   // Query execution
-  const { data: issues, isLoading, error, refetch } = useQuery<IssueResponse[]>({
+  const { data: issues = [], isLoading, error, refetch } = useQuery<IssueResponse[]>({
     queryKey: ['search-issues', effectiveJql],
     queryFn: async () => {
       const response = await issueApi.getAll({ jql: effectiveJql });
-      return response.data || [];
+      const data = response.data;
+      if (data && 'content' in data) {
+        return data.content || [];
+      }
+      return [];
     },
     enabled: effectiveJql.length > 0,
   });
 
   // Projects for filter dropdowns
-  const { data: projects } = useQuery<ProjectResponse[]>({
+  const { data: projects = [] } = useQuery<ProjectResponse[]>({
     queryKey: ['projects'],
     queryFn: async () => {
-      const response = await projectApi.getAll();
-      return response.data || [];
+      return await projectApi.getAll();
     },
   });
 

@@ -191,7 +191,7 @@ public class DataCenterService {
 
     @Transactional
     public void startService(String serviceKey) {
-        ServiceEntity service = serviceRepository.findByServiceKey(serviceKey)
+        ServiceEntity service = serviceRepository.findByServiceName(serviceKey)
                 .orElseThrow(() -> new IllegalArgumentException("Service not found"));
 
         service.setIsRunning(true);
@@ -203,7 +203,7 @@ public class DataCenterService {
 
     @Transactional
     public void stopService(String serviceKey) {
-        ServiceEntity service = serviceRepository.findByServiceKey(serviceKey)
+        ServiceEntity service = serviceRepository.findByServiceName(serviceKey)
                 .orElseThrow(() -> new IllegalArgumentException("Service not found"));
 
         service.setIsRunning(false);

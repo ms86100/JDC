@@ -92,8 +92,8 @@ export default function SprintBoard({ sprintId, boardId }: SprintBoardProps) {
         const columnName = column.name.toLowerCase();
 
         if (columnName === 'done') return isCompleted;
-        if (columnName === 'in progress') return !isCompleted && issue.completionStatus === 'IN_PROGRESS';
-        if (columnName === 'to do' || columnName === 'todo') return !isCompleted && issue.completionStatus !== 'IN_PROGRESS';
+        if (columnName === 'in progress') return !isCompleted && issue.completionStatus === 'UNCOMPLETED';
+        if (columnName === 'to do' || columnName === 'todo') return !isCompleted;
 
         return !isCompleted;
       });

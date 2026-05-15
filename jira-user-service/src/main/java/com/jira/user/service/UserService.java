@@ -117,6 +117,15 @@ public class UserService {
         return mapToOrganizationResponse(organization);
     }
 
+    @Transactional(readOnly = true)
+    public List<OrganizationResponse> getAllOrganizations() {
+        log.debug("Fetching all organizations");
+
+        return organizationRepository.findAll().stream()
+                .map(this::mapToOrganizationResponse)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public OrganizationMemberResponse addMemberToOrganization(UUID orgId, AddMemberRequest request) {
         log.info("Adding user {} to organization {}", request.getUserId(), orgId);

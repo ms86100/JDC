@@ -26,13 +26,22 @@ const INITIAL_STATE: WizardState = {
   defaultAssigneeType: 'PROJECT_LEAD',
 };
 
-export default function CreateProjectWizard() {
+export default function CreateProjectWizard({ onClose }: { onClose?: () => void }) {
   const navigate = useNavigate();
   const [wizardState, setWizardState] = useState<WizardState>(INITIAL_STATE);
   const [keyValidation, setKeyValidation] = useState<{ valid: boolean; available: boolean }>({
     valid: true,
     available: true,
   });
+
+  // Close handler
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      navigate('/projects');
+    }
+  };
 
   // Fetch project types
   const { data: projectTypes, isLoading: isLoadingTypes, error: typesError } = useQuery({

@@ -37,11 +37,11 @@ public class ProgramService {
     }
 
     @Transactional
-    public ProgramResponse createProgram(CreateProgramRequest request) {
+    public ProgramResponse createProgram(CreateProgramRequest request, UUID userId) {
         Program program = Program.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .ownerId(request.getOwnerId())
+                .ownerId(request.getOwnerId() != null ? request.getOwnerId() : userId)
                 .accessType(request.getAccessType() != null ? request.getAccessType() : "OPEN")
                 .build();
         program = programRepository.save(program);

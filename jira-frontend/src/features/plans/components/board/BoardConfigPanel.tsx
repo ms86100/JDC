@@ -17,7 +17,10 @@ export default function BoardConfigPanel({ boardId, onClose }: BoardConfigPanelP
   const addCardColor = useAddCardColor();
 
   const [activeTab, setActiveTab] = useState<'general' | 'columns' | 'swimlanes' | 'colors'>('general');
-  const [editingBoard, setEditingBoard] = useState<CreateBoardConfigRequest>({});
+  const [editingBoard, setEditingBoard] = useState<CreateBoardConfigRequest>({
+    name: board?.name || '',
+    boardType: board?.boardType as 'SCRUM' | 'KANBAN' | undefined,
+  });
   const [newColumnName, setNewColumnName] = useState('');
   const [newSwimlaneField, setNewSwimlaneField] = useState('NONE');
   const [newColorName, setNewColorName] = useState('');
