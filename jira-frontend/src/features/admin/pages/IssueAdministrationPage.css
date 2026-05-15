@@ -1,0 +1,56 @@
+.issue-type-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.issue-type-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: #0052cc;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.issue-type-name {
+  font-weight: 500;
+  color: #172b4d;
+}
+
+.issue-type-key {
+  background: #f4f5f7;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #42526e;
+}
+
+.description-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #6b778c;
+}
+
+.admin-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.admin-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-checkbox-label span {
+  font-size: 14px;
+  color: #42526e;
+}

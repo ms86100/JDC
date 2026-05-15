@@ -1,0 +1,503 @@
+networks:
+  jira-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  attachment_data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: jira-postgres
+    environment:
+      POSTGRES_USER: jiraadmin
+      POSTGRES_PASSWORD: jirapass123
+      POSTGRES_MULTIPLE_DATABASES: auth_db,user_db,project_db,issue_db,workflow_db,comment_db,notification_db,search_db,audit_db,attachment_db,sprint_db,plan_db,migration_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init/init-schemas.sql:/docker-entrypoint-initdb.d/init-schemas.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - jira-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jiraadmin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: jira-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - jira-network
+
+  # =============================================================================
+  # GATEWAY
+  # =============================================================================
+  gateway:
+    build:
+      context: ./jira-gateway
+      dockerfile: Dockerfile
+    container_name: jira-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      - auth-service
+      - user-service
+      - project-service
+      - issue-service
+
+  # =============================================================================
+  # SERVICES
+  # =============================================================================
+  auth-service:
+    build:
+      context: ./jira-auth-service
+      dockerfile: Dockerfile
+    container_name: jira-auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: auth_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+      JWT_SECRET: jira-platform-super-secret-key-that-is-at-least-256-bits-long
+      JWT_EXPIRATION_MS: 86400000
+      JWT_REFRESH_EXPIRATION_MS: 604800000
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  user-service:
+    build:
+      context: ./jira-user-service
+      dockerfile: Dockerfile
+    container_name: jira-user-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: user_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8082/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  project-service:
+    build:
+      context: ./jira-project-service
+      dockerfile: Dockerfile
+    container_name: jira-project-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: project_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8083/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  issue-service:
+    build:
+      context: ./jira-issue-service
+      dockerfile: Dockerfile
+    container_name: jira-issue-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: issue_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+      WORKFLOW_SERVICE_URL: http://workflow-service:8085
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8084/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  workflow-service:
+    build:
+      context: ./jira-workflow-service
+      dockerfile: Dockerfile
+    container_name: jira-workflow-service
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: workflow_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8085/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  comment-service:
+    build:
+      context: ./jira-comment-service
+      dockerfile: Dockerfile
+    container_name: jira-comment-service
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: comment_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8086/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  notification-service:
+    build:
+      context: ./jira-notification-service
+      dockerfile: Dockerfile
+    container_name: jira-notification-service
+    ports:
+      - "8087:8087"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: notification_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8087/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  search-service:
+    build:
+      context: ./jira-search-service
+      dockerfile: Dockerfile
+    container_name: jira-search-service
+    ports:
+      - "8088:8088"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: search_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8088/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  audit-service:
+    build:
+      context: ./jira-audit-service
+      dockerfile: Dockerfile
+    container_name: jira-audit-service
+    ports:
+      - "8089:8089"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: audit_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8089/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # =============================================================================
+  # ATTACHMENT SERVICE
+  # =============================================================================
+  attachment-service:
+    build:
+      context: ./jira-attachment-service
+      dockerfile: Dockerfile
+    container_name: jira-attachment-service
+    ports:
+      - "8090:8090"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: attachment_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      ATTACHMENT_STORAGE_PATH: /var/jira/attachments
+      JAVA_OPTS: -Xms256m -Xmx512m
+    volumes:
+      - attachment_data:/var/jira/attachments
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8090/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # =============================================================================
+  # SPRINT SERVICE
+  # =============================================================================
+  sprint-service:
+    build:
+      context: ./jira-sprint-service
+      dockerfile: Dockerfile
+    container_name: jira-sprint-service
+    ports:
+      - "8091:8091"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: sprint_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8091/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # =============================================================================
+  # PLAN SERVICE
+  # =============================================================================
+  plan-service:
+    build:
+      context: ./jira-plan-service
+      dockerfile: Dockerfile
+    container_name: jira-plan-service
+    ports:
+      - "8092:8092"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: plan_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8092/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # =============================================================================
+  # ADMIN SERVICE
+  # =============================================================================
+  admin-service:
+    build:
+      context: ./jira-admin-service
+      dockerfile: Dockerfile
+    container_name: jira-admin-service
+    ports:
+      - "8093:8093"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: admin_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8093/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # =============================================================================
+  # MIGRATION SERVICE
+  # =============================================================================
+  migration-service:
+    build:
+      context: ./jira-migration-service
+      dockerfile: Dockerfile
+    container_name: jira-migration-service
+    ports:
+      - "8094:8094"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: migration_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8094/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # =============================================================================
+  # FRONTEND
+  # =============================================================================
+  frontend:
+    build:
+      context: ./jira-frontend
+      dockerfile: Dockerfile
+    container_name: jira-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_GATEWAY_URL: http://localhost:8080
+    networks:
+      - jira-network
+    depends_on:
+      - gateway

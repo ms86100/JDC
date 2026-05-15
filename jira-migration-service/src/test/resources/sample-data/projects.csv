@@ -1,0 +1,11 @@
+project_key,name,description,project_type,lead_username,default_assignee
+PROJ1,Test Project 1,This is a test project description,COMPANY_MANAGED,admin,unassigned
+PROJ2,Test Project 2,Another test project,TEAM_MANAGED,jirauser,
+PROJ3,Alpha Project,Alpha description with special chars: &,COMPANY_MANAGED,admin,
+PROJ4,Beta Project,Short desc,COMPANY_MANAGED,,
+PROJ5,Gamma Project,,COMPANY_MANAGED,admin,
+PROJ6,Delta Project,Project with spaces in name,TEAM_MANAGED,admin,
+PROJ7,Epsilon Project,Project with numbers 123,COMPANY_MANAGED,jirauser,
+PROJ8,Zeta Project,Another project,COMPANY_MANAGED,,
+PROJ9,Eta Project,Yet another project,TEAM_MANAGED,admin,
+PROJ10,Theta Project,Last test project,COMPANY_MANAGED,jirauser,

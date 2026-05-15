@@ -1,0 +1,12 @@
+/* Airbus Design System Theme */
+@import './styles/airbus-theme.css';
+
+/* Jira Data Center Classic UI */
+@import './styles/jira-classic.css';
+
+/* Jira Platform Custom Styles */
+@import './features/dashboard/DashboardStyles.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

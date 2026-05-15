@@ -1,0 +1,270 @@
+/* Data Center Administration Page Styles */
+
+.datacenter-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #dfe1e6;
+}
+
+.datacenter-tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b778c;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.datacenter-tab:hover {
+  color: #42526e;
+}
+
+.datacenter-tab.active {
+  color: #0052cc;
+  border-bottom-color: #0052cc;
+}
+
+.datacenter-content {
+  margin-top: 0;
+}
+
+/* Overview Section */
+.overview-section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #172b4d;
+  margin: 0 0 16px 0;
+}
+
+.section-description {
+  font-size: 14px;
+  color: #6b778c;
+  margin: 0 0 16px 0;
+}
+
+.section-header {
+  margin-bottom: 16px;
+}
+
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.health-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+  border-radius: 3px;
+  border: 1px solid #dfe1e6;
+}
+
+.health-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.health-icon.healthy {
+  background: #e3fcef;
+  color: #006644;
+}
+
+.health-info {
+  flex: 1;
+}
+
+.health-title {
+  font-weight: 500;
+  color: #172b4d;
+  margin-bottom: 2px;
+}
+
+.health-status {
+  font-size: 12px;
+}
+
+.health-status.healthy {
+  color: #006644;
+}
+
+.health-status.warning {
+  color: #ff8b00;
+}
+
+.health-status.error {
+  color: #bf2600;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.quick-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #dfe1e6;
+  border-radius: 3px;
+  font-size: 14px;
+  color: #42526e;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.quick-action-btn:hover {
+  background: #f4f5f7;
+  border-color: #0052cc;
+  color: #0052cc;
+}
+
+.quick-action-icon {
+  font-size: 16px;
+}
+
+/* Cluster Nodes */
+.node-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.node-status {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.node-status.online {
+  background: #36b37e;
+}
+
+.node-status.offline {
+  background: #ff5630;
+}
+
+.node-status.draining {
+  background: #ffab00;
+}
+
+.node-name {
+  font-weight: 500;
+}
+
+.usage-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100px;
+}
+
+.usage-bar-fill {
+  height: 6px;
+  background: #4c9aff;
+  border-radius: 3px;
+  min-width: 2px;
+}
+
+.usage-value {
+  font-size: 12px;
+  color: #6b778c;
+}
+
+/* Scheduled Jobs */
+.job-name {
+  font-weight: 500;
+  color: #172b4d;
+}
+
+.job-description {
+  font-size: 12px;
+  color: #6b778c;
+  margin-top: 2px;
+}
+
+.job-status {
+  display: flex;
+  gap: 4px;
+}
+
+/* Cache */
+.cache-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.cache-card {
+  background: white;
+  border-radius: 3px;
+  border: 1px solid #dfe1e6;
+  padding: 16px;
+}
+
+.cache-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #172b4d;
+  margin-bottom: 12px;
+}
+
+.cache-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.cache-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.cache-stat-label {
+  font-size: 11px;
+  color: #6b778c;
+  text-transform: uppercase;
+}
+
+.cache-stat-value {
+  font-size: 16px;
+  font-weight: 500;
+  color: #172b4d;
+}
+
+/* Indexing */
+.indexing-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.admin-stat-value.healthy {
+  color: #006644;
+}
+
+.admin-stat-value.warning {
+  color: #ff8b00;
+}
+
+.admin-stat-value.error {
+  color: #bf2600;
+}

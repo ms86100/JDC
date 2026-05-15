@@ -1,0 +1,126 @@
+package com.jira.plan.service;
+
+import com.jira.plan.dto.request.CreateReleaseRequest;
+import com.jira.plan.dto.response.ReleaseResponse;
+import com.jira.plan.entity.Plan;
+import com.jira.plan.entity.PlanRelease;
+import com.jira.plan.exception.ResourceNotFoundException;
+import com.jira.plan.repository.PlanReleaseRepository;
+import com.jira.plan.repository.PlanRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class ReleaseService {
+
+    private final PlanReleaseRepository releaseRepository;
+    private final PlanRepository planRepository;
+
+    @Transactional(readOnly = true)
+    public List<ReleaseResponse> getReleasesByPlanId(UUID planId) {
+        return releaseRepository.findByPlanIdOrderByReleaseDateDesc(planId).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public ReleaseResponse getReleaseById(UUID planId, UUID releaseId) {
+        PlanRelease release = findReleaseById(releaseId);
+        return toResponse(release);
+    }
+
+    @Transactional
+    public ReleaseResponse createRelease(UUID planId, CreateReleaseRequest request) {
+        Plan plan = findPlanById(planId);
+
+        PlanRelease release = PlanRelease.builder()
+                .planId(planId)
+                .name(request.getName())
+                .version(request.getVersion())
+                .description(request.getDescription())
+                .releaseDate(request.getReleaseDate())
+                .status("DRAFT")
+                .build();
+
+        release = releaseRepository.save(release);
+        return toResponse(release);
+    }
+
+    @Transactional
+    public ReleaseResponse updateRelease(UUID planId, UUID releaseId, CreateReleaseRequest request) {
+        PlanRelease release = findReleaseById(releaseId);
+
+        if (request.getName() != null) {
+            release.setName(request.getName());
+        }
+        if (request.getVersion() != null) {
+            release.setVersion(request.getVersion());
+        }
+        if (request.getDescription() != null) {
+            release.setDescription(request.getDescription());
+        }
+        if (request.getReleaseDate() != null) {
+            release.setReleaseDate(request.getReleaseDate());
+        }
+
+        release = releaseRepository.save(release);
+        return toResponse(release);
+    }
+
+    @Transactional
+    public ReleaseResponse approveRelease(UUID planId, UUID releaseId, UUID approvedBy) {
+        PlanRelease release = findReleaseById(releaseId);
+        release.setStatus("APPROVED");
+        release.setApprovedBy(approvedBy);
+        release.setApprovedAt(LocalDateTime.now());
+        release = releaseRepository.save(release);
+        return toResponse(release);
+    }
+
+    @Transactional
+    public ReleaseResponse releaseVersion(UUID planId, UUID releaseId) {
+        PlanRelease release = findReleaseById(releaseId);
+        release.setStatus("RELEASED");
+        release = releaseRepository.save(release);
+        return toResponse(release);
+    }
+
+    @Transactional
+    public void deleteRelease(UUID planId, UUID releaseId) {
+        PlanRelease release = findReleaseById(releaseId);
+        releaseRepository.delete(release);
+    }
+
+    private Plan findPlanById(UUID id) {
+        return planRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Plan", "id", id));
+    }
+
+    private PlanRelease findReleaseById(UUID id) {
+        return releaseRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Release", "id", id));
+    }
+
+    private ReleaseResponse toResponse(PlanRelease release) {
+        return ReleaseResponse.builder()
+                .id(release.getId())
+                .planId(release.getPlanId())
+                .name(release.getName())
+                .version(release.getVersion())
+                .description(release.getDescription())
+                .releaseDate(release.getReleaseDate())
+                .status(release.getStatus())
+                .approvedBy(release.getApprovedBy())
+                .approvedAt(release.getApprovedAt())
+                .createdAt(release.getCreatedAt())
+                .updatedAt(release.getUpdatedAt())
+                .build();
+    }
+}

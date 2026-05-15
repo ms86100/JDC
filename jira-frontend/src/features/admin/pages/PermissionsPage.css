@@ -1,0 +1,65 @@
+/* Permissions Page Styles */
+
+.permissions-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #dfe1e6;
+}
+
+.permissions-tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b778c;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.permissions-tab:hover {
+  color: #42526e;
+}
+
+.permissions-tab.active {
+  color: #0052cc;
+  border-bottom-color: #0052cc;
+}
+
+.permissions-content {
+  /* content wrapper */
+}
+
+.scheme-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scheme-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: #0052cc;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.scheme-icon.notification {
+  background: #00875a;
+}
+
+.scheme-icon.security {
+  background: #6554c0;
+}
+
+.scheme-name {
+  font-weight: 500;
+  color: #172b4d;
+}

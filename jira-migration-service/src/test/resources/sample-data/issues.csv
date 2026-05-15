@@ -1,0 +1,11 @@
+project_key,issue_type,summary,description,status,priority,reporter_username,assignee_username,due_date,story_points,labels
+PROJ1,Bug,Database connection issue,Users cannot connect to database,Open,Highest,admin,jirauser,2026-06-15,5,backend;critical
+PROJ1,Story,User login feature,Implement user login with OAuth,In Progress,High,admin,developer1,2026-06-20,8,auth;oauth
+PROJ1,Task,Update API documentation,Update REST API docs,Open,Medium,admin,,2026-07-01,3,docs
+PROJ2,Epic,Payment system,Payment processing system,In Progress,Highest,admin,jirauser,2026-08-01,21,payment
+PROJ2,Bug,Login form validation,Email validation not working,Open,High,jirauser,developer2,2026-06-10,2,validation
+PROJ2,Story,Export reports,Export data to CSV and PDF,Open,Medium,admin,,2026-07-15,5,reporting
+PROJ1,Improvement,Performance optimization,Optimize database queries,In Progress,Medium,admin,jirauser,,3,performance
+PROJ3,Bug,Memory leak in service,Service has memory leak,Open,Highest,admin,,2026-05-20,8,memory
+PROJ3,Story,Notification system,Implement email notifications,Open,Low,admin,developer1,2026-08-01,13,notifications
+PROJ4,Task,Code review,Review pull request #123,Done,Low,developer1,admin,2026-05-01,1,review

@@ -1,0 +1,232 @@
+# =============================================================================
+# Jira Platform - Centralized Configuration
+# =============================================================================
+# This file is the single source of truth for all service ports, database
+# credentials, security settings, and startup options.
+# All launcher scripts read from this file — DO NOT hardcode values elsewhere.
+#
+# Usage:
+#   python launcher.py        - reads this file automatically
+#   .\start-jira.ps1         - reads this file automatically
+#   docker-compose up         - uses environment variables set from this file
+#
+# To override any value, set the corresponding environment variable:
+#   export JIRA_DB_PASSWORD=secret   (Unix)
+#   $env:JIRA_DB_PASSWORD="secret"   (PowerShell)
+# =============================================================================
+
+version: "1.0"
+
+# ---------------------------------------------------------------------------
+# DATABASE
+# ---------------------------------------------------------------------------
+database:
+  host: "localhost"
+  port: 5432
+  username: "jiraadmin"
+  password: "jirapass123"
+
+  # Multi-database setup — comma-separated list of database names
+  # PostgreSQL container will initialize all of these on first start
+  databases:
+    - "auth_db"
+    - "user_db"
+    - "project_db"
+    - "issue_db"
+    - "workflow_db"
+    - "comment_db"
+    - "notification_db"
+    - "search_db"
+    - "audit_db"
+    - "attachment_db"
+    - "sprint_db"
+    - "plan_db"
+    - "migration_db"
+
+  # Docker container settings
+  docker:
+    image: "postgres:16-alpine"
+    container_name: "jira-postgres"
+    data_volume: "jira-postgres-data"
+
+# ---------------------------------------------------------------------------
+# SECURITY
+# ---------------------------------------------------------------------------
+security:
+  # JWT secret — must be at least 256 bits (32+ characters)
+  jwt_secret: "jira-platform-super-secret-key-that-is-at-least-256-bits-long"
+
+# ---------------------------------------------------------------------------
+# SERVICES
+# ---------------------------------------------------------------------------
+# Each service defines:
+#   port       — the port it listens on
+#   dir        — the directory name under the platform root
+#   jar        — the built JAR filename (relative to dir/target/)
+#   health     — HTTP path to check for readiness (default: /actuator/health)
+#   deps       — services that must be healthy before this starts
+#
+# STARTUP ORDER is auto-computed from the 'deps' graph (topological sort).
+# Services with the same dependency level start in parallel.
+# ---------------------------------------------------------------------------
+services:
+  auth:
+    port: 8081
+    dir: "jira-auth-service"
+    jar: "jira-auth-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: []
+
+  gateway:
+    port: 8080
+    dir: "jira-gateway"
+    jar: "jira-gateway-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+  user:
+    port: 8082
+    dir: "jira-user-service"
+    jar: "jira-user-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+  project:
+    port: 8083
+    dir: "jira-project-service"
+    jar: "jira-project-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+  issue:
+    port: 8084
+    dir: "jira-issue-service"
+    jar: "jira-issue-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+  workflow:
+    port: 8085
+    dir: "jira-workflow-service"
+    jar: "jira-workflow-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+  comment:
+    port: 8086
+    dir: "jira-comment-service"
+    jar: "jira-comment-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+  notification:
+    port: 8087
+    dir: "jira-notification-service"
+    jar: "jira-notification-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+  search:
+    port: 8088
+    dir: "jira-search-service"
+    jar: "jira-search-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+  audit:
+    port: 8089
+    dir: "jira-audit-service"
+    jar: "jira-audit-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+  attachment:
+    port: 8090
+    dir: "jira-attachment-service"
+    jar: "jira-attachment-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+  sprint:
+    port: 8091
+    dir: "jira-sprint-service"
+    jar: "jira-sprint-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+  plan:
+    port: 8092
+    dir: "jira-plan-service"
+    jar: "jira-plan-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+  admin:
+    port: 8093
+    dir: "jira-admin-service"
+    jar: "jira-admin-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+  migration:
+    port: 8094
+    dir: "jira-migration-service"
+    jar: "jira-migration-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
+# ---------------------------------------------------------------------------
+# FRONTEND
+# ---------------------------------------------------------------------------
+frontend:
+  port: 3000
+  dir: "jira-frontend"
+  open_browser: true
+
+# ---------------------------------------------------------------------------
+# STARTUP BEHAVIOUR
+# ---------------------------------------------------------------------------
+startup:
+  # Build JARs automatically if they don't exist
+  build_if_missing: true
+
+  # Maven command for building
+  maven_flags: "-DskipTests"
+
+  # Health check settings
+  health_check_path: "/actuator/health"
+  health_timeout: 90        # seconds to wait per service
+  health_poll_interval: 2   # seconds between health checks
+
+  # Process management
+  shutdown_timeout: 15       # seconds to wait before force-kill
+
+  # Logging
+  log_dir: "logs"
+
+  # Whether to clean up existing processes on our ports at startup
+  cleanup_on_start: true
+
+  # JVM options for all Java services
+  java_opts: "-Xms256m -Xmx512m"
+
+# ---------------------------------------------------------------------------
+# PORTS (for reference — actual values come from services.*.port above)
+# ---------------------------------------------------------------------------
+# PostgreSQL : 5432
+# Gateway    : 8080
+# Auth       : 8081
+# User       : 8082
+# Project    : 8083
+# Issue      : 8084
+# Workflow   : 8085
+# Comment    : 8086
+# Notify     : 8087
+# Search     : 8088
+# Audit      : 8089
+# Attachment  : 8090
+# Sprint     : 8091
+# Plan       : 8092
+# Admin      : 8093
+# Migration  : 8094
+# Frontend   : 3000

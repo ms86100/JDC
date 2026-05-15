@@ -1,0 +1,12 @@
+export { default as UserManagementPage } from './UserManagementPage';
+export { default as IssueTypesPage } from './IssueTypesPage';
+export { default as PrioritiesPage } from './PrioritiesPage';
+export { default as StatusesPage } from './StatusesPage';
+export { default as WorkflowsPage } from './WorkflowsPage';
+export { default as ScreensPage } from './ScreensPage';
+export { default as DataCenterPage } from './DataCenterPage';
+export { default as AuditLogsPage } from './AuditLogsPage';
+export { default as SystemSettingsPage } from './SystemSettingsPage';
+export { default as CustomFieldsPage } from './CustomFieldsPage';
+export { default as ProjectAdministrationPage } from './ProjectAdministrationPage';
+export { default as PermissionsPage } from './PermissionsPage';

@@ -1,0 +1,116 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: jira-gateway
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: http://auth-service:8081
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
+        - id: user-service
+          uri: http://user-service:8082
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - StripPrefix=1
+        - id: project-service
+          uri: http://project-service:8083
+          predicates:
+            - Path=/api/projects/**
+        - id: issue-service
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/api/issues/**
+        - id: workflow-service
+          uri: http://workflow-service:8085
+          predicates:
+            - Path=/api/workflows/**
+        - id: comment-service
+          uri: http://comment-service:8086
+          predicates:
+            - Path=/api/comments/**
+        - id: notification-service
+          uri: http://notification-service:8087
+          predicates:
+            - Path=/api/notifications/**
+        - id: search-service
+          uri: http://search-service:8088
+          predicates:
+            - Path=/api/search/**
+        - id: audit-service
+          uri: http://audit-service:8089
+          predicates:
+            - Path=/api/audit/**
+        - id: sprint-service
+          uri: http://sprint-service:8091
+          predicates:
+            - Path=/api/sprints/**
+        - id: attachment-service
+          uri: http://attachment-service:8090
+          predicates:
+            - Path=/api/attachments/**
+        - id: plan-service
+          uri: ${PLAN_SERVICE_URI:http://plan-service:8092}
+          predicates:
+            - Path=/api/plans/**
+        - id: admin-service
+          uri: ${ADMIN_SERVICE_URI:http://admin-service:8093}
+          predicates:
+            - Path=/api/admin/**
+        - id: migration-service
+          uri: ${MIGRATION_SERVICE_URI:http://migration-service:8094}
+          predicates:
+            - Path=/api/migrations/**
+      default-filters:
+        - DedupeResponseHeader=Vary Access-Control-Allow-Origin
+        - name: RequestSize
+          args:
+            maxSize: 10MB
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders: "*"
+            exposeHeaders:
+              - Access-Control-Allow-Origin
+              - Access-Control-Allow-Credentials
+
+jwt:
+  secret: ${JWT_SECRET:jira-platform-super-secret-key-that-is-at-least-256-bits-long}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+  health:
+    gateway:
+      enabled: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
