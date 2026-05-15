@@ -42,7 +42,7 @@ public class JQLParser {
 
     // Date fields
     private static final Set<String> DATE_FIELDS = Set.of(
-            "created", "updated", "due", "duedate", "resolved", "resolutiondate",
+            "created", "updated", "due", "resolved", "resolutiondate",
             "lastviewed", "createddate", "updateddate"
     );
 
@@ -55,11 +55,11 @@ public class JQLParser {
     private static final Set<String> ISSUE_FIELDS = Set.of(
             "issue", "issuekey", "key", "summary", "description", "environment",
             "type", "issuetype", "status", "priority", "resolution", "assignee",
-            "reporter", "creator", "created", "updated", "duedate", "duedate",
+            "reporter", "creator", "created", "updated", "duedate",
             "resolved", "resolutiondate", "votes", "watcher", "watchers", "comment",
             "attachment", "subtask", "parent", "project", "sprint", "epic", "epiclink",
             "epic name", "labels", "component", "fixversion", "affectsversion",
-            "linkedissue", "subtasks", "summary", "text"
+            "linkedissue", "subtasks", "text"
     );
 
     private static final Pattern OPERATOR_PATTERN = Pattern.compile(

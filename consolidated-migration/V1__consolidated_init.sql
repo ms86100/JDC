@@ -21,6 +21,7 @@ CREATE SCHEMA IF NOT EXISTS jira_audit;
 CREATE SCHEMA IF NOT EXISTS jira_attachment;
 CREATE SCHEMA IF NOT EXISTS jira_sprint;
 CREATE SCHEMA IF NOT EXISTS jira_plan;
+CREATE SCHEMA IF NOT EXISTS jira_admin;
 
 -- ============================================
 -- JIRA_AUTH SCHEMA (Users, Roles, Auth)

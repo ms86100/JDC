@@ -22,7 +22,7 @@ public interface ProgramRepository extends JpaRepository<Program, UUID> {
     @Query("SELECT p FROM Program p LEFT JOIN FETCH p.plans WHERE p.id = :id")
     Program findByIdWithPlans(@Param("id") UUID id);
 
-    @Query("SELECT COUNT(pp) FROM ProgramPlan pp WHERE pp.program.id = :programId")
+    @Query("SELECT COUNT(pp) FROM Plan pp WHERE :program IN (SELECT pr FROM Program p JOIN p.plans pr WHERE p.id = :programId)")
     long countPlansByProgramId(@Param("programId") UUID programId);
 
     boolean existsByNameIgnoreCaseAndIdNot(String name, UUID id);
