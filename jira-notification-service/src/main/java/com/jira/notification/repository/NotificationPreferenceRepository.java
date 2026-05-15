@@ -17,6 +17,6 @@ public interface NotificationPreferenceRepository extends JpaRepository<Notifica
     List<NotificationPreference> findByUserId(UUID userId);
 
     @Modifying
-    @Query("DELETE FROM jira_notification.notification_preferences n WHERE n.userId = :userId")
+    @Query("DELETE FROM NotificationPreference n WHERE n.userId = :userId")
     void deleteAllByUserId(@Param("userId") UUID userId);
 }

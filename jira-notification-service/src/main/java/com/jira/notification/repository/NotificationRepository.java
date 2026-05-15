@@ -14,16 +14,16 @@ import java.util.UUID;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
 
-    @Query("SELECT n FROM jira_notification.notifications n WHERE n.userId = :userId ORDER BY n.createdAt DESC")
+    @Query("SELECT n FROM Notification n WHERE n.userId = :userId ORDER BY n.createdAt DESC")
     Page<Notification> findByUserId(@Param("userId") UUID userId, Pageable pageable);
 
-    @Query("SELECT n FROM jira_notification.notifications n WHERE n.userId = :userId AND n.isRead = :isRead ORDER BY n.createdAt DESC")
+    @Query("SELECT n FROM Notification n WHERE n.userId = :userId AND n.isRead = :isRead ORDER BY n.createdAt DESC")
     Page<Notification> findByUserIdAndIsRead(@Param("userId") UUID userId, @Param("isRead") Boolean isRead, Pageable pageable);
 
-    @Query("SELECT COUNT(n) FROM jira_notification.notifications n WHERE n.userId = :userId AND n.isRead = false")
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.userId = :userId AND n.isRead = false")
     long countUnreadByUserId(@Param("userId") UUID userId);
 
     @Modifying
-    @Query("UPDATE jira_notification.notifications n SET n.isRead = true WHERE n.userId = :userId AND n.isRead = false")
+    @Query("UPDATE Notification n SET n.isRead = true WHERE n.userId = :userId AND n.isRead = false")
     int markAllAsReadByUserId(@Param("userId") UUID userId);
 }

@@ -1,6 +1,8 @@
 -- V1__create_program_schema.sql
 -- Create the jira_plan schema and programs table
 
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE SCHEMA IF NOT EXISTS jira_plan;
 
 CREATE TABLE jira_plan.programs (

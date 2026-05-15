@@ -3,7 +3,7 @@ spring:
     activate:
       on-profile: local
   datasource:
-    url: jdbc:postgresql://localhost:5432/auth_db
+    url: jdbc:postgresql://localhost:5432/jira_platform
     username: jiraadmin
     password: UNIpay@123
   jpa:

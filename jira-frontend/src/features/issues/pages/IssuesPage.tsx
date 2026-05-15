@@ -128,14 +128,16 @@ export default function IssuesPage() {
                       {issue.issueType === 'Bug' ? '🐛' : issue.issueType === 'Story' ? '📖' : issue.issueType === 'Task' ? '✓' : '⚡'}
                     </span>
                   </td>
-                  <td onClick={() => navigate(`/issues/${issue.id}`)} style={{ cursor: 'pointer' }} className="ab-text-muted">{issue.issueKey}</td>
+                  <td onClick={() => navigate(`/issues/${issue.id}`)} style={{ cursor: 'pointer' }}>
+                    <span className="ab-issue-key-link">{issue.issueKey}</span>
+                  </td>
                   <td onClick={() => navigate(`/issues/${issue.id}`)} style={{ cursor: 'pointer' }} className="ab-issue-summary">{issue.title}</td>
                   <td onClick={() => navigate(`/issues/${issue.id}`)} style={{ cursor: 'pointer' }}>
                     <span className={`ab-badge ${issue.status?.includes('Done') ? 'ab-badge-success' : 'ab-badge-primary'}`}>
                       {issue.status}
                     </span>
                   </td>
-                  <td onClick={() => navigate(`/issues/${issue.id}`)} style={{ cursor: 'pointer' }} className={issue.priority ? `priority-${issue.priority.toLowerCase()}` : ''}>
+                  <td onClick={() => navigate(`/issues/${issue.id}`)} style={{ cursor: 'pointer' }} className={issue.priority ? `priority-${issue.priority.toLowerCase().replace(/\s+/g, '-')}` : ''}>
                     {issue.priority || '-'}
                   </td>
                   <td onClick={() => navigate(`/issues/${issue.id}`)} style={{ cursor: 'pointer' }}>{issue.assigneeId ? 'Assigned' : 'Unassigned'}</td>

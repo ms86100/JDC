@@ -1,96 +1,188 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { useState } from 'react';
-import '../../features/auth/pages/AuthStyles.css';
 
-const navigation = [
-  { name: 'Dashboard', path: '/dashboard', icon: 'ab-icon-dashboard' },
-  { name: 'Projects', path: '/projects', icon: 'ab-icon-folder' },
-  { name: 'Programs', path: '/programs', icon: 'ab-icon-program' },
-  { name: 'Issues', path: '/issues', icon: 'ab-icon-list' },
-  { name: 'Boards', path: '/boards', icon: 'ab-icon-board' },
-  { name: 'Sprints', path: '/sprints', icon: 'ab-icon-sprint' },
-  { name: 'Workflows', path: '/workflows', icon: 'ab-icon-flow' },
-  { name: 'Search', path: '/search', icon: 'ab-icon-search' },
-  { name: 'Notifications', path: '/notifications', icon: 'ab-icon-bell' },
+const TOP_NAV = [
+  { label: 'Dashboards', path: '/dashboard' },
+  { label: 'Projects', path: '/projects' },
+  { label: 'Issues', path: '/issues' },
+  { label: 'Boards', path: '/boards' },
+  { label: 'Plans', path: '/programs' },
+];
+
+const SIDE_NAV = [
+  { name: 'Dashboard', path: '/dashboard' },
+  { name: 'Projects', path: '/projects' },
+  { name: 'Programs', path: '/programs' },
+  { name: 'Issues', path: '/issues' },
+  { name: 'Boards', path: '/boards' },
+  { name: 'Sprints', path: '/sprints' },
+  { name: 'Workflows', path: '/workflows' },
+  { name: 'Search', path: '/search' },
+  { name: 'Notifications', path: '/notifications' },
+];
+
+const SYSTEM_NAV = [
+  { name: 'Administration', path: '/admin' },
+  { name: 'Audit logs', path: '/audit' },
+  { name: 'Migration', path: '/migration' },
 ];
 
 export default function AppLayout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  const initials = user?.username
+    ? user.username.slice(0, 2).toUpperCase()
+    : 'U';
+
+  const isTopNavActive = (path: string) => {
+    if (path === '/dashboard') {
+      return location.pathname === '/dashboard' || location.pathname === '/';
+    }
+    if (path === '/admin') {
+      return location.pathname.startsWith('/admin');
+    }
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
+
   return (
-    <div className="ab-app-layout">
-      {/* Header */}
-      <header className="ab-app-header">
-        <div className="ab-header-left">
-          <button className="ab-sidebar-toggle" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
-            <span className="ab-icon-menu"></span>
-          </button>
-          <div className="ab-brand">
-            <span className="ab-logo">JP</span>
-            <span className="ab-brand-name">Jira Platform</span>
-          </div>
+    <div className="ab-jira-root ab-app-shell">
+      <header className="ab-jira-topnav">
+        <div className="ab-topnav-left">
+          <Link to="/dashboard" className="ab-jira-logo-btn" title="Jira">
+            <div className="ab-jira-logo-icon">J</div>
+            <span className="ab-jira-logo-text">Jira</span>
+          </Link>
         </div>
 
-        <div className="ab-header-center">
-          <div className="ab-global-search">
-            <span className="ab-icon-search"></span>
-            <input type="text" placeholder="Search issues, projects..." className="ab-search-input" />
-            <span className="ab-search-shortcut">/</span>
-          </div>
+        <div className="ab-topnav-center">
+          <nav className="ab-topnav-items" aria-label="Primary">
+            {TOP_NAV.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`ab-topnav-item ${isTopNavActive(item.path) ? 'active' : ''}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+          <button
+            type="button"
+            className="ab-create-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('openCreateIssue'))}
+          >
+            <span>+</span> Create
+          </button>
         </div>
 
-        <div className="ab-header-right">
-          <button className="ab-icon-button" title="Create Issue" onClick={() => window.dispatchEvent(new CustomEvent('openCreateIssue'))}>
-            <span className="ab-icon-plus"></span>
-          </button>
-          <button className="ab-icon-button" title="Notifications">
-            <span className="ab-icon-bell"></span>
-          </button>
-          <div className="ab-user-menu">
-            <div className="ab-avatar">{user?.username?.charAt(0).toUpperCase() || 'U'}</div>
-            <div className="ab-user-info">
-              <span className="ab-user-name">{user?.username || 'User'}</span>
-              <span className="ab-user-role">{user?.roles?.[0] || 'User'}</span>
-            </div>
-            <button className="ab-logout-btn" onClick={logout} title="Logout">
-              <span className="ab-icon-logout"></span>
-            </button>
+        <div className="ab-topnav-right">
+          <div className="ab-search-wrapper">
+            <span className="ab-search-icon-inp" aria-hidden>⌕</span>
+            <input
+              type="search"
+              className="ab-topnav-search"
+              placeholder="Search"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') navigate('/search');
+              }}
+            />
           </div>
+          <button
+            type="button"
+            className="ab-topnav-icon-btn"
+            title="Notifications"
+            onClick={() => navigate('/notifications')}
+          >
+            🔔
+          </button>
+          <button type="button" className="ab-topnav-icon-btn" title="Help">
+            ?
+          </button>
+          <div className="ab-topnav-divider" />
+          <button
+            type="button"
+            className="ab-user-avatar-btn"
+            title={`${user?.username || 'User'} — sign out`}
+            onClick={logout}
+          >
+            {initials}
+          </button>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <div className="ab-app-container">
-        {/* Side Navigation */}
-        <nav className={`ab-sidebar ${sidebarCollapsed ? 'ab-collapsed' : ''}`}>
-          <div className="ab-sidebar-nav">
-            {navigation.map((item) => (
+      <div className="ab-jira-body">
+        <aside className={`ab-project-sidebar ab-app-sidebar ${sidebarCollapsed ? 'ab-app-sidebar-collapsed' : ''}`}>
+          <div className="ab-sidebar-project-header">
+            <div className="ab-project-avatar">JP</div>
+            <div className="ab-project-info">
+              <h2 className="ab-project-title">Jira Platform</h2>
+              {!sidebarCollapsed && (
+                <span className="ab-app-sidebar-subtitle">Data Center</span>
+              )}
+            </div>
+          </div>
+
+          <nav className="ab-sidebar-nav" aria-label="Application">
+            {!sidebarCollapsed && <div className="ab-sidebar-section-label">Navigation</div>}
+            {SIDE_NAV.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `ab-nav-item ${isActive ? 'ab-active' : ''}`
+                  `ab-sidebar-nav-item ${isActive ? 'active' : ''}`
                 }
+                title={sidebarCollapsed ? item.name : undefined}
               >
-                <span className={`${item.icon} ab-nav-icon`}></span>
-                <span className="ab-nav-label">{item.name}</span>
+                <span className="ab-nav-icon ab-nav-dot" />
+                {!sidebarCollapsed && <span className="ab-nav-text">{item.name}</span>}
               </NavLink>
             ))}
-          </div>
+
+            {!sidebarCollapsed && (
+              <div className="ab-sidebar-section-label ab-sidebar-section-spaced">System</div>
+            )}
+            {SYSTEM_NAV.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end={item.path === '/admin'}
+                className={({ isActive }) =>
+                  `ab-sidebar-nav-item ${isActive ? 'active' : ''}`
+                }
+                title={sidebarCollapsed ? item.name : undefined}
+              >
+                <span className="ab-nav-icon ab-nav-dot" />
+                {!sidebarCollapsed && <span className="ab-nav-text">{item.name}</span>}
+              </NavLink>
+            ))}
+          </nav>
 
           <div className="ab-sidebar-footer">
-            <div className="ab-system-status">
-              <span className="ab-status-indicator ab-status-ok"></span>
-              <span className="ab-status-text">All systems operational</span>
-            </div>
+            {!sidebarCollapsed && (
+              <div className="ab-system-status-inline">
+                <span className="ab-status-dot" />
+                <span>All systems operational</span>
+              </div>
+            )}
+            <button
+              type="button"
+              className="ab-collapse-btn"
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            >
+              {sidebarCollapsed ? '»' : '‹'}
+            </button>
           </div>
-        </nav>
+        </aside>
 
-        {/* Main Content */}
-        <main className="ab-main-content">
-          <Outlet />
+        <main className="ab-main-content ab-app-main">
+          <div className="ab-content-scroll ab-app-page">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

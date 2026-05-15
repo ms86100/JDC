@@ -1,0 +1,41 @@
+# Platform Runtime (generated at runtime)
+platform-runtime/
+logs/
+*.log
+
+# Java build outputs
+jira-*/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Node modules
+jira-frontend/node_modules/
+platform-runtime/node_modules/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*.swp
+
+# Credentials (DO NOT COMMIT)
+*.env
+*.env.local
+*.pem
+*.key
+credentials.json
+secrets.json

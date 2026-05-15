@@ -2,6 +2,12 @@
 -- Migration Service Database Schema
 -- Supports project import/export and CSV-based data migration
 
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Create schema
+CREATE SCHEMA IF NOT EXISTS jira_migration;
+
 -- ============================================
 -- MIGRATION JOBS TABLE
 -- Tracks all import/export operations

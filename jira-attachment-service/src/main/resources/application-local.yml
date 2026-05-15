@@ -1,5 +1,5 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/attachment_db
+    url: jdbc:postgresql://localhost:5432/jira_platform
     username: jiraadmin
     password: UNIpay@123

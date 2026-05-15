@@ -5,8 +5,6 @@ import com.jira.issue.entity.*;
 import com.jira.issue.exception.InvalidTransitionException;
 import com.jira.issue.exception.ResourceNotFoundException;
 import com.jira.issue.repository.*;
-import com.jira.project.entity.Project;
-import com.jira.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,10 +29,14 @@ public class IssueService {
     private final IssueTypeRepository issueTypeRepository;
     private final IssuePriorityRepository issuePriorityRepository;
     private final IssueStatusRepository issueStatusRepository;
-    private final ProjectRepository projectRepository;
 
     @Value("${workflow.service.url}")
     private String workflowServiceUrl;
+
+    @Value("${project.service.url}")
+    private String projectServiceUrl;
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     private static final UUID DEFAULT_STATUS_ID = UUID.fromString("c0000000-0000-0000-0000-000000000001");
     private static final UUID DEFAULT_TYPE_ID = UUID.fromString("a0000000-0000-0000-0000-000000000001");
@@ -44,9 +46,11 @@ public class IssueService {
     public IssueResponse createIssue(CreateIssueRequest request, UUID currentUserId) {
         log.info("Creating issue in project: {} by user: {}", request.getProjectId(), currentUserId);
 
-        // Get project key for issue key generation
-        Project project = projectRepository.findById(request.getProjectId())
-                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", request.getProjectId()));
+        // Get project key for issue key generation via REST
+        String projectKey = getProjectKey(request.getProjectId());
+        if (projectKey == null) {
+            throw new ResourceNotFoundException("Project", "id", request.getProjectId());
+        }
 
         IssueType issueType = issueTypeRepository.findById(
                 request.getIssueTypeId() != null ? request.getIssueTypeId() : DEFAULT_TYPE_ID)
@@ -61,7 +65,7 @@ public class IssueService {
                 .orElseThrow(() -> new ResourceNotFoundException("IssuePriority", "id",
                         request.getPriorityId() != null ? request.getPriorityId() : DEFAULT_PRIORITY_ID));
 
-        String issueKey = generateIssueKey(project.getProjectKey());
+        String issueKey = generateIssueKey(projectKey);
 
         Issue issue = Issue.builder()
                 .projectId(request.getProjectId())
@@ -396,6 +400,21 @@ public class IssueService {
 
         map.put("fields", fields);
         return map;
+    }
+
+    private String getProjectKey(UUID projectId) {
+        try {
+            String url = String.format("%s/api/projects/%s", projectServiceUrl, projectId);
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> response = restTemplate.getForObject(url, java.util.Map.class);
+            if (response != null && response.get("projectKey") != null) {
+                return response.get("projectKey").toString();
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("Failed to get project key for {}: {}", projectId, e.getMessage());
+            return null;
+        }
     }
 
     @lombok.Data

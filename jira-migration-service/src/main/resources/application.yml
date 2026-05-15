@@ -5,9 +5,9 @@ spring:
   application:
     name: jira-migration-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:migration_db}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:jira_platform}
     username: ${DB_USERNAME:jiraadmin}
-    password: ${DB_PASSWORD:jirapass123}
+    password: ${DB_PASSWORD:UNIpay@123}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
@@ -16,20 +16,15 @@ spring:
       connection-timeout: 20000
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        default_schema: jira_migration
+        default_schema: public
   flyway:
-    enabled: true
-    baseline-on-migrate: true
-    locations: classpath:db/migration
-    schemas: jira_migration
-    default-schema: jira_migration
-    validate-on-migrate: false
+    enabled: false
 
   servlet:
     multipart:
@@ -45,12 +40,6 @@ management:
     health:
       show-details: when_authorized
 
-async:
-  core-pool-size: 5
-  max-pool-size: 20
-  queue-capacity: 500
-  thread-name-prefix: migration-async-
-
 springdoc:
   api-docs:
     path: /api-docs
@@ -63,153 +52,3 @@ logging:
     com.jira.migration: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
-    com.jira.migration.async: INFO
-
-# Service clients configuration
-services:
-  issueServiceUrl: ${ISSUE_SERVICE_URL:http://localhost:8081}
-  projectServiceUrl: ${PROJECT_SERVICE_URL:http://localhost:8082}
-  userServiceUrl: ${USER_SERVICE_URL:http://localhost:8083}
-  workflowServiceUrl: ${WORKFLOW_SERVICE_URL:http://localhost:8084}
-  searchServiceUrl: ${SEARCH_SERVICE_URL:http://localhost:8085}
-  notificationServiceUrl: ${NOTIFICATION_SERVICE_URL:http://localhost:8086}
-  sprintServiceUrl: ${SPRINT_SERVICE_URL:http://localhost:8087}
-  commentServiceUrl: ${COMMENT_SERVICE_URL:http://localhost:8088}
-  attachmentServiceUrl: ${ATTACHMENT_SERVICE_URL:http://localhost:8089}
-  auditServiceUrl: ${AUDIT_SERVICE_URL:http://localhost:8090}
-
-# Resilience configuration
-resilience4j:
-  circuitbreaker:
-    configs:
-      default:
-        registerHealth: true
-        slidingWindowSize: 10
-        failureRateThreshold: 50
-        waitDurationInOpenState: 30s
-        permittedNumberOfCallsInHalfOpenState: 3
-        minimumNumberOfCalls: 5
-        automaticTransitionFromOpenToHalfOpenEnabled: true
-    instances:
-      issueService:
-        baseConfig: default
-      projectService:
-        baseConfig: default
-      userService:
-        baseConfig: default
-      workflowService:
-        baseConfig: default
-      searchService:
-        baseConfig: default
-      notificationService:
-        baseConfig: default
-      sprintService:
-        baseConfig: default
-      commentService:
-        baseConfig: default
-      attachmentService:
-        baseConfig: default
-      auditService:
-        baseConfig: default
-  retry:
-    configs:
-      default:
-        maxAttempts: 3
-        waitDuration: 1s
-        enableExponentialBackoff: true
-        exponentialBackoffMultiplier: 2
-        retryExceptions:
-          - java.io.IOException
-          - java.net.SocketTimeoutException
-          - org.springframework.web.client.ResourceAccessException
-    instances:
-      default:
-        baseConfig: default
-
-# WebSocket Configuration
-websocket:
-  enabled: true
-  endpoint: /ws/migration
-  allowed-origins: "*"
-  message-cache-size: 1000
-  heartbeat-interval-ms: 25000
-  max-connections-per-user: 10
-  rate-limit-per-second: 100
-
-# SSE (Server-Sent Events) Configuration
-sse:
-  timeout-ms: 60000
-  reconnect-delay-ms: 3000
-
-# Batch Processing Configuration
-batch:
-  default-size: 100
-  max-size: 500
-  chunk-size: 50
-  parallel-enabled: true
-  max-parallel-threads: 4
-  memory-cleanup-enabled: true
-  memory-cleanup-interval: 10
-  continue-on-batch-failure: true
-  max-failure-percentage: 50
-  progress-tracking-enabled: true
-  csv-buffer-size: 8192
-
-# Retry Configuration
-retry:
-  max-attempts: 3
-  initial-delay-ms: 1000
-  multiplier: 2.0
-  jitter: 0.3
-  max-delay-ms: 30000
-  transient-failures-only: true
-  statistics-enabled: true
-  retryable-exceptions:
-    - java.net.ConnectException
-    - java.net.SocketTimeoutException
-    - java.net.UnknownHostException
-    - org.springframework.dao.TransientDataAccessException
-    - org.hibernate.StaleObjectStateException
-    - org.springframework.orm.ObjectOptimisticLockingFailureException
-  non-retryable-exceptions:
-    - java.lang.IllegalArgumentException
-    - java.lang.NullPointerException
-    - org.springframework.dao.DataIntegrityViolationException
-
-# Dead Letter Queue Configuration
-dlq:
-  enabled: true
-  retention-days: 7
-  auto-retry: true
-  auto-retry-delay-hours: 24
-  max-auto-retry-attempts: 3
-  metrics-enabled: true
-  max-queue-size: 10000
-  email-notification-enabled: false
-  notification-emails:
-  retry-batch-size: 100
-  cleanup-enabled: true
-  cleanup-cron: "0 0 2 * * *"
-  auto-retry-check-interval-ms: 60000
-
-# Job Recovery Configuration
-job:
-  recovery:
-    enabled: true
-    cleanup-stale-after-hours: 24
-    check-interrupted-on-startup: true
-    force-complete-after-hours: 48
-    auto-recover: true
-    max-recoveries-per-run: 100
-    recover-failed-batches: true
-    cleanup-orphaned-resources: true
-    recovery-check-cron: "0 */15 * * * *"
-    cleanup-cron: "0 0 * * * *"
-    persist-recovery-status: true
-    orphan-cleanup-interval-ms: 3600000
-
-# Polling Fallback Configuration
-polling:
-  fallback-enabled: true
-  cache-ttl-minutes: 5
-  max-poll-interval-ms: 2000

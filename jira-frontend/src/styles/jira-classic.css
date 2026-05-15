@@ -1129,3 +1129,262 @@
 .ab-type-story { color: #0052cc; }
 .ab-type-task { color: #6b778c; }
 .ab-type-epic { color: #6554c0; }
+
+/* ============================================================
+   APP SHELL (AppLayout + page content)
+   ============================================================ */
+.ab-app-shell .ab-main-content.ab-app-main {
+  margin-left: 0;
+  padding: 0;
+}
+
+.ab-app-page {
+  padding: 20px 24px 32px;
+  min-height: 100%;
+}
+
+.ab-app-sidebar .ab-sidebar-project-header {
+  min-height: 56px;
+}
+
+.ab-app-sidebar-subtitle {
+  display: block;
+  font-size: 11px;
+  color: #6b778c;
+  margin-top: 2px;
+}
+
+.ab-app-sidebar-collapsed {
+  width: 52px;
+}
+
+.ab-app-sidebar-collapsed .ab-sidebar-project-header,
+.ab-app-sidebar-collapsed .ab-sidebar-footer {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.ab-app-sidebar-collapsed .ab-project-title,
+.ab-app-sidebar-collapsed .ab-sidebar-section-label,
+.ab-app-sidebar-collapsed .ab-system-status-inline {
+  display: none;
+}
+
+.ab-app-sidebar-collapsed .ab-sidebar-nav-item {
+  justify-content: center;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.ab-sidebar-section-spaced {
+  margin-top: 12px;
+}
+
+.ab-nav-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #97a0af;
+  display: inline-block;
+}
+
+.ab-sidebar-nav-item.active .ab-nav-dot {
+  background: #0052cc;
+}
+
+.ab-system-status-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #6b778c;
+  flex: 1;
+  min-width: 0;
+}
+
+.ab-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #36b37e;
+  flex-shrink: 0;
+}
+
+.ab-jira-logo-btn.ab-topnav-left {
+  width: 240px;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Page headers & breadcrumbs */
+.ab-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+
+.ab-page-title {
+  font-size: 24px;
+  font-weight: 500;
+  color: #172b4d;
+  margin: 0 0 4px;
+  letter-spacing: -0.2px;
+}
+
+.ab-page-subtitle {
+  font-size: 14px;
+  color: #6b778c;
+  margin: 0;
+}
+
+.ab-breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 12px;
+  color: #6b778c;
+  margin-bottom: 12px;
+}
+
+.ab-breadcrumbs a {
+  color: #0052cc;
+  text-decoration: none;
+}
+
+.ab-breadcrumbs a:hover {
+  text-decoration: underline;
+}
+
+.ab-breadcrumb-sep {
+  color: #97a0af;
+  margin: 0 2px;
+}
+
+/* Issue list table (Jira DC) */
+.ab-jira-root .ab-card {
+  background: #fff;
+  border: 1px solid #dfe1e6;
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.ab-jira-root .ab-table th {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #6b778c;
+  background: #f4f5f7;
+  border-bottom: 1px solid #dfe1e6;
+}
+
+.ab-jira-root .ab-table td {
+  padding: 8px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid #ebecf0;
+  color: #172b4d;
+  vertical-align: middle;
+}
+
+.ab-jira-root .ab-table tbody tr:hover {
+  background: #f4f5f7;
+}
+
+.ab-jira-root .ab-table tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+
+.ab-jira-root .ab-table tbody tr:nth-child(even):hover {
+  background: #f4f5f7;
+}
+
+.ab-issue-key-link {
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  font-size: 12px;
+  color: #0052cc;
+  font-weight: 500;
+}
+
+.ab-issue-key-link:hover {
+  text-decoration: underline;
+}
+
+.ab-issue-summary {
+  color: #172b4d;
+}
+
+.ab-jira-root .ab-badge {
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 2px 6px;
+}
+
+.ab-jira-root .ab-badge-primary {
+  background: #deebff;
+  color: #0052cc;
+}
+
+.ab-jira-root .ab-badge-success {
+  background: #e3fcef;
+  color: #006644;
+}
+
+.ab-jira-root .ab-btn-primary {
+  background: #0052cc;
+  border-radius: 3px;
+  font-size: 14px;
+}
+
+.ab-jira-root .ab-btn-primary:hover:not(:disabled) {
+  background: #0043a6;
+}
+
+.ab-jira-root .ab-btn-secondary {
+  background: #f4f5f7;
+  border: 1px solid #dfe1e6;
+  border-radius: 3px;
+  color: #42526e;
+}
+
+.ab-jira-root .ab-tab {
+  border-radius: 3px 3px 0 0;
+  color: #42526e;
+  margin-bottom: 0;
+}
+
+.ab-jira-root .ab-tab.active {
+  color: #0052cc;
+  border-bottom-color: #0052cc;
+  background: transparent;
+}
+
+.ab-jira-root .priority-highest,
+.ab-jira-root .priority-critical { color: #de350b; font-weight: 600; }
+.ab-jira-root .priority-high { color: #ff5630; font-weight: 600; }
+.ab-jira-root .priority-medium { color: #ff8b00; }
+.ab-jira-root .priority-low { color: #36b37e; }
+.ab-jira-root .priority-lowest { color: #6b778c; }
+
+/* Embedded issue detail (inside AppLayout) */
+.idc-issue-view {
+  background: #f4f5f7;
+  min-height: 100%;
+  padding: 0 0 24px;
+}
+
+.idc-issue-view .idc-breadcrumb {
+  padding: 12px 0 0;
+}
+
+.idc-issue-view .idc-content,
+.idc-issue-view .idc-issue-header,
+.idc-issue-view .idc-issue-body {
+  max-width: none;
+}

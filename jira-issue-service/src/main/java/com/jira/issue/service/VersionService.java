@@ -7,11 +7,12 @@ import com.jira.issue.entity.ProjectVersion;
 import com.jira.issue.exception.DuplicateResourceException;
 import com.jira.issue.exception.ResourceNotFoundException;
 import com.jira.issue.repository.ProjectVersionRepository;
-import com.jira.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,14 +25,18 @@ import java.util.stream.Collectors;
 public class VersionService {
 
     private final ProjectVersionRepository versionRepository;
-    private final ProjectRepository projectRepository;
+
+    @Value("${project.service.url}")
+    private String projectServiceUrl;
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Transactional
     public VersionResponse createVersion(CreateVersionRequest request, UUID currentUserId) {
         log.info("Creating version '{}' for project: {}", request.getName(), request.getProjectId());
 
-        // Verify project exists
-        if (!projectRepository.existsById(request.getProjectId())) {
+        // Verify project exists via REST
+        if (!projectExists(request.getProjectId())) {
             throw new ResourceNotFoundException("Project", "id", request.getProjectId());
         }
 
@@ -228,5 +233,16 @@ public class VersionService {
                 .createdAt(version.getCreatedAt())
                 .updatedAt(version.getUpdatedAt())
                 .build();
+    }
+
+    private boolean projectExists(UUID projectId) {
+        try {
+            String url = String.format("%s/api/projects/%s", projectServiceUrl, projectId);
+            restTemplate.getForEntity(url, Object.class);
+            return true;
+        } catch (Exception e) {
+            log.warn("Project check failed for {}: {}", projectId, e.getMessage());
+            return false;
+        }
     }
 }

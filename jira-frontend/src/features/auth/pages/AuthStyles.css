@@ -2,13 +2,13 @@
 
 /* CSS Variables */
 :root {
-  --ab-primary: #006EBC;
-  --ab-primary-dark: #005899;
+  --ab-primary: #0052cc;
+  --ab-primary-dark: #0043a6;
   --ab-secondary: #7A7E85;
   --ab-success: #008500;
   --ab-warning: #FF8C00;
   --ab-error: #D40000;
-  --ab-background: #F5F5F5;
+  --ab-background: #f4f5f7;
   --ab-surface: #FFFFFF;
   --ab-text: #1F2328;
   --ab-text-secondary: #5C6370;

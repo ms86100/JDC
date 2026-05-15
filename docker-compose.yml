@@ -13,7 +13,7 @@ services:
     environment:
       POSTGRES_USER: jiraadmin
       POSTGRES_PASSWORD: jirapass123
-      POSTGRES_MULTIPLE_DATABASES: auth_db,user_db,project_db,issue_db,workflow_db,comment_db,notification_db,search_db,audit_db,attachment_db,sprint_db,plan_db,migration_db
+      POSTGRES_MULTIPLE_DATABASES: jira_platform
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init/init-schemas.sql:/docker-entrypoint-initdb.d/init-schemas.sql
@@ -70,7 +70,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: auth_db
+      DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: jirapass123
       JAVA_OPTS: -Xms256m -Xmx512m

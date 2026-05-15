@@ -10,6 +10,7 @@ import './IssueDetailPage.css';
 type TabType = 'details' | 'people' | 'activity' | 'comment' | 'work';
 
 interface FullIssueResponse extends IssueResponse {
+  projectName?: string;
   epicId?: string;
   epicName?: string;
   storyPoints?: number;
@@ -31,7 +32,6 @@ export default function IssueDetailPage() {
   const { issueId } = useParams<{ issueId: string }>();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>('details');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showTransitionMenu, setShowTransitionMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -66,7 +66,7 @@ export default function IssueDetailPage() {
 
   const { data: statuses } = useQuery({
     queryKey: ['statuses'],
-    fn: async () => {
+    queryFn: async () => {
       const response = await issueApi.getStatuses();
       return response.data;
     },
@@ -188,74 +188,22 @@ export default function IssueDetailPage() {
   const statusStyle = getStatusStyle(issue.status || '');
 
   return (
-    <div className="idc-layout">
-      {/* Global Nav */}
-      <header className="idc-global-nav">
-        <div className="idc-nav-left">
-          <span className="idc-nav-logo">
-            <span className="idc-logo-icon">◇</span>
-            <span className="idc-logo-text">Jira Software</span>
-          </span>
-          <nav className="idc-nav-items">
-            <a href="#" className="idc-nav-item">Dashboards</a>
-            <a href="#" className="idc-nav-item">Projects</a>
-            <a href="#" className="idc-nav-item idc-nav-item-active">Issues</a>
-            <a href="#" className="idc-nav-item">Plans</a>
-            <button className="idc-nav-item idc-nav-create">Create</button>
-          </nav>
-        </div>
-        <div className="idc-nav-right">
-          <div className="idc-nav-search">
-            <span className="idc-search-icon">🔍</span>
-            <input type="text" className="idc-search-input" placeholder="Search" />
-          </div>
-          <button className="idc-nav-icon" title="Feedback">✉</button>
-          <button className="idc-nav-icon" title="Help">?</button>
-          <button className="idc-nav-icon" title="Settings">⚙</button>
-          <div className="idc-nav-avatar" title="Sagar Sharma (ms86100)">SS</div>
-        </div>
-      </header>
-
-      {/* ========== BODY ========== */}
-      <div className="idc-body">
-        {/* Sidebar */}
-        <aside className={`idc-sidebar ${sidebarCollapsed ? 'idc-sidebar-collapsed' : ''}`}>
-          <div className="idc-sidebar-header">
-            <span className="idc-project-name">{issue.projectName || 'ProjectA'}</span>
-            <button
-              className="idc-sidebar-toggle"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              title={sidebarCollapsed ? 'Expand' : 'Collapse'}
-            >
-              {sidebarCollapsed ? '»' : '«'}
-            </button>
-          </div>
-          <nav className="idc-sidebar-nav">
-            <a href="#" className="idc-sidebar-link idc-sidebar-active">
-              <span className="idc-sidebar-icon">📁</span>
-              {!sidebarCollapsed && <span>Issues</span>}
-            </a>
-            <a href="#" className="idc-sidebar-link">
-              <span className="idc-sidebar-icon">📊</span>
-              {!sidebarCollapsed && <span>Reports</span>}
-            </a>
-            <a href="#" className="idc-sidebar-link">
-              <span className="idc-sidebar-icon">🔧</span>
-              {!sidebarCollapsed && <span>Components</span>}
-            </a>
-          </nav>
-        </aside>
-
-        {/* Content */}
-        <main className="idc-content">
-          {/* Breadcrumb */}
-          <div className="idc-breadcrumb">
-            <a href="#" className="idc-breadcrumb-project">{issue.projectName || 'ProjectA'}</a>
+    <div className="idc-issue-view">
+      <div className="idc-breadcrumb">
+        <Link to="/issues" className="idc-breadcrumb-project">Issues</Link>
+        <span className="idc-breadcrumb-sep">/</span>
+        {issue.projectId && (
+          <>
+            <Link to={`/projects/${issue.projectId}`} className="idc-breadcrumb-project">
+              {issue.projectName || 'Project'}
+            </Link>
             <span className="idc-breadcrumb-sep">/</span>
-            <span className="idc-breadcrumb-key">{issue.issueKey}</span>
-          </div>
+          </>
+        )}
+        <span className="idc-breadcrumb-key">{issue.issueKey}</span>
+      </div>
 
-          {/* Issue Header */}
+      {/* Issue Header */}
           <div className="idc-issue-header">
             <div className="idc-issue-header-top">
               {/* Type + Status */}
@@ -903,9 +851,6 @@ export default function IssueDetailPage() {
               </div>
             </div>
           </div>
-
-                  </main>
-      </div>
 
       {/* Edit Modal */}
       {showEditModal && (
