@@ -18,7 +18,7 @@ public interface SearchIndexRepository extends JpaRepository<SearchIndex, UUID> 
     Optional<SearchIndex> findByEntityTypeAndEntityId(String entityType, UUID entityId);
 
     @Modifying
-    @Query("DELETE FROM jira_search.search_index s WHERE s.entityType = :entityType AND s.entityId = :entityId")
+    @Query("DELETE FROM SearchIndex s WHERE s.entityType = :entityType AND s.entityId = :entityId")
     int deleteByEntityTypeAndEntityId(@Param("entityType") String entityType, @Param("entityId") UUID entityId);
 
     @Query(value = "SELECT s.*, ts_rank(s.search_vector, to_tsquery('english', :query)) AS rank " +

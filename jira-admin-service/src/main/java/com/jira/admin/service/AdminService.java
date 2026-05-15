@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -23,133 +22,7 @@ public class AdminService {
     private final AppearanceRepository appearanceRepository;
     private final LicenseRepository licenseRepository;
 
-    @PostConstruct
-    public void init() {
-        initializeDefaults();
-    }
-
-    private void initializeDefaults() {
-        // Initialize default settings
-        if (settingsRepository.count() == 0) {
-            List<SystemSettingsEntity> defaults = Arrays.asList(
-                createSetting("application.title", "Jira Clone", "Application Title", "general", "string", false),
-                createSetting("application.baseUrl", "http://localhost:3000", "Base URL", "general", "string", false),
-                createSetting("application.adminEmail", "admin@example.com", "Admin Email", "general", "string", true),
-                createSetting("application.dateFormat", "MMM dd, yyyy", "Date Format", "general", "string", false),
-                createSetting("application.timeZone", "UTC", "Time Zone", "general", "string", false),
-                createSetting("security.allowSignUp", "true", "Allow User Registration", "security", "boolean", false),
-                createSetting("security.requireEmailVerification", "false", "Require Email Verification", "security", "boolean", false),
-                createSetting("security.enableTwoFactor", "false", "Enable 2FA", "security", "boolean", false),
-                createSetting("security.passwordMinLength", "8", "Minimum Password Length", "security", "number", false),
-                createSetting("security.sessionTimeout", "30", "Session Timeout (minutes)", "security", "number", false),
-                createSetting("email.enabled", "true", "Enable Email", "email", "boolean", false),
-                createSetting("email.smtpHost", "smtp.example.com", "SMTP Host", "email", "string", true),
-                createSetting("email.smtpPort", "587", "SMTP Port", "email", "number", false),
-                createSetting("email.smtpUsername", "", "SMTP Username", "email", "string", true),
-                createSetting("email.smtpPassword", "", "SMTP Password", "email", "password", true),
-                createSetting("email.from", "noreply@example.com", "From Address", "email", "string", true),
-                createSetting("email.ssl", "true", "Use SSL/TLS", "email", "boolean", false),
-                createSetting("attachments.maxSize", "10485760", "Max Attachment Size (bytes)", "attachments", "number", false),
-                createSetting("attachments.allowedTypes", "jpg,png,pdf,doc,docx,xls,xlsx", "Allowed File Types", "attachments", "string", false),
-                createSetting("api.enabled", "true", "Enable API", "api", "boolean", false),
-                createSetting("api.rateLimit", "1000", "API Rate Limit (per hour)", "api", "number", false),
-                createSetting("logging.level", "INFO", "Log Level", "logging", "string", false),
-                createSetting("logging.audit", "true", "Enable Audit Logging", "logging", "boolean", false)
-            );
-            settingsRepository.saveAll(defaults);
-        }
-
-        // Initialize default appearance
-        if (appearanceRepository.count() == 0) {
-            AppearanceEntity appearance = AppearanceEntity.builder()
-                    .logoUrl("/assets/logo.png")
-                    .faviconUrl("/assets/favicon.ico")
-                    .appName("Jira Clone")
-                    .loginPageMessage("Welcome to Jira Clone")
-                    .footerMessage("Powered by Jira Clone Platform")
-                    .theme("light")
-                    .themeConfig("{\"primaryColor\":\"#0052CC\",\"secondaryColor\":\"#6C757D\",\"accentColor\":\"#00B8D9\"}")
-                    .colorScheme("default")
-                    .fonts("{\"primaryFont\":\"Inter\",\"monospaceFont\":\"JetBrains Mono\",\"baseFontSize\":\"14px\"}")
-                    .useSystemFont(false)
-                    .build();
-            appearanceRepository.save(appearance);
-        }
-
-        // Initialize default license
-        if (licenseRepository.count() == 0) {
-            LicenseEntity license = LicenseEntity.builder()
-                    .licenseType("Standard")
-                    .maxUsers(100)
-                    .maxProjects(50)
-                    .purchaseDate(LocalDateTime.now().minusYears(1))
-                    .expiryDate(LocalDateTime.now().plusMonths(6))
-                    .supportEntitlement("Standard Support")
-                    .build();
-            licenseRepository.save(license);
-        }
-
-        // Initialize sample users if none exist
-        if (userRepository.count() == 0) {
-            for (int i = 1; i <= 5; i++) {
-                UserEntity user = UserEntity.builder()
-                        .username("user" + i)
-                        .email("user" + i + "@example.com")
-                        .displayName("User " + i)
-                        .passwordHash("$2a$10$dummy") // Placeholder
-                        .status(UserEntity.UserStatus.ACTIVE)
-                        .role(i == 1 ? "ADMIN" : "USER")
-                        .emailVerified(true)
-                        .timezone("UTC")
-                        .language("en-US")
-                        .lastLogin(LocalDateTime.now().minusHours(i * 2))
-                        .build();
-                userRepository.save(user);
-            }
-        }
-
-        // Initialize sample projects if none exist
-        if (projectRepository.count() == 0) {
-            String[] names = {"Project Alpha", "Project Beta", "Project Gamma"};
-            String[] keys = {"ALPHA", "BETA", "GAMMA"};
-            for (int i = 0; i < 3; i++) {
-                ProjectEntity project = ProjectEntity.builder()
-                        .projectKey(keys[i])
-                        .name(names[i])
-                        .description("Description for " + names[i])
-                        .type(ProjectEntity.ProjectType.SOFTWARE)
-                        .status(ProjectEntity.ProjectStatus.ACTIVE)
-                        .leadUserId(userRepository.findAll().get(0).getId())
-                        .defaultAssignee("unassigned")
-                        .defaultPriority("Medium")
-                        .defaultIssueType("Task")
-                        .allowSubTasks(true)
-                        .allowAttachments(true)
-                        .allowComments(true)
-                        .maxAttachments(10)
-                        .workflowScheme("Default Workflow")
-                        .issueTypeScheme("Default Issue Type Scheme")
-                        .fieldConfigurationScheme("Default Field Configuration")
-                        .projectLevel("PROJECT")
-                        .enableNotifications(true)
-                        .notificationEvents("issue_created,issue_assigned,comment_added")
-                        .build();
-                projectRepository.save(project);
-            }
-        }
-    }
-
-    private SystemSettingsEntity createSetting(String key, String value, String description, String category, String dataType, boolean sensitive) {
-        return SystemSettingsEntity.builder()
-                .settingKey(key)
-                .settingValue(value)
-                .description(description)
-                .category(category)
-                .dataType(dataType)
-                .isSensitive(sensitive)
-                .isSystem(false)
-                .build();
-    }
+    // Note: initializeDefaults() removed - seed data is handled by consolidated-migration
 
     // ==================== System Settings ====================
 

@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "appearance")
+@Table(name = "appearance_settings")
 @Data
 @Builder
 @NoArgsConstructor
