@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import './WorkflowsPage.css';
 
-const API_BASE = '/api/admin/workflows';
+const API_BASE = '/api/workflows';
 
 interface WorkflowScheme {
   id: string;

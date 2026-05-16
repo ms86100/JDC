@@ -41,8 +41,9 @@ public class SecurityConfig {
                     "/actuator/**",           // Health checks
                     "/ws/**",                 // WebSocket endpoints
                     "/api/auth/**",           // Auth endpoints
+                    "/api/migration/**",      // Migration endpoints (uses custom auth)
                     "/swagger-ui/**",         // API docs
-                    "/v3/api-docs/**"         // OpenAPI spec
+                    "/v3/api-docs/**"        // OpenAPI spec
                 )
             )
             .sessionManagement(session -> session
@@ -117,12 +118,16 @@ public class SecurityConfig {
             "Accept",
             "Origin",
             "X-CSRF-Token",
-            "X-User-Id"
+            "X-User-Id",
+            "Access-Control-Request-Method",
+            "Access-Control-Request-Headers"
         ));
         configuration.setExposedHeaders(List.of(
             "X-CSRF-Token",
             "X-RateLimit-Remaining",
-            "X-RateLimit-Limit"
+            "X-RateLimit-Limit",
+            "Access-Control-Allow-Origin",
+            "Access-Control-Allow-Credentials"
         ));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

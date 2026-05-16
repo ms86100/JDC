@@ -52,14 +52,27 @@ public class RateLimitingFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
+        // Skip CORS preflight requests - add headers and return early
+        if ("OPTIONS".equalsIgnoreCase(httpRequest.getMethod())) {
+            httpResponse.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+            httpResponse.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+            httpResponse.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, Accept, Origin, X-CSRF-Token, X-User-Id, Access-Control-Request-Method, Access-Control-Request-Headers");
+            httpResponse.setHeader("Access-Control-Allow-Credentials", "true");
+            httpResponse.setHeader("Access-Control-Max-Age", "3600");
+            httpResponse.setStatus(HttpStatus.NO_CONTENT.value());
+            return;
+        }
+
         if (!enabled) {
+            addCorsHeaders(httpResponse);
             chain.doFilter(request, response);
             return;
         }
 
-        // Skip rate limiting for health endpoints
+        // Skip rate limiting for health endpoints and WebSocket, but still add CORS headers
         String path = httpRequest.getRequestURI();
         if (path.startsWith("/actuator") || path.startsWith("/ws")) {
+            addCorsHeaders(httpResponse);
             chain.doFilter(request, response);
             return;
         }
@@ -83,6 +96,9 @@ public class RateLimitingFilter implements Filter {
             return;
         }
 
+        // Add CORS and rate limit headers
+        addCorsHeaders(httpResponse);
+
         // Add rate limit headers
         httpResponse.setHeader("X-RateLimit-Remaining", String.valueOf(bucket.getAvailableTokens()));
         httpResponse.setHeader("X-RateLimit-Limit", String.valueOf(requestsPerSecond));
@@ -99,8 +115,17 @@ public class RateLimitingFilter implements Filter {
         return request.getRemoteAddr();
     }
 
+    private void addCorsHeaders(HttpServletResponse response) {
+        response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+        response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, Accept, Origin, X-CSRF-Token, X-User-Id, Access-Control-Request-Method, Access-Control-Request-Headers");
+        response.setHeader("Access-Control-Allow-Credentials", "true");
+        response.setHeader("Access-Control-Max-Age", "3600");
+    }
+
     private void sendRateLimitResponse(HttpServletResponse response, String message, int retryAfter)
             throws IOException {
+        addCorsHeaders(response);
         response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
         response.setContentType("application/json");
         response.setHeader("Retry-After", String.valueOf(retryAfter));

@@ -260,7 +260,7 @@ public class SprintSnapshotService {
     private BigDecimal getIssuePoints(SprintIssue issue) {
         // Try to get points from plan item first
         if (issue.getPlanItem() != null && issue.getPlanItem().getStoryPoints() != null) {
-            return issue.getPlanItem().getStoryPoints();
+            return BigDecimal.valueOf(issue.getPlanItem().getStoryPoints());
         }
 
         // Points from story points field

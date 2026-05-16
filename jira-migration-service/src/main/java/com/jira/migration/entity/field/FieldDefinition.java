@@ -75,6 +75,10 @@ public class FieldDefinition {
     @Builder.Default
     private Boolean readOnly = false;
 
+    @Column(name = "navigable")
+    @Builder.Default
+    private Boolean navigable = true;
+
     @Column(name = "hidden")
     @Builder.Default
     private Boolean hidden = false;

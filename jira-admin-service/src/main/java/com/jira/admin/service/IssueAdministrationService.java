@@ -400,7 +400,6 @@ public class IssueAdministrationService {
         NotificationSchemeEntity scheme = NotificationSchemeEntity.builder()
                 .name((String) data.get("name"))
                 .description((String) data.getOrDefault("description", ""))
-                .events("[]")
                 .isDefault(false)
                 .build();
 

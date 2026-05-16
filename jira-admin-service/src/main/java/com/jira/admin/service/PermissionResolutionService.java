@@ -240,9 +240,17 @@ public class PermissionResolutionService {
 
     private Optional<PermissionSchemeEntity> getProjectPermissionScheme(String projectId) {
         // Get project to find its permission scheme
-        return projectRepository.findById(projectId)
-                .map(project -> permissionSchemeRepository.findById(project.getPermissionSchemeId())
-                        .or(() -> permissionSchemeRepository.findByIsDefaultTrue()));
+        Optional<ProjectEntity> project = projectRepository.findById(projectId);
+        if (project.isEmpty()) {
+            return permissionSchemeRepository.findByIsDefaultTrue();
+        }
+
+        String schemeId = project.get().getPermissionSchemeId();
+        if (schemeId == null) {
+            return permissionSchemeRepository.findByIsDefaultTrue();
+        }
+
+        return permissionSchemeRepository.findById(schemeId);
     }
 
     private List<String> collectHolderIds(String userId) {
