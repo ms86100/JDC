@@ -93,6 +93,7 @@ public class PluginFieldRegistry {
     public enum FieldType {
         TEXT,
         NUMBER,
+        FLOAT,
         DATE,
         DATETIME,
         SELECT,

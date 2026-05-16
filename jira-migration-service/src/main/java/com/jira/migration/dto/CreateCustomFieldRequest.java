@@ -12,6 +12,8 @@ public class CreateCustomFieldRequest {
     private String description;
     private String type;
     private String searcherKey;
+    private String rendererKey;
+    private Boolean navigable;
     private Map<String, Object> config;
     private Map<String, Object> defaultValues;
     private List<Map<String, Object>> options;

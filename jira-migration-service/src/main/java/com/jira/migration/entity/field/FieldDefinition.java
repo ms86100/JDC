@@ -158,6 +158,8 @@ public class FieldDefinition {
         SECURITY_LEVEL,
         URL,
         EMAIL,
+        FLOAT,
+        STORY_POINTS,
         CURRENCY,
         DURATION,
         SPRINT,

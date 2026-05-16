@@ -31,6 +31,13 @@ public class WorkflowController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @GetMapping
+    @Operation(summary = "List all workflows", description = "Returns all available workflows")
+    public ResponseEntity<List<WorkflowResponse>> listWorkflows() {
+        List<WorkflowResponse> workflows = workflowService.listAllWorkflows();
+        return ResponseEntity.ok(workflows);
+    }
+
     @GetMapping("/project/{projectId}")
     @Operation(summary = "Get project workflows", description = "Returns all workflows for a project")
     public ResponseEntity<List<WorkflowResponse>> getWorkflowsForProject(

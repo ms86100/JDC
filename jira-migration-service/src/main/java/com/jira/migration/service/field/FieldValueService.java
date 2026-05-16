@@ -246,7 +246,9 @@ public class FieldValueService {
             case MULTI_SELECT, LABEL, USER, GROUP -> {
                 try {
                     List<?> list = parseAsList(value);
-                    fieldValue.setArrayValue(list.stream().map(Object::toString).toList());
+                    @SuppressWarnings("unchecked")
+                    List<Object> objList = new java.util.ArrayList<>(list);
+                    fieldValue.setArrayValue(objList.stream().map(Object::toString).toList());
                     fieldValue.setFormattedValue(formatMultiSelectValue(list, fieldDef));
                 } catch (Exception e) {
                     fieldValue.setStringValue(value != null ? value.toString() : null);

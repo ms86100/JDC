@@ -56,8 +56,8 @@ public class MigrationFieldController {
             @RequestBody FieldMapping fieldMapping,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
 
-        log.info("Creating field mapping: source={}, target={}",
-                fieldMapping.getSourceField(), fieldMapping.getTargetField());
+        log.info("Creating field mapping: name={}, type={}",
+                fieldMapping.getMappingName(), fieldMapping.getMappingType());
 
         if (userId != null) {
             fieldMapping.setCreatedBy(userId);

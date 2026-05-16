@@ -35,10 +35,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Allow health checks and swagger
                 .requestMatchers("/actuator/**", "/api-docs/**", "/swagger-ui/**").permitAll()
+                // Workflow endpoints - allow without auth for development
+                .requestMatchers("/api/workflows/**").permitAll()
                 // Admin endpoints require ADMIN role
                 .requestMatchers("/api/admin/**").hasAnyRole("USER", "ADMIN")
-                // Workflow execution endpoints require USER role
-                .requestMatchers("/api/workflows/**").hasAnyRole("USER", "ADMIN")
                 // All other requests require authentication
                 .anyRequest().authenticated()
             )

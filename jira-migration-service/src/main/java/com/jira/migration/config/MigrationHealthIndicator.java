@@ -1,5 +1,6 @@
 package com.jira.migration.config;
 
+import com.jira.migration.entity.EntityStatus;
 import com.jira.migration.entity.MigrationJob;
 import com.jira.migration.repository.DlqEntryRepository;
 import com.jira.migration.repository.EntityStatusRepository;
@@ -11,6 +12,7 @@ import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**

@@ -80,6 +80,14 @@ public class WorkflowService {
     }
 
     @Transactional(readOnly = true)
+    public List<WorkflowResponse> listAllWorkflows() {
+        log.debug("Listing all workflows");
+        return workflowRepository.findAll().stream()
+                .map(this::mapToWorkflowResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public WorkflowResponse getWorkflow(UUID workflowId) {
         Workflow workflow = workflowRepository.findById(workflowId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workflow", "id", workflowId));
