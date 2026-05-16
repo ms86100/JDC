@@ -14,6 +14,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -156,34 +157,44 @@ public class EpicService {
     public void recalculateEpicProgress(String epicId) {
         List<String> issueIds = epicIssueRepository.findIssueIdsByEpicId(epicId);
 
-        BigDecimal totalPoints = BigDecimal.ZERO;
-        BigDecimal completedPoints = BigDecimal.ZERO;
+        AtomicReference<BigDecimal> totalPoints = new AtomicReference<>(BigDecimal.ZERO);
+        AtomicReference<BigDecimal> completedPoints = new AtomicReference<>(BigDecimal.ZERO);
         int totalIssues = issueIds.size();
-        int completedIssues = 0;
+        AtomicReference<Integer> completedIssues = new AtomicReference<>(0);
 
         for (String issueId : issueIds) {
-            issueRepository.findById(issueId).ifPresent(issue -> {
-                if (issue.getStoryPoints() != null) {
-                    totalPoints = totalPoints.add(issue.getStoryPoints());
-                }
-            });
+            try {
+                UUID issueUuid = UUID.fromString(issueId);
+                issueRepository.findById(issueUuid).ifPresent(issue -> {
+                    if (issue.getStoryPoints() != null) {
+                        totalPoints.updateAndGet(v -> v.add(BigDecimal.valueOf(issue.getStoryPoints())));
+                    }
+                });
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid issue ID format: {}", issueId);
+            }
         }
 
         // Count completed issues (status containing "done", "closed", "complete")
         for (String issueId : issueIds) {
-            issueRepository.findById(issueId).ifPresent(issue -> {
-                String statusName = issue.getStatus() != null ? issue.getStatus().getStatusName().toLowerCase() : "";
-                if (statusName.contains("done") || statusName.contains("closed") || statusName.contains("complete")) {
-                    completedIssues++;
-                    if (issue.getStoryPoints() != null) {
-                        completedPoints = completedPoints.add(issue.getStoryPoints());
+            try {
+                UUID issueUuid = UUID.fromString(issueId);
+                issueRepository.findById(issueUuid).ifPresent(issue -> {
+                    String statusName = issue.getStatus() != null ? issue.getStatus().getName().toLowerCase() : "";
+                    if (statusName.contains("done") || statusName.contains("closed") || statusName.contains("complete")) {
+                        completedIssues.updateAndGet(v -> v + 1);
+                        if (issue.getStoryPoints() != null) {
+                            completedPoints.updateAndGet(v -> v.add(BigDecimal.valueOf(issue.getStoryPoints())));
+                        }
                     }
-                }
-            });
+                });
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid issue ID format: {}", issueId);
+            }
         }
 
-        epicRepository.updateProgress(epicId, totalPoints, completedPoints, totalIssues, completedIssues);
-        log.debug("Recalculated epic {} progress: {} total points, {} completed", epicId, totalPoints, completedPoints);
+        epicRepository.updateProgress(epicId, totalPoints.get(), completedPoints.get(), totalIssues, completedIssues.get());
+        log.debug("Recalculated epic {} progress: {} total points, {} completed", epicId, totalPoints.get(), completedPoints.get());
     }
 
     @Transactional

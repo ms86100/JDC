@@ -9,6 +9,8 @@ import com.jira.comment.exception.ResourceNotFoundException;
 import com.jira.comment.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +44,7 @@ public class CommentService {
                 .parentComment(parentComment)
                 .content(request.getContent())
                 .deleted(false)
+                .internal(request.getInternal() != null ? request.getInternal() : false)
                 .build();
 
         comment = commentRepository.save(comment);
@@ -106,6 +109,9 @@ public class CommentService {
         }
 
         comment.setContent(request.getContent());
+        if (request.getInternal() != null) {
+            comment.setInternal(request.getInternal());
+        }
         comment = commentRepository.save(comment);
         log.info("Updated comment: {}", commentId);
 
@@ -132,6 +138,23 @@ public class CommentService {
         log.info("Soft deleted comment: {}", commentId);
     }
 
+    @Transactional(readOnly = true)
+    public Page<CommentResponse> getCommentsByIssueIdPaginated(UUID issueId, Pageable pageable) {
+        log.debug("Fetching paginated comments for issue: {}", issueId);
+        Page<Comment> commentPage = commentRepository.findByIssueIdAndDeletedFalse(issueId, pageable);
+        return commentPage.map(this::mapToResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<CommentResponse> getCommentsByIssueIdPaginated(UUID issueId, Pageable pageable, Boolean internal) {
+        log.debug("Fetching paginated comments for issue: {} with internal filter: {}", issueId, internal);
+        if (internal != null) {
+            Page<Comment> filteredComments = commentRepository.findRootCommentsByIssueId(issueId, pageable);
+            return filteredComments.map(this::mapToResponse);
+        }
+        return getCommentsByIssueIdPaginated(issueId, pageable);
+    }
+
     private CommentResponse mapToResponse(Comment comment) {
         return CommentResponse.builder()
                 .id(comment.getId())
@@ -142,6 +165,7 @@ public class CommentService {
                 .version(comment.getVersion())
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
+                .internal(comment.getInternal())
                 .replies(new ArrayList<>())
                 .build();
     }

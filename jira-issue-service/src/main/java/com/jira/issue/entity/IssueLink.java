@@ -25,8 +25,8 @@ public class IssueLink {
     @Column(name = "source_issue_id", nullable = false)
     private UUID sourceIssueId;
 
-    @Column(name = "destination_issue_id", nullable = false)
-    private UUID destinationIssueId;
+    @Column(name = "target_issue_id", nullable = false)
+    private UUID targetIssueId;
 
     @Column(name = "sequence", nullable = true)
     private Integer sequence;

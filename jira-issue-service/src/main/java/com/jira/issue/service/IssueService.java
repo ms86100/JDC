@@ -3,6 +3,7 @@ package com.jira.issue.service;
 import com.jira.issue.dto.*;
 import com.jira.issue.entity.*;
 import com.jira.issue.exception.InvalidTransitionException;
+import com.jira.issue.exception.OptimisticLockException;
 import com.jira.issue.exception.ResourceNotFoundException;
 import com.jira.issue.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class IssueService {
     private final VoteRepository voteRepository;
     private final WatcherRepository watcherRepository;
     private final IssueLinkRepository issueLinkRepository;
+    private final IssueLinkTypeRepository issueLinkTypeRepository;
 
     @Value("${workflow.service.url}")
     private String workflowServiceUrl;
@@ -361,19 +363,26 @@ public class IssueService {
         // Load linked issues
         List<IssueLink> links = issueLinkRepository.findBySourceIssueId(issue.getId());
         if (!links.isEmpty()) {
-            // Batch load all destination issues to avoid N+1
+            // Batch load all destination issues and link types to avoid N+1
             Set<UUID> destinationIds = links.stream()
                     .map(IssueLink::getDestinationIssueId)
                     .collect(Collectors.toSet());
             Map<UUID, Issue> issuesById = issueRepository.findAllById(destinationIds).stream()
                     .collect(Collectors.toMap(Issue::getId, i -> i));
 
+            Set<UUID> linkTypeIds = links.stream()
+                    .map(IssueLink::getLinkTypeId)
+                    .collect(Collectors.toSet());
+            Map<UUID, String> linkTypeNames = issueLinkTypeRepository.findAllById(linkTypeIds).stream()
+                    .collect(Collectors.toMap(IssueLinkType::getId, IssueLinkType::getName));
+
             List<IssueResponse.LinkedIssueInfo> linkedIssues = links.stream()
                     .map(link -> {
                         Issue linkedIssue = issuesById.get(link.getDestinationIssueId());
                         if (linkedIssue == null) return null;
+                        String linkTypeName = linkTypeNames.getOrDefault(link.getLinkTypeId(), "Related");
                         return IssueResponse.LinkedIssueInfo.builder()
-                                .linkType(link.getLinkType() != null ? link.getLinkType() : "Related")
+                                .linkType(linkTypeName)
                                 .issueId(linkedIssue.getId())
                                 .issueKey(linkedIssue.getIssueKey())
                                 .title(linkedIssue.getTitle())

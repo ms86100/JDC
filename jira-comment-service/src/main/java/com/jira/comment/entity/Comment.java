@@ -42,6 +42,10 @@ public class Comment {
     @Builder.Default
     private Boolean deleted = false;
 
+    @Column(name = "internal")
+    @Builder.Default
+    private Boolean internal = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;

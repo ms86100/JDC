@@ -7,6 +7,9 @@ import com.jira.comment.service.CommentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,6 +38,16 @@ public class CommentController {
     public ResponseEntity<List<CommentResponse>> getCommentsByIssue(@PathVariable UUID issueId) {
         log.info("GET /comments/issue/{} - Fetching threaded comments", issueId);
         List<CommentResponse> response = commentService.getCommentsByIssueId(issueId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/issue/{issueId}/paginated")
+    public ResponseEntity<Page<CommentResponse>> getCommentsByIssuePaginated(
+            @PathVariable UUID issueId,
+            @PageableDefault(size = 20) Pageable pageable,
+            @RequestParam(required = false) Boolean internal) {
+        log.info("GET /comments/issue/{}/paginated - Fetching paginated comments", issueId);
+        Page<CommentResponse> response = commentService.getCommentsByIssueIdPaginated(issueId, pageable, internal);
         return ResponseEntity.ok(response);
     }
 

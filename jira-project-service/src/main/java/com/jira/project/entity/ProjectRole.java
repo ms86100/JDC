@@ -35,6 +35,14 @@ public class ProjectRole {
     @Column(columnDefinition = "jsonb")
     private List<String> permissions;
 
+    @Column(name = "is_default")
+    @Builder.Default
+    private Boolean isDefault = false;
+
+    @Column(name = "is_system_role")
+    @Builder.Default
+    private Boolean isSystemRole = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

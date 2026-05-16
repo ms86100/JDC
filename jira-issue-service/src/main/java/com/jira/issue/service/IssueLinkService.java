@@ -4,17 +4,17 @@ import com.jira.issue.dto.IssueLinkRequest;
 import com.jira.issue.dto.IssueLinkResponse;
 import com.jira.issue.entity.Issue;
 import com.jira.issue.entity.IssueLink;
+import com.jira.issue.entity.IssueLinkType;
 import com.jira.issue.exception.ResourceNotFoundException;
 import com.jira.issue.repository.IssueLinkRepository;
+import com.jira.issue.repository.IssueLinkTypeRepository;
 import com.jira.issue.repository.IssueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -24,40 +24,32 @@ import java.util.stream.Collectors;
 public class IssueLinkService {
 
     private final IssueLinkRepository issueLinkRepository;
+    private final IssueLinkTypeRepository issueLinkTypeRepository;
     private final IssueRepository issueRepository;
-
-    private static final Map<String, String> LINK_TYPE_LABELS = Map.of(
-            "blocks", "Blocks",
-            "relates to", "Relates to",
-            "duplicates", "Duplicates",
-            "is cloned by", "Clones",
-            "is parent of", "Parent",
-            "causes", "Causes"
-    );
 
     @Transactional
     public IssueLinkResponse createIssueLink(IssueLinkRequest request) {
         if (!issueRepository.existsById(request.getSourceIssueId())) {
             throw new ResourceNotFoundException("Source issue not found: " + request.getSourceIssueId());
         }
-        if (!issueRepository.existsById(request.getDestinationIssueId())) {
-            throw new ResourceNotFoundException("Destination issue not found: " + request.getDestinationIssueId());
+        if (!issueRepository.existsById(request.getTargetIssueId())) {
+            throw new ResourceNotFoundException("Target issue not found: " + request.getTargetIssueId());
         }
 
-        if (issueLinkRepository.existsBySourceIssueIdAndDestinationIssueIdAndLinkType(
-                request.getSourceIssueId(), request.getDestinationIssueId(), request.getLinkType())) {
+        if (issueLinkRepository.existsBySourceIssueIdAndTargetIssueIdAndLinkTypeId(
+                request.getSourceIssueId(), request.getTargetIssueId(), request.getLinkTypeId())) {
             throw new IllegalArgumentException("Issue link already exists");
         }
 
         IssueLink issueLink = IssueLink.builder()
                 .sourceIssueId(request.getSourceIssueId())
-                .destinationIssueId(request.getDestinationIssueId())
-                .linkType(request.getLinkType())
+                .targetIssueId(request.getTargetIssueId())
+                .linkTypeId(request.getLinkTypeId())
                 .build();
 
         issueLink = issueLinkRepository.save(issueLink);
         log.info("Created issue link {} from {} to {} ({})",
-                issueLink.getId(), request.getSourceIssueId(), request.getDestinationIssueId(), request.getLinkType());
+                issueLink.getId(), request.getSourceIssueId(), request.getTargetIssueId(), request.getLinkTypeId());
 
         return toResponse(issueLink);
     }
@@ -80,7 +72,7 @@ public class IssueLinkService {
 
     @Transactional(readOnly = true)
     public List<IssueLinkResponse> getInwardLinks(UUID issueId) {
-        return issueLinkRepository.findByDestinationIssueId(issueId)
+        return issueLinkRepository.findByTargetIssueId(issueId)
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -97,23 +89,30 @@ public class IssueLinkService {
 
     @Transactional(readOnly = true)
     public List<String> getAvailableLinkTypes() {
-        return Arrays.asList("blocks", "relates to", "duplicates", "is cloned by", "is parent of", "causes");
+        return issueLinkTypeRepository.findAll().stream()
+                .map(IssueLinkType::getName)
+                .collect(Collectors.toList());
     }
 
     private IssueLinkResponse toResponse(IssueLink link) {
         Issue sourceIssue = issueRepository.findById(link.getSourceIssueId()).orElse(null);
-        Issue destIssue = issueRepository.findById(link.getDestinationIssueId()).orElse(null);
+        Issue destIssue = issueRepository.findById(link.getTargetIssueId()).orElse(null);
 
-        String label = LINK_TYPE_LABELS.getOrDefault(link.getLinkType(), link.getLinkType());
+        String linkTypeName = "Related";
+        if (link.getLinkTypeId() != null) {
+            linkTypeName = issueLinkTypeRepository.findById(link.getLinkTypeId())
+                    .map(IssueLinkType::getName)
+                    .orElse("Related");
+        }
 
         return IssueLinkResponse.builder()
                 .id(link.getId())
                 .sourceIssueId(link.getSourceIssueId())
                 .sourceIssueKey(sourceIssue != null ? sourceIssue.getIssueKey() : null)
-                .destinationIssueId(link.getDestinationIssueId())
-                .destinationIssueKey(destIssue != null ? destIssue.getIssueKey() : null)
-                .linkType(link.getLinkType())
-                .linkTypeLabel(label)
+                .targetIssueId(link.getTargetIssueId())
+                .targetIssueKey(destIssue != null ? destIssue.getIssueKey() : null)
+                .linkType(linkTypeName)
+                .linkTypeLabel(linkTypeName)
                 .sequence(link.getSequence())
                 .createdAt(link.getCreatedAt())
                 .build();

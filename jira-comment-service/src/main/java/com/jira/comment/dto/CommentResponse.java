@@ -21,6 +21,7 @@ public class CommentResponse {
     private Long version;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
+    private Boolean internal;
 
     @Builder.Default
     private List<CommentResponse> replies = new ArrayList<>();

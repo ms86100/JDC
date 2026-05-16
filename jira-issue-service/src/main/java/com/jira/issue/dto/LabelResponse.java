@@ -16,6 +16,8 @@ public class LabelResponse {
     private UUID id;
     private UUID issueId;
     private String name;
+    private String color;
+    private String description;
     private UUID createdBy;
     private LocalDateTime createdAt;
 }

@@ -32,6 +32,12 @@ public class Attachment {
     @Column(name = "mime_type", nullable = false, length = 100)
     private String mimeType;
 
+    @Column(name = "mime_type_detected", length = 100)
+    private String mimeTypeDetected;
+
+    @Column(name = "thumbnail_path", length = 500)
+    private String thumbnailPath;
+
     @Column(name = "file_size", nullable = false)
     private Long fileSize;
 

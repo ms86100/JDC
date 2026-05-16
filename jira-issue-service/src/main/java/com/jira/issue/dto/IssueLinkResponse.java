@@ -16,8 +16,8 @@ public class IssueLinkResponse {
     private UUID id;
     private UUID sourceIssueId;
     private String sourceIssueKey;
-    private UUID destinationIssueId;
-    private String destinationIssueKey;
+    private UUID targetIssueId;
+    private String targetIssueKey;
     private String linkType;
     private String linkTypeLabel;
     private Integer sequence;

@@ -19,4 +19,7 @@ public class CreateCommentRequest {
     private String content;
 
     private UUID parentCommentId;
+
+    @Builder.Default
+    private Boolean internal = false;
 }

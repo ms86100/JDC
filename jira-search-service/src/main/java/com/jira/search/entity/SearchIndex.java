@@ -3,7 +3,9 @@ package com.jira.search.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -32,7 +34,8 @@ public class SearchIndex {
     @Column(columnDefinition = "TEXT")
     private String content;
 
-    @Column(name = "search_vector", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.TSVECTOR)
+    @Column(name = "search_vector", columnDefinition = "tsvector")
     private String searchVector;
 
     @CreationTimestamp

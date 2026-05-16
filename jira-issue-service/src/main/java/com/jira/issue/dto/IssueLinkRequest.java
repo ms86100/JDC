@@ -17,9 +17,11 @@ public class IssueLinkRequest {
     @NotNull(message = "Source issue ID is required")
     private UUID sourceIssueId;
 
-    @NotNull(message = "Destination issue ID is required")
-    private UUID destinationIssueId;
+    @NotNull(message = "Target issue ID is required")
+    private UUID targetIssueId;
 
-    @NotBlank(message = "Link type is required")
-    private String linkType;
+    @NotBlank(message = "Link type ID is required")
+    private UUID linkTypeId;
+
+    private String linkTypeName;
 }

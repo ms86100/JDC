@@ -1,7 +1,5 @@
 package com.jira.audit.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jira.audit.dto.AuditEvent;
 import com.jira.audit.dto.AuditLogResponse;
 import com.jira.audit.entity.AuditLog;
@@ -13,6 +11,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -20,23 +19,22 @@ import java.util.UUID;
 public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional
     public AuditLogResponse logEvent(AuditEvent event) {
-        AuditLog log = AuditLog.builder()
+        AuditLog auditLog = AuditLog.builder()
                 .userId(event.getUserId())
                 .serviceName(event.getServiceName())
                 .entityType(event.getEntityType())
                 .entityId(event.getEntityId())
                 .action(event.getAction())
-                .changes(toJson(event.getChanges()))
+                .changes(event.getChanges())
                 .ipAddress(event.getIpAddress())
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        log = auditLogRepository.save(log);
-        return toResponse(log);
+        auditLog = auditLogRepository.save(auditLog);
+        return toResponse(auditLog);
     }
 
     @Transactional(readOnly = true)
@@ -73,26 +71,17 @@ public class AuditService {
                 .map(this::toResponse);
     }
 
-    private String toJson(Object obj) {
-        if (obj == null) return null;
-        try {
-            return objectMapper.writeValueAsString(obj);
-        } catch (JsonProcessingException e) {
-            return null;
-        }
-    }
-
-    private AuditLogResponse toResponse(AuditLog log) {
+    private AuditLogResponse toResponse(AuditLog auditLog) {
         return AuditLogResponse.builder()
-                .id(log.getId())
-                .userId(log.getUserId())
-                .serviceName(log.getServiceName())
-                .entityType(log.getEntityType())
-                .entityId(log.getEntityId())
-                .action(log.getAction())
-                .changes(log.getChanges())
-                .ipAddress(log.getIpAddress())
-                .createdAt(log.getCreatedAt())
+                .id(auditLog.getId())
+                .userId(auditLog.getUserId())
+                .serviceName(auditLog.getServiceName())
+                .entityType(auditLog.getEntityType())
+                .entityId(auditLog.getEntityId())
+                .action(auditLog.getAction())
+                .changes(auditLog.getChanges())
+                .ipAddress(auditLog.getIpAddress())
+                .createdAt(auditLog.getCreatedAt())
                 .build();
     }
 }

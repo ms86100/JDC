@@ -169,6 +169,8 @@ public class AttachmentService {
                 .filename(attachment.getOriginalFilename())
                 .originalFilename(attachment.getOriginalFilename())
                 .mimeType(attachment.getMimeType())
+                .mimeTypeDetected(attachment.getMimeTypeDetected())
+                .thumbnailPath(attachment.getThumbnailPath())
                 .fileSize(attachment.getFileSize())
                 .uploaderId(attachment.getUploaderId())
                 .uploaderName(attachment.getUploaderName())

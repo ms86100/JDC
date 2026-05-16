@@ -2,7 +2,11 @@ package com.jira.audit.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -28,8 +32,9 @@ public class AuditLog {
     @Column(nullable = false, length = 50)
     private String action;
 
-    @Column(columnDefinition = "jsonb")
-    private String changes;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "changes", columnDefinition = "jsonb")
+    private Map<String, Object> changes;
 
     @Column(name = "ip_address", length = 45)
     private String ipAddress;

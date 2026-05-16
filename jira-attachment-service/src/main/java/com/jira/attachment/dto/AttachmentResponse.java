@@ -18,6 +18,8 @@ public class AttachmentResponse {
     private String filename;
     private String originalFilename;
     private String mimeType;
+    private String mimeTypeDetected;
+    private String thumbnailPath;
     private Long fileSize;
     private UUID uploaderId;
     private String uploaderName;

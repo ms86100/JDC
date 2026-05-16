@@ -20,6 +20,7 @@ public class WorklogResponse {
     private String workDescription;
     private LocalDateTime startedAt;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     public String getTimeWorkedFormatted() {
         long seconds = timeSpentSeconds != null ? timeSpentSeconds : 0;

@@ -10,9 +10,9 @@ import java.util.UUID;
 @Repository
 public interface IssueLinkRepository extends JpaRepository<IssueLink, UUID> {
     List<IssueLink> findBySourceIssueId(UUID sourceIssueId);
-    List<IssueLink> findByDestinationIssueId(UUID destinationIssueId);
-    List<IssueLink> findBySourceIssueIdOrDestinationIssueId(UUID sourceIssueId, UUID destinationIssueId);
-    List<IssueLink> findByLinkType(String linkType);
-    boolean existsBySourceIssueIdAndDestinationIssueIdAndLinkType(UUID sourceIssueId, UUID destinationIssueId, String linkType);
-    void deleteBySourceIssueIdOrDestinationIssueId(UUID sourceIssueId, UUID destinationIssueId);
+    List<IssueLink> findByTargetIssueId(UUID targetIssueId);
+    List<IssueLink> findBySourceIssueIdOrTargetIssueId(UUID sourceIssueId, UUID targetIssueId);
+    List<IssueLink> findByLinkTypeId(UUID linkTypeId);
+    boolean existsBySourceIssueIdAndTargetIssueIdAndLinkTypeId(UUID sourceIssueId, UUID targetIssueId, UUID linkTypeId);
+    void deleteBySourceIssueIdOrTargetIssueId(UUID sourceIssueId, UUID targetIssueId);
 }

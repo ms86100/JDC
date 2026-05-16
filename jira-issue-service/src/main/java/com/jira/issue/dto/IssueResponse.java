@@ -106,6 +106,7 @@ public class IssueResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime lastViewedAt;
+    private Long version;
 
     // Votes and watchers (People section)
     private Integer voteCount;
