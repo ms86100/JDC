@@ -4,6 +4,7 @@ import com.jira.plan.dto.request.CreatePlanRequest;
 import com.jira.plan.dto.request.UpdatePlanRequest;
 import com.jira.plan.dto.response.PlanResponse;
 import com.jira.plan.entity.Plan;
+import com.jira.plan.exception.OptimisticLockException;
 import com.jira.plan.exception.ResourceNotFoundException;
 import com.jira.plan.repository.PlanRepository;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +59,15 @@ public class PlanService {
     @Transactional
     public PlanResponse updatePlan(UUID id, UpdatePlanRequest request) {
         Plan plan = findPlanById(id);
+
+        // Optimistic locking: check version if provided
+        if (request.getVersion() != null && !request.getVersion().equals(plan.getVersion())) {
+            throw new OptimisticLockException(
+                "Plan was modified by another user. Please refresh and try again. " +
+                "Expected version: " + plan.getVersion() + ", provided: " + request.getVersion()
+            );
+        }
+
         if (request.getName() != null) {
             plan.setName(request.getName());
         }
@@ -75,6 +85,9 @@ public class PlanService {
         }
         if (request.getIsActive() != null) {
             plan.setIsActive(request.getIsActive());
+        }
+        if (request.getSettings() != null) {
+            plan.setSettings(request.getSettings());
         }
         plan = planRepository.save(plan);
         return toResponse(plan);
@@ -122,6 +135,7 @@ public class PlanService {
                 .startDate(plan.getStartDate())
                 .endDate(plan.getEndDate())
                 .isActive(plan.getIsActive())
+                .version(plan.getVersion())
                 .itemCount(plan.getItems() != null ? plan.getItems().size() : 0)
                 .teamCount(plan.getTeams() != null ? plan.getTeams().size() : 0)
                 .releaseCount(plan.getReleases() != null ? plan.getReleases().size() : 0)

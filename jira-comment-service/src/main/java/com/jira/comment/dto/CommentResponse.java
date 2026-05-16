@@ -18,6 +18,7 @@ public class CommentResponse {
     private UUID userId;
     private UUID parentCommentId;
     private String content;
+    private Long version;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 

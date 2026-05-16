@@ -22,6 +22,7 @@ public class PlanResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private Boolean isActive;
+    private Long version;
     private Integer itemCount;
     private Integer teamCount;
     private Integer releaseCount;

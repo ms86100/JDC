@@ -24,6 +24,7 @@ public class ProjectResponse {
     private Boolean allowIssueCreation;
     private Boolean archived;
     private LocalDateTime archivedAt;
+    private Long version;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

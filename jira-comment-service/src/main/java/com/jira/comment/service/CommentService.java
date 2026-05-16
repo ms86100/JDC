@@ -4,6 +4,7 @@ import com.jira.comment.dto.CommentResponse;
 import com.jira.comment.dto.CreateCommentRequest;
 import com.jira.comment.dto.UpdateCommentRequest;
 import com.jira.comment.entity.Comment;
+import com.jira.comment.exception.OptimisticLockException;
 import com.jira.comment.exception.ResourceNotFoundException;
 import com.jira.comment.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
@@ -96,6 +97,14 @@ public class CommentService {
             throw new IllegalArgumentException("User is not authorized to update this comment");
         }
 
+        // Optimistic locking: check version if provided
+        if (request.getVersion() != null && !request.getVersion().equals(comment.getVersion())) {
+            throw new OptimisticLockException(
+                "Comment was modified by another user. Please refresh and try again. " +
+                "Expected version: " + comment.getVersion() + ", provided: " + request.getVersion()
+            );
+        }
+
         comment.setContent(request.getContent());
         comment = commentRepository.save(comment);
         log.info("Updated comment: {}", commentId);
@@ -130,6 +139,7 @@ public class CommentService {
                 .userId(comment.getUserId())
                 .parentCommentId(comment.getParentComment() != null ? comment.getParentComment().getId() : null)
                 .content(comment.getContent())
+                .version(comment.getVersion())
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
                 .replies(new ArrayList<>())

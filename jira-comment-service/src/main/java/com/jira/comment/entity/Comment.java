@@ -20,6 +20,11 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Version
+    @Column(name = "version")
+    @Builder.Default
+    private Long version = 0L;
+
     @Column(name = "issue_id", nullable = false)
     private UUID issueId;
 

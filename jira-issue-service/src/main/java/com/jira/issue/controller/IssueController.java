@@ -1,7 +1,13 @@
 package com.jira.issue.controller;
 
 import com.jira.issue.dto.*;
+import com.jira.issue.entity.IssueType;
+import com.jira.issue.entity.IssuePriority;
+import com.jira.issue.entity.IssueStatus;
 import com.jira.issue.service.IssueService;
+import com.jira.issue.repository.IssueTypeRepository;
+import com.jira.issue.repository.IssuePriorityRepository;
+import com.jira.issue.repository.IssueStatusRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -19,9 +26,13 @@ import java.util.UUID;
 @RequestMapping("/api/issues")
 @RequiredArgsConstructor
 @Tag(name = "Issues", description = "Issue management endpoints")
+@CrossOrigin(origins = "*")
 public class IssueController {
 
     private final IssueService issueService;
+    private final IssueTypeRepository issueTypeRepository;
+    private final IssuePriorityRepository issuePriorityRepository;
+    private final IssueStatusRepository issueStatusRepository;
 
     @PostMapping
     @Operation(summary = "Create a new issue", description = "Creates a new issue in the specified project")
@@ -113,5 +124,23 @@ public class IssueController {
 
         issueService.deleteIssue(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/types")
+    @Operation(summary = "Get issue types", description = "Returns all available issue types")
+    public ResponseEntity<List<IssueType>> getIssueTypes() {
+        return ResponseEntity.ok(issueTypeRepository.findAll());
+    }
+
+    @GetMapping("/priorities")
+    @Operation(summary = "Get priorities", description = "Returns all available priorities")
+    public ResponseEntity<List<IssuePriority>> getPriorities() {
+        return ResponseEntity.ok(issuePriorityRepository.findAll());
+    }
+
+    @GetMapping("/statuses")
+    @Operation(summary = "Get statuses", description = "Returns all available statuses")
+    public ResponseEntity<List<IssueStatus>> getStatuses() {
+        return ResponseEntity.ok(issueStatusRepository.findAll());
     }
 }

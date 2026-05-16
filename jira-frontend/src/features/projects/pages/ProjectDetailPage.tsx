@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { projectApi, ProjectResponse } from '../../../api/projectApi';
 import { issueApi, IssueResponse } from '../../../api/issueApi';
+import CreateIssueModal from '../../issues/components/CreateIssueModal';
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const { data: project, isLoading: projectLoading } = useQuery<ProjectResponse>({
     queryKey: ['project', projectId],
@@ -49,7 +52,7 @@ export default function ProjectDetailPage() {
             Key: <span className="ab-badge ab-badge-primary">{project?.projectKey}</span>
           </p>
         </div>
-        <button className="ab-btn ab-btn-primary">
+        <button className="ab-btn ab-btn-primary" onClick={() => setShowCreateModal(true)}>
           <span>+</span> Create Issue
         </button>
       </div>
@@ -98,6 +101,14 @@ export default function ProjectDetailPage() {
           )}
         </div>
       </div>
+
+      {showCreateModal && (
+        <CreateIssueModal
+          projectId={projectId!}
+          projectKey={project?.projectKey || ''}
+          onClose={() => setShowCreateModal(false)}
+        />
+      )}
     </div>
   );
 }

@@ -5,12 +5,14 @@ import { issueApi, IssueType, CreateIssueRequest } from '../../../api/issueApi';
 
 interface CreateIssueModalProps {
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
+  projectId?: string;
+  projectKey?: string;
 }
 
-export default function CreateIssueModal({ onClose, onSuccess }: CreateIssueModalProps) {
+export default function CreateIssueModal({ onClose, onSuccess, projectId: propProjectId, projectKey: propProjectKey }: CreateIssueModalProps) {
   const [form, setForm] = useState<CreateIssueRequest>({
-    projectId: '',
+    projectId: propProjectId || '',
     title: '',
     description: '',
     issueTypeId: '',
@@ -43,7 +45,8 @@ export default function CreateIssueModal({ onClose, onSuccess }: CreateIssueModa
   const createMutation = useMutation({
     mutationFn: (data: CreateIssueRequest) => issueApi.create(data),
     onSuccess: () => {
-      onSuccess();
+      if (onSuccess) onSuccess();
+      onClose();
     },
   });
 
@@ -69,19 +72,28 @@ export default function CreateIssueModal({ onClose, onSuccess }: CreateIssueModa
           <div className="ab-modal-body">
             <div className="ab-form-group">
               <label className="ab-label">Project *</label>
-              <select
-                className="ab-select"
-                value={form.projectId}
-                onChange={(e) => setForm({ ...form, projectId: e.target.value })}
-                required
-              >
-                <option value="">Select Project</option>
-                {projects?.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name} ({project.projectKey})
-                  </option>
-                ))}
-              </select>
+              {propProjectId ? (
+                <input
+                  type="text"
+                  className="ab-input"
+                  value={propProjectKey || propProjectId}
+                  disabled
+                />
+              ) : (
+                <select
+                  className="ab-select"
+                  value={form.projectId}
+                  onChange={(e) => setForm({ ...form, projectId: e.target.value })}
+                  required
+                >
+                  <option value="">Select Project</option>
+                  {projects?.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name} ({project.projectKey})
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="ab-form-group">

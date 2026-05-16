@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreatePlan } from '../hooks/usePlans';
-import { boardApi, AgileBoard } from '../../../api/boardApi';
+import boardApi, { AgileBoard } from '../../../api/boardApi';
 import { projectApi, ProjectResponse } from '../../../api/projectApi';
 import { filterApi, SavedFilter } from '../../../api/filterApi';
 import '../styles/plans.css';

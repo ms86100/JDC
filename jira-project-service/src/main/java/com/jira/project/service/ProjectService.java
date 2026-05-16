@@ -174,6 +174,14 @@ public class ProjectService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
 
+        // Optimistic locking: check version if provided
+        if (request.getVersion() != null && !request.getVersion().equals(project.getVersion())) {
+            throw new OptimisticLockException(
+                "Project was modified by another user. Please refresh and try again. " +
+                "Expected version: " + project.getVersion() + ", provided: " + request.getVersion()
+            );
+        }
+
         if (request.getName() != null) {
             project.setName(request.getName());
         }
@@ -357,6 +365,7 @@ public class ProjectService {
                 .defaultAssigneeType(project.getDefaultAssigneeType())
                 .allowIssueCreation(project.getAllowIssueCreation())
                 .archived(project.getArchived())
+                .version(project.getVersion())
                 .createdAt(project.getCreatedAt())
                 .updatedAt(project.getUpdatedAt())
                 .build();

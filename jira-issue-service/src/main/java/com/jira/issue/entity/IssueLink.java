@@ -19,8 +19,8 @@ public class IssueLink {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "link_type", nullable = false, length = 50)
-    private String linkType;
+    @Column(name = "link_type_id", nullable = false)
+    private UUID linkTypeId;
 
     @Column(name = "source_issue_id", nullable = false)
     private UUID sourceIssueId;

@@ -2,6 +2,7 @@ package com.jira.plan.exception;
 
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Data
 @Builder
@@ -14,4 +15,7 @@ public class ErrorResponse {
     private String error;
     private String message;
     private String path;
+    private String service;
+    private String traceId;
+    private Map<String, String> validationErrors;
 }
