@@ -19,6 +19,10 @@ export const useCreateRelease = () => {
       queryClient.invalidateQueries({ queryKey: ['releases', planId] });
       queryClient.invalidateQueries({ queryKey: ['plans', planId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to create release:', error);
+      alert(error.message || 'Failed to create release');
+    },
   });
 };
 
@@ -29,6 +33,10 @@ export const useUpdateRelease = () => {
       planApi.updateRelease(planId, releaseId, data),
     onSuccess: (_, { planId }) => {
       queryClient.invalidateQueries({ queryKey: ['releases', planId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to update release:', error);
+      alert(error.message || 'Failed to update release');
     },
   });
 };
@@ -41,6 +49,10 @@ export const useApproveRelease = () => {
     onSuccess: (_, { planId }) => {
       queryClient.invalidateQueries({ queryKey: ['releases', planId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to approve release:', error);
+      alert(error.message || 'Failed to approve release');
+    },
   });
 };
 
@@ -51,6 +63,10 @@ export const useReleaseVersion = () => {
       planApi.releaseVersion(planId, releaseId),
     onSuccess: (_, { planId }) => {
       queryClient.invalidateQueries({ queryKey: ['releases', planId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to release version:', error);
+      alert(error.message || 'Failed to release');
     },
   });
 };
@@ -63,6 +79,10 @@ export const useDeleteRelease = () => {
     onSuccess: (_, { planId }) => {
       queryClient.invalidateQueries({ queryKey: ['releases', planId] });
       queryClient.invalidateQueries({ queryKey: ['plans', planId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to delete release:', error);
+      alert(error.message || 'Failed to delete release');
     },
   });
 };

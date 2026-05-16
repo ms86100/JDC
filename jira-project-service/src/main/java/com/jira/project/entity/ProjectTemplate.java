@@ -51,6 +51,16 @@ public class ProjectTemplate {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(length = 20)
+    @Builder.Default
+    private String category = "SOFTWARE";
+
+    @Column(name = "template_type", length = 50)
+    private String templateType;
+
+    @Column(columnDefinition = "TEXT")
+    private String instructions;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

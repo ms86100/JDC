@@ -31,6 +31,9 @@ export default function TeamsView({ planId }: TeamsViewProps) {
           setTeamName('');
           setTeamDescription('');
         },
+        onError: (error: Error) => {
+          alert(error.message || 'Failed to create team');
+        },
       }
     );
   };
@@ -45,14 +48,19 @@ export default function TeamsView({ planId }: TeamsViewProps) {
           setMemberUserId('');
           setMemberRole('');
         },
+        onError: (error: Error) => {
+          alert(error.message || 'Failed to add member');
+        },
       }
     );
   };
 
   const handleDeleteTeam = (teamId: string) => {
-    if (confirm('Delete this team?')) {
-      deleteTeamMutation.mutate({ planId, teamId });
-    }
+    deleteTeamMutation.mutate({ planId, teamId }, {
+      onError: (error: Error) => {
+        alert(error.message || 'Failed to delete team');
+      },
+    });
   };
 
   if (isLoading) {

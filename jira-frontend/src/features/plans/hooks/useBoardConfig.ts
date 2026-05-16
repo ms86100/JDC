@@ -167,6 +167,10 @@ export const useCreateBoard = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['boards', variables.planId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to create board:', error);
+      alert(error.message || 'Failed to create board');
+    },
   });
 };
 
@@ -179,6 +183,10 @@ export const useUpdateBoard = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['board', variables.boardId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to update board:', error);
+      alert(error.message || 'Failed to update board');
+    },
   });
 };
 
@@ -189,6 +197,10 @@ export const useDeleteBoard = () => {
     mutationFn: boardConfigApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['boards'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to delete board:', error);
+      alert(error.message || 'Failed to delete board');
     },
   });
 };
@@ -202,6 +214,10 @@ export const useAddColumn = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['board', variables.boardId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to add column:', error);
+      alert(error.message || 'Failed to add column');
+    },
   });
 };
 
@@ -211,8 +227,12 @@ export const useUpdateColumn = () => {
   return useMutation({
     mutationFn: ({ columnId, data }: { columnId: string; data: CreateBoardColumnRequest }) =>
       boardConfigApi.updateColumn(columnId, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['board'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to update column:', error);
+      alert(error.message || 'Failed to update column');
     },
   });
 };
@@ -224,6 +244,10 @@ export const useDeleteColumn = () => {
     mutationFn: boardConfigApi.deleteColumn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to delete column:', error);
+      alert(error.message || 'Failed to delete column');
     },
   });
 };
@@ -237,6 +261,10 @@ export const useUpdateColumnsOrder = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['board', variables.boardId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to update columns order:', error);
+      alert(error.message || 'Failed to update columns order');
+    },
   });
 };
 
@@ -246,8 +274,12 @@ export const useAddSwimlane = () => {
   return useMutation({
     mutationFn: ({ boardId, data }: { boardId: string; data: any }) =>
       boardConfigApi.addSwimlane(boardId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['board'] });
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['board', variables.boardId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to add swimlane:', error);
+      alert(error.message || 'Failed to add swimlane');
     },
   });
 };
@@ -258,8 +290,12 @@ export const useAddCardColor = () => {
   return useMutation({
     mutationFn: ({ boardId, data }: { boardId: string; data: any }) =>
       boardConfigApi.addCardColor(boardId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['board'] });
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['board', variables.boardId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to add card color:', error);
+      alert(error.message || 'Failed to add card color');
     },
   });
 };

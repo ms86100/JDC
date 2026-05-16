@@ -30,14 +30,31 @@ public class TeamService {
 
     @Transactional(readOnly = true)
     public List<TeamResponse> getTeamsByPlanId(UUID planId) {
-        return teamRepository.findByPlanIdAndIsActiveTrue(planId).stream()
-                .map(this::toTeamResponse)
+        List<PlanTeam> teams = teamRepository.findByPlanIdAndIsActiveTrue(planId);
+        if (teams.isEmpty()) {
+            return List.of();
+        }
+
+        // Batch fetch all team members to avoid N+1 queries
+        List<UUID> teamIds = teams.stream().map(PlanTeam::getId).collect(Collectors.toList());
+        List<PlanTeamMember> allMembers = memberRepository.findByTeamIds(teamIds);
+
+        // Group members by team ID
+        java.util.Map<UUID, List<PlanTeamMember>> membersByTeam = allMembers.stream()
+                .collect(Collectors.groupingBy(PlanTeamMember::getTeamId));
+
+        return teams.stream()
+                .map(team -> toTeamResponseWithMembers(team, membersByTeam.getOrDefault(team.getId(), List.of())))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public TeamResponse getTeamById(UUID planId, UUID teamId) {
         PlanTeam team = findTeamById(teamId);
+        // IDOR protection: verify team belongs to the specified plan
+        if (!team.getPlanId().equals(planId)) {
+            throw new ResourceNotFoundException("Team", "id", teamId);
+        }
         return toTeamResponse(team);
     }
 
@@ -58,6 +75,10 @@ public class TeamService {
     @Transactional
     public TeamResponse updateTeam(UUID planId, UUID teamId, CreateTeamRequest request) {
         PlanTeam team = findTeamById(teamId);
+        // IDOR protection: verify team belongs to the specified plan
+        if (!team.getPlanId().equals(planId)) {
+            throw new ResourceNotFoundException("Team", "id", teamId);
+        }
 
         if (request.getName() != null) {
             team.setName(request.getName());
@@ -73,6 +94,10 @@ public class TeamService {
     @Transactional
     public void deleteTeam(UUID planId, UUID teamId) {
         PlanTeam team = findTeamById(teamId);
+        // IDOR protection: verify team belongs to the specified plan
+        if (!team.getPlanId().equals(planId)) {
+            throw new ResourceNotFoundException("Team", "id", teamId);
+        }
         team.setIsActive(false);
         teamRepository.save(team);
     }
@@ -111,10 +136,13 @@ public class TeamService {
     }
 
     private TeamResponse toTeamResponse(PlanTeam team) {
-        List<PlanTeamMember> members = memberRepository.findByTeamId(team.getId());
+        return toTeamResponseWithMembers(team, memberRepository.findByTeamId(team.getId()));
+    }
+
+    private TeamResponse toTeamResponseWithMembers(PlanTeam team, List<PlanTeamMember> members) {
         BigDecimal totalCapacity = members.stream()
                 .map(PlanTeamMember::getCapacityHours)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, (a, b) -> a.add(b != null ? b : BigDecimal.ZERO));
 
         return TeamResponse.builder()
                 .id(team.getId())

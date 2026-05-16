@@ -13,7 +13,8 @@ CREATE TABLE jira_plan.plan_releases (
     approved_at TIMESTAMP,
     published_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE INDEX idx_plan_releases_plan_id ON jira_plan.plan_releases(plan_id);

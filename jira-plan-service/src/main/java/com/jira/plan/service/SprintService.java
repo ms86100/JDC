@@ -32,12 +32,27 @@ public class SprintService {
     private final SprintBurndownRepository sprintBurndownRepository;
     private final BoardConfigRepository boardConfigRepository;
     private final PlanItemRepository planItemRepository;
+    private final WorkingDaysService workingDaysService;
+    private final SprintSnapshotService sprintSnapshotService;
 
     @Transactional(readOnly = true)
     public List<SprintResponse> getSprintsByBoardId(UUID boardId) {
-        return sprintRepository.findByBoardConfigIdOrderBySequenceAsc(boardId).stream()
-            .map(this::toResponse)
-            .collect(Collectors.toList());
+        List<Sprint> sprints = sprintRepository.findByBoardConfigIdOrderBySequenceAsc(boardId);
+        if (sprints.isEmpty()) {
+            return List.of();
+        }
+
+        // Batch fetch all sprint issues to avoid N+1
+        List<UUID> sprintIds = sprints.stream().map(Sprint::getId).collect(Collectors.toList());
+        List<SprintIssue> allIssues = sprintIssueRepository.findBySprintIds(sprintIds);
+
+        // Group issues by sprint ID
+        Map<UUID, List<SprintIssue>> issuesBySprint = allIssues.stream()
+                .collect(Collectors.groupingBy(si -> si.getSprint().getId()));
+
+        return sprints.stream()
+                .map(sprint -> toResponseWithIssues(sprint, issuesBySprint.getOrDefault(sprint.getId(), List.of())))
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -52,9 +67,8 @@ public class SprintService {
         BoardConfig board = boardConfigRepository.findById(boardId)
             .orElseThrow(() -> new ResourceNotFoundException("BoardConfig", "id", boardId));
 
-        Integer nextSeq = sprintRepository.getMaxSequence(boardId);
-        if (nextSeq == null) nextSeq = 0;
-        else nextSeq = nextSeq + 1;
+        // Use pessimistic lock to prevent race conditions on sequence generation
+        Integer nextSeq = sprintRepository.getMaxSequenceWithLock(boardId).orElse(0) + 1;
 
         Sprint sprint = Sprint.builder()
             .boardConfig(board)
@@ -64,6 +78,7 @@ public class SprintService {
             .endDate(request.getEndDate())
             .state("FUTURE")
             .sequence(nextSeq)
+            .wipLimit(request.getWipLimit())
             .build();
 
         sprint = sprintRepository.save(sprint);
@@ -113,6 +128,13 @@ public class SprintService {
 
         createAuditLog(sprint.getId(), "STARTED", userId, null);
 
+        // Record COMMITMENT snapshot for velocity tracking
+        try {
+            sprintSnapshotService.recordCommitmentSnapshot(sprint);
+        } catch (Exception e) {
+            log.warn("Failed to record commitment snapshot: {}", e.getMessage());
+        }
+
         log.info("Sprint {} started at {}", sprint.getName(), sprint.getStartDate());
 
         return toResponse(sprint);
@@ -135,6 +157,15 @@ public class SprintService {
         sprint.setVelocity(completedPoints != null ? completedPoints : 0);
 
         sprint = sprintRepository.save(sprint);
+
+        // Record CLOSURE snapshot for velocity tracking
+        try {
+            int completedIssues = sprintIssueRepository.countCompletedBySprintId(sprintId);
+            BigDecimal completedPointsBd = completedPoints != null ? BigDecimal.valueOf(completedPoints) : BigDecimal.ZERO;
+            sprintSnapshotService.recordClosureSnapshot(sprint, completedIssues, completedPointsBd);
+        } catch (Exception e) {
+            log.warn("Failed to record closure snapshot: {}", e.getMessage());
+        }
 
         log.info("Sprint {} closed with velocity {}", sprint.getName(), sprint.getVelocity());
 
@@ -169,12 +200,44 @@ public class SprintService {
     }
 
     @Transactional
+    public void deleteSprint(UUID sprintId) {
+        Sprint sprint = sprintRepository.findById(sprintId)
+            .orElseThrow(() -> new ResourceNotFoundException("Sprint", "id", sprintId));
+
+        // Only allow deletion of non-active sprints
+        if ("ACTIVE".equals(sprint.getState())) {
+            throw new IllegalStateException("Cannot delete an active sprint. Close or abandon it first.");
+        }
+
+        // Soft delete: mark issues as removed
+        List<SprintIssue> activeIssues = sprintIssueRepository.findActiveBySprintId(sprintId);
+        for (SprintIssue issue : activeIssues) {
+            issue.remove(null);
+            sprintIssueRepository.save(issue);
+        }
+
+        createAuditLog(sprintId, "DELETED", null, null);
+
+        // Perform hard delete (sprint has no children with cascade)
+        sprintRepository.delete(sprint);
+        log.info("Sprint {} deleted", sprint.getName());
+    }
+
+    @Transactional
     public SprintIssueResponse addIssueToSprint(UUID sprintId, UUID planItemId, UUID userId) {
         Sprint sprint = sprintRepository.findById(sprintId)
             .orElseThrow(() -> new ResourceNotFoundException("Sprint", "id", sprintId));
 
         if (!"ACTIVE".equals(sprint.getState())) {
             throw new IllegalStateException("Can only add issues to ACTIVE sprint");
+        }
+
+        // Enforce WIP limit
+        if (sprint.getWipLimit() != null && sprint.getWipLimit() > 0) {
+            int currentIssueCount = sprintIssueRepository.findActiveBySprintId(sprintId).size();
+            if (currentIssueCount >= sprint.getWipLimit()) {
+                throw new IllegalStateException("Sprint WIP limit (" + sprint.getWipLimit() + ") reached. Cannot add more issues.");
+            }
         }
 
         PlanItem planItem = planItemRepository.findById(planItemId)
@@ -273,6 +336,19 @@ public class SprintService {
         Integer totalPoints = sprintIssueRepository.sumTotalPoints(sprintId);
         Integer completedPoints = sprintIssueRepository.sumCompletedPoints(sprintId);
 
+        // Calculate burndown duration using working days if available
+        Long burndownDurationWorkingDays = null;
+        if (sprint.getStartDate() != null && sprint.getEndDate() != null) {
+            try {
+                var config = workingDaysService.getDefaultWorkingDaysConfig();
+                LocalDate start = sprint.getStartDate().toLocalDate();
+                LocalDate end = sprint.getEndDate().toLocalDate();
+                burndownDurationWorkingDays = workingDaysService.calculateWorkingDays(start, end, mapToWorkingDays(config));
+            } catch (Exception e) {
+                log.debug("Could not calculate working days for burndown summary", e);
+            }
+        }
+
         return SprintBurndownResponse.builder()
             .sprintId(sprintId)
             .sprintName(sprint.getName())
@@ -307,17 +383,25 @@ public class SprintService {
         Integer totalPoints = sprintIssueRepository.sumTotalPoints(sprintId);
         Integer completedPoints = sprintIssueRepository.sumCompletedPoints(sprintId);
 
-        // Calculate ideal remaining
-        int daysTotal = 0;
-        int daysRemaining = 0;
+        // Calculate ideal remaining using WorkingDaysService
+        int idealRemaining = 0;
         if (sprint.getStartDate() != null && sprint.getEndDate() != null) {
             LocalDate start = sprint.getStartDate().toLocalDate();
             LocalDate end = sprint.getEndDate().toLocalDate();
-            daysTotal = (int) java.time.temporal.ChronoUnit.DAYS.between(start, end) + 1;
-            daysRemaining = (int) java.time.temporal.ChronoUnit.DAYS.between(today, end);
+            try {
+                // Get default working days config and calculate working days
+                var config = workingDaysService.getDefaultWorkingDaysConfig();
+                long totalWorkingDays = workingDaysService.calculateWorkingDays(start, end, mapToWorkingDays(config));
+                long remainingWorkingDays = workingDaysService.calculateWorkingDays(today, end, mapToWorkingDays(config));
+                idealRemaining = totalWorkingDays > 0 ? (int) ((double) remainingWorkingDays / totalWorkingDays * totalIssues) : 0;
+            } catch (Exception e) {
+                // Fallback to simple calendar days calculation
+                long daysTotal = java.time.temporal.ChronoUnit.DAYS.between(start, end) + 1;
+                long daysRemaining = java.time.temporal.ChronoUnit.DAYS.between(today, end);
+                idealRemaining = daysTotal > 0 ? (int) ((double) daysRemaining / daysTotal * totalIssues) : 0;
+                log.warn("WorkingDays config not available, using calendar days for burndown", e);
+            }
         }
-
-        int idealRemaining = daysTotal > 0 ? (int) ((double) daysRemaining / daysTotal * totalIssues) : 0;
 
         SprintBurndown snapshot = SprintBurndown.builder()
             .sprintId(sprintId)
@@ -329,6 +413,21 @@ public class SprintService {
             .build();
 
         sprintBurndownRepository.save(snapshot);
+    }
+
+    // Helper to map WorkingDaysResponse to WorkingDays entity
+    private WorkingDays mapToWorkingDays(com.jira.plan.dto.response.WorkingDaysResponse config) {
+        return WorkingDays.builder()
+            .id(config.getId())
+            .monday(config.getMonday())
+            .tuesday(config.getTuesday())
+            .wednesday(config.getWednesday())
+            .thursday(config.getThursday())
+            .friday(config.getFriday())
+            .saturday(config.getSaturday())
+            .sunday(config.getSunday())
+            .hoursPerDay(config.getHoursPerDay())
+            .build();
     }
 
     @Transactional(readOnly = true)
@@ -356,6 +455,10 @@ public class SprintService {
 
     private SprintResponse toResponse(Sprint sprint) {
         List<SprintIssue> issues = sprintIssueRepository.findBySprintId(sprint.getId());
+        return toResponseWithIssues(sprint, issues);
+    }
+
+    private SprintResponse toResponseWithIssues(Sprint sprint, List<SprintIssue> issues) {
         int totalIssues = issues.size();
         int completedIssues = (int) issues.stream()
             .filter(i -> "COMPLETED".equals(i.getCompletionStatus()))
@@ -372,6 +475,7 @@ public class SprintService {
             .state(sprint.getState())
             .sequence(sprint.getSequence())
             .velocity(sprint.getVelocity())
+            .wipLimit(sprint.getWipLimit())
             .committedPoints(sprint.getCommittedPoints())
             .completedPoints(sprint.getCompletedPoints())
             .totalIssues(totalIssues)

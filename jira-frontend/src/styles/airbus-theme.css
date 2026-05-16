@@ -301,6 +301,30 @@ body {
   color: var(--ab-gray-700);
 }
 
+.ab-btn-full {
+  width: 100%;
+}
+
+.ab-btn-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ab-spacing-xs);
+  padding: var(--ab-spacing-xs) var(--ab-spacing-sm);
+  background: transparent;
+  color: var(--ab-primary-500);
+  font-size: var(--ab-font-size-sm);
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color var(--ab-transition-fast);
+}
+
+.ab-btn-link:hover {
+  color: var(--ab-primary-700);
+  text-decoration: underline;
+}
+
 /* Form Components */
 .ab-input,
 .ab-select,

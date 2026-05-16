@@ -168,6 +168,7 @@ public class WorkingDaysService {
 
     /**
      * Calculate working days between two dates (excluding holidays).
+     * Includes both start and end dates in the calculation.
      */
     public long calculateWorkingDays(LocalDate start, LocalDate end, WorkingDays config) {
         if (start.isAfter(end)) {
@@ -185,6 +186,17 @@ public class WorkingDaysService {
         }
 
         return workingDays;
+    }
+
+    /**
+     * Calculate working days using config ID.
+     * Uses default config if not found.
+     */
+    public long calculateWorkingDays(UUID configId, LocalDate start, LocalDate end) {
+        WorkingDays config = workingDaysRepository.findById(configId)
+                .orElseGet(() -> workingDaysRepository.findByIsDefaultTrue()
+                        .orElseGet(this::createDefaultConfig));
+        return calculateWorkingDays(start, end, config);
     }
 
     /**

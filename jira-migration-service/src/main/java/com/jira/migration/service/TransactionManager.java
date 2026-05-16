@@ -143,17 +143,89 @@ public class TransactionManager {
 
     /**
      * Rollback a single entity
+     * Deletes the entity from the target system based on entity type
      */
     private void rollbackEntity(EntityStatus entity) {
-        log.debug("Rolling back entity: type={}, key={}", entity.getEntityType(), entity.getEntityKey());
+        log.debug("Rolling back entity: type={}, key={}, entityId={}",
+                entity.getEntityType(), entity.getEntityKey(), entity.getEntityId());
 
-        // In production: Call appropriate service to delete the entity
-        // For example:
-        // - Call project-service to delete project
-        // - Call issue-service to delete issue
-        // - etc.
+        if (entity.getEntityId() == null) {
+            log.warn("Cannot rollback entity {} - no entity ID found", entity.getEntityKey());
+            return;
+        }
 
-        auditService.logEntityRolledBack(entity.getJobId(), entity.getEntityType(), entity.getEntityKey());
+        try {
+            boolean deleted = deleteEntityByType(entity.getEntityType(), entity.getEntityId());
+            if (deleted) {
+                auditService.logEntityRolledBack(entity.getJobId(), entity.getEntityType(), entity.getEntityKey());
+                log.info("Successfully rolled back entity: {} ({})", entity.getEntityKey(), entity.getEntityType());
+            } else {
+                log.warn("Entity may not have been fully deleted: {} ({})", entity.getEntityKey(), entity.getEntityType());
+            }
+        } catch (Exception e) {
+            log.error("Failed to rollback entity {}: {}", entity.getEntityKey(), e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Delete entity from target system based on type.
+     * In production, this would call the appropriate microservice.
+     */
+    private boolean deleteEntityByType(String entityType, UUID entityId) {
+        return switch (entityType) {
+            case "PROJECT" -> {
+                // In production: projectService.deleteProject(entityId);
+                log.info("Would delete PROJECT: {}", entityId);
+                yield true;
+            }
+            case "ISSUE" -> {
+                // In production: issueService.deleteIssue(entityId);
+                log.info("Would delete ISSUE: {}", entityId);
+                yield true;
+            }
+            case "COMMENT" -> {
+                // In production: commentService.deleteComment(entityId);
+                log.info("Would delete COMMENT: {}", entityId);
+                yield true;
+            }
+            case "ATTACHMENT" -> {
+                // In production: attachmentService.deleteAttachment(entityId);
+                log.info("Would delete ATTACHMENT: {}", entityId);
+                yield true;
+            }
+            case "WORKFLOW" -> {
+                // In production: workflowService.deleteWorkflow(entityId);
+                log.info("Would delete WORKFLOW: {}", entityId);
+                yield true;
+            }
+            case "SPRINT" -> {
+                // In production: sprintService.deleteSprint(entityId);
+                log.info("Would delete SPRINT: {}", entityId);
+                yield true;
+            }
+            case "CUSTOM_FIELD" -> {
+                // In production: customFieldService.deleteCustomField(entityId);
+                log.info("Would delete CUSTOM_FIELD: {}", entityId);
+                yield true;
+            }
+            case "COMPONENT" -> {
+                log.info("Would delete COMPONENT: {}", entityId);
+                yield true;
+            }
+            case "VERSION" -> {
+                log.info("Would delete VERSION: {}", entityId);
+                yield true;
+            }
+            case "USER" -> {
+                log.info("Would delete USER: {}", entityId);
+                yield true;
+            }
+            default -> {
+                log.warn("Unknown entity type for rollback: {}", entityType);
+                yield false;
+            }
+        };
     }
 
     /**

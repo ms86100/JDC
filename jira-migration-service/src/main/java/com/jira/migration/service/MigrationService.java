@@ -9,6 +9,8 @@ import com.jira.migration.exception.*;
 import com.jira.migration.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -176,8 +178,6 @@ public class MigrationService {
         job.setJobStatus("CANCELLED");
         job.setCompletedAt(LocalDateTime.now());
         migrationJobRepository.save(job);
-
-        log.info("Cancelled migration job: id={}", jobId);
     }
 
     @Transactional
@@ -224,6 +224,28 @@ public class MigrationService {
                 .orElseThrow(() -> new EntityNotFoundException("MigrationJob", jobId.toString()));
         job.setTotalEntities(total);
         migrationJobRepository.save(job);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<MigrationJobResponse> listJobs(String status, String type, UUID userId, Pageable pageable) {
+        log.debug("Listing jobs: status={}, type={}, userId={}, page={}",
+                status, type, userId, pageable.getPageNumber());
+
+        Page<MigrationJob> jobs;
+
+        if (status != null && userId != null) {
+            jobs = migrationJobRepository.findByUserAndStatus(userId, status, pageable);
+        } else if (status != null) {
+            jobs = migrationJobRepository.findByJobStatus(status, pageable);
+        } else if (type != null) {
+            jobs = migrationJobRepository.findByJobType(type, pageable);
+        } else if (userId != null) {
+            jobs = migrationJobRepository.findByInitiatedBy(userId, pageable);
+        } else {
+            jobs = migrationJobRepository.findAll(pageable);
+        }
+
+        return jobs.map(MigrationJobResponse::fromEntity);
     }
 
     private String serialize(Object obj) {

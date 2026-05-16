@@ -130,6 +130,9 @@ export const useCreateWorkingDays = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workingDays'] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to create working days config:', error.message);
+    },
   });
 };
 
@@ -142,6 +145,9 @@ export const useUpdateWorkingDays = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workingDays'] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to update working days config:', error.message);
+    },
   });
 };
 
@@ -152,6 +158,9 @@ export const useDeleteWorkingDays = () => {
     mutationFn: workingDaysApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workingDays'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to delete working days config:', error.message);
     },
   });
 };
@@ -175,6 +184,9 @@ export const useAddHoliday = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['holidays', variables.configId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to add holiday:', error.message);
+    },
   });
 };
 
@@ -186,6 +198,9 @@ export const useRemoveHoliday = () => {
       workingDaysApi.removeHoliday(configId, holidayId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['holidays', variables.configId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to remove holiday:', error.message);
     },
   });
 };
@@ -208,6 +223,9 @@ export const useSetTeamAvailability = () => {
       workingDaysApi.setTeamAvailability(teamId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['teamAvailability', variables.teamId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to set team availability:', error.message);
     },
   });
 };

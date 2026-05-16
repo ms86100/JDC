@@ -25,6 +25,10 @@ export const useCreateProgram = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['programs'] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to create program:', error);
+      alert(error.message || 'Failed to create program');
+    },
   });
 };
 
@@ -37,6 +41,10 @@ export const useUpdateProgram = () => {
       queryClient.invalidateQueries({ queryKey: ['programs'] });
       queryClient.invalidateQueries({ queryKey: ['programs', id] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to update program:', error);
+      alert(error.message || 'Failed to update program');
+    },
   });
 };
 
@@ -46,6 +54,10 @@ export const useDeleteProgram = () => {
     mutationFn: planApi.deleteProgram,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['programs'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to delete program:', error);
+      alert(error.message || 'Failed to delete program');
     },
   });
 };
@@ -74,6 +86,10 @@ export const useCreatePlan = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plans'] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to create plan:', error);
+      alert(error.message || 'Failed to create plan');
+    },
   });
 };
 
@@ -86,6 +102,10 @@ export const useUpdatePlan = () => {
       queryClient.invalidateQueries({ queryKey: ['plans'] });
       queryClient.invalidateQueries({ queryKey: ['plans', id] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to update plan:', error);
+      alert(error.message || 'Failed to update plan');
+    },
   });
 };
 
@@ -95,6 +115,10 @@ export const useDeletePlan = () => {
     mutationFn: planApi.deletePlan,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plans'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to delete plan:', error);
+      alert(error.message || 'Failed to delete plan');
     },
   });
 };

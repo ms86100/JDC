@@ -24,7 +24,7 @@ database:
   host: "localhost"
   port: 5432
   username: "jiraadmin"
-  password: "jirapass123"
+  password: "UNIpay@123"
 
   # Multi-database setup — comma-separated list of database names
   # PostgreSQL container will initialize all of these on first start

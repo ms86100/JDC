@@ -15,6 +15,12 @@ public interface SprintIssueRepository extends JpaRepository<SprintIssue, UUID> 
 
     List<SprintIssue> findBySprintId(UUID sprintId);
 
+    /**
+     * Batch fetch sprint issues for multiple sprints to avoid N+1 queries.
+     */
+    @Query("SELECT si FROM SprintIssue si JOIN FETCH si.sprint WHERE si.sprint.id IN :sprintIds")
+    List<SprintIssue> findBySprintIds(@Param("sprintIds") List<UUID> sprintIds);
+
     List<SprintIssue> findBySprintIdAndCompletionStatus(UUID sprintId, String completionStatus);
 
     @Query("SELECT si FROM SprintIssue si WHERE si.sprint.id = :sprintId AND si.completionStatus != 'DROPPED'")

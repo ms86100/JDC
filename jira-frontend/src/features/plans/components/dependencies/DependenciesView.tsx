@@ -30,14 +30,19 @@ export default function DependenciesView({ planId }: DependenciesViewProps) {
           setBlockingIssueId('');
           setBlockedIssueId('');
         },
+        onError: (error: Error) => {
+          alert(error.message || 'Failed to create dependency. Check for circular dependencies.');
+        },
       }
     );
   };
 
   const handleDelete = (dependencyId: string) => {
-    if (confirm('Remove this dependency?')) {
-      deleteMutation.mutate({ planId, dependencyId });
-    }
+    deleteMutation.mutate({ planId, dependencyId }, {
+      onError: (error: Error) => {
+        alert(error.message || 'Failed to delete dependency');
+      },
+    });
   };
 
   if (isLoading) {

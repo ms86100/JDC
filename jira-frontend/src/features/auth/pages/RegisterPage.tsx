@@ -39,12 +39,17 @@ export default function RegisterPage() {
     <div className="ab-auth-page">
       <div className="ab-auth-container">
         <div className="ab-auth-header">
-          <div className="ab-logo-large">JP</div>
+          <div className="ab-auth-logo">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <rect width="48" height="48" rx="8" fill="#0066FF"/>
+              <path d="M12 36V12L24 24L36 12V36" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
           <h1 className="ab-auth-title">Create Account</h1>
           <p className="ab-auth-subtitle">Join Jira Platform to manage your projects</p>
         </div>
 
-        <div className="ab-card">
+        <div className="ab-card ab-auth-card">
           <form onSubmit={handleSubmit} className="ab-auth-form">
             {error && (
               <div className="ab-alert ab-alert-error">
@@ -105,6 +110,10 @@ export default function RegisterPage() {
             Already have an account?{' '}
             <Link to="/login" className="ab-link">Sign in</Link>
           </p>
+        </div>
+
+        <div className="ab-auth-brand">
+          <span>Powered by Airbus Digital</span>
         </div>
       </div>
     </div>

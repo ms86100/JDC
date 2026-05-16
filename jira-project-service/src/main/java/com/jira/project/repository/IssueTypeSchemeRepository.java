@@ -13,5 +13,7 @@ public interface IssueTypeSchemeRepository extends JpaRepository<IssueTypeScheme
 
     Optional<IssueTypeScheme> findByIsDefaultTrue();
 
+    Optional<IssueTypeScheme> findByName(String name);
+
     List<IssueTypeScheme> findByNameContainingIgnoreCase(String name);
 }

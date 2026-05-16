@@ -129,6 +129,10 @@ export const useCreateSprint = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['sprints', variables.boardId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to create sprint:', error);
+      alert(error.message || 'Failed to create sprint');
+    },
   });
 };
 
@@ -140,6 +144,10 @@ export const useUpdateSprint = () => {
       sprintApi.update(sprintId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['sprint', variables.sprintId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to update sprint:', error);
+      alert(error.message || 'Failed to update sprint');
     },
   });
 };
@@ -154,6 +162,10 @@ export const useStartSprint = () => {
       queryClient.invalidateQueries({ queryKey: ['sprints'] });
       queryClient.invalidateQueries({ queryKey: ['sprint'] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to start sprint:', error);
+      alert(error.message || 'Failed to start sprint');
+    },
   });
 };
 
@@ -167,6 +179,10 @@ export const useCloseSprint = () => {
       queryClient.invalidateQueries({ queryKey: ['sprints'] });
       queryClient.invalidateQueries({ queryKey: ['sprint'] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to close sprint:', error);
+      alert(error.message || 'Failed to close sprint');
+    },
   });
 };
 
@@ -179,6 +195,10 @@ export const useAbandonSprint = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sprints'] });
       queryClient.invalidateQueries({ queryKey: ['sprint'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to abandon sprint:', error);
+      alert(error.message || 'Failed to abandon sprint');
     },
   });
 };
@@ -202,6 +222,10 @@ export const useAddIssueToSprint = () => {
       queryClient.invalidateQueries({ queryKey: ['sprintIssues', variables.sprintId] });
       queryClient.invalidateQueries({ queryKey: ['sprint', variables.sprintId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to add issue to sprint:', error);
+      alert(error.message || 'Failed to add issue to sprint');
+    },
   });
 };
 
@@ -215,6 +239,10 @@ export const useRemoveIssueFromSprint = () => {
       queryClient.invalidateQueries({ queryKey: ['sprintIssues', variables.sprintId] });
       queryClient.invalidateQueries({ queryKey: ['sprint', variables.sprintId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to remove issue from sprint:', error);
+      alert(error.message || 'Failed to remove issue from sprint');
+    },
   });
 };
 
@@ -227,6 +255,10 @@ export const useCompleteIssue = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['sprintIssues', variables.sprintId] });
       queryClient.invalidateQueries({ queryKey: ['sprint', variables.sprintId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to complete issue:', error);
+      alert(error.message || 'Failed to complete issue');
     },
   });
 };
@@ -247,6 +279,10 @@ export const useTakeBurndownSnapshot = () => {
     mutationFn: sprintApi.takeSnapshot,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sprintBurndown'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to take burndown snapshot:', error);
+      alert(error.message || 'Failed to take burndown snapshot');
     },
   });
 };
@@ -280,6 +316,10 @@ export const useUpdateIssueColumn = () => {
       queryClient.invalidateQueries({ queryKey: ['sprintIssues', variables.sprintId] });
       queryClient.invalidateQueries({ queryKey: ['sprint', variables.sprintId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to update issue column:', error);
+      alert(error.message || 'Failed to update issue column');
+    },
   });
 };
 
@@ -293,6 +333,10 @@ export const useRankIssueToTop = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['backlog', variables.planId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to rank issue to top:', error);
+      alert(error.message || 'Failed to rank issue to top');
+    },
   });
 };
 
@@ -304,6 +348,10 @@ export const useRankIssueToBottom = () => {
       apiClient.post(`/api/plans/${planId}/backlog/rank/bottom`, { planItemId }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['backlog', variables.planId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to rank issue to bottom:', error);
+      alert(error.message || 'Failed to rank issue to bottom');
     },
   });
 };
@@ -318,6 +366,10 @@ export const useAssignIssueToMe = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sprintIssues'] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to assign issue:', error);
+      alert(error.message || 'Failed to assign issue');
+    },
   });
 };
 
@@ -330,6 +382,10 @@ export const useCloneIssue = () => {
       apiClient.post(`/api/issues/${issueId}/clone`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sprintIssues'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to clone issue:', error);
+      alert(error.message || 'Failed to clone issue');
     },
   });
 };
@@ -344,6 +400,10 @@ export const useCreateSubTask = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sprintIssues'] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to create sub-task:', error);
+      alert(error.message || 'Failed to create sub-task');
+    },
   });
 };
 
@@ -356,6 +416,10 @@ export const useArchiveIssue = () => {
       apiClient.put(`/api/issues/${issueId}/archive`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sprintIssues'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to archive issue:', error);
+      alert(error.message || 'Failed to archive issue');
     },
   });
 };

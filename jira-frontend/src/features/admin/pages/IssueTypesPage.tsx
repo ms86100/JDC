@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import AdminLayout from '../components/AdminLayout';
 import { useIssueTypes, IssueType } from '../hooks/useAdminApi';
+import AdminLayout from '../components/AdminLayout';
 import './IssueAdministrationPage.css';
 
 export default function IssueTypesPage() {
@@ -42,12 +42,12 @@ export default function IssueTypesPage() {
 
   return (
     <AdminLayout>
-      <div className="admin-page">
-        <div className="admin-page-header">
-          <h1 className="admin-page-title">Issue Types</h1>
-          <p className="admin-page-description">
-            Configure the types of issues available in your Jira instance.
-          </p>
+    <div className="admin-page">
+      <div className="admin-page-header">
+        <h1 className="admin-page-title">Issue Types</h1>
+        <p className="admin-page-description">
+          Configure the types of issues available in your Jira instance.
+        </p>
         </div>
 
         <div className="admin-toolbar">

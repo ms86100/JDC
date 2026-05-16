@@ -85,6 +85,10 @@ public class MigrationJob {
     @Column(name = "file_path", length = 500)
     private String filePath;
 
+    @Version
+    @Column(name = "optimistic_lock_version")
+    private Long optimisticLockVersion;
+
     // Rollback support
     @Column(name = "can_rollback")
     @Builder.Default

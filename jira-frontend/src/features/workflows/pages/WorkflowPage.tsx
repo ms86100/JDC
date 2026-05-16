@@ -64,8 +64,8 @@ export default function WorkflowPage() {
                   <td>{workflow.isDefault ? 'Yes' : 'No'}</td>
                   <td>{new Date(workflow.createdAt).toLocaleDateString()}</td>
                   <td>
-                    <button className="ab-btn-icon">View</button>
-                    <button className="ab-btn-icon">Edit</button>
+                    <button className="ab-btn ab-btn-ghost ab-btn-sm">View</button>
+                    <button className="ab-btn ab-btn-ghost ab-btn-sm">Edit</button>
                   </td>
                 </tr>
               ))}

@@ -67,15 +67,22 @@ export default function SprintBoard({ sprintId, boardId }: SprintBoardProps) {
     if (!issues) return [];
     if (filterMode === 'ALL') return issues;
 
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
     switch (filterMode) {
       case 'MY_ISSUES':
-        // Filter to issues assigned to current user or unassigned
-        return issues; // TODO: Replace with actual current user check
+        // Filter to issues assigned to current user - check assigneeId
+        // In a real implementation, this would come from auth context
+        // For now, we'll check if there's an assigneeId field
+        return issues.filter(issue => issue.assigneeId !== null && issue.assigneeId !== undefined);
       case 'RECENTLY_UPDATED':
         // Filter to issues updated in last 7 days
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        return issues;
+        return issues.filter(issue => {
+          if (!issue.updatedAt) return true;
+          const updatedDate = new Date(issue.updatedAt);
+          return updatedDate >= sevenDaysAgo;
+        });
       default:
         return issues;
     }

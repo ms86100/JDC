@@ -19,6 +19,10 @@ export const useAddItemToBacklog = () => {
       queryClient.invalidateQueries({ queryKey: ['backlog', planId] });
       queryClient.invalidateQueries({ queryKey: ['plans', planId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to add item to backlog:', error);
+      alert(error.message || 'Failed to add item to backlog');
+    },
   });
 };
 
@@ -29,6 +33,10 @@ export const useUpdateBacklogItem = () => {
       planApi.updateBacklogItem(planId, itemId, data),
     onSuccess: (_, { planId }) => {
       queryClient.invalidateQueries({ queryKey: ['backlog', planId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to update backlog item:', error);
+      alert(error.message || 'Failed to update backlog item');
     },
   });
 };
@@ -42,6 +50,10 @@ export const useRemoveItemFromBacklog = () => {
       queryClient.invalidateQueries({ queryKey: ['backlog', planId] });
       queryClient.invalidateQueries({ queryKey: ['plans', planId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to remove item from backlog:', error);
+      alert(error.message || 'Failed to remove item from backlog');
+    },
   });
 };
 
@@ -52,6 +64,10 @@ export const useReorderBacklog = () => {
       planApi.reorderBacklog(planId, data),
     onSuccess: (_, { planId }) => {
       queryClient.invalidateQueries({ queryKey: ['backlog', planId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to reorder backlog:', error);
+      alert(error.message || 'Failed to reorder backlog');
     },
   });
 };

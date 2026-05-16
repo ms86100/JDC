@@ -16,6 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.util.*;
 
@@ -161,12 +164,22 @@ public class MigrationController {
     }
 
     @GetMapping("/jobs")
-    public ResponseEntity<List<MigrationJobResponse>> listJobs(
+    public ResponseEntity<Page<MigrationJobResponse>> listJobs(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) UUID userId) {
-        // Implement filtering based on parameters
-        return ResponseEntity.ok(List.of());
+            @RequestParam(required = false) UUID userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "initiatedAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDir) {
+
+        PageRequest pageRequest = PageRequest.of(
+                page, Math.min(size, 100),
+                Sort.by(Sort.Direction.fromString(sortDir), sortBy)
+        );
+
+        Page<MigrationJobResponse> jobs = migrationService.listJobs(status, type, userId, pageRequest);
+        return ResponseEntity.ok(jobs);
     }
 
     // ============================================

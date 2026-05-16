@@ -14,20 +14,21 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
+@RequestMapping("/api/search")
 @RequiredArgsConstructor
 @Slf4j
 public class SearchController {
 
     private final SearchService searchService;
 
-    @PostMapping("/search/index")
+    @PostMapping("/index")
     public ResponseEntity<IndexResponse> indexEntity(@Valid @RequestBody IndexRequest request) {
         log.info("POST /search/index - Indexing entity: {} {}", request.getEntityType(), request.getEntityId());
         IndexResponse response = searchService.indexEntity(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @DeleteMapping("/search/index/{entityType}/{entityId}")
+    @DeleteMapping("/index/{entityType}/{entityId}")
     public ResponseEntity<Void> removeFromIndex(
             @PathVariable String entityType,
             @PathVariable UUID entityId) {
@@ -36,7 +37,7 @@ public class SearchController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/search")
+    @GetMapping
     public ResponseEntity<SearchResponse> search(
             @RequestParam String q,
             @RequestParam(required = false) String entityType,

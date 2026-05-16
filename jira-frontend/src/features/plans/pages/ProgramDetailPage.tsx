@@ -12,7 +12,7 @@ export default function ProgramDetailPage() {
   const queryClient = useQueryClient();
   const [showCreatePlan, setShowCreatePlan] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
-  const [form, setForm] = useState<CreatePlanRequest>({ name: '', description: '' });
+  const [form, setForm] = useState<{ name: string; description: string }>({ name: '', description: '' });
 
   const { data: program, isLoading: programLoading } = useProgram(programId || '');
   const { data: plans, isLoading: plansLoading } = usePlans();
@@ -74,7 +74,10 @@ export default function ProgramDetailPage() {
           <p className="ab-page-subtitle">{program.description || 'No description'}</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <button className="ab-btn ab-btn-secondary" onClick={() => setShowEdit(true)}>
+          <button className="ab-btn ab-btn-secondary" onClick={() => {
+                setForm({ name: program.name, description: program.description || '' });
+                setShowEdit(true);
+              }}>
             Edit
           </button>
           <button className="ab-btn ab-btn-primary" onClick={() => setShowCreatePlan(true)}>
@@ -203,11 +206,16 @@ export default function ProgramDetailPage() {
               e.preventDefault();
               if (!programId) return;
               updateMutation.mutate(
-                { id: programId, data: { name: program.name, description: program.description } },
-                { onSuccess: () => {
-                  setShowEdit(false);
-                  queryClient.invalidateQueries({ queryKey: ['programs', programId] });
-                }}
+                { id: programId, data: { name: form.name, description: form.description } },
+                {
+                  onSuccess: () => {
+                    setShowEdit(false);
+                    queryClient.invalidateQueries({ queryKey: ['programs', programId] });
+                  },
+                  onError: (error: Error) => {
+                    alert(error.message || 'Failed to update program');
+                  },
+                }
               );
             }}>
               <div className="ab-modal-body">
@@ -216,8 +224,17 @@ export default function ProgramDetailPage() {
                   <input
                     type="text"
                     className="ab-input"
-                    value={program.name}
-                    onChange={(e) => {}}
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                </div>
+                <div className="ab-form-group">
+                  <label className="ab-label">Description</label>
+                  <textarea
+                    className="ab-textarea"
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    rows={3}
                   />
                 </div>
               </div>

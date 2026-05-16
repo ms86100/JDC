@@ -121,7 +121,7 @@ export default function KanbanColumn({
             <div className="ab-empty-state">
               <span className="ab-empty-icon">📋</span>
               <p>No issues</p>
-              <button className="ab-btn-link" onClick={onCreateIssue}>
+              <button className="ab-btn ab-btn-ghost" onClick={onCreateIssue}>
                 + Create issue
               </button>
             </div>

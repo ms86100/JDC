@@ -122,6 +122,23 @@ public class WorkflowTransition {
     @Column(name = "updated_by")
     private UUID updatedBy;
 
+    @Column(name = "type", length = 50)
+    @Builder.Default
+    private String type = "MANUAL";
+
+    // Conditions, Validators, PostFunctions stored as JSONB
+    @Column(name = "conditions", columnDefinition = "TEXT")
+    private String conditions;
+
+    @Column(name = "validators", columnDefinition = "TEXT")
+    private String validators;
+
+    @Column(name = "post_functions", columnDefinition = "TEXT")
+    private String postFunctions;
+
+    @Column(name = "screen_id")
+    private UUID screenId;
+
     // Transition operations
     public static final String OPERATION_AUTO = "AUTO";
     public static final String OPERATION_MANUAL = "MANUAL";

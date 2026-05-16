@@ -8,4 +8,6 @@ import java.util.Optional;
 @Repository
 public interface PermissionSchemeRepository extends JpaRepository<PermissionSchemeEntity, String> {
     Optional<PermissionSchemeEntity> findByName(String name);
+    Optional<PermissionSchemeEntity> findByIsDefaultTrue();
+    Optional<PermissionSchemeEntity> findFirstByIsDefaultTrue();
 }

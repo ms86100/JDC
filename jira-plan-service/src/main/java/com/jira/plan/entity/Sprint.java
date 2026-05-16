@@ -31,6 +31,9 @@ public class Sprint {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Version
+    private Long version;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "board_id")
     private BoardConfig boardConfig;
@@ -59,6 +62,9 @@ public class Sprint {
     @Column
     @Builder.Default
     private Integer velocity = 0;
+
+    @Column(name = "wip_limit")
+    private Integer wipLimit;  // Work-in-progress limit for sprint
 
     @Column(name = "committed_points")
     @Builder.Default

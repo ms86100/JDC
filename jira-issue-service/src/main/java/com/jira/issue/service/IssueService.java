@@ -18,7 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +30,11 @@ public class IssueService {
     private final IssueTypeRepository issueTypeRepository;
     private final IssuePriorityRepository issuePriorityRepository;
     private final IssueStatusRepository issueStatusRepository;
+    private final ProjectVersionRepository versionRepository;
+    private final ProjectComponentRepository componentRepository;
+    private final VoteRepository voteRepository;
+    private final WatcherRepository watcherRepository;
+    private final IssueLinkRepository issueLinkRepository;
 
     @Value("${workflow.service.url}")
     private String workflowServiceUrl;
@@ -137,6 +143,15 @@ public class IssueService {
 
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", issueId));
+
+        // Optimistic locking: check version if provided
+        if (request.getExpectedVersion() != null) {
+            if (!request.getExpectedVersion().equals(issue.getVersion())) {
+                throw new OptimisticLockException(
+                        "Issue has been modified by another user. Expected version: " +
+                        request.getExpectedVersion() + ", current version: " + issue.getVersion());
+            }
+        }
 
         if (request.getTitle() != null) {
             issue.setTitle(request.getTitle());
@@ -309,6 +324,74 @@ public class IssueService {
             builder.issueTypeId(issue.getIssueType().getId())
                     .issueTypeName(issue.getIssueType().getName())
                     .issueTypeIcon(issue.getIssueType().getIcon());
+        }
+
+        // Calculate work ratio
+        if (issue.getOriginalEstimate() != null && issue.getOriginalEstimate() > 0) {
+            long spent = issue.getTimeSpent() != null ? issue.getTimeSpent() : 0;
+            double ratio = (double) spent / issue.getOriginalEstimate() * 100;
+            builder.workRatio(Math.round(ratio * 100.0) / 100.0);
+        }
+
+        // Load version names
+        if (issue.getAffectsVersions() != null && issue.getAffectsVersions().length > 0) {
+            List<String> versionNames = new ArrayList<>();
+            for (UUID versionId : issue.getAffectsVersions()) {
+                versionRepository.findById(versionId).ifPresent(v -> versionNames.add(v.getName()));
+            }
+            builder.affectsVersionNames(versionNames.isEmpty() ? null : versionNames.toArray(new String[0]));
+        }
+        if (issue.getFixVersions() != null && issue.getFixVersions().length > 0) {
+            List<String> versionNames = new ArrayList<>();
+            for (UUID versionId : issue.getFixVersions()) {
+                versionRepository.findById(versionId).ifPresent(v -> versionNames.add(v.getName()));
+            }
+            builder.fixVersionNames(versionNames.isEmpty() ? null : versionNames.toArray(new String[0]));
+        }
+
+        // Load component names
+        if (issue.getComponentIds() != null && issue.getComponentIds().length > 0) {
+            List<String> componentNames = new ArrayList<>();
+            for (UUID componentId : issue.getComponentIds()) {
+                componentRepository.findById(componentId).ifPresent(c -> componentNames.add(c.getName()));
+            }
+            builder.componentNames(componentNames.isEmpty() ? null : componentNames.toArray(new String[0]));
+        }
+
+        // Load linked issues
+        List<IssueLink> links = issueLinkRepository.findBySourceIssueId(issue.getId());
+        if (!links.isEmpty()) {
+            // Batch load all destination issues to avoid N+1
+            Set<UUID> destinationIds = links.stream()
+                    .map(IssueLink::getDestinationIssueId)
+                    .collect(Collectors.toSet());
+            Map<UUID, Issue> issuesById = issueRepository.findAllById(destinationIds).stream()
+                    .collect(Collectors.toMap(Issue::getId, i -> i));
+
+            List<IssueResponse.LinkedIssueInfo> linkedIssues = links.stream()
+                    .map(link -> {
+                        Issue linkedIssue = issuesById.get(link.getDestinationIssueId());
+                        if (linkedIssue == null) return null;
+                        return IssueResponse.LinkedIssueInfo.builder()
+                                .linkType(link.getLinkType() != null ? link.getLinkType() : "Related")
+                                .issueId(linkedIssue.getId())
+                                .issueKey(linkedIssue.getIssueKey())
+                                .title(linkedIssue.getTitle())
+                                .direction("OUTWARD")
+                                .build();
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            builder.linkedIssues(linkedIssues);
+        }
+
+        // Load subtasks
+        List<Issue> subtasks = issueRepository.findByParentIssueId(issue.getId());
+        if (!subtasks.isEmpty()) {
+            builder.subTaskCount(subtasks.size())
+                    .subtasks(subtasks.stream()
+                            .map(this::mapToIssueResponse)
+                            .collect(Collectors.toList()));
         }
 
         return builder.build();

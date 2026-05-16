@@ -137,13 +137,13 @@ export default function CreateProjectModal({ isOpen, onClose, onSelect }: Create
 
         <div className="ab-modal-footer">
           <div className="ab-modal-footer-left">
-            <button className="ab-footer-link">Import a project</button>
-            <button className="ab-footer-link">Create with shared configuration</button>
-            <button className="ab-footer-link">Create sample data</button>
+            <button className="ab-btn ab-btn-ghost">Import a project</button>
+            <button className="ab-btn ab-btn-ghost">Create with shared configuration</button>
+            <button className="ab-btn ab-btn-ghost">Create sample data</button>
           </div>
           <div className="ab-modal-footer-right">
-            <button className="ab-btn-cancel" onClick={onClose}>Cancel</button>
-            <button className="ab-btn-next" onClick={() => { onSelect(selectedTemplate); onClose(); }}>
+            <button className="ab-btn ab-btn-secondary" onClick={onClose}>Cancel</button>
+            <button className="ab-btn ab-btn-primary" onClick={() => { onSelect(selectedTemplate); onClose(); }}>
               Next
             </button>
           </div>

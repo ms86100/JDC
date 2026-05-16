@@ -92,6 +92,18 @@ public class PlanService {
     public void deletePlan(UUID id) {
         Plan plan = findPlanById(id);
         plan.setIsActive(false);
+
+        // Cascade soft-delete to related entities to maintain referential integrity
+        if (plan.getItems() != null) {
+            plan.getItems().forEach(item -> item.setIsActive(false));
+        }
+        if (plan.getTeams() != null) {
+            plan.getTeams().forEach(team -> team.setIsActive(false));
+        }
+        if (plan.getReleases() != null) {
+            plan.getReleases().forEach(release -> release.setIsActive(false));
+        }
+
         planRepository.save(plan);
     }
 

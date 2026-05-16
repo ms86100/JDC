@@ -127,6 +127,15 @@ public class IssueServiceClient {
             data.setAssigneeId(parseUUID(assigneeId));
         }
 
+        // Extract assignee name (display name)
+        Object assigneeNameObj = response.get("assigneeName");
+        if (assigneeNameObj instanceof String) {
+            data.setAssigneeName((String) assigneeNameObj);
+        } else if (assigneeId != null) {
+            // Use ID as fallback name if no display name available
+            data.setAssigneeName(data.getAssigneeId().toString().substring(0, 8));
+        }
+
         // Extract reporter
         Object reporterId = response.get("reporterId");
         if (reporterId != null) {
@@ -156,6 +165,7 @@ public class IssueServiceClient {
         private String priorityName;
         private String issueTypeName;
         private UUID assigneeId;
+        private String assigneeName;
         private UUID reporterId;
         private Date createdAt;
         private Date updatedAt;

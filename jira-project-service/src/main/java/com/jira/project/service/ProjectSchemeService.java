@@ -8,7 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +27,8 @@ public class ProjectSchemeService {
     private final NotificationSchemeRepository notificationSchemeRepository;
     private final ScreenSchemeRepository screenSchemeRepository;
     private final ScreenSchemeScreenRepository screenSchemeScreenRepository;
+    private final TemplateSchemeMappingRepository templateSchemeMappingRepository;
+    private final ProjectTemplateRepository projectTemplateRepository;
 
     public ProjectSchemeResponse getSchemeByProjectId(UUID projectId) {
         ProjectScheme scheme = projectSchemeRepository.findByProjectId(projectId)
@@ -42,17 +46,69 @@ public class ProjectSchemeService {
         ProjectScheme.ProjectSchemeBuilder builder = ProjectScheme.builder()
                 .project(project);
 
-        // Assign default schemes
-        issueTypeSchemeRepository.findByIsDefaultTrue()
-                .ifPresent(builder::issueTypeScheme);
-        workflowSchemeRepository.findByIsDefaultTrue()
-                .ifPresent(builder::workflowScheme);
-        permissionSchemeRepository.findByIsDefaultTrue()
-                .ifPresent(builder::permissionScheme);
-        notificationSchemeRepository.findByIsDefaultTrue()
-                .ifPresent(builder::notificationScheme);
-        screenSchemeRepository.findByIsDefaultTrue()
-                .ifPresent(builder::screenScheme);
+        // First, try to assign template-specific schemes if templateId is provided
+        if (templateId != null) {
+            List<TemplateSchemeMapping> templateSchemes = templateSchemeMappingRepository.findByTemplateId(templateId);
+
+            if (!templateSchemes.isEmpty()) {
+                log.debug("Assigning template-specific schemes for template: {}", templateId);
+
+                for (TemplateSchemeMapping mapping : templateSchemes) {
+                    UUID schemeId = mapping.getSchemeId();
+                    String schemeName = mapping.getSchemeName();
+
+                    switch (mapping.getSchemeType()) {
+                        case TemplateSchemeMapping.SCHEME_TYPE_ISSUE_TYPE:
+                            issueTypeSchemeRepository.findById(schemeId)
+                                    .or(() -> issueTypeSchemeRepository.findByName(schemeName))
+                                    .ifPresent(builder::issueTypeScheme);
+                            break;
+                        case TemplateSchemeMapping.SCHEME_TYPE_WORKFLOW:
+                            workflowSchemeRepository.findById(schemeId)
+                                    .or(() -> workflowSchemeRepository.findByName(schemeName))
+                                    .ifPresent(builder::workflowScheme);
+                            break;
+                        case TemplateSchemeMapping.SCHEME_TYPE_PERMISSION:
+                            permissionSchemeRepository.findById(schemeId)
+                                    .or(() -> permissionSchemeRepository.findByName(schemeName))
+                                    .ifPresent(builder::permissionScheme);
+                            break;
+                        case TemplateSchemeMapping.SCHEME_TYPE_NOTIFICATION:
+                            notificationSchemeRepository.findById(schemeId)
+                                    .or(() -> notificationSchemeRepository.findByName(schemeName))
+                                    .ifPresent(builder::notificationScheme);
+                            break;
+                        case TemplateSchemeMapping.SCHEME_TYPE_SCREEN:
+                            screenSchemeRepository.findById(schemeId)
+                                    .or(() -> screenSchemeRepository.findByName(schemeName))
+                                    .ifPresent(builder::screenScheme);
+                            break;
+                    }
+                }
+            }
+        }
+
+        // Fall back to default schemes for any not yet assigned
+        if (builder.build().getIssueTypeScheme() == null) {
+            issueTypeSchemeRepository.findByIsDefaultTrue()
+                    .ifPresent(builder::issueTypeScheme);
+        }
+        if (builder.build().getWorkflowScheme() == null) {
+            workflowSchemeRepository.findByIsDefaultTrue()
+                    .ifPresent(builder::workflowScheme);
+        }
+        if (builder.build().getPermissionScheme() == null) {
+            permissionSchemeRepository.findByIsDefaultTrue()
+                    .ifPresent(builder::permissionScheme);
+        }
+        if (builder.build().getNotificationScheme() == null) {
+            notificationSchemeRepository.findByIsDefaultTrue()
+                    .ifPresent(builder::notificationScheme);
+        }
+        if (builder.build().getScreenScheme() == null) {
+            screenSchemeRepository.findByIsDefaultTrue()
+                    .ifPresent(builder::screenScheme);
+        }
 
         ProjectScheme projectScheme = builder.build();
         return projectSchemeRepository.save(projectScheme);

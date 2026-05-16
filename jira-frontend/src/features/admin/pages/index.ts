@@ -1,4 +1,8 @@
 export { default as UserManagementPage } from './UserManagementPage';
+export { default as JiraUserBrowser } from './JiraUserBrowser';
+export { default as JiraCreateUser } from './JiraCreateUser';
+export { default as JiraGroupsBrowser } from './JiraGroupsBrowser';
+export { default as JiraViewGroup } from './JiraViewGroup';
 export { default as IssueTypesPage } from './IssueTypesPage';
 export { default as PrioritiesPage } from './PrioritiesPage';
 export { default as StatusesPage } from './StatusesPage';

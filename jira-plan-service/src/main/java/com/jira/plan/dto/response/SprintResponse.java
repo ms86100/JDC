@@ -23,6 +23,7 @@ public class SprintResponse {
     private String state;
     private Integer sequence;
     private Integer velocity;
+    private Integer wipLimit;
     private Integer committedPoints;
     private Integer completedPoints;
     private int totalIssues;

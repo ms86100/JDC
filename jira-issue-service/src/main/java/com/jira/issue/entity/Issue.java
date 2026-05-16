@@ -120,6 +120,23 @@ public class Issue {
     @Builder.Default
     private Integer watcherCount = 0;
 
+    // Components
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "component_ids", columnDefinition = "uuid[]")
+    @Builder.Default
+    private UUID[] componentIds = new UUID[]{};
+
+    // Environment (for bug descriptions)
+    @Column(name = "environment", columnDefinition = "TEXT")
+    private String environment;
+
+    // Creator (separate from reporter)
+    @Column(name = "creator_id")
+    private UUID creatorId;
+
+    @Column(name = "last_viewed_at")
+    private LocalDateTime lastViewedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -127,6 +144,12 @@ public class Issue {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    // Optimistic locking version
+    @Version
+    @Column(name = "version")
+    @Builder.Default
+    private Long version = 0L;
 
     // Helper methods
     public void incrementVoteCount() {

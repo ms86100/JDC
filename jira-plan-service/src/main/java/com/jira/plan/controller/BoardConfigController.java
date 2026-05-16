@@ -2,6 +2,7 @@ package com.jira.plan.controller;
 
 import com.jira.plan.dto.request.*;
 import com.jira.plan.dto.response.*;
+import com.jira.plan.entity.BoardConfigAuditLog;
 import com.jira.plan.service.BoardConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -46,9 +47,11 @@ public class BoardConfigController {
         return ResponseEntity.ok(boardConfigService.updateBoard(boardId, request));
     }
 
-    @DeleteMapping("/boards/{boardId}")
-    public ResponseEntity<Void> deleteBoard(@PathVariable UUID boardId) {
-        boardConfigService.deleteBoard(boardId);
+    @DeleteMapping("/{planId}/boards/{boardId}")
+    public ResponseEntity<Void> deleteBoard(
+            @PathVariable UUID planId,
+            @PathVariable UUID boardId) {
+        boardConfigService.deleteBoard(planId, boardId);
         return ResponseEntity.noContent().build();
     }
 
@@ -63,18 +66,21 @@ public class BoardConfigController {
 
     @PutMapping("/boards/columns/{columnId}")
     public ResponseEntity<BoardColumnResponse> updateColumn(
+            @PathVariable UUID boardId,
             @PathVariable UUID columnId,
             @RequestBody CreateBoardColumnRequest request) {
-        return ResponseEntity.ok(boardConfigService.updateColumn(columnId, request));
+        return ResponseEntity.ok(boardConfigService.updateColumn(boardId, columnId, request));
     }
 
-    @DeleteMapping("/boards/columns/{columnId}")
-    public ResponseEntity<Void> deleteColumn(@PathVariable UUID columnId) {
-        boardConfigService.deleteColumn(columnId);
+    @DeleteMapping("/boards/{boardId}/columns/{columnId}")
+    public ResponseEntity<Void> deleteColumn(
+            @PathVariable UUID boardId,
+            @PathVariable UUID columnId) {
+        boardConfigService.deleteColumn(boardId, columnId);
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/boards/{boardId}/columns")
+    @PutMapping("/boards/{boardId}/columns/order")
     public ResponseEntity<Void> updateColumnsOrder(
             @PathVariable UUID boardId,
             @RequestBody List<UUID> columnIds) {
@@ -91,9 +97,11 @@ public class BoardConfigController {
         return ResponseEntity.ok(boardConfigService.addQuickFilter(boardId, request));
     }
 
-    @DeleteMapping("/boards/quick-filters/{filterId}")
-    public ResponseEntity<Void> deleteQuickFilter(@PathVariable UUID filterId) {
-        boardConfigService.deleteQuickFilter(filterId);
+    @DeleteMapping("/boards/{boardId}/quick-filters/{filterId}")
+    public ResponseEntity<Void> deleteQuickFilter(
+            @PathVariable UUID boardId,
+            @PathVariable UUID filterId) {
+        boardConfigService.deleteQuickFilter(boardId, filterId);
         return ResponseEntity.noContent().build();
     }
 
@@ -106,9 +114,11 @@ public class BoardConfigController {
         return ResponseEntity.ok(boardConfigService.addSwimlane(boardId, request));
     }
 
-    @DeleteMapping("/boards/swimlanes/{swimlaneId}")
-    public ResponseEntity<Void> deleteSwimlane(@PathVariable UUID swimlaneId) {
-        boardConfigService.deleteSwimlane(swimlaneId);
+    @DeleteMapping("/boards/{boardId}/swimlanes/{swimlaneId}")
+    public ResponseEntity<Void> deleteSwimlane(
+            @PathVariable UUID boardId,
+            @PathVariable UUID swimlaneId) {
+        boardConfigService.deleteSwimlane(boardId, swimlaneId);
         return ResponseEntity.noContent().build();
     }
 
@@ -121,9 +131,11 @@ public class BoardConfigController {
         return ResponseEntity.ok(boardConfigService.addCardColor(boardId, request));
     }
 
-    @DeleteMapping("/boards/card-colors/{colorId}")
-    public ResponseEntity<Void> deleteCardColor(@PathVariable UUID colorId) {
-        boardConfigService.deleteCardColor(colorId);
+    @DeleteMapping("/boards/{boardId}/card-colors/{colorId}")
+    public ResponseEntity<Void> deleteCardColor(
+            @PathVariable UUID boardId,
+            @PathVariable UUID colorId) {
+        boardConfigService.deleteCardColor(boardId, colorId);
         return ResponseEntity.noContent().build();
     }
 
@@ -136,9 +148,18 @@ public class BoardConfigController {
         return ResponseEntity.ok(boardConfigService.addDetailField(boardId, request));
     }
 
-    @DeleteMapping("/boards/detail-fields/{fieldId}")
-    public ResponseEntity<Void> deleteDetailField(@PathVariable UUID fieldId) {
-        boardConfigService.deleteDetailField(fieldId);
+    @DeleteMapping("/boards/{boardId}/detail-fields/{fieldId}")
+    public ResponseEntity<Void> deleteDetailField(
+            @PathVariable UUID boardId,
+            @PathVariable UUID fieldId) {
+        boardConfigService.deleteDetailField(boardId, fieldId);
         return ResponseEntity.noContent().build();
+    }
+
+    // Audit Log
+
+    @GetMapping("/boards/{boardId}/audit-log")
+    public ResponseEntity<List<BoardConfigAuditLog>> getBoardAuditLog(@PathVariable UUID boardId) {
+        return ResponseEntity.ok(boardConfigService.getBoardAuditLog(boardId));
     }
 }

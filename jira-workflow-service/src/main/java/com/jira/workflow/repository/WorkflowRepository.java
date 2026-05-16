@@ -14,4 +14,8 @@ public interface WorkflowRepository extends JpaRepository<Workflow, UUID> {
     List<Workflow> findByProjectId(UUID projectId);
 
     Optional<Workflow> findByProjectIdAndIsDefaultTrue(UUID projectId);
+
+    Optional<Workflow> findByName(String name);
+
+    boolean existsByName(String name);
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import AdminLayout from '../components/AdminLayout';
 import { usePriorities, Priority } from '../hooks/useAdminApi';
+import AdminLayout from '../components/AdminLayout';
 import './PrioritiesPage.css';
 
 export default function PrioritiesPage() {

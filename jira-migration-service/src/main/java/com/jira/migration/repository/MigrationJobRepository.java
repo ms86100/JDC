@@ -1,6 +1,8 @@
 package com.jira.migration.repository;
 
 import com.jira.migration.entity.MigrationJob;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,9 +17,15 @@ public interface MigrationJobRepository extends JpaRepository<MigrationJob, UUID
 
     List<MigrationJob> findByJobStatusOrderByInitiatedAtDesc(String jobStatus);
 
+    Page<MigrationJob> findByJobStatus(String jobStatus, Pageable pageable);
+
     List<MigrationJob> findByJobTypeOrderByInitiatedAtDesc(String jobType);
 
+    Page<MigrationJob> findByJobType(String jobType, Pageable pageable);
+
     List<MigrationJob> findByInitiatedByOrderByInitiatedAtDesc(UUID initiatedBy);
+
+    Page<MigrationJob> findByInitiatedBy(UUID initiatedBy, Pageable pageable);
 
     @Query("SELECT j FROM MigrationJob j WHERE j.jobStatus IN ('PENDING', 'IN_PROGRESS') ORDER BY j.initiatedAt ASC")
     List<MigrationJob> findPendingJobs();
@@ -32,7 +40,10 @@ public interface MigrationJobRepository extends JpaRepository<MigrationJob, UUID
     long countByStatus(@Param("status") String status);
 
     @Query("SELECT j FROM MigrationJob j WHERE j.initiatedBy = :userId AND j.jobStatus = :status")
-    List<MigrationJob> findByUserAndStatus(@Param("userId") UUID userId, @Param("status") String status);
+    Page<MigrationJob> findByUserAndStatus(@Param("userId") UUID userId, @Param("status") String status, Pageable pageable);
 
     Optional<MigrationJob> findByIdAndInitiatedBy(UUID id, UUID initiatedBy);
+
+    @Query("SELECT j FROM MigrationJob j WHERE j.jobStatus = :status ORDER BY j.initiatedAt DESC")
+    Page<MigrationJob> findByStatusOrderByInitiatedAtDesc(@Param("status") String status, Pageable pageable);
 }

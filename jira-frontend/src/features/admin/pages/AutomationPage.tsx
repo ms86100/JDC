@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import AdminLayout from '../components/AdminLayout';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import AdminLayout from '../components/AdminLayout';
 import apiClient from '../../../api/axiosClient';
 import './AutomationPage.css';
 
@@ -317,7 +317,7 @@ export default function AutomationPage() {
             <p>Create rules to automate your project's workflow</p>
           </div>
           <div className="automation-header-right">
-            <button className="ds-button ds-button--primary" onClick={handleOpenCreate}>
+            <button className="ab-btn ab-btn-primary" onClick={handleOpenCreate}>
               + Create Rule
             </button>
           </div>
@@ -382,7 +382,7 @@ export default function AutomationPage() {
             </div>
 
             <div className="automation-rules-table">
-              <table className="ds-table">
+              <table className="ab-table">
                 <thead>
                   <tr>
                     <th style={{ width: '40px' }}></th>
@@ -401,7 +401,7 @@ export default function AutomationPage() {
                         <div className="empty-state">
                           <span className="empty-icon">⚡</span>
                           <p>No automation rules found</p>
-                          <button className="ds-button ds-button--primary ds-button--small" onClick={handleOpenCreate}>
+                          <button className="ab-btn ab-btn-primary ab-btn-sm" onClick={handleOpenCreate}>
                             Create your first rule
                           </button>
                         </div>
@@ -411,13 +411,13 @@ export default function AutomationPage() {
                     filteredRules.map((rule) => (
                       <tr key={rule.id} className={!rule.isEnabled ? 'disabled-rule' : ''}>
                         <td>
-                          <label className="ds-toggle">
+                          <label className="ab-toggle">
                             <input
                               type="checkbox"
                               checked={rule.isEnabled}
                               onChange={() => handleToggleRule(rule.id)}
                             />
-                            <span className="ds-toggle-slider"></span>
+                            <span className="ab-toggle-slider"></span>
                           </label>
                         </td>
                         <td>
@@ -448,13 +448,13 @@ export default function AutomationPage() {
                         <td>
                           <div className="action-buttons">
                             <button
-                              className="ds-button ds-button--ghost ds-button--xsmall"
+                              className="ab-btn ab-btn-ghost ab-btn-sm"
                               onClick={() => handleOpenEdit(rule)}
                             >
                               Edit
                             </button>
                             <button
-                              className="ds-button ds-button--ghost ds-button--xsmall ds-button--error"
+                              className="ab-btn ab-btn-ghost ab-btn-sm ab-btn-danger"
                               onClick={() => handleDeleteRule(rule.id)}
                             >
                               Delete
@@ -472,7 +472,7 @@ export default function AutomationPage() {
 
         {activeTab === 'logs' && (
           <div className="automation-logs">
-            <table className="ds-table">
+            <table className="ab-table">
               <thead>
                 <tr>
                   <th>Rule</th>
@@ -501,7 +501,7 @@ export default function AutomationPage() {
                       <span className="duration">{log.executionTimeMs}ms</span>
                     </td>
                     <td>
-                      <button className="ds-button ds-button--ghost ds-button--xsmall">
+                      <button className="ab-btn ab-btn-ghost ab-btn-sm">
                         View Details
                       </button>
                     </td>
@@ -523,36 +523,36 @@ export default function AutomationPage() {
               <div className="settings-form">
                 <div className="settings-item">
                   <label>Maximum Rules Per Project</label>
-                  <input type="number" className="ds-text-input" defaultValue="100" />
+                  <input type="number" className="ab-input" defaultValue="100" />
                 </div>
                 <div className="settings-item">
                   <label>Maximum Conditions Per Rule</label>
-                  <input type="number" className="ds-text-input" defaultValue="10" />
+                  <input type="number" className="ab-input" defaultValue="10" />
                 </div>
                 <div className="settings-item">
                   <label>Maximum Actions Per Rule</label>
-                  <input type="number" className="ds-text-input" defaultValue="10" />
+                  <input type="number" className="ab-input" defaultValue="10" />
                 </div>
                 <div className="settings-item">
                   <label>Log Retention (days)</label>
-                  <input type="number" className="ds-text-input" defaultValue="30" />
+                  <input type="number" className="ab-input" defaultValue="30" />
                 </div>
                 <div className="settings-item">
-                  <label className="ds-toggle-label">
-                    <input type="checkbox" className="ds-toggle" defaultChecked />
+                  <label className="ab-toggle-label">
+                    <input type="checkbox" className="ab-toggle" defaultChecked />
                     <span>Enable Automation for New Projects</span>
                   </label>
                 </div>
                 <div className="settings-item">
-                  <label className="ds-toggle-label">
-                    <input type="checkbox" className="ds-toggle" defaultChecked />
+                  <label className="ab-toggle-label">
+                    <input type="checkbox" className="ab-toggle" defaultChecked />
                     <span>Notify on Rule Failure</span>
                   </label>
                 </div>
               </div>
 
               <div className="settings-actions">
-                <button className="ds-button ds-button--primary">Save Settings</button>
+                <button className="ab-btn ab-btn-primary">Save Settings</button>
               </div>
             </div>
           </div>
@@ -561,31 +561,31 @@ export default function AutomationPage() {
 
       {/* Create/Edit Rule Modal */}
       {showCreateModal && (
-        <div className="ds-modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="ds-modal automation-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="ds-modal-header">
+        <div className="ab-modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="ab-modal automation-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="ab-modal-header">
               <h2>{editingRule ? 'Edit Rule' : 'Create Rule'}</h2>
-              <button className="ds-button ds-button--ghost" onClick={() => setShowCreateModal(false)}>×</button>
+              <button className="ab-btn ab-btn-ghost" onClick={() => setShowCreateModal(false)}>×</button>
             </div>
-            <div className="ds-modal-body">
+            <div className="ab-modal-body">
               <div className="rule-form">
                 {/* Basic Info */}
                 <div className="form-section">
                   <h3>Rule Details</h3>
                   <div className="form-group">
-                    <label className="ds-form-label">Name *</label>
+                    <label className="ab-form-label">Name *</label>
                     <input
                       type="text"
-                      className="ds-text-input"
+                      className="ab-input"
                       placeholder="Enter rule name"
                       value={ruleName}
                       onChange={(e) => setRuleName(e.target.value)}
                     />
                   </div>
                   <div className="form-group">
-                    <label className="ds-form-label">Description</label>
+                    <label className="ab-form-label">Description</label>
                     <textarea
-                      className="ds-textarea"
+                      className="ab-textarea"
                       placeholder="What does this rule do?"
                       rows={2}
                       value={ruleDescription}
@@ -593,9 +593,9 @@ export default function AutomationPage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="ds-form-label">Project</label>
+                    <label className="ab-form-label">Project</label>
                     <select
-                      className="ds-select"
+                      className="ab-select"
                       value={ruleProject}
                       onChange={(e) => setRuleProject(e.target.value)}
                     >
@@ -627,7 +627,7 @@ export default function AutomationPage() {
                 <div className="form-section">
                   <div className="section-header">
                     <h3>If... (Conditions)</h3>
-                    <button className="ds-button ds-button--ghost ds-button--xsmall" onClick={handleAddCondition}>
+                    <button className="ab-btn ab-btn-ghost ab-btn-sm" onClick={handleAddCondition}>
                       + Add Condition
                     </button>
                   </div>
@@ -638,7 +638,7 @@ export default function AutomationPage() {
                       {ruleConditions.map((condition, index) => (
                         <div key={index} className="condition-row">
                           <select
-                            className="ds-select"
+                            className="ab-select"
                             value={condition.field}
                             onChange={(e) => handleUpdateCondition(index, 'field', e.target.value)}
                           >
@@ -648,7 +648,7 @@ export default function AutomationPage() {
                             ))}
                           </select>
                           <select
-                            className="ds-select"
+                            className="ab-select"
                             value={condition.operator}
                             onChange={(e) => handleUpdateCondition(index, 'operator', e.target.value)}
                           >
@@ -658,13 +658,13 @@ export default function AutomationPage() {
                           </select>
                           <input
                             type="text"
-                            className="ds-text-input"
+                            className="ab-input"
                             placeholder="Value"
                             value={condition.value}
                             onChange={(e) => handleUpdateCondition(index, 'value', e.target.value)}
                           />
                           <button
-                            className="ds-button ds-button--ghost ds-button--xsmall"
+                            className="ab-btn ab-btn-ghost ab-btn-sm"
                             onClick={() => handleRemoveCondition(index)}
                           >
                             ×
@@ -679,7 +679,7 @@ export default function AutomationPage() {
                 <div className="form-section">
                   <div className="section-header">
                     <h3>Then... (Actions)</h3>
-                    <button className="ds-button ds-button--ghost ds-button--xsmall" onClick={handleAddAction}>
+                    <button className="ab-btn ab-btn-ghost ab-btn-sm" onClick={handleAddAction}>
                       + Add Action
                     </button>
                   </div>
@@ -690,7 +690,7 @@ export default function AutomationPage() {
                       {ruleActions.map((action, index) => (
                         <div key={index} className="action-row">
                           <select
-                            className="ds-select"
+                            className="ab-select"
                             value={action.type}
                             onChange={(e) => handleUpdateAction(index, e.target.value)}
                           >
@@ -702,14 +702,14 @@ export default function AutomationPage() {
                           {action.type && (
                             <div className="action-config">
                               {action.type === 'ASSIGN_ISSUE' && (
-                                <select className="ds-select">
+                                <select className="ab-select">
                                   <option value="">Select assignee...</option>
                                   <option value="user-1">User 1</option>
                                   <option value="user-2">User 2</option>
                                 </select>
                               )}
                               {action.type === 'TRANSITION_ISSUE' && (
-                                <select className="ds-select">
+                                <select className="ab-select">
                                   <option value="">Select status...</option>
                                   <option value="todo">To Do</option>
                                   <option value="in_progress">In Progress</option>
@@ -717,12 +717,12 @@ export default function AutomationPage() {
                                 </select>
                               )}
                               {action.type === 'SEND_NOTIFICATION' && (
-                                <input type="text" className="ds-text-input" placeholder="Notification message..." />
+                                <input type="text" className="ab-input" placeholder="Notification message..." />
                               )}
                             </div>
                           )}
                           <button
-                            className="ds-button ds-button--ghost ds-button--xsmall"
+                            className="ab-btn ab-btn-ghost ab-btn-sm"
                             onClick={() => handleRemoveAction(index)}
                           >
                             ×
@@ -735,10 +735,10 @@ export default function AutomationPage() {
 
                 {/* Enable Toggle */}
                 <div className="form-section">
-                  <label className="ds-toggle-label">
+                  <label className="ab-toggle-label">
                     <input
                       type="checkbox"
-                      className="ds-toggle"
+                      className="ab-toggle"
                       checked={ruleEnabled}
                       onChange={(e) => setRuleEnabled(e.target.checked)}
                     />
@@ -747,12 +747,12 @@ export default function AutomationPage() {
                 </div>
               </div>
             </div>
-            <div className="ds-modal-footer">
-              <button className="ds-button ds-button--secondary" onClick={() => setShowCreateModal(false)}>
+            <div className="ab-modal-footer">
+              <button className="ab-btn ab-btn-secondary" onClick={() => setShowCreateModal(false)}>
                 Cancel
               </button>
               <button
-                className="ds-button ds-button--primary"
+                className="ab-btn ab-btn-primary"
                 disabled={!ruleName || !ruleTrigger || ruleActions.length === 0}
                 onClick={() => {
                   // Save rule
@@ -863,12 +863,12 @@ export default function AutomationPage() {
           overflow: hidden;
         }
 
-        .ds-table {
+        .ab-table {
           width: 100%;
           border-collapse: collapse;
         }
 
-        .ds-table th {
+        .ab-table th {
           text-align: left;
           padding: 12px 16px;
           background: var(--ab-gray-50, #f9fafb);
@@ -879,13 +879,13 @@ export default function AutomationPage() {
           border-bottom: 1px solid var(--ab-gray-200, #e5e7eb);
         }
 
-        .ds-table td {
+        .ab-table td {
           padding: 12px 16px;
           border-bottom: 1px solid var(--ab-gray-100, #f3f4f6);
           font-size: 14px;
         }
 
-        .ds-table tr:last-child td {
+        .ab-table tr:last-child td {
           border-bottom: none;
         }
 
@@ -976,7 +976,7 @@ export default function AutomationPage() {
         }
 
         /* Toggle */
-        .ds-toggle {
+        .ab-toggle {
           position: relative;
           width: 36px;
           height: 20px;
@@ -987,11 +987,11 @@ export default function AutomationPage() {
           transition: background 0.2s;
         }
 
-        .ds-toggle:checked {
+        .ab-toggle:checked {
           background: var(--ab-primary-500, #00205b);
         }
 
-        .ds-toggle::before {
+        .ab-toggle::before {
           content: '';
           position: absolute;
           top: 2px;
@@ -1003,7 +1003,7 @@ export default function AutomationPage() {
           transition: transform 0.2s;
         }
 
-        .ds-toggle:checked::before {
+        .ab-toggle:checked::before {
           transform: translateX(16px);
         }
 
@@ -1092,14 +1092,14 @@ export default function AutomationPage() {
           color: var(--ab-gray-700, #374151);
         }
 
-        .ds-text-input, .ds-select {
+        .ab-input, .ab-select {
           padding: 8px 12px;
           border: 1px solid var(--ab-gray-300, #d1d5db);
           border-radius: 4px;
           font-size: 14px;
         }
 
-        .ds-toggle-label {
+        .ab-toggle-label {
           display: flex;
           align-items: center;
           gap: 8px;
@@ -1165,7 +1165,7 @@ export default function AutomationPage() {
           margin-bottom: 12px;
         }
 
-        .ds-form-label {
+        .ab-form-label {
           display: block;
           font-size: 14px;
           font-weight: 500;
@@ -1173,7 +1173,7 @@ export default function AutomationPage() {
           color: var(--ab-gray-700, #374151);
         }
 
-        .ds-textarea {
+        .ab-textarea {
           width: 100%;
           padding: 8px 12px;
           border: 1px solid var(--ab-gray-300, #d1d5db);
@@ -1225,12 +1225,12 @@ export default function AutomationPage() {
           gap: 8px;
         }
 
-        .condition-row .ds-select,
-        .condition-row .ds-text-input {
+        .condition-row .ab-select,
+        .condition-row .ab-input {
           flex: 1;
         }
 
-        .action-row .ds-select {
+        .action-row .ab-select {
           flex: 1;
         }
 

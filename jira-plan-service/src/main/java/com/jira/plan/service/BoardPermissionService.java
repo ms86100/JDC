@@ -19,7 +19,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Board and project-level permission service.
+ * Board and project-level permission service with enterprise RBAC.
  */
 @Service
 @RequiredArgsConstructor
@@ -29,6 +29,7 @@ public class BoardPermissionService {
     private final BoardPermissionRepository boardPermissionRepository;
     private final ProjectSprintPermissionRepository projectSprintPermissionRepository;
     private final BoardConfigRepository boardConfigRepository;
+    private final UserGroupMembershipRepository userGroupMembershipRepository;
 
     // Permission types
     public static final String PERMISSION_VIEW = "VIEW";
@@ -90,15 +91,36 @@ public class BoardPermissionService {
             return true;
         }
 
-        // Check for specific permission
-        return boardPermissionRepository.existsByBoardConfigIdAndPermissionTypeAndPrincipalId(boardId, permissionType, userId);
+        // Check for specific permission granted directly to user
+        if (boardPermissionRepository.existsByBoardConfigIdAndPermissionTypeAndPrincipalId(boardId, permissionType, userId)) {
+            return true;
+        }
+
+        // Check group memberships and group-based permissions
+        List<UUID> userGroups = userGroupMembershipRepository.findGroupIdsByUserId(userId.toString());
+        for (UUID groupId : userGroups) {
+            if (boardPermissionRepository.existsByBoardConfigIdAndPermissionTypeAndPrincipalId(boardId, permissionType, groupId)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Transactional(readOnly = true)
     public List<String> getEffectivePermissions(UUID boardId, UUID userId) {
-        return boardPermissionRepository.findByBoardConfigIdAndPrincipalTypeAndPrincipalId(boardId, "USER", userId)
-            .stream()
+        List<BoardPermission> directPermissions = boardPermissionRepository.findByBoardConfigIdAndPrincipalTypeAndPrincipalId(boardId, "USER", userId);
+
+        // Also get group-based permissions
+        List<UUID> userGroups = userGroupMembershipRepository.findGroupIdsByUserId(userId.toString());
+        for (UUID groupId : userGroups) {
+            List<BoardPermission> groupPerms = boardPermissionRepository.findByBoardConfigIdAndPrincipalTypeAndPrincipalId(boardId, "GROUP", groupId);
+            directPermissions.addAll(groupPerms);
+        }
+
+        return directPermissions.stream()
             .map(BoardPermission::getPermissionType)
+            .distinct()
             .collect(Collectors.toList());
     }
 

@@ -13,5 +13,7 @@ public interface PermissionSchemeRepository extends JpaRepository<PermissionSche
 
     Optional<PermissionScheme> findByIsDefaultTrue();
 
+    Optional<PermissionScheme> findByName(String name);
+
     List<PermissionScheme> findByNameContainingIgnoreCase(String name);
 }

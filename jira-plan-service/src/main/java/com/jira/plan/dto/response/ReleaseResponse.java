@@ -27,4 +27,5 @@ public class ReleaseResponse {
     private Double progress;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Boolean isActive;
 }

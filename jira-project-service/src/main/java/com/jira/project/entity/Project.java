@@ -20,6 +20,11 @@ public class Project {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Version
+    @Column(name = "version")
+    @Builder.Default
+    private Long version = 0L;
+
     @Column(name = "project_key", nullable = false, unique = true, length = 10)
     private String projectKey;
 

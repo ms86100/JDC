@@ -1,0 +1,624 @@
+/* Jira Admin Layout - Atlassian Design System */
+
+.jira-admin-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  color: #172B4D;
+  background: #F4F5F7;
+}
+
+/* ============ GLOBAL HEADER ============ */
+
+.jira-global-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 48px;
+  padding: 0 16px;
+  background: #0747A6;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.jira-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.jira-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  text-decoration: none;
+}
+
+.jira-logo-text {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.jira-header-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.jira-nav-item {
+  padding: 8px 12px;
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  border-radius: 3px;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.jira-nav-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.jira-create-btn {
+  padding: 6px 16px;
+  background: #0052CC;
+  color: white;
+  text-decoration: none;
+  border-radius: 3px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.jira-create-btn:hover {
+  background: #0065FF;
+}
+
+.jira-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jira-search-box {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  padding: 0 8px;
+}
+
+.jira-search-icon {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.jira-search-input {
+  width: 160px;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 14px;
+  outline: none;
+}
+
+.jira-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.jira-header-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.15s;
+}
+
+.jira-header-icon:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.jira-user-avatar {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #4C9AFF;
+  color: white;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ============ ADMIN SUBHEADER ============ */
+
+.jira-admin-subheader {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 48px;
+  background: white;
+  border-bottom: 1px solid #DFE1E6;
+  position: sticky;
+  top: 48px;
+  z-index: 90;
+}
+
+.jira-admin-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0052CC;
+  margin-right: 16px;
+  white-space: nowrap;
+}
+
+.jira-admin-search {
+  display: flex;
+  align-items: center;
+  background: #F4F5F7;
+  border-radius: 3px;
+  padding: 0 8px;
+  margin-right: 16px;
+}
+
+.jira-admin-search-input {
+  width: 180px;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  outline: none;
+}
+
+.jira-admin-tabs {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.jira-admin-tab {
+  padding: 14px 12px;
+  color: #6B778C;
+  text-decoration: none;
+  font-size: 14px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.jira-admin-tab:hover {
+  color: #172B4D;
+}
+
+.jira-admin-tab-active {
+  color: #0052CC;
+  border-bottom-color: #0052CC;
+  font-weight: 500;
+}
+
+.jira-admin-subheader-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.jira-info-icon {
+  color: #0052CC;
+  font-size: 16px;
+}
+
+.jira-back-link {
+  color: #0052CC;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.jira-back-link:hover {
+  text-decoration: underline;
+}
+
+/* ============ ADMIN SIDEBAR ============ */
+
+.jira-admin-body {
+  display: flex;
+  flex: 1;
+}
+
+.jira-admin-sidebar {
+  width: 240px;
+  background: white;
+  border-right: 1px solid #DFE1E6;
+  padding: 16px 0;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.jira-sidebar-section {
+  margin-bottom: 8px;
+}
+
+.jira-sidebar-heading {
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B778C;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.jira-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.jira-sidebar-item {
+  padding: 8px 16px;
+  color: #6B778C;
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+
+.jira-sidebar-item:hover {
+  background: #F4F5F7;
+  color: #172B4D;
+}
+
+.jira-sidebar-item-active {
+  background: #DEEBFF;
+  color: #0052CC;
+  font-weight: 500;
+}
+
+.jira-sidebar-item-active:hover {
+  background: #DEEBFF;
+  color: #0052CC;
+}
+
+/* ============ ADMIN CONTENT ============ */
+
+.jira-admin-content {
+  flex: 1;
+  padding: 24px;
+  overflow-x: auto;
+}
+
+/* ============ ADMIN PAGES ============ */
+
+.admin-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.admin-page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #172B4D;
+  margin: 0;
+}
+
+.admin-page-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ============ BUTTONS ============ */
+
+.btn-primary {
+  padding: 8px 16px;
+  background: #0052CC;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover {
+  background: #0065FF;
+}
+
+.btn-primary:disabled {
+  background: #B3D4FF;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  padding: 8px 16px;
+  background: white;
+  color: #505F79;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-secondary:hover {
+  background: #F4F5F7;
+}
+
+.btn-link {
+  padding: 8px 12px;
+  background: transparent;
+  color: #0052CC;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+/* ============ FORMS ============ */
+
+.admin-form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: flex-start;
+}
+
+.admin-form-label {
+  width: 160px;
+  padding-top: 8px;
+  text-align: right;
+  font-size: 14px;
+  color: #172B4D;
+}
+
+.admin-form-label-required::after {
+  content: '*';
+  color: #D04437;
+  margin-left: 4px;
+}
+
+.admin-form-input {
+  flex: 1;
+  max-width: 400px;
+  padding: 8px 12px;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.admin-form-input:focus {
+  border-color: #4C9AFF;
+  box-shadow: 0 0 0 2px rgba(76, 159, 255, 0.2);
+}
+
+.admin-form-input-purple {
+  background: #FAFBFC;
+}
+
+.admin-form-select {
+  padding: 8px 12px;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  outline: none;
+}
+
+.admin-form-select:focus {
+  border-color: #4C9AFF;
+}
+
+.admin-form-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6B778C;
+}
+
+.admin-form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.admin-form-checkbox input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* ============ TABLES ============ */
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.admin-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B778C;
+  text-transform: uppercase;
+  background: #F4F5F7;
+  border-bottom: 1px solid #DFE1E6;
+}
+
+.admin-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #DFE1E6;
+  font-size: 14px;
+}
+
+.admin-table tr:hover td {
+  background: #FAFBFC;
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ============ MODALS ============ */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 3px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #DFE1E6;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #172B4D;
+  margin: 0;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: #6B778C;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.modal-close:hover {
+  background: #F4F5F7;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 20px;
+  border-top: 1px solid #DFE1E6;
+}
+
+/* ============ BADGES ============ */
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-admin {
+  background: #525F6B;
+  color: white;
+}
+
+.badge-jira {
+  background: #DFE1E6;
+  color: #505F79;
+}
+
+/* ============ PAGINATION ============ */
+
+.admin-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: white;
+  border-top: 1px solid #DFE1E6;
+}
+
+.admin-pagination-info {
+  font-size: 14px;
+  color: #6B778C;
+}
+
+.admin-pagination-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.pagination-btn {
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  font-size: 14px;
+  color: #505F79;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #F4F5F7;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-btn-active {
+  background: #0052CC;
+  color: white;
+  border-color: #0052CC;
+}

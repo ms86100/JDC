@@ -97,7 +97,7 @@ export default function ProjectsPage() {
           <p>Manage your projects and access their boards, issues, and settings</p>
         </div>
         <div className="projects-header-right">
-          <button className="ds-button ds-button--primary" onClick={() => setShowCreateWizard(true)}>
+          <button className="ab-btn ab-btn-primary" onClick={() => setShowCreateWizard(true)}>
             + Create Project
           </button>
         </div>
@@ -162,8 +162,8 @@ export default function ProjectsPage() {
       </div>
 
       {isLoading ? (
-        <div className="projects-loading">
-          <div className="ds-spinner-large"></div>
+        <div className="ab-loading">
+          <div className="ab-spinner"></div>
         </div>
       ) : filteredProjects.length === 0 ? (
         <div className="projects-empty">
@@ -177,7 +177,7 @@ export default function ProjectsPage() {
               : 'Get started by creating your first project'}
           </p>
           {!searchQuery && filter !== 'archived' && (
-            <button className="ds-button ds-button--primary" onClick={() => setShowCreateWizard(true)}>
+            <button className="ab-btn ab-btn-primary" onClick={() => setShowCreateWizard(true)}>
               Create Project
             </button>
           )}
@@ -246,7 +246,7 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="projects-list">
-          <table className="ds-table">
+          <table className="ab-table">
             <thead>
               <tr>
                 <th>Project</th>
@@ -309,10 +309,10 @@ export default function ProjectsPage() {
                     </td>
                     <td>
                       <div className="action-buttons">
-                        <Link to={`/projects/${project.id}`} className="ds-button ds-button--ghost ds-button--xsmall">
+                        <Link to={`/projects/${project.id}`} className="ab-btn ab-btn-ghost ab-btn-sm">
                           View
                         </Link>
-                        <button className="ds-button ds-button--ghost ds-button--xsmall">
+                        <button className="ab-btn ab-btn-ghost ab-btn-sm">
                           Settings
                         </button>
                       </div>

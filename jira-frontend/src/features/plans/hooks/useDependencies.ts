@@ -18,6 +18,10 @@ export const useCreateDependency = () => {
     onSuccess: (_, { planId }) => {
       queryClient.invalidateQueries({ queryKey: ['dependencies', planId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to create dependency:', error);
+      alert(error.message || 'Failed to create dependency. Check for circular dependencies.');
+    },
   });
 };
 
@@ -28,6 +32,10 @@ export const useDeleteDependency = () => {
       planApi.deleteDependency(planId, dependencyId),
     onSuccess: (_, { planId }) => {
       queryClient.invalidateQueries({ queryKey: ['dependencies', planId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to delete dependency:', error);
+      alert(error.message || 'Failed to delete dependency');
     },
   });
 };
@@ -48,6 +56,10 @@ export const useDismissWarning = () => {
       planApi.dismissWarning(planId, warningId),
     onSuccess: (_, { planId }) => {
       queryClient.invalidateQueries({ queryKey: ['warnings', planId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to dismiss warning:', error);
+      alert(error.message || 'Failed to dismiss warning');
     },
   });
 };

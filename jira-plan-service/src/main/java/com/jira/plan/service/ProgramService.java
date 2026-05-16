@@ -71,6 +71,10 @@ public class ProgramService {
     public void deleteProgram(UUID id) {
         Program program = findProgramById(id);
         program.setIsActive(false);
+        // Cascade soft-delete to linked plans
+        if (program.getPlans() != null) {
+            program.getPlans().forEach(plan -> plan.setIsActive(false));
+        }
         programRepository.save(program);
     }
 

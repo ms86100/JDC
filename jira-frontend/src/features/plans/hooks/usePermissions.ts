@@ -94,6 +94,10 @@ export const useGrantBoardPermission = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['boardPermissions', variables.boardId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to grant board permission:', error);
+      alert(error.message || 'Failed to grant board permission');
+    },
   });
 };
 
@@ -104,6 +108,10 @@ export const useRevokeBoardPermission = () => {
     mutationFn: permissionApi.revokeBoardPermission,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['boardPermissions'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to revoke board permission:', error);
+      alert(error.message || 'Failed to revoke board permission');
     },
   });
 };
@@ -154,6 +162,10 @@ export const useGrantProjectSprintPermission = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['projectSprintPermissions', variables.projectId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to grant project sprint permission:', error);
+      alert(error.message || 'Failed to grant project sprint permission');
+    },
   });
 };
 
@@ -164,6 +176,10 @@ export const useRevokeProjectSprintPermission = () => {
     mutationFn: permissionApi.revokeProjectSprintPermission,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projectSprintPermissions'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to revoke project sprint permission:', error);
+      alert(error.message || 'Failed to revoke project sprint permission');
     },
   });
 };

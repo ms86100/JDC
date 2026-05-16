@@ -20,13 +20,18 @@ export default function ProgramsPage() {
         setShowCreate(false);
         setForm({ name: '', description: '' });
       },
+      onError: (error: Error) => {
+        alert(error.message || 'Failed to create program');
+      },
     });
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this program?')) {
-      deleteMutation.mutate(id);
-    }
+    deleteMutation.mutate(id, {
+      onError: (error: Error) => {
+        alert(error.message || 'Failed to delete program');
+      },
+    });
   };
 
   return (

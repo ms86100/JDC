@@ -1,6 +1,12 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
+import AdminLayout from '../components/AdminLayout';
 import UserManagementPage from '../pages/UserManagementPage';
+import JiraUserBrowser from '../pages/JiraUserBrowser';
+import JiraCreateUser from '../pages/JiraCreateUser';
+import JiraGroupsBrowser from '../pages/JiraGroupsBrowser';
+import JiraViewGroup from '../pages/JiraViewGroup';
+import BulkCreateWizard from '../pages/BulkCreateWizard';
 import IssueTypesPage from '../pages/IssueTypesPage';
 import PrioritiesPage from '../pages/PrioritiesPage';
 import StatusesPage from '../pages/StatusesPage';
@@ -20,7 +26,8 @@ import InsightsPage from '../pages/InsightsPage';
 
 export default function AdminRoutes() {
   return (
-    <Routes>
+    <AdminLayout>
+      <Routes>
       {/* Dashboard */}
       <Route path="/" element={<AdminDashboardPage />} />
       <Route path="/overview" element={<AdminDashboardPage />} />
@@ -37,9 +44,18 @@ export default function AdminRoutes() {
       <Route path="reports" element={<ReportsPage />} />
       <Route path="insights" element={<InsightsPage />} />
 
-      {/* User Management */}
-      <Route path="users" element={<UserManagementPage />} />
-      <Route path="groups" element={<UserManagementPage />} />
+      {/* User Management - Jira Style */}
+      <Route path="users" element={<JiraUserBrowser />} />
+      <Route path="users/create" element={<JiraCreateUser />} />
+      <Route path="groups" element={<JiraGroupsBrowser />} />
+      <Route path="groups/view" element={<JiraViewGroup />} />
+
+      {/* Bulk Operations */}
+      <Route path="bulk-create/*" element={<BulkCreateWizard />} />
+      <Route path="bulk-create" element={<BulkCreateWizard />} />
+
+      {/* Legacy User Management */}
+      <Route path="user-management" element={<UserManagementPage />} />
       <Route path="roles" element={<UserManagementPage />} />
       <Route path="permissions" element={<PermissionsPage />} />
       <Route path="directories" element={<UserManagementPage />} />
@@ -91,6 +107,7 @@ export default function AdminRoutes() {
       <Route path="oauth" element={<SystemSettingsPage />} />
       <Route path="links" element={<SystemSettingsPage />} />
       <Route path="dark-features" element={<SystemSettingsPage />} />
-    </Routes>
+      </Routes>
+    </AdminLayout>
   );
 }

@@ -80,6 +80,10 @@ public class EntityStatus {
     @Column(name = "processed_at")
     private LocalDateTime processedAt;
 
+    @Version
+    @Column(name = "optimistic_lock_version")
+    private Long optimisticLockVersion;
+
     public void markProcessing() {
         this.status = "PROCESSING";
     }

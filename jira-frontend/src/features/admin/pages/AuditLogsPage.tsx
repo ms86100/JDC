@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import AdminLayout from '../components/AdminLayout';
 import { useAuditLogs, useAuditStatistics, AuditLog } from '../hooks/useAdminApi';
+import AdminLayout from '../components/AdminLayout';
 import './AuditLogsPage.css';
 
 export default function AuditLogsPage() {

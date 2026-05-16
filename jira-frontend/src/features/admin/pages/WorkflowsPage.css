@@ -435,3 +435,385 @@
 .wf-dropdown-item:hover {
   background: #F4F5F7;
 }
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+.wf-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(9, 30, 66, 0.54);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.wf-modal {
+  background: white;
+  border-radius: 3px;
+  box-shadow: 0 8px 16px rgba(9, 30, 66, 0.16);
+  padding: 24px;
+  min-width: 400px;
+  max-width: 500px;
+}
+
+.wf-modal-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: #172B4D;
+  margin: 0 0 20px;
+}
+
+.wf-form-group {
+  margin-bottom: 16px;
+}
+
+.wf-form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5E6C84;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.wf-input,
+.wf-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.wf-input:focus,
+.wf-textarea:focus {
+  outline: none;
+  border-color: #4c9aff;
+  box-shadow: 0 0 0 1px #4c9aff;
+}
+
+.wf-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.wf-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+/* ============================================================
+   ERROR BANNER
+   ============================================================ */
+.wf-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #FFEBE6;
+  border: 1px solid #DE350B;
+  border-radius: 3px;
+  margin-bottom: 16px;
+  color: #BF2600;
+  font-size: 14px;
+}
+
+.wf-error-banner button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #BF2600;
+  padding: 0;
+  line-height: 1;
+}
+
+/* ============================================================
+   LOADING
+   ============================================================ */
+.wf-loading {
+  text-align: center;
+  padding: 32px;
+  color: #6B778C;
+  font-size: 14px;
+}
+
+/* ============================================================
+   BADGES
+   ============================================================ */
+.wf-system-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6554C0;
+  background: #EAE6FF;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 6px;
+  text-transform: uppercase;
+}
+
+.wf-default-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #006644;
+  background: #E3FCEF;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 6px;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   SCHEMES SECTION
+   ============================================================ */
+.wf-section-schemes {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid #DFE1E6;
+}
+
+.wf-section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.wf-col-description {
+  width: 25%;
+}
+
+/* ============================================================
+   DETAIL PAGE
+   ============================================================ */
+.wf-detail-page {
+  padding: 24px 32px;
+}
+
+.wf-detail-header {
+  margin-bottom: 24px;
+}
+
+.wf-back-btn {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: #0052CC;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 12px;
+  font-family: inherit;
+}
+
+.wf-back-btn:hover {
+  text-decoration: underline;
+}
+
+.wf-detail-title {
+  font-size: 24px;
+  font-weight: 500;
+  color: #333;
+  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wf-detail-description {
+  font-size: 14px;
+  color: #6B778C;
+  margin: 0;
+}
+
+.wf-detail-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #DFE1E6;
+  margin-bottom: 20px;
+}
+
+.wf-tab {
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #6B778C;
+  cursor: pointer;
+  font-family: inherit;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.1s, border-color 0.1s;
+}
+
+.wf-tab:hover {
+  color: #0052CC;
+}
+
+.wf-tab-active {
+  color: #0052CC;
+  border-bottom-color: #0052CC;
+  font-weight: 500;
+}
+
+.wf-detail-content {
+  background: white;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  padding: 20px;
+}
+
+/* Status Cards */
+.wf-statuses-list,
+.wf-transitions-list,
+.wf-versions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wf-status-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #F8F9FA;
+  border-radius: 3px;
+}
+
+.wf-status-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.wf-status-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.wf-status-info strong {
+  font-size: 14px;
+  color: #333;
+}
+
+.wf-status-category {
+  font-size: 12px;
+  color: #6B778C;
+}
+
+/* Transition Cards */
+.wf-transition-card {
+  padding: 12px;
+  background: #F8F9FA;
+  border-radius: 3px;
+  border-left: 3px solid #0052CC;
+}
+
+.wf-transition-card strong {
+  font-size: 14px;
+  color: #333;
+}
+
+.wf-transition-desc {
+  font-size: 12px;
+  color: #6B778C;
+  margin: 4px 0;
+}
+
+.wf-transition-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #6B778C;
+  margin-top: 8px;
+}
+
+/* Version Cards */
+.wf-version-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #F8F9FA;
+  border-radius: 3px;
+}
+
+.wf-version-number {
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  background: #6B778C;
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.wf-version-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.wf-version-info strong {
+  font-size: 14px;
+  color: #333;
+}
+
+.wf-version-type {
+  font-size: 11px;
+  color: #6B778C;
+  text-transform: uppercase;
+}
+
+.wf-version-date {
+  font-size: 12px;
+  color: #6B778C;
+}
+
+.wf-btn-sm {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+/* ============================================================
+   MAPPINGS SECTION
+   ============================================================ */
+.wf-mappings-section {
+  margin-top: 24px;
+}
+
+.wf-mappings-section .wf-section-header {
+  margin-bottom: 12px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .wf-page {
+    padding: 16px;
+  }
+
+  .wf-modal {
+    min-width: auto;
+    margin: 16px;
+  }
+
+  .wf-table th:last-child,
+  .wf-table td:last-child {
+    display: none;
+  }
+}

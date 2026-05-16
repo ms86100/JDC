@@ -28,12 +28,17 @@ export default function LoginPage() {
     <div className="ab-auth-page">
       <div className="ab-auth-container">
         <div className="ab-auth-header">
-          <div className="ab-logo-large">JP</div>
-          <h1 className="ab-auth-title">Welcome to Jira Platform</h1>
-          <p className="ab-auth-subtitle">Sign in to access your projects and issues</p>
+          <div className="ab-auth-logo">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <rect width="48" height="48" rx="8" fill="#0066FF"/>
+              <path d="M12 36V12L24 24L36 12V36" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <h1 className="ab-auth-title">Jira Platform</h1>
+          <p className="ab-auth-subtitle">Enterprise Project Management powered by Airbus</p>
         </div>
 
-        <div className="ab-card">
+        <div className="ab-card ab-auth-card">
           <form onSubmit={handleSubmit} className="ab-auth-form">
             {error && (
               <div className="ab-alert ab-alert-error">
@@ -42,7 +47,7 @@ export default function LoginPage() {
             )}
 
             <div className="ab-form-group">
-              <label className="ab-label">Username</label>
+              <label className="ab-label">Username or Email</label>
               <input
                 type="text"
                 className="ab-input"
@@ -67,6 +72,14 @@ export default function LoginPage() {
               />
             </div>
 
+            <div className="ab-form-group ab-checkbox-group">
+              <label className="ab-checkbox-label">
+                <input type="checkbox" className="ab-checkbox" />
+                <span>Remember me</span>
+              </label>
+              <a href="#" className="ab-link-forgot">Forgot password?</a>
+            </div>
+
             <button
               type="submit"
               className="ab-btn ab-btn-primary ab-btn-full"
@@ -82,6 +95,10 @@ export default function LoginPage() {
             Don't have an account?{' '}
             <Link to="/register" className="ab-link">Create one</Link>
           </p>
+        </div>
+
+        <div className="ab-auth-brand">
+          <span>Powered by Airbus Digital</span>
         </div>
       </div>
     </div>

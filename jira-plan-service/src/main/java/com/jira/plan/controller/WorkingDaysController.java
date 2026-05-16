@@ -117,21 +117,7 @@ public class WorkingDaysController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
             @RequestParam UUID configId) {
-        WorkingDaysResponse config = workingDaysService.getWorkingDaysConfig(configId);
-        // Reconstruct WorkingDays entity for calculation
-        com.jira.plan.entity.WorkingDays wd = com.jira.plan.entity.WorkingDays.builder()
-            .id(config.getId())
-            .monday(config.getMonday())
-            .tuesday(config.getTuesday())
-            .wednesday(config.getWednesday())
-            .thursday(config.getThursday())
-            .friday(config.getFriday())
-            .saturday(config.getSaturday())
-            .sunday(config.getSunday())
-            .hoursPerDay(config.getHoursPerDay())
-            .build();
-        // This is a simplified version - in real implementation, use the entity directly
-        long days = java.time.temporal.ChronoUnit.DAYS.between(start, end) + 1;
-        return ResponseEntity.ok(days);
+        long workingDays = workingDaysService.calculateWorkingDays(configId, start, end);
+        return ResponseEntity.ok(workingDays);
     }
 }

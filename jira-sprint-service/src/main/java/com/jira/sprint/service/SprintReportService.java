@@ -87,21 +87,14 @@ public class SprintReportService {
         issuesByStatus.put("In Progress", inProgressIssues);
         issuesByStatus.put("Done", completedIssues);
 
-        Map<String, Integer> issuesByPriority = new LinkedHashMap<>();
-        issuesByPriority.put("Highest", totalIssues / 5);
-        issuesByPriority.put("High", totalIssues / 4);
-        issuesByPriority.put("Medium", totalIssues / 3);
-        issuesByPriority.put("Low", totalIssues / 4);
-        issuesByPriority.put("Lowest", totalIssues / 10);
+        // Get real priority distribution from issue service
+        Map<String, Integer> issuesByPriority = calculateIssueCountByPriority(sprintIssues);
 
-        Map<String, Integer> issuesByType = new LinkedHashMap<>();
-        issuesByType.put("Bug", totalIssues / 4);
-        issuesByType.put("Story", totalIssues / 3);
-        issuesByType.put("Task", totalIssues / 4);
-        issuesByType.put("Epic", totalIssues / 10);
+        // Get real type distribution from issue service
+        Map<String, Integer> issuesByType = calculateIssueCountByType(sprintIssues);
 
-        Map<String, Integer> issuesByAssignee = new LinkedHashMap<>();
-        issuesByAssignee.put("Unassigned", todoIssues / 3);
+        // Get real assignee distribution from issue service
+        Map<String, Integer> issuesByAssignee = calculateIssueCountByAssignee(sprintIssues);
 
         // Generate burndown data
         BurndownResponse burndown = generateBurndownData(sprint, sprintIssues, totalPoints, completedPoints);
@@ -331,5 +324,86 @@ public class SprintReportService {
             }
         }
         return pointsByStatus;
+    }
+
+    /**
+     * Calculate real issue count by priority using actual data from issue service.
+     */
+    private Map<String, Integer> calculateIssueCountByPriority(List<SprintIssue> sprintIssues) {
+        Map<String, Integer> priorityCounts = new LinkedHashMap<>();
+        priorityCounts.put("Highest", 0);
+        priorityCounts.put("High", 0);
+        priorityCounts.put("Medium", 0);
+        priorityCounts.put("Low", 0);
+        priorityCounts.put("Lowest", 0);
+
+        for (SprintIssue si : sprintIssues) {
+            try {
+                IssueServiceClient.IssueData issue = issueServiceClient.getIssue(si.getIssueId());
+                String priority = issue.getPriorityName();
+                if (priority != null && priorityCounts.containsKey(priority)) {
+                    priorityCounts.merge(priority, 1, Integer::sum);
+                } else if (priority != null) {
+                    priorityCounts.merge("Medium", 1, Integer::sum); // Default unknown to Medium
+                }
+            } catch (Exception e) {
+                log.debug("Failed to get priority for issue {}: {}", si.getIssueId(), e.getMessage());
+            }
+        }
+
+        return priorityCounts;
+    }
+
+    /**
+     * Calculate real issue count by type using actual data from issue service.
+     */
+    private Map<String, Integer> calculateIssueCountByType(List<SprintIssue> sprintIssues) {
+        Map<String, Integer> typeCounts = new LinkedHashMap<>();
+        typeCounts.put("Bug", 0);
+        typeCounts.put("Story", 0);
+        typeCounts.put("Task", 0);
+        typeCounts.put("Epic", 0);
+        typeCounts.put("Other", 0);
+
+        for (SprintIssue si : sprintIssues) {
+            try {
+                IssueServiceClient.IssueData issue = issueServiceClient.getIssue(si.getIssueId());
+                String type = issue.getIssueTypeName();
+                if (type != null && typeCounts.containsKey(type)) {
+                    typeCounts.merge(type, 1, Integer::sum);
+                } else if (type != null) {
+                    typeCounts.merge("Other", 1, Integer::sum);
+                }
+            } catch (Exception e) {
+                log.debug("Failed to get type for issue {}: {}", si.getIssueId(), e.getMessage());
+            }
+        }
+
+        return typeCounts;
+    }
+
+    /**
+     * Calculate real issue count by assignee using actual data from issue service.
+     */
+    private Map<String, Integer> calculateIssueCountByAssignee(List<SprintIssue> sprintIssues) {
+        Map<String, Integer> assigneeCounts = new LinkedHashMap<>();
+        assigneeCounts.put("Unassigned", 0);
+
+        for (SprintIssue si : sprintIssues) {
+            try {
+                IssueServiceClient.IssueData issue = issueServiceClient.getIssue(si.getIssueId());
+                String assignee = issue.getAssigneeName();
+                if (assignee != null && !assignee.isEmpty()) {
+                    assigneeCounts.merge(assignee, 1, Integer::sum);
+                } else {
+                    assigneeCounts.merge("Unassigned", 1, Integer::sum);
+                }
+            } catch (Exception e) {
+                log.debug("Failed to get assignee for issue {}: {}", si.getIssueId(), e.getMessage());
+                assigneeCounts.merge("Unassigned", 1, Integer::sum);
+            }
+        }
+
+        return assigneeCounts;
     }
 }

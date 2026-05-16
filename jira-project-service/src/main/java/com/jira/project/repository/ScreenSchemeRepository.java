@@ -13,5 +13,7 @@ public interface ScreenSchemeRepository extends JpaRepository<ScreenScheme, UUID
 
     Optional<ScreenScheme> findByIsDefaultTrue();
 
+    Optional<ScreenScheme> findByName(String name);
+
     List<ScreenScheme> findByNameContainingIgnoreCase(String name);
 }

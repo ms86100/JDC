@@ -25,7 +25,7 @@ public class ReleaseService {
 
     @Transactional(readOnly = true)
     public List<ReleaseResponse> getReleasesByPlanId(UUID planId) {
-        return releaseRepository.findByPlanIdOrderByReleaseDateDesc(planId).stream()
+        return releaseRepository.findByPlanIdAndIsActiveTrueOrderByReleaseDateDesc(planId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -33,6 +33,10 @@ public class ReleaseService {
     @Transactional(readOnly = true)
     public ReleaseResponse getReleaseById(UUID planId, UUID releaseId) {
         PlanRelease release = findReleaseById(releaseId);
+        // IDOR check: verify release belongs to specified plan
+        if (!release.getPlanId().equals(planId)) {
+            throw new ResourceNotFoundException("Release", "id", releaseId);
+        }
         return toResponse(release);
     }
 
@@ -56,6 +60,10 @@ public class ReleaseService {
     @Transactional
     public ReleaseResponse updateRelease(UUID planId, UUID releaseId, CreateReleaseRequest request) {
         PlanRelease release = findReleaseById(releaseId);
+        // IDOR check: verify release belongs to specified plan
+        if (!release.getPlanId().equals(planId)) {
+            throw new ResourceNotFoundException("Release", "id", releaseId);
+        }
 
         if (request.getName() != null) {
             release.setName(request.getName());
@@ -77,6 +85,10 @@ public class ReleaseService {
     @Transactional
     public ReleaseResponse approveRelease(UUID planId, UUID releaseId, UUID approvedBy) {
         PlanRelease release = findReleaseById(releaseId);
+        // IDOR check: verify release belongs to specified plan
+        if (!release.getPlanId().equals(planId)) {
+            throw new ResourceNotFoundException("Release", "id", releaseId);
+        }
         release.setStatus("APPROVED");
         release.setApprovedBy(approvedBy);
         release.setApprovedAt(LocalDateTime.now());
@@ -87,6 +99,10 @@ public class ReleaseService {
     @Transactional
     public ReleaseResponse releaseVersion(UUID planId, UUID releaseId) {
         PlanRelease release = findReleaseById(releaseId);
+        // IDOR check: verify release belongs to specified plan
+        if (!release.getPlanId().equals(planId)) {
+            throw new ResourceNotFoundException("Release", "id", releaseId);
+        }
         release.setStatus("RELEASED");
         release = releaseRepository.save(release);
         return toResponse(release);
@@ -95,7 +111,13 @@ public class ReleaseService {
     @Transactional
     public void deleteRelease(UUID planId, UUID releaseId) {
         PlanRelease release = findReleaseById(releaseId);
-        releaseRepository.delete(release);
+        // IDOR check: verify release belongs to specified plan
+        if (!release.getPlanId().equals(planId)) {
+            throw new ResourceNotFoundException("Release", "id", releaseId);
+        }
+        // Soft delete to maintain referential integrity
+        release.setIsActive(false);
+        releaseRepository.save(release);
     }
 
     private Plan findPlanById(UUID id) {
@@ -121,6 +143,7 @@ public class ReleaseService {
                 .approvedAt(release.getApprovedAt())
                 .createdAt(release.getCreatedAt())
                 .updatedAt(release.getUpdatedAt())
+                .isActive(release.getIsActive())
                 .build();
     }
 }

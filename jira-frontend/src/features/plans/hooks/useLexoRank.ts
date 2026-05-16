@@ -61,6 +61,9 @@ export const useRankItem = () => {
       queryClient.invalidateQueries({ queryKey: ['lexorank'] });
       queryClient.invalidateQueries({ queryKey: ['backlog', variables.planId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to rank item:', error.message);
+    },
   });
 };
 
@@ -72,6 +75,9 @@ export const useLockRank = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lexorank'] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to lock rank:', error.message);
+    },
   });
 };
 
@@ -82,6 +88,9 @@ export const useUnlockRank = () => {
     mutationFn: lexoRankApi.unlockRank,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lexorank'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to unlock rank:', error.message);
     },
   });
 };
@@ -102,6 +111,9 @@ export const useRebalance = () => {
     mutationFn: lexoRankApi.rebalance,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lexorank'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to rebalance ranks:', error.message);
     },
   });
 };
@@ -128,6 +140,9 @@ export const useReorderItem = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['backlog', variables.planId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to reorder item:', error.message);
     },
   });
 };

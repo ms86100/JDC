@@ -73,6 +73,10 @@ public class BacklogService {
     @Transactional
     public PlanItemResponse updateItem(UUID planId, UUID itemId, CreatePlanItemRequest request) {
         PlanItem item = findItemById(itemId);
+        // IDOR check: verify item belongs to specified plan
+        if (!item.getPlanId().equals(planId)) {
+            throw new ResourceNotFoundException("PlanItem", "id", itemId);
+        }
 
         if (request.getParentId() != null) {
             item.setParentId(request.getParentId());
@@ -91,6 +95,10 @@ public class BacklogService {
     @Transactional
     public void removeItemFromBacklog(UUID planId, UUID itemId) {
         PlanItem item = findItemById(itemId);
+        // IDOR check: verify item belongs to specified plan
+        if (!item.getPlanId().equals(planId)) {
+            throw new ResourceNotFoundException("PlanItem", "id", itemId);
+        }
         planItemRepository.delete(item);
     }
 
@@ -98,6 +106,10 @@ public class BacklogService {
     public void reorderItems(UUID planId, ReorderRequest request) {
         if (request.getItemId() != null && request.getNewSortOrder() != null) {
             PlanItem item = findItemById(request.getItemId());
+            // IDOR check: verify item belongs to specified plan
+            if (!item.getPlanId().equals(planId)) {
+                throw new ResourceNotFoundException("PlanItem", "id", request.getItemId());
+            }
             item.setSortOrder(request.getNewSortOrder());
             if (request.getNewParentId() != null) {
                 item.setParentId(request.getNewParentId());

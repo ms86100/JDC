@@ -38,10 +38,16 @@ export default function BoardDetailPage() {
     createSprint.mutate({
       boardId: boardId!,
       data: { name: newSprintName, goal: newSprintGoal },
+    }, {
+      onSuccess: () => {
+        setNewSprintName('');
+        setNewSprintGoal('');
+        setShowCreateSprint(false);
+      },
+      onError: (error: Error) => {
+        alert(error.message || 'Failed to create sprint');
+      },
     });
-    setNewSprintName('');
-    setNewSprintGoal('');
-    setShowCreateSprint(false);
   };
 
   const activeSprints = sprints?.filter(s => s.state === 'ACTIVE') || [];

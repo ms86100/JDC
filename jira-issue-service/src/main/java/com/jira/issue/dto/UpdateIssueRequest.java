@@ -59,4 +59,7 @@ public class UpdateIssueRequest {
 
     // Status (for workflow transitions)
     private UUID statusId;
+
+    // Optimistic locking - required for updates to detect concurrent modifications
+    private Long expectedVersion;
 }

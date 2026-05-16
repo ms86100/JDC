@@ -13,7 +13,6 @@ export default function SystemInfoPage() {
           <p className="dc-page-subtitle">View information about your Jira installation</p>
         </div>
 
-        {/* Tabs */}
         <div className="dc-tabs" style={{ marginBottom: 16 }}>
           <button
             className={`dc-tab ${activeTab === 'system' ? 'dc-tab-active' : ''}`}
@@ -35,7 +34,6 @@ export default function SystemInfoPage() {
           </button>
         </div>
 
-        {/* System Info Table */}
         <div className="dc-card" style={{ marginBottom: 16 }}>
           <div className="dc-card-header">
             <h3 className="dc-card-title">Jira Information</h3>
@@ -77,7 +75,6 @@ export default function SystemInfoPage() {
           </div>
         </div>
 
-        {/* Build Information */}
         <div className="dc-card" style={{ marginBottom: 16 }}>
           <div className="dc-card-header">
             <h3 className="dc-card-title">Build Information</h3>
@@ -106,7 +103,6 @@ export default function SystemInfoPage() {
           </div>
         </div>
 
-        {/* Memory Info */}
         <div className="dc-card">
           <div className="dc-card-header">
             <h3 className="dc-card-title">Memory</h3>

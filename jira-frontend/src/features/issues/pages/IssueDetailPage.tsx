@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { issueApi, IssueResponse } from '../../../api/issueApi';
 import { commentApi } from '../../../api/commentApi';
 import { labelApi } from '../../../api/labelApi';
@@ -9,22 +9,101 @@ import './IssueDetailPage.css';
 
 type TabType = 'details' | 'people' | 'activity' | 'comment' | 'work';
 
+/**
+ * Full Issue Response - All Jira DC Mandatory Fields
+ */
 interface FullIssueResponse extends IssueResponse {
+  // Core Metadata
   projectName?: string;
-  epicId?: string;
-  epicName?: string;
-  storyPoints?: number;
+  issueKey: string;
+
+  // Issue Type & Category
+  issueType: string;
+  issueTypeIcon?: string;
+  issueTypeColor?: string;
+
+  // Status & Priority
+  status: string;
+  statusCategory?: string;
+  priority: string;
+  priorityIcon?: string;
+  priorityColor?: string;
+
+  // Resolution
+  resolutionId?: string;
+  resolutionName?: string;
+  resolutionDate?: string;
+
+  // Project Information
+  projectId: string;
+  projectKey: string;
+
+  // User Relationships
+  assigneeId?: string;
+  assigneeName?: string;
+  assigneeAvatar?: string;
+  reporterId?: string;
+  reporterName?: string;
+  reporterAvatar?: string;
+  creatorId?: string;
+  creatorName?: string;
+
+  // Timestamps
+  createdAt: string;
+  updatedAt: string;
+  lastViewedAt?: string;
+  resolvedAt?: string;
+  dueDate?: string;
+
+  // Title & Description
+  title: string;
+  description?: string;
+  environment?: string;
+
+  // Versioning
+  affectsVersions?: string[];
+  fixVersions?: string[];
+
+  // Organization
+  components?: string[];
+  labels?: string[];
   sprintId?: string;
   sprintName?: string;
-  components?: string[];
-  securityLevel?: string;
+  teamId?: string;
+  teamName?: string;
+
+  // Agile Fields
+  epicId?: string;
+  epicName?: string;
+  epicColor?: string;
+  storyPoints?: number;
+  originalStoryPoints?: number;
   parentId?: string;
   parentKey?: string;
-  children?: IssueResponse[];
+
+  // Time Tracking
+  originalEstimate?: number;  // seconds
+  remainingEstimate?: number;  // seconds
+  timeSpent?: number;  // seconds
+  aggregateTimeEstimate?: number;
+  aggregateTimeSpent?: number;
+  workRatio?: number;
+
+  // Security
+  securityLevelId?: string;
+  securityLevelName?: string;
+
+  // Social
   votes?: number;
-  watchers?: string[];
+  voteCount?: number;
+  watcherCount?: number;
+  watchers?: Array<{ id: string; name: string; avatar: string }>;
   linkedIssues?: Array<{ type: string; key: string; title: string }>;
-  labels?: string[];
+  subtasks?: IssueResponse[];
+  parent?: { id: string; key: string; title: string };
+
+  // Custom Fields (dynamic)
+  customFields?: Record<string, any>;
 }
 
 export default function IssueDetailPage() {
@@ -34,7 +113,6 @@ export default function IssueDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showTransitionMenu, setShowTransitionMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [showExportMenu, setShowExportMenu] = useState(false);
   const [newComment, setNewComment] = useState('');
 
   const { data: issue, isLoading } = useQuery<FullIssueResponse>({
@@ -48,7 +126,7 @@ export default function IssueDetailPage() {
 
   const { data: comments } = useQuery({
     queryKey: ['comments', issueId],
-    queryFn: async () => {
+    fn: async () => {
       const response = await commentApi.getByIssue(issueId!);
       return response.data;
     },
@@ -57,7 +135,7 @@ export default function IssueDetailPage() {
 
   const { data: priorities } = useQuery({
     queryKey: ['priorities'],
-    queryFn: async () => {
+    fn: async () => {
       const response = await issueApi.getPriorities();
       return response.data;
     },
@@ -65,7 +143,7 @@ export default function IssueDetailPage() {
 
   const { data: statuses } = useQuery({
     queryKey: ['statuses'],
-    queryFn: async () => {
+    fn: async () => {
       const response = await issueApi.getStatuses();
       return response.data;
     },
@@ -87,6 +165,7 @@ export default function IssueDetailPage() {
     },
   });
 
+  // Helper functions
   const getStatusStyle = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'done': case 'resolved': case 'closed':
@@ -97,17 +176,6 @@ export default function IssueDetailPage() {
         return { background: '#fee2e2', color: '#991b1b' };
       default:
         return { background: '#f3f4f6', color: '#374151' };
-    }
-  };
-
-  const getPriorityIcon = (priority: string) => {
-    switch (priority?.toLowerCase()) {
-      case 'highest': return '▲';
-      case 'high': return '▲';
-      case 'medium': return '◆';
-      case 'low': return '▼';
-      case 'lowest': return '▼';
-      default: return '◆';
     }
   };
 
@@ -125,6 +193,7 @@ export default function IssueDetailPage() {
       case 'story': return '📖';
       case 'task': return '✓';
       case 'epic': return '⚡';
+      case 'sub-task': return '↳';
       default: return '📋';
     }
   };
@@ -144,6 +213,30 @@ export default function IssueDetailPage() {
     });
   };
 
+  const formatTime = (seconds: number | undefined) => {
+    if (!seconds) return '-';
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    if (hours >= 24) {
+      const days = Math.floor(hours / 24);
+      const remainingHours = hours % 24;
+      return `${days}d ${remainingHours}h`;
+    }
+    return `${hours}h ${mins}m`;
+  };
+
+  const formatTimeWithDays = (seconds: number | undefined) => {
+    if (!seconds) return '-';
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    if (hours >= 24) {
+      const days = Math.floor(hours / 24);
+      const remainingHours = hours % 24;
+      return `${days}d ${remainingHours}h ${mins}m`;
+    }
+    return `${hours}h ${mins}m`;
+  };
+
   const getRelativeTime = (dateStr: string | undefined) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -157,14 +250,6 @@ export default function IssueDetailPage() {
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return formatDate(dateStr);
-  };
-
-  const formatTime = (seconds: number | undefined) => {
-    if (!seconds) return '-';
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    if (hours >= 24) return `${Math.floor(hours / 24)}d ${hours % 24}h`;
-    return `${hours}h ${mins}m`;
   };
 
   if (isLoading) {
@@ -188,675 +273,560 @@ export default function IssueDetailPage() {
 
   return (
     <div className="idc-issue-view">
+      {/* Breadcrumb */}
       <div className="idc-breadcrumb">
         <Link to="/issues" className="idc-breadcrumb-project">Issues</Link>
         <span className="idc-breadcrumb-sep">/</span>
-        {issue.projectId && (
-          <>
-            <Link to={`/projects/${issue.projectId}`} className="idc-breadcrumb-project">
-              {issue.projectName || 'Project'}
-            </Link>
-            <span className="idc-breadcrumb-sep">/</span>
-          </>
-        )}
+        <Link to={`/projects/${issue.projectId}`} className="idc-breadcrumb-project">
+          {issue.projectName || issue.projectKey || 'Project'}
+        </Link>
+        <span className="idc-breadcrumb-sep">/</span>
         <span className="idc-breadcrumb-key">{issue.issueKey}</span>
       </div>
 
-      {/* Issue Header */}
-          <div className="idc-issue-header">
-            <div className="idc-issue-header-top">
-              {/* Type + Status */}
-              <div className="idc-type-status">
-                <span className="idc-type-badge">
-                  <span>{getTypeIcon(issue.issueType)}</span>
-                  <span>{issue.issueType || 'Story'}</span>
+      {/* Issue Header - Jira DC Style */}
+      <div className="idc-issue-header">
+        <div className="idc-issue-header-top">
+          {/* Type + Status badges */}
+          <div className="idc-type-status">
+            <span className="idc-type-badge">
+              <span className="idc-type-icon">{getTypeIcon(issue.issueType)}</span>
+              <span className="idc-type-name">{issue.issueType || 'Story'}</span>
+            </span>
+            <div
+              className="idc-status-badge"
+              style={{ background: statusStyle.background, color: statusStyle.color }}
+            >
+              {issue.status || 'To Do'}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="idc-issue-actions">
+            <button className="idc-action-btn" onClick={() => setShowEditModal(true)}>Edit</button>
+            <div className="idc-dropdown-wrapper">
+              <button className="idc-action-btn" onClick={() => setShowMoreMenu(!showMoreMenu)}>
+                More <span className="idc-dropdown-caret">▾</span>
+              </button>
+              {showMoreMenu && (
+                <div className="idc-dropdown-menu">
+                  <button className="idc-dropdown-item">Link issues</button>
+                  <button className="idc-dropdown-item">Create subtask</button>
+                  <button className="idc-dropdown-item">Clone issue</button>
+                  <button className="idc-dropdown-item">Move</button>
+                  <div className="idc-dropdown-divider"></div>
+                  <button className="idc-dropdown-item idc-dropdown-danger">Delete</button>
+                </div>
+              )}
+            </div>
+            <button
+              className="idc-status-transition-btn"
+              onClick={() => setShowTransitionMenu(!showTransitionMenu)}
+            >
+              <span>To Do</span>
+              <span className="idc-dropdown-caret">▾</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Title */}
+        <h1 className="idc-issue-title">{issue.title}</h1>
+
+        {/* Meta info */}
+        <div className="idc-issue-meta">
+          <span className="idc-meta-key">{issue.issueKey}</span>
+          <span className="idc-meta-sep">—</span>
+          <span className="idc-meta-created">
+            Created by {issue.reporterName || 'Unknown'} · {getRelativeTime(issue.createdAt)}
+          </span>
+        </div>
+
+        {/* Transition Menu */}
+        {showTransitionMenu && (
+          <div className="idc-transition-menu">
+            <div className="idc-transition-header">Transition</div>
+            {statuses?.map((s) => (
+              <button
+                key={s.id}
+                className="idc-transition-option"
+                onClick={() => {
+                  transitionMutation.mutate(s.id);
+                  setShowTransitionMenu(false);
+                }}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Two Column Layout - Jira DC Style */}
+      <div className="idc-issue-body">
+        {/* ========== LEFT PRIMARY CONTENT COLUMN ========== */}
+        <div className="idc-left-col">
+
+          {/* Description */}
+          <div className="idc-section">
+            <div className="idc-section-header">
+              <h3>Description</h3>
+              <button className="idc-section-btn">Edit</button>
+            </div>
+            <div className="idc-description">
+              {issue.description ? (
+                <div className="idc-description-text" dangerouslySetInnerHTML={{ __html: issue.description }} />
+              ) : (
+                <span className="idc-description-placeholder">
+                  Click to add description...
                 </span>
-                <div
-                  className="idc-status-badge"
-                  style={{ background: statusStyle.background, color: statusStyle.color }}
-                >
-                  {issue.status || 'To Do'}
-                  <span className="idc-status-caret">▾</span>
-                </div>
-              </div>
+              )}
+            </div>
+          </div>
 
-              {/* Right Actions */}
-              <div className="idc-issue-actions">
-                <button className="idc-action-btn" onClick={() => setShowEditModal(true)}>
-                  Edit
-                </button>
-                <button className="idc-action-btn" onClick={() => {
-                  const content = newComment;
-                  if (content.trim()) addCommentMutation.mutate(content);
-                }}>
-                  Add comment
-                </button>
-                <button className="idc-action-btn">
-                  Assign
-                </button>
-                <div className="idc-dropdown-wrapper">
-                  <button
-                    className="idc-action-btn"
-                    onClick={() => setShowMoreMenu(!showMoreMenu)}
-                  >
-                    More <span className="idc-dropdown-caret">▾</span>
-                  </button>
-                  {showMoreMenu && (
-                    <div className="idc-dropdown-menu">
-                      <button className="idc-dropdown-item">Link issues</button>
-                      <button className="idc-dropdown-item">Create subtask</button>
-                      <button className="idc-dropdown-item">Clone issue</button>
-                      <button className="idc-dropdown-item">Delete</button>
-                    </div>
-                  )}
-                </div>
-                <button
-                  className="idc-status-transition-btn"
-                  onClick={() => setShowTransitionMenu(!showTransitionMenu)}
-                >
-                  In Progress <span className="idc-dropdown-caret">▾</span>
-                </button>
-                <button className="idc-action-btn">Admin</button>
-                <button className="idc-icon-btn" title="Share">🔗</button>
-                <div className="idc-dropdown-wrapper">
-                  <button
-                    className="idc-action-btn"
-                    onClick={() => setShowExportMenu(!showExportMenu)}
-                  >
-                    Export <span className="idc-dropdown-caret">▾</span>
-                  </button>
-                  {showExportMenu && (
-                    <div className="idc-dropdown-menu idc-dropdown-right">
-                      <button className="idc-dropdown-item">Export to Word</button>
-                      <button className="idc-dropdown-item">Export to PDF</button>
-                      <button className="idc-dropdown-item">Print</button>
-                    </div>
-                  )}
-                </div>
+          {/* Environment */}
+          {issue.environment && (
+            <div className="idc-section">
+              <div className="idc-section-header">
+                <h3>Environment</h3>
+              </div>
+              <div className="idc-environment">
+                <p>{issue.environment}</p>
               </div>
             </div>
+          )}
 
-            {/* Title */}
-            <h1 className="idc-issue-title">{issue.title}</h1>
+          {/* Activity Tabs */}
+          <div className="idc-tabs">
+            <button
+              className={`idc-tab ${activeTab === 'comment' ? 'idc-tab-active' : ''}`}
+              onClick={() => setActiveTab('comment')}
+            >
+              Comment
+            </button>
+            <button
+              className={`idc-tab ${activeTab === 'activity' ? 'idc-tab-active' : ''}`}
+              onClick={() => setActiveTab('activity')}
+            >
+              Activity
+            </button>
+            <button
+              className={`idc-tab ${activeTab === 'work' ? 'idc-tab-active' : ''}`}
+              onClick={() => setActiveTab('work')}
+            >
+              Work Log
+            </button>
+            <button
+              className={`idc-tab ${activeTab === 'details' ? 'idc-tab-active' : ''}`}
+              onClick={() => setActiveTab('details')}
+            >
+              Details
+            </button>
+          </div>
 
-            {/* Metadata */}
-            <div className="idc-issue-meta">
-              <span className="idc-meta-key">{issue.issueKey}</span>
-              <span className="idc-meta-sep">—</span>
-              <span className="idc-meta-created">
-                Created by {String(issue.reporterId || '').split('-')[0] || 'Unknown'} · {getRelativeTime(issue.createdAt)}
-              </span>
-            </div>
-
-            {/* Transition Menu */}
-            {showTransitionMenu && (
-              <div className="idc-transition-menu">
-                <div className="idc-transition-header">Status</div>
-                {statuses?.map((s) => (
+          <div className="idc-tab-content">
+            {/* Comments Tab */}
+            {activeTab === 'comment' && (
+              <div className="idc-comment-section">
+                <div className="idc-comment-list">
+                  {comments?.map((c: any) => (
+                    <div key={c.id} className="idc-comment">
+                      <div className="idc-comment-avatar">
+                        {c.authorName?.charAt(0) || 'U'}
+                      </div>
+                      <div className="idc-comment-body">
+                        <div className="idc-comment-header">
+                          <span className="idc-comment-author">{c.authorName}</span>
+                          <span className="idc-comment-time">{getRelativeTime(c.createdAt)}</span>
+                        </div>
+                        <p className="idc-comment-text">{c.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="idc-comment-input">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Add a comment..."
+                    className="idc-comment-textarea"
+                  />
                   <button
-                    key={s.id}
-                    className="idc-transition-option"
+                    className="idc-btn idc-btn-primary"
                     onClick={() => {
-                      transitionMutation.mutate(s.id);
-                      setShowTransitionMenu(false);
+                      if (newComment.trim()) {
+                        addCommentMutation.mutate(newComment);
+                      }
                     }}
+                    disabled={addCommentMutation.isPending}
                   >
-                    {s.name}
+                    Save
                   </button>
-                ))}
+                </div>
+              </div>
+            )}
+
+            {/* Activity Tab (Change History) */}
+            {activeTab === 'activity' && (
+              <div className="idc-activity-section">
+                <p className="idc-no-content">No activity recorded yet.</p>
+              </div>
+            )}
+
+            {/* Work Log Tab */}
+            {activeTab === 'work' && (
+              <div className="idc-work-section">
+                <div className="idc-worklog-list">
+                  <div className="idc-worklog-summary">
+                    <span>Remaining Estimate: {formatTimeWithDays(issue.remainingEstimate)}</span>
+                    <span>Time Spent: {formatTimeWithDays(issue.timeSpent)}</span>
+                  </div>
+                </div>
+                <button className="idc-btn idc-btn-secondary">Log Work</button>
+              </div>
+            )}
+
+            {/* Details Tab - Field Mappings */}
+            {activeTab === 'details' && (
+              <div className="idc-details-section">
+                <div className="idc-details-grid">
+                  <div className="idc-detail-item">
+                    <span className="idc-detail-label">Type</span>
+                    <span className="idc-detail-value">
+                      <span className="idc-type-icon-sm">{getTypeIcon(issue.issueType)}</span>
+                      {issue.issueType}
+                    </span>
+                  </div>
+                  <div className="idc-detail-item">
+                    <span className="idc-detail-label">Priority</span>
+                    <span className="idc-detail-value" style={{ color: getPriorityColor(issue.priority) }}>
+                      {issue.priority}
+                    </span>
+                  </div>
+                  <div className="idc-detail-item">
+                    <span className="idc-detail-label">Status</span>
+                    <span className="idc-detail-value">{issue.status}</span>
+                  </div>
+                  <div className="idc-detail-item">
+                    <span className="idc-detail-label">Resolution</span>
+                    <span className="idc-detail-value">{issue.resolutionName || '-'}</span>
+                  </div>
+                  <div className="idc-detail-item">
+                    <span className="idc-detail-label">Affects Version</span>
+                    <span className="idc-detail-value">
+                      {issue.affectsVersions?.length ? issue.affectsVersions.join(', ') : '-'}
+                    </span>
+                  </div>
+                  <div className="idc-detail-item">
+                    <span className="idc-detail-label">Fix Version</span>
+                    <span className="idc-detail-value">
+                      {issue.fixVersions?.length ? issue.fixVersions.join(', ') : '-'}
+                    </span>
+                  </div>
+                  <div className="idc-detail-item">
+                    <span className="idc-detail-label">Components</span>
+                    <span className="idc-detail-value">
+                      {issue.components?.length ? issue.components.join(', ') : '-'}
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Two Column Layout */}
-          <div className="idc-issue-body">
-            {/* ========== LEFT COLUMN ========== */}
-            <div className="idc-left-col">
-              {/* Details Section */}
-              <div className="idc-section">
-                <div className="idc-section-header">
-                  <h3>Details</h3>
-                  <button className="idc-section-btn" onClick={() => setShowEditModal(true)}>
-                    Edit
-                  </button>
-                </div>
-                <div className="idc-details-table">
-                  <div className="idc-detail-row">
-                    <span className="idc-detail-label">Assignee</span>
-                    <div className="idc-detail-value">
-                      {issue.assigneeId ? (
-                        <span className="idc-user">
-                          <span className="idc-user-avatar">
-                            {String(issue.assigneeId).charAt(0).toUpperCase()}
-                          </span>
-                          <span className="idc-user-name">
-                            {String(issue.assigneeId).split('-')[0]}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="idc-unassigned">Unassigned</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="idc-detail-row">
-                    <span className="idc-detail-label">Reporter</span>
-                    <div className="idc-detail-value">
-                      <span className="idc-user">
-                        <span className="idc-user-avatar idc-user-avatar-green">
-                          {String(issue.reporterId || 'U').charAt(0).toUpperCase()}
-                        </span>
-                        <span className="idc-user-name">
-                          {String(issue.reporterId || '').split('-')[0] || 'Unknown'}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                  <div className="idc-detail-row">
-                    <span className="idc-detail-label">Priority</span>
-                    <div className="idc-detail-value">
-                      <span style={{ color: getPriorityColor(issue.priority || '') }}>
-                        {getPriorityIcon(issue.priority || '')}
-                      </span>
-                      <span>{issue.priority || 'Medium'}</span>
-                    </div>
-                  </div>
-                  <div className="idc-detail-row">
-                    <span className="idc-detail-label">Labels</span>
-                    <div className="idc-detail-value">
-                      {(issue as any).labels?.length > 0 ? (
-                        <div className="idc-labels">
-                          {(issue as any).labels.map((l: string) => (
-                            <span key={l} className="idc-label">{l}</span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="idc-no-value">None</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="idc-detail-row">
-                    <span className="idc-detail-label">Sprint</span>
-                    <div className="idc-detail-value">
-                      {issue.sprintName ? (
-                        <span className="idc-sprint-tag">{issue.sprintName}</span>
-                      ) : (
-                        <span className="idc-no-value">Backlog</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="idc-detail-row">
-                    <span className="idc-detail-label">Epic Link</span>
-                    <div className="idc-detail-value">
-                      {issue.epicId ? (
-                        <span className="idc-epic-link">⚡ {issue.epicName || 'Epic'}</span>
-                      ) : (
-                        <span className="idc-no-value">None</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="idc-detail-row">
-                    <span className="idc-detail-label">Story Points</span>
-                    <div className="idc-detail-value">
-                      {issue.storyPoints !== undefined ? (
-                        <span className="idc-story-points">{issue.storyPoints}</span>
-                      ) : (
-                        <span className="idc-no-value">None</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+          {/* Subtasks Section */}
+          {issue.subtasks && issue.subtasks.length > 0 && (
+            <div className="idc-section">
+              <div className="idc-section-header">
+                <h3>Subtasks ({issue.subtasks.length})</h3>
               </div>
-
-              {/* Description */}
-              <div className="idc-section">
-                <div className="idc-section-header">
-                  <h3>Description</h3>
-                </div>
-                <div className="idc-description">
-                  {issue.description ? (
-                    <p className="idc-description-text">{issue.description}</p>
-                  ) : (
-                    <span className="idc-description-placeholder">
-                      Click to add description...
+              <div className="idc-subtask-list">
+                {issue.subtasks.map((subtask: any) => (
+                  <Link key={subtask.id} to={`/issues/${subtask.id}`} className="idc-subtask-item">
+                    <span className="idc-subtask-status" style={getStatusStyle(subtask.status)}>
+                      {subtask.status}
                     </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Activity Tabs */}
-              <div className="idc-tabs">
-                <button
-                  className={`idc-tab ${activeTab === 'details' ? 'idc-tab-active' : ''}`}
-                  onClick={() => setActiveTab('details')}
-                >
-                  Details
-                </button>
-                <button
-                  className={`idc-tab ${activeTab === 'comment' ? 'idc-tab-active' : ''}`}
-                  onClick={() => setActiveTab('comment')}
-                >
-                  Comment
-                </button>
-                <button
-                  className={`idc-tab ${activeTab === 'activity' ? 'idc-tab-active' : ''}`}
-                  onClick={() => setActiveTab('activity')}
-                >
-                  Activity
-                </button>
-                <button
-                  className={`idc-tab ${activeTab === 'work' ? 'idc-tab-active' : ''}`}
-                  onClick={() => setActiveTab('work')}
-                >
-                  Work Log
-                </button>
-                <button
-                  className={`idc-tab ${activeTab === 'people' ? 'idc-tab-active' : ''}`}
-                  onClick={() => setActiveTab('people')}
-                >
-                  People
-                </button>
-              </div>
-
-              <div className="idc-tab-content">
-                {/* Details Tab */}
-                {activeTab === 'details' && (
-                  <div className="idc-tab-details">
-                    <div className="idc-detail-col">
-                      <div className="idc-detail-row-2">
-                        <span className="idc-detail-label-2">Type</span>
-                        <span>{issue.issueType || 'Story'}</span>
-                      </div>
-                      <div className="idc-detail-row-2">
-                        <span className="idc-detail-label-2">Priority</span>
-                        <span style={{ color: getPriorityColor(issue.priority || '') }}>
-                          {getPriorityIcon(issue.priority || '')} {issue.priority || 'Medium'}
-                        </span>
-                      </div>
-                      <div className="idc-detail-row-2">
-                        <span className="idc-detail-label-2">Status</span>
-                        <span style={{ fontWeight: 500 }}>{issue.status || 'To Do'}</span>
-                      </div>
-                    </div>
-                    <div className="idc-detail-col">
-                      <div className="idc-detail-row-2">
-                        <span className="idc-detail-label-2">Affects Version</span>
-                        <span className="idc-no-value">None</span>
-                      </div>
-                      <div className="idc-detail-row-2">
-                        <span className="idc-detail-label-2">Fix Version</span>
-                        <span className="idc-no-value">None</span>
-                      </div>
-                      <div className="idc-detail-row-2">
-                        <span className="idc-detail-label-2">Components</span>
-                        <span className="idc-no-value">None</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Comment Tab */}
-                {activeTab === 'comment' && (
-                  <div className="idc-comment-tab">
-                    <div className="idc-compose">
-                      <div className="idc-compose-avatar">S</div>
-                      <div className="idc-compose-body">
-                        <textarea
-                          className="idc-compose-input"
-                          placeholder="Add a comment..."
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          rows={3}
-                        />
-                        <div className="idc-compose-toolbar">
-                          <button className="idc-compose-tool">B</button>
-                          <button className="idc-compose-tool">I</button>
-                          <button className="idc-compose-tool">U</button>
-                          <button className="idc-compose-tool">🔗</button>
-                          <button className="idc-compose-tool">📎</button>
-                        </div>
-                        <div className="idc-compose-footer">
-                          <span className="idc-compose-visibility">All Users</span>
-                          <button
-                            className="idc-btn idc-btn-primary idc-btn-sm"
-                            onClick={() => {
-                              if (newComment.trim()) addCommentMutation.mutate(newComment);
-                            }}
-                            disabled={!newComment.trim() || addCommentMutation.isPending}
-                          >
-                            Save
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    {comments && comments.length > 0 ? (
-                      <div className="idc-comments-list">
-                        {comments.map((c: any) => (
-                          <div key={c.id} className="idc-comment">
-                            <div className="idc-comment-avatar">
-                              {String(c.authorId || 'U').charAt(0).toUpperCase()}
-                            </div>
-                            <div className="idc-comment-body">
-                              <div className="idc-comment-header">
-                                <span className="idc-comment-author">
-                                  {String(c.authorId || '').split('-')[0]}
-                                </span>
-                                <span className="idc-comment-time">
-                                  {getRelativeTime(c.createdAt)}
-                                </span>
-                              </div>
-                              <p className="idc-comment-text">{c.content}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="idc-no-comments">No comments yet.</div>
-                    )}
-                  </div>
-                )}
-
-                {/* Activity Tab */}
-                {activeTab === 'activity' && (
-                  <div className="idc-activity-tab">
-                    <div className="idc-activity-filter">
-                      <span className="idc-activity-label">Show:</span>
-                      <button className="idc-activity-chosen">All</button>
-                      <button className="idc-activity-opt">Comments</button>
-                      <button className="idc-activity-opt">History</button>
-                    </div>
-                    <div className="idc-activity-timeline">
-                      <div className="idc-activity-empty">
-                        No activity recorded yet.
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Work Tab */}
-                {activeTab === 'work' && (
-                  <div className="idc-work-tab">
-                    <div className="idc-work-summary">
-                      <div className="idc-work-item">
-                        <span className="idc-work-label">Remaining Estimate</span>
-                        <span className="idc-work-value">-</span>
-                      </div>
-                      <div className="idc-work-item">
-                        <span className="idc-work-label">Time Spent</span>
-                        <span className="idc-work-value">-</span>
-                      </div>
-                    </div>
-                    <button className="idc-btn idc-btn-secondary idc-btn-sm">
-                      Log Work
-                    </button>
-                  </div>
-                )}
-
-                {/* People Tab */}
-                {activeTab === 'people' && (
-                  <div className="idc-people-tab">
-                    <div className="idc-people-list">
-                      <div className="idc-people-row">
-                        <span className="idc-detail-label-2">Assignee</span>
-                        <span className="idc-user">
-                          <span className="idc-user-avatar">
-                            {String(issue.assigneeId || 'U').charAt(0).toUpperCase()}
-                          </span>
-                          <span>{String(issue.assigneeId || '').split('-')[0]}</span>
-                        </span>
-                      </div>
-                      <div className="idc-people-row">
-                        <span className="idc-detail-label-2">Reporter</span>
-                        <span className="idc-user">
-                          <span className="idc-user-avatar idc-user-avatar-green">
-                            {String(issue.reporterId || 'U').charAt(0).toUpperCase()}
-                          </span>
-                          <span>{String(issue.reporterId || '').split('-')[0]}</span>
-                        </span>
-                      </div>
-                      <div className="idc-people-row">
-                        <span className="idc-detail-label-2">Watchers</span>
-                        <span className="idc-no-value">{issue.watchers?.length || 0} watching</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Attachments */}
-              <div className="idc-section">
-                <div className="idc-section-header">
-                  <h3>Attachments</h3>
-                  <button className="idc-section-btn">Add files</button>
-                </div>
-                <div className="idc-empty-section">No attachments</div>
+                    <span className="idc-subtask-key">{subtask.issueKey}</span>
+                    <span className="idc-subtask-title">{subtask.title}</span>
+                  </Link>
+                ))}
               </div>
             </div>
+          )}
+        </div>
 
-            {/* ========== RIGHT COLUMN ========== */}
-            <div className="idc-right-col">
-              {/* People */}
-              <div className="idc-right-section">
-                <h4 className="idc-right-title">People</h4>
-                <div className="idc-right-rows">
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Assignee</span>
-                    <span className="idc-right-value">
-                      {issue.assigneeId ? (
-                        <span className="idc-user">
-                          <span className="idc-user-avatar-sm">
-                            {String(issue.assigneeId).charAt(0).toUpperCase()}
-                          </span>
-                          <span className="idc-user-name-sm">
-                            {String(issue.assigneeId).split('-')[0]}
-                          </span>
-                        </span>
-                      ) : (
-                        <button className="idc-right-action">Assign</button>
-                      )}
-                    </span>
+        {/* ========== RIGHT METADATA SIDEBAR ========== */}
+        <div className="idc-right-col">
+
+          {/* PEOPLE Section */}
+          <div className="idc-sidebar-section">
+            <h4 className="idc-sidebar-section-title">People</h4>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Assignee</span>
+              <div className="idc-sidebar-value">
+                {issue.assigneeId ? (
+                  <div className="idc-user-chip">
+                    <span className="idc-user-avatar-sm">{issue.assigneeName?.charAt(0) || 'U'}</span>
+                    <span>{issue.assigneeName}</span>
                   </div>
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Reporter</span>
-                    <span className="idc-right-value">
-                      <span className="idc-user">
-                        <span className="idc-user-avatar-sm idc-user-avatar-green">
-                          {String(issue.reporterId || 'U').charAt(0).toUpperCase()}
-                        </span>
-                        <span className="idc-user-name-sm">
-                          {String(issue.reporterId || '').split('-')[0] || 'Unknown'}
-                        </span>
-                      </span>
-                    </span>
-                  </div>
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Watchers</span>
-                    <button className="idc-right-action">{issue.watchers?.length || 0}</button>
-                  </div>
+                ) : (
+                  <span className="idc-no-value">Unassigned</span>
+                )}
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Reporter</span>
+              <div className="idc-sidebar-value">
+                <div className="idc-user-chip">
+                  <span className="idc-user-avatar-sm idc-avatar-green">{issue.reporterName?.charAt(0) || 'U'}</span>
+                  <span>{issue.reporterName}</span>
                 </div>
               </div>
-
-              {/* Dates */}
-              <div className="idc-right-section">
-                <h4 className="idc-right-title">Dates</h4>
-                <div className="idc-right-rows">
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Created</span>
-                    <span className="idc-right-value" title={formatDateTime(issue.createdAt)}>
-                      {formatDate(issue.createdAt)}
-                    </span>
-                  </div>
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Updated</span>
-                    <span className="idc-right-value" title={formatDateTime(issue.updatedAt)}>
-                      {getRelativeTime(issue.updatedAt)}
-                    </span>
-                  </div>
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Due Date</span>
-                    <button className="idc-right-action">Set due date</button>
-                  </div>
-                </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Votes</span>
+              <div className="idc-sidebar-value">
+                <span className="idc-vote-count">
+                  {issue.voteCount || 0}
+                  <button className="idc-vote-btn">Vote for this issue</button>
+                </span>
               </div>
-
-              {/* Priority & Type */}
-              <div className="idc-right-section">
-                <h4 className="idc-right-title">Fields</h4>
-                <div className="idc-right-rows">
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Priority</span>
-                    <button className="idc-right-value idc-priority-btn">
-                      <span style={{ color: getPriorityColor(issue.priority || '') }}>
-                        {getPriorityIcon(issue.priority || '')}
-                      </span>
-                      {issue.priority || 'Medium'}
-                    </button>
-                  </div>
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Type</span>
-                    <button className="idc-right-value idc-type-btn">
-                      <span>{getTypeIcon(issue.issueType)}</span>
-                      {issue.issueType || 'Story'}
-                    </button>
-                  </div>
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Resolution</span>
-                    <span className="idc-right-value idc-no-val">Unresolved</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sprint & Epic */}
-              <div className="idc-right-section">
-                <h4 className="idc-right-title">Sprint & Epic</h4>
-                <div className="idc-right-rows">
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Sprint</span>
-                    <button className="idc-right-action">
-                      {issue.sprintName || 'Backlog'}
-                    </button>
-                  </div>
-                  {issue.epicId && (
-                    <div className="idc-right-row">
-                      <span className="idc-right-label">Epic</span>
-                      <span className="idc-epic-link">⚡ {issue.epicName || 'Epic'}</span>
-                    </div>
-                  )}
-                  {issue.storyPoints !== undefined && (
-                    <div className="idc-right-row">
-                      <span className="idc-right-label">Story Points</span>
-                      <span className="idc-story-points-sm">{issue.storyPoints}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Time Tracking */}
-              <div className="idc-right-section">
-                <h4 className="idc-right-title">Time Tracking</h4>
-                <div className="idc-right-rows">
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Original Estimate</span>
-                    <span className="idc-right-value">
-                      {issue.originalEstimate ? formatTime(issue.originalEstimate) : '-'}
-                    </span>
-                  </div>
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Remaining</span>
-                    <span className="idc-right-value">
-                      {issue.remainingEstimate ? formatTime(issue.remainingEstimate) : '-'}
-                    </span>
-                  </div>
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Time Spent</span>
-                    <span className="idc-right-value">
-                      {issue.timeSpent ? formatTime(issue.timeSpent) : '-'}
-                    </span>
-                  </div>
-                  <button className="idc-log-work-btn">⏱ Log Work</button>
-                </div>
-              </div>
-
-              {/* Components & Versions */}
-              <div className="idc-right-section">
-                <h4 className="idc-right-title">Components & Versions</h4>
-                <div className="idc-right-rows">
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Components</span>
-                    <button className="idc-right-action">
-                      {issue.components?.length ? issue.components.join(', ') : 'None'}
-                    </button>
-                  </div>
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Affects Versions</span>
-                    <span className="idc-right-value idc-no-val">-</span>
-                  </div>
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Fix Versions</span>
-                    <span className="idc-right-value idc-no-val">-</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Labels */}
-              <div className="idc-right-section">
-                <h4 className="idc-right-title">Labels</h4>
-                <div className="idc-right-rows">
-                  <div className="idc-labels-row">
-                    {(issue as any).labels?.length > 0 ? (
-                      <div className="idc-labels">
-                        {(issue as any).labels.map((l: string) => (
-                          <span key={l} className="idc-label">{l}</span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="idc-no-val">None</span>
-                    )}
-                    <button className="idc-right-action">Add</button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Security */}
-              <div className="idc-right-section">
-                <h4 className="idc-right-title">Security</h4>
-                <div className="idc-right-rows">
-                  <div className="idc-right-row">
-                    <span className="idc-right-label">Security Level</span>
-                    <button className="idc-right-action">
-                      {issue.securityLevel || 'None'}
-                    </button>
-                  </div>
-                  {issue.parentId && (
-                    <div className="idc-right-row">
-                      <span className="idc-right-label">Parent</span>
-                      <Link to={`/issues/${issue.parentKey}`} className="idc-parent-link">
-                        {issue.parentKey || 'Parent'}
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="idc-right-section">
-                <h4 className="idc-right-title">Actions</h4>
-                <div className="idc-actions-list">
-                  <button className="idc-action-link">👤 Assign to me</button>
-                  <button className="idc-action-link">🔄 Change status</button>
-                  <button className="idc-action-link">👁 Watch</button>
-                  <button className="idc-action-link">📋 Clone issue</button>
-                  <button className="idc-action-link idc-action-link-danger">🗑 Delete</button>
-                </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Watchers</span>
+              <div className="idc-sidebar-value">
+                <span>{issue.watcherCount || 0}</span>
               </div>
             </div>
           </div>
+
+          {/* DETAILS Section */}
+          <div className="idc-sidebar-section">
+            <h4 className="idc-sidebar-section-title">Details</h4>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Priority</span>
+              <div className="idc-sidebar-value">
+                <span style={{ color: getPriorityColor(issue.priority) }}>{issue.priority}</span>
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Resolution</span>
+              <div className="idc-sidebar-value">
+                {issue.resolutionName ? (
+                  <span>{issue.resolutionName}</span>
+                ) : (
+                  <span className="idc-no-value">Unresolved</span>
+                )}
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Components</span>
+              <div className="idc-sidebar-value">
+                {issue.components?.length ? (
+                  <div className="idc-components">
+                    {issue.components.map(c => (
+                      <span key={c} className="idc-component-tag">{c}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="idc-no-value">None</span>
+                )}
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Labels</span>
+              <div className="idc-sidebar-value">
+                {issue.labels?.length ? (
+                  <div className="idc-labels">
+                    {issue.labels.map(l => (
+                      <span key={l} className="idc-label">{l}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="idc-no-value">None</span>
+                )}
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Security</span>
+              <div className="idc-sidebar-value">
+                {issue.securityLevelName ? (
+                  <span>{issue.securityLevelName}</span>
+                ) : (
+                  <span className="idc-no-value">None</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* TIME TRACKING Section */}
+          <div className="idc-sidebar-section">
+            <h4 className="idc-sidebar-section-title">Time Tracking</h4>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Original Estimate</span>
+              <div className="idc-sidebar-value">
+                <span>{formatTimeWithDays(issue.originalEstimate)}</span>
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Remaining Estimate</span>
+              <div className="idc-sidebar-value">
+                <span>{formatTimeWithDays(issue.remainingEstimate)}</span>
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Time Spent</span>
+              <div className="idc-sidebar-value">
+                <span>{formatTimeWithDays(issue.timeSpent)}</span>
+              </div>
+            </div>
+            {issue.workRatio !== undefined && (
+              <div className="idc-sidebar-item">
+                <span className="idc-sidebar-label">Work Ratio</span>
+                <div className="idc-sidebar-value">
+                  <span>{issue.workRatio}%</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* AGILE Section */}
+          <div className="idc-sidebar-section">
+            <h4 className="idc-sidebar-section-title">Agile</h4>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Sprint</span>
+              <div className="idc-sidebar-value">
+                {issue.sprintName ? (
+                  <span className="idc-sprint-tag">{issue.sprintName}</span>
+                ) : (
+                  <span className="idc-no-value">Backlog</span>
+                )}
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Story Points</span>
+              <div className="idc-sidebar-value">
+                {issue.storyPoints !== undefined ? (
+                  <span className="idc-story-points">{issue.storyPoints}</span>
+                ) : (
+                  <span className="idc-no-value">None</span>
+                )}
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Epic Link</span>
+              <div className="idc-sidebar-value">
+                {issue.epicId ? (
+                  <Link to={`/issues/${issue.epicId}`} className="idc-epic-link">
+                    <span className="idc-epic-icon" style={{ color: issue.epicColor }}>⚡</span>
+                    <span>{issue.epicName}</span>
+                  </Link>
+                ) : (
+                  <span className="idc-no-value">None</span>
+                )}
+              </div>
+            </div>
+            {issue.teamName && (
+              <div className="idc-sidebar-item">
+                <span className="idc-sidebar-label">Team</span>
+                <div className="idc-sidebar-value">
+                  <span>{issue.teamName}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* DATES Section */}
+          <div className="idc-sidebar-section">
+            <h4 className="idc-sidebar-section-title">Dates</h4>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Created</span>
+              <div className="idc-sidebar-value">
+                <span>{formatDateTime(issue.createdAt)}</span>
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Updated</span>
+              <div className="idc-sidebar-value">
+                <span>{formatDateTime(issue.updatedAt)}</span>
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Resolved</span>
+              <div className="idc-sidebar-value">
+                <span>{issue.resolvedAt ? formatDateTime(issue.resolvedAt) : '-'}</span>
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Due Date</span>
+              <div className="idc-sidebar-value">
+                <span>{issue.dueDate ? formatDate(issue.dueDate) : '-'}</span>
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Last Viewed</span>
+              <div className="idc-sidebar-value">
+                <span>{issue.lastViewedAt ? formatDateTime(issue.lastViewedAt) : '-'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* VERSIONS Section */}
+          <div className="idc-sidebar-section">
+            <h4 className="idc-sidebar-section-title">Versions</h4>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Affects Version/s</span>
+              <div className="idc-sidebar-value">
+                {issue.affectsVersions?.length ? (
+                  <div className="idc-version-list">
+                    {issue.affectsVersions.map(v => (
+                      <span key={v} className="idc-version-tag">{v}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="idc-no-value">None</span>
+                )}
+              </div>
+            </div>
+            <div className="idc-sidebar-item">
+              <span className="idc-sidebar-label">Fix Version/s</span>
+              <div className="idc-sidebar-value">
+                {issue.fixVersions?.length ? (
+                  <div className="idc-version-list">
+                    {issue.fixVersions.map(v => (
+                      <span key={v} className="idc-version-tag">{v}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="idc-no-value">None</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Linked Issues */}
+          {issue.linkedIssues && issue.linkedIssues.length > 0 && (
+            <div className="idc-sidebar-section">
+              <h4 className="idc-sidebar-section-title">Linked Issues</h4>
+              <div className="idc-linked-list">
+                {issue.linkedIssues.map((link, idx) => (
+                  <div key={idx} className="idc-linked-item">
+                    <span className="idc-linked-type">{link.type}</span>
+                    <Link to={`/issues/${link.key}`} className="idc-linked-key">{link.key}</Link>
+                    <span className="idc-linked-title">{link.title}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Edit Modal */}
       {showEditModal && (
         <EditIssueModal
           issue={issue}
           onClose={() => setShowEditModal(false)}
-          onSuccess={() => {
+          onSave={() => {
             queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
             setShowEditModal(false);
           }}

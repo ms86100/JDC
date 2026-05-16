@@ -48,9 +48,15 @@ export default function PlanDetailPage() {
     createBoard.mutate({
       planId,
       data: { name: newBoardName, boardType: newBoardType },
+    }, {
+      onSuccess: () => {
+        setNewBoardName('');
+        setShowCreateBoard(false);
+      },
+      onError: (error: Error) => {
+        alert(error.message || 'Failed to create board');
+      },
     });
-    setNewBoardName('');
-    setShowCreateBoard(false);
   };
 
   const tabs: { id: TabType; label: string; count?: number }[] = [

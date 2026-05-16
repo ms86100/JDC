@@ -13,5 +13,7 @@ public interface WorkflowSchemeRepository extends JpaRepository<WorkflowScheme, 
 
     Optional<WorkflowScheme> findByIsDefaultTrue();
 
+    Optional<WorkflowScheme> findByName(String name);
+
     List<WorkflowScheme> findByNameContainingIgnoreCase(String name);
 }

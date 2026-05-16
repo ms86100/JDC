@@ -34,22 +34,35 @@ export default function ReleasesView({ planId }: ReleasesViewProps) {
           setVersion('');
           setReleaseDate('');
         },
+        onError: (error: Error) => {
+          alert(error.message || 'Failed to create release');
+        },
       }
     );
   };
 
   const handleApprove = (releaseId: string) => {
-    approveMutation.mutate({ planId, releaseId, approvedBy: 'current-user' });
+    approveMutation.mutate({ planId, releaseId, approvedBy: 'current-user' }, {
+      onError: (error: Error) => {
+        alert(error.message || 'Failed to approve release');
+      },
+    });
   };
 
   const handleRelease = (releaseId: string) => {
-    releaseMutation.mutate({ planId, releaseId });
+    releaseMutation.mutate({ planId, releaseId }, {
+      onError: (error: Error) => {
+        alert(error.message || 'Failed to release');
+      },
+    });
   };
 
   const handleDelete = (releaseId: string) => {
-    if (confirm('Delete this release?')) {
-      deleteMutation.mutate({ planId, releaseId });
-    }
+    deleteMutation.mutate({ planId, releaseId }, {
+      onError: (error: Error) => {
+        alert(error.message || 'Failed to delete release');
+      },
+    });
   };
 
   const getStatusColor = (status: string) => {

@@ -30,7 +30,7 @@ public class Workflow {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "project_id", nullable = false)
+    @Column(name = "project_id")
     private UUID projectId;
 
     @Column(nullable = false, unique = true, length = 200)
@@ -57,6 +57,17 @@ public class Workflow {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "is_system", nullable = false)
+    @Builder.Default
+    private Boolean isSystem = false;
+
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
+    @Column(name = "type", length = 50)
+    @Builder.Default
+    private String type = "CUSTOM";
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -70,6 +81,10 @@ public class Workflow {
 
     @Column(name = "updated_by")
     private UUID updatedBy;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
 
     @Transient
     @Builder.Default

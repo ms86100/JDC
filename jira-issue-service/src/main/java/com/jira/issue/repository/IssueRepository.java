@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,4 +24,24 @@ public interface IssueRepository extends JpaRepository<Issue, UUID>, JpaSpecific
     @Query("SELECT MAX(CAST(SUBSTRING(i.issueKey, LENGTH(:projectKey) + 2) AS integer)) " +
            "FROM Issue i WHERE i.issueKey LIKE :projectKey || '-%'")
     Optional<Integer> findMaxIssueNumberByProjectKey(@Param("projectKey") String projectKey);
+
+    List<Issue> findByParentIssueId(UUID parentIssueId);
+
+    @Query("SELECT i FROM Issue i WHERE i.epicId = :epicId ORDER BY i.createdAt ASC")
+    List<Issue> findByEpicId(@Param("epicId") UUID epicId);
+
+    @Query("SELECT i FROM Issue i WHERE i.projectId = :projectId AND i.status.id = :statusId")
+    List<Issue> findByProjectIdAndStatusId(@Param("projectId") UUID projectId, @Param("statusId") UUID statusId);
+
+    @Query("SELECT i FROM Issue i WHERE i.assigneeId = :assigneeId ORDER BY i.createdAt DESC")
+    Page<Issue> findByAssigneeId(@Param("assigneeId") UUID assigneeId, Pageable pageable);
+
+    @Query("SELECT i FROM Issue i WHERE i.reporterId = :reporterId ORDER BY i.createdAt DESC")
+    Page<Issue> findByReporterId(@Param("reporterId") UUID reporterId, Pageable pageable);
+
+    @Query("SELECT COUNT(i) FROM Issue i WHERE i.projectId = :projectId")
+    long countByProjectId(@Param("projectId") UUID projectId);
+
+    @Query("SELECT i FROM Issue i JOIN i.status s WHERE i.projectId = :projectId AND s.category = :category")
+    List<Issue> findByProjectIdAndStatusCategory(@Param("projectId") UUID projectId, @Param("category") String category);
 }

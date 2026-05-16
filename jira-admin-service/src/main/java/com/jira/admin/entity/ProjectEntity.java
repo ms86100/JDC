@@ -73,6 +73,9 @@ public class ProjectEntity {
     @Column(name = "field_configuration_scheme")
     private String fieldConfigurationScheme;
 
+    @Column(name = "permission_scheme_id")
+    private String permissionSchemeId;
+
     private String projectLevel = "PROJECT";
 
     @Column(name = "enable_notifications")

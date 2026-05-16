@@ -15,13 +15,14 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@RequestMapping("/api/comments")
 @RequiredArgsConstructor
 @Slf4j
 public class CommentController {
 
     private final CommentService commentService;
 
-    @PostMapping("/comments")
+    @PostMapping
     public ResponseEntity<CommentResponse> createComment(
             @Valid @RequestBody CreateCommentRequest request,
             @RequestHeader("X-User-Id") UUID userId) {
@@ -30,14 +31,14 @@ public class CommentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/comments/issue/{issueId}")
+    @GetMapping("/issue/{issueId}")
     public ResponseEntity<List<CommentResponse>> getCommentsByIssue(@PathVariable UUID issueId) {
         log.info("GET /comments/issue/{} - Fetching threaded comments", issueId);
         List<CommentResponse> response = commentService.getCommentsByIssueId(issueId);
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/comments/{id}")
+    @PutMapping("/{id}")
     public ResponseEntity<CommentResponse> updateComment(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateCommentRequest request,
@@ -47,7 +48,7 @@ public class CommentController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/comments/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteComment(
             @PathVariable UUID id,
             @RequestHeader("X-User-Id") UUID userId) {

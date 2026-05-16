@@ -24,7 +24,14 @@ spring:
         format_sql: true
         default_schema: jira_workflow
   flyway:
-    enabled: false
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: '0'
+    validate-on-migrate: true
+    schemas: jira_workflow
+    default-schema: jira_workflow
+    table: flyway_schema_history
 
 management:
   endpoints:

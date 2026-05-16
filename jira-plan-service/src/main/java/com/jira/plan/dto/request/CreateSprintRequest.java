@@ -16,4 +16,5 @@ public class CreateSprintRequest {
     private String goal;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
+    private Integer wipLimit;
 }

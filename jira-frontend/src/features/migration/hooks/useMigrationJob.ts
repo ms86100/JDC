@@ -163,6 +163,9 @@ export function useMigrationJob(options: UseMigrationJobOptions = {}) {
         );
       }
     },
+    onError: (error: Error) => {
+      console.error('Failed to cancel job:', error.message);
+    },
   });
 
   // Get import result

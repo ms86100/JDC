@@ -282,6 +282,9 @@ export function useValidation(options: UseValidationOptions = {}) {
       const response = await migrationApi.validateRow(row, entityType);
       return response.data;
     },
+    onError: (error: Error) => {
+      console.error('Failed to validate row:', error.message);
+    },
   });
 
   // Generate field mappings based on headers

@@ -25,6 +25,9 @@ import UserManagementPage from './features/admin/pages/UserManagementPage';
 import ProgramsPage from './features/plans/pages/ProgramsPage';
 import ProgramDetailPage from './features/plans/pages/ProgramDetailPage';
 import PlanDetailPage from './features/plans/pages/PlanDetailPage';
+import ManagePlansPage from './features/plans/pages/ManagePlansPage';
+import CreateProgramPage from './features/plans/pages/CreateProgramPage';
+import CreatePlanPage from './features/plans/pages/CreatePlanPage';
 
 const queryClient = new QueryClient();
 
@@ -70,7 +73,10 @@ function App() {
               <Route path="migration" element={<MigrationPage />} />
               <Route path="admin/*" element={<AdminRoutes />} />
               <Route path="programs" element={<ProgramsPage />} />
+              <Route path="programs/create" element={<CreateProgramPage />} />
               <Route path="programs/:programId" element={<ProgramDetailPage />} />
+              <Route path="plans" element={<ManagePlansPage />} />
+              <Route path="plans/create" element={<CreatePlanPage />} />
               <Route path="plans/:planId" element={<PlanDetailPage />} />
             </Route>
           </Routes>

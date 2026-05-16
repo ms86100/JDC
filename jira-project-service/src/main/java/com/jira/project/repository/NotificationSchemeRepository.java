@@ -13,5 +13,7 @@ public interface NotificationSchemeRepository extends JpaRepository<Notification
 
     Optional<NotificationScheme> findByIsDefaultTrue();
 
+    Optional<NotificationScheme> findByName(String name);
+
     List<NotificationScheme> findByNameContainingIgnoreCase(String name);
 }

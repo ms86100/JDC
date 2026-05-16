@@ -208,6 +208,9 @@ export const useCreateUser = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to create user:', error.message);
+    },
   });
 };
 
@@ -220,6 +223,9 @@ export const useUpdateUser = () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', variables.userId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to update user:', error.message);
+    },
   });
 };
 
@@ -229,6 +235,9 @@ export const useDeleteUser = () => {
     mutationFn: (userId: string) => adminApi.deleteUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to delete user:', error.message);
     },
   });
 };
@@ -249,6 +258,9 @@ export const useCreateGroup = () => {
       adminApi.createGroup(name, description),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'groups'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to create group:', error.message);
     },
   });
 };
@@ -331,6 +343,9 @@ export const useRunJob = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'scheduledJobs'] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to run job:', error.message);
+    },
   });
 };
 
@@ -341,6 +356,9 @@ export const useToggleJob = () => {
       enabled ? adminApi.enableJob(jobId) : adminApi.disableJob(jobId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'scheduledJobs'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to toggle job:', error.message);
     },
   });
 };
@@ -360,6 +378,153 @@ export const useAuditLogs = (params?: { userId?: string; category?: string; acti
     queryKey: ['admin', 'auditLogs', params],
     queryFn: () => adminApi.getAuditLogs(params),
     select: (res) => res.data,
+  });
+};
+
+// ==================== Jira User Management API ====================
+
+export interface JiraUser {
+  id: string;
+  userName: string;
+  emailAddress: string;
+  displayName: string;
+  firstName: string;
+  lastName: string;
+  active: boolean;
+  createdDate: string;
+  updatedDate: string;
+  directoryId: string;
+  directoryName: string;
+  groups: JiraGroupInfo[];
+  applications: string[];
+  loginInfo: JiraLoginInfo;
+}
+
+export interface JiraGroupInfo {
+  id: string;
+  name: string;
+  isAdmin: boolean;
+  isJiraSoftware: boolean;
+}
+
+export interface JiraLoginInfo {
+  loginCount: number;
+  lastLogin: string | null;
+}
+
+export interface JiraGroup {
+  id: string;
+  name: string;
+  description: string;
+  active: boolean;
+  createdDate: string;
+  isSystem: boolean;
+  userCount: number;
+  permissionSchemes: JiraSchemeInfo[];
+  notificationSchemes: JiraSchemeInfo[];
+  securitySchemes: JiraSchemeInfo[];
+}
+
+export interface JiraSchemeInfo {
+  id: string;
+  name: string;
+}
+
+// Jira User Management API
+const jiraUserApi = {
+  // Users
+  getUsers: (params?: { search?: string; status?: string; page?: number; size?: number }) =>
+    apiClient.get<{ content: JiraUser[]; totalElements: number; totalPages: number }>('/user-service/rest/admin/1.0/users/search', { params }),
+  getUser: (userId: string) => apiClient.get<JiraUser>(`/user-service/rest/admin/1.0/users/${userId}`),
+  createUser: (data: { email: string; fullName: string; userName: string; password?: string; sendNotification?: boolean }) =>
+    apiClient.post<JiraUser>('/user-service/rest/admin/1.0/users', data),
+  deleteUser: (userId: string) => apiClient.delete(`/user-service/rest/admin/1.0/users/${userId}`),
+
+  // Groups
+  getGroups: (params?: { search?: string; page?: number; size?: number }) =>
+    apiClient.get<{ content: JiraGroup[]; totalElements: number; totalPages: number }>('/user-service/rest/admin/1.0/groups', { params }),
+  getGroupByName: (name: string) => apiClient.get<JiraGroup>(`/user-service/rest/admin/1.0/groups/name/${name}`),
+  createGroup: (data: { name: string; description?: string }) =>
+    apiClient.post<JiraGroup>('/user-service/rest/admin/1.0/groups', data),
+  deleteGroup: (groupId: string) => apiClient.delete(`/user-service/rest/admin/1.0/groups/${groupId}`),
+};
+
+// Jira User Management Hooks
+export const useJiraUsers = (params?: { search?: string; status?: string; page?: number; size?: number }) => {
+  return useQuery({
+    queryKey: ['jira', 'users', params],
+    queryFn: () => jiraUserApi.getUsers(params),
+    select: (res) => res.data,
+  });
+};
+
+export const useJiraGroups = (params?: { search?: string; page?: number; size?: number }) => {
+  return useQuery({
+    queryKey: ['jira', 'groups', params],
+    queryFn: () => jiraUserApi.getGroups(params),
+    select: (res) => res.data,
+  });
+};
+
+export const useJiraGroupByName = (name: string) => {
+  return useQuery({
+    queryKey: ['jira', 'group', name],
+    queryFn: () => jiraUserApi.getGroupByName(name),
+    select: (res) => res.data,
+    enabled: !!name,
+  });
+};
+
+export const useCreateJiraUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { email: string; fullName: string; userName: string; password?: string; sendNotification?: boolean }) =>
+      jiraUserApi.createUser(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jira', 'users'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to create Jira user:', error.message);
+    },
+  });
+};
+
+export const useCreateJiraGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { name: string; description?: string }) => jiraUserApi.createGroup(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jira', 'groups'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to create Jira group:', error.message);
+    },
+  });
+};
+
+export const useDeleteJiraGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (groupId: string) => jiraUserApi.deleteGroup(groupId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jira', 'groups'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to delete Jira group:', error.message);
+    },
+  });
+};
+
+export const useDeleteJiraUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => jiraUserApi.deleteUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jira', 'users'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to delete Jira user:', error.message);
+    },
   });
 };
 

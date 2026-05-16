@@ -28,6 +28,10 @@ export const useCreateTeam = () => {
       queryClient.invalidateQueries({ queryKey: ['teams', planId] });
       queryClient.invalidateQueries({ queryKey: ['plans', planId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to create team:', error);
+      alert(error.message || 'Failed to create team');
+    },
   });
 };
 
@@ -38,6 +42,10 @@ export const useUpdateTeam = () => {
       planApi.updateTeam(planId, teamId, data),
     onSuccess: (_, { planId }) => {
       queryClient.invalidateQueries({ queryKey: ['teams', planId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to update team:', error);
+      alert(error.message || 'Failed to update team');
     },
   });
 };
@@ -51,6 +59,10 @@ export const useDeleteTeam = () => {
       queryClient.invalidateQueries({ queryKey: ['teams', planId] });
       queryClient.invalidateQueries({ queryKey: ['plans', planId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to delete team:', error);
+      alert(error.message || 'Failed to delete team');
+    },
   });
 };
 
@@ -63,6 +75,10 @@ export const useAddTeamMember = () => {
       queryClient.invalidateQueries({ queryKey: ['teams', planId] });
       queryClient.invalidateQueries({ queryKey: ['teams', planId, teamId] });
     },
+    onError: (error: Error) => {
+      console.error('Failed to add team member:', error);
+      alert(error.message || 'Failed to add team member');
+    },
   });
 };
 
@@ -74,6 +90,10 @@ export const useRemoveTeamMember = () => {
     onSuccess: (_, { planId, teamId }) => {
       queryClient.invalidateQueries({ queryKey: ['teams', planId] });
       queryClient.invalidateQueries({ queryKey: ['teams', planId, teamId] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to remove team member:', error);
+      alert(error.message || 'Failed to remove team member');
     },
   });
 };
