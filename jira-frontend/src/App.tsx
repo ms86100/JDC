@@ -20,6 +20,7 @@ import KanbanBoardPage from './features/boards/pages/KanbanBoardPage';
 import AuditLogsPage from './features/audit/pages/AuditLogsPage';
 import MigrationPage from './features/migration/pages/MigrationPage';
 import AdminRoutes from './features/admin/routes/AdminRoutes';
+import JiraAdminLayout from './features/admin/components/JiraAdminLayout';
 import SystemSettingsPage from './features/admin/pages/SystemSettingsPage';
 import UserManagementPage from './features/admin/pages/UserManagementPage';
 import ProgramsPage from './features/plans/pages/ProgramsPage';
