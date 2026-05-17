@@ -48,10 +48,10 @@ public class Workflow {
     private Boolean isDraft = false;
 
     @Column(name = "draft_of_workflow_id")
-    private UUID draftOfWorkflowId;  // Reference to original workflow if this is a draft
+    private UUID draftOfWorkflowId;
 
     @Column(name = "status_category_mapping", columnDefinition = "TEXT")
-    private String statusCategoryMapping;  // JSON mapping of status to category
+    private String statusCategoryMapping;
 
     @Column(name = "is_active", nullable = false)
     @Builder.Default
@@ -61,12 +61,28 @@ public class Workflow {
     @Builder.Default
     private Boolean isSystem = false;
 
+    @Column(name = "is_locked")
+    @Builder.Default
+    private Boolean isLocked = false;
+
+    @Column(name = "locked_by")
+    private UUID lockedBy;
+
+    @Column(name = "locked_at")
+    private LocalDateTime lockedAt;
+
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
     @Column(name = "type", length = 50)
     @Builder.Default
     private String type = "CUSTOM";
+
+    @Column(name = "default_workflow_id")
+    private UUID defaultWorkflowId;
+
+    @Column(name = "original_workflow_id")
+    private UUID originalWorkflowId;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -94,28 +110,40 @@ public class Workflow {
     @Builder.Default
     private List<WorkflowTransition> transitions = new ArrayList<>();
 
-    // Workflow types
     public static final String TYPE_BUILD_IN = "BUILD_IN";
     public static final String TYPE_CUSTOM = "CUSTOM";
 
-    // Copy workflow as draft
-    public Workflow createDraft() {
+    public void lock(UUID userId) {
+        this.isLocked = true;
+        this.lockedBy = userId;
+        this.lockedAt = LocalDateTime.now();
+    }
+
+    public void unlock() {
+        this.isLocked = false;
+        this.lockedBy = null;
+        this.lockedAt = null;
+    }
+
+    public Workflow createDraft(UUID userId) {
         Workflow draft = Workflow.builder()
-                .projectId(this.projectId)
                 .name(this.name + " (Draft)")
                 .description(this.description)
                 .isDefault(false)
                 .isDraft(true)
+                .isActive(true)
+                .isSystem(false)
                 .draftOfWorkflowId(this.id)
                 .statusCategoryMapping(this.statusCategoryMapping)
-                .isActive(true)
-                .createdBy(this.createdBy)
+                .type(this.type)
+                .originalWorkflowId(this.id)
+                .createdBy(userId)
                 .build();
         return draft;
     }
 
-    // Publish draft workflow
     public void publish() {
         this.isDraft = false;
+        this.publishedAt = LocalDateTime.now();
     }
 }

@@ -1,7 +1,6 @@
 package com.jira.workflow.dto;
 
 import lombok.*;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -10,30 +9,32 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class WorkflowResponse {
-
+public class WorkflowSchemeResponse {
     private UUID id;
-    private UUID projectId;
     private String name;
     private String description;
     private Boolean isDefault;
-    private Boolean isDraft;
-    private Boolean isActive;
-    private Boolean isSystem;
-    private Boolean isLocked;
-    private UUID lockedBy;
-    private LocalDateTime lockedAt;
-    private LocalDateTime publishedAt;
-    private String type;
     private UUID defaultWorkflowId;
-    private List<UUID> statusIds;
-    private Integer statusCount;
-    private Integer transitionCount;
+    private Boolean isDraft;
+    private UUID draftOfSchemeId;
+    private Boolean isActive;
+    private List<WorkflowSchemeMappingResponse> mappings;
+    private Integer issueTypeCount;
     private Integer projectCount;
-    private List<TransitionDetailResponse> transitions;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private UUID createdBy;
     private UUID updatedBy;
-    private Long version;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+class WorkflowSchemeMappingResponse {
+    private UUID id;
+    private UUID issueTypeId;
+    private UUID workflowId;
+    private String workflowName;
+    private LocalDateTime createdAt;
 }

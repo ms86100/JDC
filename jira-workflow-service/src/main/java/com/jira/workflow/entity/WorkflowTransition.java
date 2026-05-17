@@ -4,10 +4,13 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -50,15 +53,29 @@ public class WorkflowTransition {
     private Integer displayOrder = 0;
 
     @Column(name = "icon", length = 100)
-    private String icon;  // Icon key for UI
+    private String icon;
 
-    // Validation rules
+    @Column(name = "type", length = 50)
+    @Builder.Default
+    private String type = "MANUAL";
+
+    @Column(name = "trigger_type", length = 50)
+    private String triggerType;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "trigger_config", columnDefinition = "jsonb")
+    private Map<String, Object> triggerConfig;
+
+    @Column(name = "origin", length = 50)
+    @Builder.Default
+    private String origin = "USER";
+
     @Column(name = "requires_approval", nullable = false)
     @Builder.Default
     private Boolean requiresApproval = false;
 
     @Column(name = "approval_group_id")
-    private UUID approvalGroupId;  // Required approval group
+    private UUID approvalGroupId;
 
     @Column(name = "allow_assignee_override", nullable = false)
     @Builder.Default
@@ -68,38 +85,39 @@ public class WorkflowTransition {
     @Builder.Default
     private Boolean allowUnassign = true;
 
-    @Column(name = "fields_required", columnDefinition = "TEXT")
-    private String fieldsRequired;  // JSON array of required fields
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "fields_required", columnDefinition = "jsonb")
+    private List<String> fieldsRequired;
 
-    @Column(name = "fields_updated", columnDefinition = "TEXT")
-    private String fieldsUpdated;  // JSON array of fields to update automatically
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "fields_updated", columnDefinition = "jsonb")
+    private List<Map<String, Object>> fieldsUpdated;
 
-    @Column(name = "fields_hidden", columnDefinition = "TEXT")
-    private String fieldsHidden;  // JSON array of fields to hide
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "fields_hidden", columnDefinition = "jsonb")
+    private List<String> fieldsHidden;
 
     @Column(name = "fields_auto_submit", nullable = false)
     @Builder.Default
     private Boolean fieldsAutoSubmit = false;
 
-    // Security
     @Column(name = "permission_check", length = 50)
-    private String permissionCheck;  // Permission required to perform transition
+    private String permissionCheck;
 
-    @Column(name = "user_group_ids", columnDefinition = "TEXT")
-    private String userGroupIds;  // JSON array of allowed group IDs
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "user_group_ids", columnDefinition = "jsonb")
+    private List<String> userGroupIds;
 
-    // Linked Issue Transitions
     @Column(name = "remote_link_transition", nullable = false)
     @Builder.Default
-    private Boolean remoteLinkTransition = false;  // Should linked issues transition too
+    private Boolean remoteLinkTransition = false;
 
     @Column(name = "remote_link_direction", length = 10)
-    private String remoteLinkDirection;  // OUTWARD, INWARD, BOTH
+    private String remoteLinkDirection;
 
     @Column(name = "remote_link_issue_link_type", length = 50)
-    private String remoteLinkIssueLinkType;  // Blocks, relates to, etc.
+    private String remoteLinkIssueLinkType;
 
-    // Loop prevention
     @Column(name = "allow_loop", nullable = false)
     @Builder.Default
     private Boolean allowLoop = false;
@@ -107,6 +125,25 @@ public class WorkflowTransition {
     @Column(name = "max_loop_count")
     @Builder.Default
     private Integer maxLoopCount = 0;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "condition_conditions", columnDefinition = "jsonb")
+    private List<Map<String, Object>> conditionConditions;
+
+    @Column(name = "condition_operator", length = 10)
+    @Builder.Default
+    private String conditionOperator = "AND";
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "validator_validators", columnDefinition = "jsonb")
+    private List<Map<String, Object>> validatorValidators;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "post_function_functions", columnDefinition = "jsonb")
+    private List<Map<String, Object>> postFunctionFunctions;
+
+    @Column(name = "screen_id")
+    private UUID screenId;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -122,27 +159,14 @@ public class WorkflowTransition {
     @Column(name = "updated_by")
     private UUID updatedBy;
 
-    @Column(name = "type", length = 50)
-    @Builder.Default
-    private String type = "MANUAL";
-
-    // Conditions, Validators, PostFunctions stored as JSONB
-    @Column(name = "conditions", columnDefinition = "TEXT")
-    private String conditions;
-
-    @Column(name = "validators", columnDefinition = "TEXT")
-    private String validators;
-
-    @Column(name = "post_functions", columnDefinition = "TEXT")
-    private String postFunctions;
-
-    @Column(name = "screen_id")
-    private UUID screenId;
-
-    // Transition operations
     public static final String OPERATION_AUTO = "AUTO";
     public static final String OPERATION_MANUAL = "MANUAL";
     public static final String OPERATION_SCRIPT = "SCRIPT";
+
+    public static final String TRIGGER_MANUAL = "MANUAL";
+    public static final String TRIGGER_AUTOMATIC = "AUTOMATIC";
+    public static final String TRIGGER_SCHEDULED = "SCHEDULED";
+    public static final String TRIGGER_WEBHOOK = "WEBHOOK";
 
     public boolean hasCondition() {
         return permissionCheck != null || (userGroupIds != null && !userGroupIds.isEmpty());

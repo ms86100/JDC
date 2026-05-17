@@ -1,7 +1,6 @@
 package com.jira.workflow.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.util.List;
@@ -13,7 +12,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateWorkflowRequest {
 
-    @NotNull(message = "Project ID is required")
     private UUID projectId;
 
     @NotBlank(message = "Workflow name is required")
@@ -21,8 +19,13 @@ public class CreateWorkflowRequest {
 
     private String description;
 
+    @Builder.Default
+    private boolean isDefault = false;
+
     private List<UUID> statusIds;
 
     @Builder.Default
-    private boolean isDefault = true;
+    private String type = "CUSTOM";
+
+    private String statusCategoryMapping;
 }
