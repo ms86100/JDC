@@ -3,6 +3,8 @@ package com.jira.workflow.dto;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -23,9 +25,9 @@ public class TransitionResponse {
     private UUID approvalGroupId;
     private Boolean allowAssigneeOverride;
     private Boolean allowUnassign;
-    private String fieldsRequired;
-    private String fieldsUpdated;
-    private String fieldsHidden;
+    private List<String> fieldsRequired;
+    private List<Map<String, Object>> fieldsUpdated;
+    private List<String> fieldsHidden;
     private String permissionCheck;
     private LocalDateTime createdAt;
 }

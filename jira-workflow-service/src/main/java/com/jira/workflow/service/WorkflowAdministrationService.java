@@ -1239,9 +1239,9 @@ public class WorkflowAdministrationService {
                     .description(source.getDescription())
                     .displayOrder(source.getDisplayOrder())
                     .type(source.getType())
-                    .conditions(source.getConditions())
-                    .validators(source.getValidators())
-                    .postFunctions(source.getPostFunctions())
+                    .conditionConditions(source.getConditionConditions())
+                    .validatorValidators(source.getValidatorValidators())
+                    .postFunctionFunctions(source.getPostFunctionFunctions())
                     .build();
             workflowTransitionRepository.save(clone);
         }
@@ -1320,9 +1320,9 @@ public class WorkflowAdministrationService {
         map.put("toStatusId", transition.getToStatusId());
         map.put("displayOrder", transition.getDisplayOrder());
         map.put("type", transition.getType());
-        map.put("conditions", transition.getConditions());
-        map.put("validators", transition.getValidators());
-        map.put("postFunctions", transition.getPostFunctions());
+        map.put("conditions", transition.getConditionConditions());
+        map.put("validators", transition.getValidatorValidators());
+        map.put("postFunctions", transition.getPostFunctionFunctions());
         map.put("screenId", transition.getScreenId());
         return map;
     }

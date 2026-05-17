@@ -5,6 +5,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -25,12 +26,12 @@ public class TransitionDetailResponse {
     private UUID approvalGroupId;
     private Boolean allowAssigneeOverride;
     private Boolean allowUnassign;
-    private String fieldsRequired;
-    private String fieldsUpdated;
-    private String fieldsHidden;
+    private List<String> fieldsRequired;
+    private List<Map<String, Object>> fieldsUpdated;
+    private List<String> fieldsHidden;
     private Boolean fieldsAutoSubmit;
     private String permissionCheck;
-    private String userGroupIds;
+    private List<String> userGroupIds;
     private Boolean remoteLinkTransition;
     private String remoteLinkDirection;
     private String remoteLinkIssueLinkType;
