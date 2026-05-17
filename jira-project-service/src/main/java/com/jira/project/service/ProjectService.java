@@ -146,6 +146,13 @@ public class ProjectService {
     public List<ProjectResponse> getProjectsForUser(UUID userId) {
         log.debug("Fetching projects for user: {}", userId);
 
+        if (userId == null) {
+            // If no userId, return all projects
+            return projectRepository.findAll().stream()
+                    .map(this::mapToProjectResponse)
+                    .collect(Collectors.toList());
+        }
+
         List<ProjectMember> memberships = projectMemberRepository.findByUserId(userId);
 
         List<UUID> projectIds = memberships.stream()
@@ -157,6 +164,14 @@ public class ProjectService {
         }
 
         return projectRepository.findAllById(projectIds).stream()
+                .map(this::mapToProjectResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProjectResponse> getAllProjects() {
+        log.debug("Fetching all projects");
+        return projectRepository.findAll().stream()
                 .map(this::mapToProjectResponse)
                 .collect(Collectors.toList());
     }

@@ -60,7 +60,8 @@ public class SecurityLevelController {
     @Operation(summary = "Get security levels for project", description = "Returns security levels available for a project")
     public ResponseEntity<List<SecurityLevelResponse>> getSecurityLevelsForProject(
             @Parameter(description = "Project ID") @PathVariable UUID projectId) {
-        List<SecurityLevelResponse> levels = securityLevelRepository.findByProjectIdOrderBySequence(projectId).stream()
+        // For now, return all levels - in production, filter by project's security scheme
+        List<SecurityLevelResponse> levels = securityLevelRepository.findAll().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(levels);

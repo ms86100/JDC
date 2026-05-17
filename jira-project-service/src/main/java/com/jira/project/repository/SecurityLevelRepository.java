@@ -9,5 +9,5 @@ import java.util.UUID;
 @Repository
 public interface SecurityLevelRepository extends JpaRepository<SecurityLevel, UUID> {
     List<SecurityLevel> findBySchemeId(UUID schemeId);
-    List<SecurityLevel> findByProjectIdOrderBySequence(UUID projectId);
+    List<SecurityLevel> findBySchemeIdOrderBySequence(UUID schemeId);
 }

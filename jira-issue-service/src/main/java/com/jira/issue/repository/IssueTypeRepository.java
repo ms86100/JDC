@@ -11,4 +11,8 @@ import java.util.UUID;
 public interface IssueTypeRepository extends JpaRepository<IssueType, UUID> {
 
     Optional<IssueType> findByName(String name);
+
+    Optional<IssueType> findByIssueTypeKey(String issueTypeKey);
+
+    boolean existsByIssueTypeKey(String issueTypeKey);
 }

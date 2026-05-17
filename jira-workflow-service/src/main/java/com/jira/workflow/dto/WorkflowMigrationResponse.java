@@ -33,7 +33,7 @@ public class WorkflowMigrationResponse {
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-class WorkflowMigrationIssueResponse {
+public class WorkflowMigrationIssueResponse {
     private UUID id;
     private UUID issueId;
     private String issueKey;
@@ -48,7 +48,7 @@ class WorkflowMigrationIssueResponse {
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-class CreateMigrationRequest {
+public class CreateMigrationRequest {
     private UUID workflowId;
     private UUID oldStatusId;
     private UUID newStatusId;
@@ -60,7 +60,7 @@ class CreateMigrationRequest {
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-class MigrationPreviewResponse {
+public class MigrationPreviewResponse {
     private UUID workflowId;
     private UUID oldStatusId;
     private String oldStatusName;
@@ -74,7 +74,7 @@ class MigrationPreviewResponse {
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-class IssuePreview {
+public class IssuePreview {
     private UUID issueId;
     private String issueKey;
     private String summary;

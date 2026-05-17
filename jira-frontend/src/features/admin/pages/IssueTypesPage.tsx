@@ -1,15 +1,78 @@
 import React, { useState } from 'react';
-import { useIssueTypes, IssueType } from '../hooks/useAdminApi';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import apiClient from '../../../api/axiosClient';
 import AdminLayout from '../components/AdminLayout';
 import './IssueAdministrationPage.css';
+import './IssueTypesPage.css';
+
+interface IssueType {
+  id: string;
+  name: string;
+  description: string;
+  issueTypeKey: string;
+  isSubtask: boolean;
+  icon?: string;
+  color?: string;
+  createdAt?: string;
+}
+
+// API functions
+const issueTypeApi = {
+  getIssueTypes: () => apiClient.get<IssueType[]>('/api/admin/issues/issue-types'),
+  createIssueType: (data: Partial<IssueType>) => apiClient.post<IssueType>('/api/admin/issues/issue-types', data),
+  updateIssueType: (id: string, data: Partial<IssueType>) => apiClient.put<IssueType>(`/api/admin/issues/issue-types/${id}`, data),
+  deleteIssueType: (id: string) => apiClient.delete(`/api/admin/issues/issue-types/${id}`),
+};
 
 export default function IssueTypesPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedIssueType, setSelectedIssueType] = useState<IssueType | null>(null);
   const [editMode, setEditMode] = useState(false);
 
-  const { data: issueTypes, isLoading, refetch } = useIssueTypes();
+  const { data: issueTypes, isLoading, isError, error } = useQuery({
+    queryKey: ['admin', 'issueTypes'],
+    queryFn: () => issueTypeApi.getIssueTypes().then(res => res.data),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: Partial<IssueType>) => issueTypeApi.createIssueType(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'issueTypes'] });
+      setShowCreateModal(false);
+      setFormData({ name: '', description: '', issueTypeKey: '', isSubtask: false });
+    },
+    onError: (err: Error) => {
+      console.error('Failed to create issue type:', err.message);
+      alert('Failed to create issue type: ' + err.message);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<IssueType> }) =>
+      issueTypeApi.updateIssueType(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'issueTypes'] });
+      setEditMode(false);
+      setSelectedIssueType(null);
+    },
+    onError: (err: Error) => {
+      console.error('Failed to update issue type:', err.message);
+      alert('Failed to update issue type: ' + err.message);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => issueTypeApi.deleteIssueType(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'issueTypes'] });
+    },
+    onError: (err: Error) => {
+      console.error('Failed to delete issue type:', err.message);
+      alert('Failed to delete issue type: ' + err.message);
+    },
+  });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -23,10 +86,12 @@ export default function IssueTypesPage() {
     it.issueTypeKey.toLowerCase().includes(search.toLowerCase())
   ) || [];
 
-  const handleCreate = async () => {
-    // API call would go here
-    setShowCreateModal(false);
-    setFormData({ name: '', description: '', issueTypeKey: '', isSubtask: false });
+  const handleCreate = () => {
+    if (!formData.name || !formData.issueTypeKey) {
+      alert('Name and Issue Type Key are required');
+      return;
+    }
+    createMutation.mutate(formData);
   };
 
   const openEditModal = (issueType: IssueType) => {
@@ -35,9 +100,35 @@ export default function IssueTypesPage() {
   };
 
   const handleSaveEdit = () => {
-    // API call would go here
-    setEditMode(false);
-    setSelectedIssueType(null);
+    if (!selectedIssueType) return;
+    updateMutation.mutate({ id: selectedIssueType.id, data: selectedIssueType });
+  };
+
+  const handleDelete = (issueType: IssueType) => {
+    if (confirm(`Are you sure you want to delete "${issueType.name}"?`)) {
+      deleteMutation.mutate(issueType.id);
+    }
+  };
+
+  const getIssueTypeColor = (issueType: IssueType): string => {
+    if (issueType.color) return issueType.color;
+    const colors: Record<string, string> = {
+      bug: '#d73a49',
+      story: '#006644',
+      task: '#0052cc',
+      epic: '#6b2db0',
+    };
+    return colors[issueType.issueTypeKey?.toLowerCase()] || '#0052cc';
+  };
+
+  const getIssueTypeIcon = (issueType: IssueType): string => {
+    const icons: Record<string, string> = {
+      bug: '🐛',
+      story: '📖',
+      task: '✅',
+      epic: '⚡',
+    };
+    return icons[issueType.issueTypeKey?.toLowerCase()] || issueType.name.charAt(0).toUpperCase();
   };
 
   return (
@@ -84,18 +175,43 @@ export default function IssueTypesPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '24px' }}>Loading...</td>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '24px' }}>
+                    <div className="loading-spinner">Loading issue types...</div>
+                  </td>
+                </tr>
+              ) : isError ? (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: '#de350b' }}>
+                    Error loading issue types. Please check if the server is running.
+                    <br />
+                    <small>{(error as Error)?.message}</small>
+                  </td>
                 </tr>
               ) : filteredIssueTypes.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '24px' }}>No issue types found</td>
+                  <td colSpan={5}>
+                    <div className="admin-empty-state">
+                      <div className="admin-empty-state-icon">📋</div>
+                      <div className="admin-empty-state-title">No issue types found</div>
+                      <div className="admin-empty-state-description">
+                        {search ? 'No issue types match your search criteria.' : 'Get started by creating your first issue type.'}
+                      </div>
+                      {!search && (
+                        <button className="admin-btn-primary" onClick={() => setShowCreateModal(true)}>
+                          + Add Issue Type
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ) : (
                 filteredIssueTypes.map((issueType) => (
                   <tr key={issueType.id}>
                     <td>
                       <div className="issue-type-cell">
-                        <span className="issue-type-icon">{issueType.name.charAt(0)}</span>
+                        <span className="issue-type-icon" style={{ background: getIssueTypeColor(issueType) }}>
+                          {getIssueTypeIcon(issueType)}
+                        </span>
                         <span className="issue-type-name">{issueType.name}</span>
                       </div>
                     </td>
@@ -113,9 +229,12 @@ export default function IssueTypesPage() {
                         <button className="admin-btn-secondary" onClick={() => openEditModal(issueType)}>
                           Edit
                         </button>
-                        {!issueType.isSubtask && (
-                          <button className="admin-btn-secondary">Schemes</button>
-                        )}
+                        <button
+                          className="admin-btn-secondary admin-btn-danger-text"
+                          onClick={() => handleDelete(issueType)}
+                        >
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -151,7 +270,7 @@ export default function IssueTypesPage() {
                   type="text"
                   className="admin-form-input"
                   value={formData.issueTypeKey}
-                  onChange={(e) => setFormData({ ...formData, issueTypeKey: e.target.value.toLowerCase() })}
+                  onChange={(e) => setFormData({ ...formData, issueTypeKey: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
                   placeholder="e.g., bug, story, task"
                 />
                 <span className="admin-form-hint">Lowercase letters and numbers only</span>
@@ -181,8 +300,12 @@ export default function IssueTypesPage() {
               <button className="admin-btn-secondary" onClick={() => setShowCreateModal(false)}>
                 Cancel
               </button>
-              <button className="admin-btn-primary" onClick={handleCreate}>
-                Add
+              <button
+                className="admin-btn-primary"
+                onClick={handleCreate}
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? 'Creating...' : 'Add'}
               </button>
             </div>
           </div>
@@ -220,8 +343,12 @@ export default function IssueTypesPage() {
               <button className="admin-btn-secondary" onClick={() => setEditMode(false)}>
                 Cancel
               </button>
-              <button className="admin-btn-primary" onClick={handleSaveEdit}>
-                Save
+              <button
+                className="admin-btn-primary"
+                onClick={handleSaveEdit}
+                disabled={updateMutation.isPending}
+              >
+                {updateMutation.isPending ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>

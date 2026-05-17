@@ -97,9 +97,16 @@ public class ProjectController {
     @GetMapping
     @Operation(summary = "List all projects for user", description = "Returns all projects the current user is a member of")
     public ResponseEntity<List<ProjectResponse>> getProjects(
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
 
         List<ProjectResponse> projects = projectService.getProjectsForUser(userId);
+        return ResponseEntity.ok(projects);
+    }
+
+    @GetMapping("/all")
+    @Operation(summary = "List all projects", description = "Returns all projects (admin endpoint, no user filtering)")
+    public ResponseEntity<List<ProjectResponse>> getAllProjects() {
+        List<ProjectResponse> projects = projectService.getAllProjects();
         return ResponseEntity.ok(projects);
     }
 
