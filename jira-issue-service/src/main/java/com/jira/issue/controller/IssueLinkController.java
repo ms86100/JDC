@@ -65,6 +65,13 @@ public class IssueLinkController {
         return ResponseEntity.ok(issueLinkService.getAvailableLinkTypes());
     }
 
+    // Standalone endpoint for getting all link types (not tied to a specific issue)
+    @GetMapping("/all-types")
+    @Operation(summary = "Get all link types", description = "Get all available issue link types without requiring an issue ID")
+    public ResponseEntity<List<String>> getAllLinkTypes() {
+        return ResponseEntity.ok(issueLinkService.getAvailableLinkTypes());
+    }
+
     @DeleteMapping("/{linkId}")
     @Operation(summary = "Delete link", description = "Delete an issue link")
     @ApiResponses({

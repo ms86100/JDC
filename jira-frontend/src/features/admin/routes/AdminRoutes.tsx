@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import AdminLayout from '../components/AdminLayout';
+import JiraAdminLayout from '../components/JiraAdminLayout';
 import UserManagementPage from '../pages/UserManagementPage';
 import JiraUserBrowser from '../pages/JiraUserBrowser';
 import JiraCreateUser from '../pages/JiraCreateUser';
@@ -26,7 +26,7 @@ import InsightsPage from '../pages/InsightsPage';
 
 export default function AdminRoutes() {
   return (
-    <AdminLayout>
+    <JiraAdminLayout>
       <Routes>
       {/* Dashboard */}
       <Route path="/" element={<AdminDashboardPage />} />
@@ -108,6 +108,6 @@ export default function AdminRoutes() {
       <Route path="links" element={<SystemSettingsPage />} />
       <Route path="dark-features" element={<SystemSettingsPage />} />
       </Routes>
-    </AdminLayout>
+    </JiraAdminLayout>
   );
 }

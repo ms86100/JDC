@@ -365,7 +365,7 @@ public class IssueService {
         if (!links.isEmpty()) {
             // Batch load all destination issues and link types to avoid N+1
             Set<UUID> destinationIds = links.stream()
-                    .map(IssueLink::getDestinationIssueId)
+                    .map(IssueLink::getTargetIssueId)
                     .collect(Collectors.toSet());
             Map<UUID, Issue> issuesById = issueRepository.findAllById(destinationIds).stream()
                     .collect(Collectors.toMap(Issue::getId, i -> i));
@@ -378,7 +378,7 @@ public class IssueService {
 
             List<IssueResponse.LinkedIssueInfo> linkedIssues = links.stream()
                     .map(link -> {
-                        Issue linkedIssue = issuesById.get(link.getDestinationIssueId());
+                        Issue linkedIssue = issuesById.get(link.getTargetIssueId());
                         if (linkedIssue == null) return null;
                         String linkTypeName = linkTypeNames.getOrDefault(link.getLinkTypeId(), "Related");
                         return IssueResponse.LinkedIssueInfo.builder()

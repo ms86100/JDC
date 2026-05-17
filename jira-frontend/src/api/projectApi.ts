@@ -169,9 +169,9 @@ export const projectApi = {
   addMember: (id: string, userId: string, projectRoleName: string) =>
     apiClient.post(`/api/projects/${id}/members`, { userId, projectRoleName }),
   getMembers: (id: string) => apiClient.get<ProjectMemberResponse[]>(`/api/projects/${id}/members`),
-  getVersions: (projectId: string) => apiClient.get<Version[]>(`/api/projects/${projectId}/versions`),
-  getComponents: (projectId: string) => apiClient.get<Component[]>(`/api/projects/${projectId}/components`),
-  getSprints: (projectId: string) => apiClient.get(`/api/projects/${projectId}/sprints`),
+  getVersions: (projectId: string) => apiClient.get<Version[]>(`/api/versions?projectId=${projectId}`),
+  getComponents: (projectId: string) => apiClient.get<Component[]>(`/api/components?projectId=${projectId}`),
+  getSprints: (projectId: string) => apiClient.get(`/api/sprints?projectId=${projectId}`),
 
   // Wizard endpoints
   getProjectTypes: () => apiClient.get<ProjectType[]>('/api/projects/types'),

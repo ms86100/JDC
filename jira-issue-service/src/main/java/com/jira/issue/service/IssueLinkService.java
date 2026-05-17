@@ -56,7 +56,7 @@ public class IssueLinkService {
 
     @Transactional(readOnly = true)
     public List<IssueLinkResponse> getLinksByIssue(UUID issueId) {
-        List<IssueLink> links = issueLinkRepository.findBySourceIssueIdOrDestinationIssueId(issueId, issueId);
+        List<IssueLink> links = issueLinkRepository.findBySourceIssueIdOrTargetIssueId(issueId, issueId);
         return links.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());

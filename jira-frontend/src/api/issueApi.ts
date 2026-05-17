@@ -54,16 +54,25 @@ export interface CreateIssueRequest {
   description?: string;
   issueTypeId: string;
   priorityId?: string;
+  reporterId?: string;
   assigneeId?: string;
   parentIssueId?: string;
+  parentId?: string;
   epicId?: string;
   sprintId?: string;
   dueDate?: string;
   storyPoints?: number;
-  originalEstimate?: number;
+  originalEstimateSeconds?: number;
+  remainingEstimateSeconds?: number;
   labels?: string[];
   classification?: string;
   securityLevelId?: string;
+  environment?: string;
+  teamId?: string;
+  fixVersionIds?: string[];
+  affectsVersionIds?: string[];
+  componentIds?: string[];
+  linkedIssues?: Array<{ targetIssueKey: string; linkType: string }>;
 }
 
 export interface UpdateIssueRequest extends Partial<CreateIssueRequest> {
@@ -170,7 +179,7 @@ export const issueApi = {
   move: (id: string, data: { projectId: string }) => apiClient.post<IssueResponse>(`/api/issues/${id}/move`, data),
 
   // Link issues
-  linkIssue: (id: string, data: { targetIssueId: string; linkType: string }) => apiClient.post(`/api/issues/${id}/links`, data),
+  linkIssue: (id: string, data: { targetIssueId?: string; targetIssueKey?: string; linkType: string }) => apiClient.post(`/api/issues/${id}/links`, data),
   unlinkIssue: (id: string, linkId: string) => apiClient.delete(`/api/issues/${id}/links/${linkId}`),
   getLinks: (id: string) => apiClient.get<Array<{ id: string; type: string; targetIssue: IssueResponse }>>(`/api/issues/${id}/links`),
 
@@ -204,13 +213,13 @@ export const projectApi = {
   delete: (id: string) => apiClient.delete(`/api/projects/${id}`),
   archive: (id: string) => apiClient.post(`/api/projects/${id}/archive`),
   unarchive: (id: string) => apiClient.post(`/api/projects/${id}/unarchive`),
-  getVersions: (projectId: string) => apiClient.get<Version[]>(`/api/projects/${projectId}/versions`),
-  getComponents: (projectId: string) => apiClient.get<Component[]>(`/api/projects/${projectId}/components`),
-  getSprints: (projectId: string) => apiClient.get<Sprint[]>(`/api/projects/${projectId}/sprints`),
+  getVersions: (projectId: string) => apiClient.get<Version[]>(`/api/versions?projectId=${projectId}`),
+  getComponents: (projectId: string) => apiClient.get<Component[]>(`/api/components?projectId=${projectId}`),
+  getSprints: (projectId: string) => apiClient.get<Sprint[]>(`/api/sprints?projectId=${projectId}`),
 };
 
 export const sprintApi = {
-  getAll: (params?: { boardId?: string; state?: string }) =>
+  getAll: (params?: { boardId?: string; state?: string; projectId?: string }) =>
     apiClient.get<Sprint[]>('/api/sprints', { params }),
   getById: (id: string) => apiClient.get<Sprint>(`/api/sprints/${id}`),
   create: (data: Partial<Sprint>) => apiClient.post<Sprint>('/api/sprints', data),
@@ -220,16 +229,16 @@ export const sprintApi = {
 };
 
 export const versionApi = {
-  getByProject: (projectId: string) => apiClient.get<Version[]>(`/api/projects/${projectId}/versions`),
-  create: (projectId: string, data: Partial<Version>) => apiClient.post<Version>(`/api/projects/${projectId}/versions`, data),
+  getByProject: (projectId: string) => apiClient.get<Version[]>(`/api/versions?projectId=${projectId}`),
+  create: (projectId: string, data: Partial<Version>) => apiClient.post<Version>('/api/versions', { ...data, projectId }),
   update: (versionId: string, data: Partial<Version>) => apiClient.put<Version>(`/api/versions/${versionId}`, data),
   release: (versionId: string) => apiClient.post<Version>(`/api/versions/${versionId}/release`),
   archive: (versionId: string) => apiClient.post<Version>(`/api/versions/${versionId}/archive`),
 };
 
 export const componentApi = {
-  getByProject: (projectId: string) => apiClient.get<Component[]>(`/api/projects/${projectId}/components`),
-  create: (projectId: string, data: Partial<Component>) => apiClient.post<Component>(`/api/projects/${projectId}/components`, data),
+  getByProject: (projectId: string) => apiClient.get<Component[]>(`/api/components?projectId=${projectId}`),
+  create: (projectId: string, data: Partial<Component>) => apiClient.post<Component>('/api/components', { ...data, projectId }),
   update: (componentId: string, data: Partial<Component>) => apiClient.put<Component>(`/api/components/${componentId}`, data),
   delete: (componentId: string) => apiClient.delete(`/api/components/${componentId}`),
 };
@@ -274,9 +283,41 @@ export interface Resolution {
   sequence: number;
 }
 
+// ==================== Issue Link Types ====================
+
+export interface IssueLinkType {
+  id: string;
+  name: string;
+  inward: string;
+  outward: string;
+  style?: string;
+  sequence: number;
+}
+
+// ==================== Security Levels ====================
+
+export interface SecurityLevel {
+  id: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+}
+
 export const resolutionApi = {
-  getAll: () => apiClient.get<Resolution[]>('/api/resolutions'),
-  create: (data: Partial<Resolution>) => apiClient.post<Resolution>('/api/resolutions', data),
-  update: (id: string, data: Partial<Resolution>) => apiClient.put<Resolution>(`/api/resolutions/${id}`, data),
-  delete: (id: string) => apiClient.delete(`/api/resolutions/${id}`),
+  getAll: () => apiClient.get<Resolution[]>('/api/admin/issues/resolutions'),
+  create: (data: Partial<Resolution>) => apiClient.post<Resolution>('/api/admin/issues/resolutions', data),
+  update: (id: string, data: Partial<Resolution>) => apiClient.put<Resolution>(`/api/admin/issues/resolutions/${id}`, data),
+  delete: (id: string) => apiClient.delete(`/api/admin/issues/resolutions/${id}`),
+};
+
+// ==================== Issue Link Types ====================
+
+export const issueLinkTypeApi = {
+  getAll: () => apiClient.get<IssueLinkType[]>('/api/issues/links/types'),
+};
+
+// ==================== Security Levels ====================
+
+export const securityLevelApi = {
+  getAll: () => apiClient.get<SecurityLevel[]>('/api/security-levels'),
 };

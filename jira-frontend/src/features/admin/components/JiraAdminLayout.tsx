@@ -6,15 +6,15 @@ interface JiraAdminLayoutProps {
   children: React.ReactNode;
 }
 
-const USER_MANAGEMENT_ITEMS = [
-  { key: 'users', label: 'Users', path: '/admin/users' },
-  { key: 'groups', label: 'Groups', path: '/admin/groups' },
-  { key: 'anonymization', label: 'Anonymization', path: '/admin/anonymization' },
-];
-
-const USER_DIRECTORIES_ITEMS = [
-  { key: 'user-directories', label: 'User Directories', path: '/admin/directories' },
-  { key: 'service-accounts', label: 'Service accounts', path: '/admin/service-accounts' },
+const ADMIN_SIDEBAR_ITEMS = [
+  { key: 'projects', label: 'Projects', icon: '📁', path: '/admin/project-types' },
+  { key: 'issues', label: 'Issues', icon: '🐛', path: '/admin/issue-types' },
+  { key: 'workflows', label: 'Workflows', icon: '⚙', path: '/admin/workflows' },
+  { key: 'forms', label: 'Forms', icon: '📋', path: '/admin/forms' },
+  { key: 'automations', label: 'Automations', icon: '⚡', path: '/admin/automation' },
+  { key: 'reports', label: 'Reports', icon: '📊', path: '/admin/reports' },
+  { key: 'settings', label: 'Settings', icon: '🔧', path: '/admin/system/general' },
+  { key: 'insights', label: 'Insights', icon: '🔍', path: '/admin/insights' },
 ];
 
 export default function JiraAdminLayout({ children }: JiraAdminLayoutProps) {
@@ -39,7 +39,7 @@ export default function JiraAdminLayout({ children }: JiraAdminLayoutProps) {
             <Link to="/issues" className="jira-nav-item">Issues</Link>
             <Link to="/plans" className="jira-nav-item">Plans</Link>
           </nav>
-          <Link to="/create" className="jira-create-btn">Create</Link>
+          <Link to="/create" className="jira-create-btn">+ Create</Link>
         </div>
         <div className="jira-header-right">
           <div className="jira-search-box">
@@ -48,67 +48,31 @@ export default function JiraAdminLayout({ children }: JiraAdminLayoutProps) {
           </div>
           <button className="jira-header-icon" title="Announcements">📢</button>
           <button className="jira-header-icon" title="Help">?</button>
-          <button className="jira-header-icon" title="Settings">⚙</button>
-          <button className="jira-user-avatar">S</button>
+          <button className="jira-user-avatar">MS</button>
         </div>
       </header>
 
       {/* Admin Secondary Header */}
       <div className="jira-admin-subheader">
-        <h1 className="jira-admin-title">Administration</h1>
-        <div className="jira-admin-search">
-          <span className="jira-search-icon">🔍</span>
-          <input type="text" placeholder="Search Jira admin" className="jira-admin-search-input" />
-        </div>
-        <nav className="jira-admin-tabs">
-          <Link to="/admin/applications" className="jira-admin-tab">Applications</Link>
-          <Link to="/admin/projects" className="jira-admin-tab">Projects</Link>
-          <Link to="/admin/issues" className="jira-admin-tab">Issues</Link>
-          <Link to="/admin/manage-apps" className="jira-admin-tab">Manage apps</Link>
-          <Link to="/admin/user-management" className="jira-admin-tab jira-admin-tab-active">User management</Link>
-          <Link to="/admin/upgrade" className="jira-admin-tab">Latest upgrade report</Link>
-          <Link to="/admin/system" className="jira-admin-tab">System</Link>
-        </nav>
-        <div className="jira-admin-subheader-right">
-          <span className="jira-info-icon">ℹ</span>
-          <Link to="/projects/ProjectA" className="jira-back-link">← Back to project: ProjectA</Link>
-        </div>
+        <Link to="/dashboard" className="jira-back-link">← Jira Administration</Link>
       </div>
 
       {/* Admin Body with Sidebar */}
       <div className="jira-admin-body">
         <aside className="jira-admin-sidebar">
-          <div className="jira-sidebar-section">
-            <h3 className="jira-sidebar-heading">USER MANAGEMENT</h3>
-            <nav className="jira-sidebar-nav">
-              {USER_MANAGEMENT_ITEMS.map((item) => (
-                <Link
-                  key={item.key}
-                  to={item.path}
-                  className={`jira-sidebar-item ${location.pathname === item.path ? 'jira-sidebar-item-active' : ''}`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-          <div className="jira-sidebar-section">
-            <Link to="/admin/user-server" className="jira-sidebar-item">Jira user server</Link>
-          </div>
-          <div className="jira-sidebar-section">
-            <h3 className="jira-sidebar-heading">USER DIRECTORIES</h3>
-            <nav className="jira-sidebar-nav">
-              {USER_DIRECTORIES_ITEMS.map((item) => (
-                <Link
-                  key={item.key}
-                  to={item.path}
-                  className={`jira-sidebar-item ${location.pathname === item.path ? 'jira-sidebar-item-active' : ''}`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
+          <nav className="jira-admin-nav">
+            {ADMIN_SIDEBAR_ITEMS.map((item) => (
+              <Link
+                key={item.key}
+                to={item.path}
+                className={`jira-admin-nav-item ${location.pathname.startsWith(item.path) ? 'jira-admin-nav-active' : ''}`}
+                title={item.label}
+              >
+                <span className="jira-admin-nav-icon">{item.icon}</span>
+                <span className="jira-admin-nav-label">{item.label}</span>
+              </Link>
+            ))}
+          </nav>
         </aside>
         <main className="jira-admin-content">{children}</main>
       </div>

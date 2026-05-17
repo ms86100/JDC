@@ -34,6 +34,8 @@ export const issueLinkApi = {
   delete: (issueId: string, linkId: string) =>
     apiClient.delete(`/api/issues/${issueId}/links/${linkId}`),
 
-  getLinkTypes: () =>
-    apiClient.get<string[]>('/api/issues/links/types'),
+  getLinkTypes: (issueId?: string) =>
+    issueId
+      ? apiClient.get<string[]>(`/api/issues/${issueId}/links/types`)
+      : apiClient.get<string[]>('/api/issues/links/types'),
 };

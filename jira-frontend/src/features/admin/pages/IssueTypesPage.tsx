@@ -50,19 +50,22 @@ export default function IssueTypesPage() {
         </p>
         </div>
 
-        <div className="admin-toolbar">
-          <div className="admin-toolbar-left">
-            <input
-              type="text"
-              placeholder="Search issue types..."
-              className="admin-search-input-toolbar"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        <div className="admin-toolbar-modern">
+          <div className="toolbar-left">
+            <div className="search-input-wrapper">
+              <span className="search-icon">🔍</span>
+              <input
+                type="text"
+                placeholder="Search issue types..."
+                className="search-input"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="admin-toolbar-right">
-            <button className="admin-btn-primary" onClick={() => setShowCreateModal(true)}>
-              Add Issue Type
+          <div className="toolbar-right">
+            <button className="btn-create-project" onClick={() => setShowCreateModal(true)}>
+              <span>+</span> Add Issue Type
             </button>
           </div>
         </div>

@@ -247,6 +247,42 @@
   overflow-y: auto;
 }
 
+.jira-admin-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.jira-admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  color: #6B778C;
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+
+.jira-admin-nav-item:hover {
+  background: #F4F5F7;
+  color: #172B4D;
+}
+
+.jira-admin-nav-active {
+  background: #DEEBFF;
+  color: #0052CC;
+  font-weight: 500;
+  border-left: 3px solid #0052CC;
+}
+
+.jira-admin-nav-icon {
+  font-size: 18px;
+}
+
+.jira-admin-nav-label {
+  font-size: 14px;
+}
+
 .jira-sidebar-section {
   margin-bottom: 8px;
 }

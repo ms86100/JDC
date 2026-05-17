@@ -44,43 +44,55 @@ export default function ProjectAdministrationPage() {
           </p>
         </div>
 
-        <div className="admin-stats-grid">
-          <div className="admin-stat-card">
-            <div className="admin-stat-label">Total Projects</div>
-            <div className="admin-stat-value">{mockProjects.length}</div>
-          </div>
-          <div className="admin-stat-card">
-            <div className="admin-stat-label">Active Projects</div>
-            <div className="admin-stat-value">
-              {mockProjects.filter(p => p.status === 'Active').length}
+        {/* Visual Stats Cards */}
+        <div className="admin-stats-cards">
+          <div className="admin-stat-card-blue">
+            <div className="stat-card-icon">📁</div>
+            <div className="stat-card-content">
+              <div className="stat-card-value">{mockProjects.length}</div>
+              <div className="stat-card-label">Total Projects</div>
             </div>
           </div>
-          <div className="admin-stat-card">
-            <div className="admin-stat-label">Total Issues</div>
-            <div className="admin-stat-value">
-              {mockProjects.reduce((sum, p) => sum + p.issues, 0)}
+          <div className="admin-stat-card-green">
+            <div className="stat-card-icon">✅</div>
+            <div className="stat-card-content">
+              <div className="stat-card-value">{mockProjects.filter(p => p.status === 'Active').length}</div>
+              <div className="stat-card-label">Active Projects</div>
             </div>
           </div>
-          <div className="admin-stat-card">
-            <div className="admin-stat-label">Categories</div>
-            <div className="admin-stat-value">4</div>
+          <div className="admin-stat-card-purple">
+            <div className="stat-card-icon">🐛</div>
+            <div className="stat-card-content">
+              <div className="stat-card-value">{mockProjects.reduce((sum, p) => sum + p.issues, 0).toLocaleString()}</div>
+              <div className="stat-card-label">Total Issues</div>
+            </div>
+          </div>
+          <div className="admin-stat-card-orange">
+            <div className="stat-card-icon">📂</div>
+            <div className="stat-card-content">
+              <div className="stat-card-value">4</div>
+              <div className="stat-card-label">Categories</div>
+            </div>
           </div>
         </div>
 
-        <div className="admin-toolbar">
-          <div className="admin-toolbar-left">
-            <input
-              type="text"
-              placeholder="Search projects..."
-              className="admin-search-input-toolbar"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        {/* Toolbar with better styling */}
+        <div className="admin-toolbar-modern">
+          <div className="toolbar-left">
+            <div className="search-input-wrapper">
+              <span className="search-icon">🔍</span>
+              <input
+                type="text"
+                placeholder="Search projects..."
+                className="search-input"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
             <select
-              className="admin-form-select"
+              className="filter-select"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              style={{ width: '140px' }}
             >
               <option value="">All Types</option>
               <option value="Software">Software</option>
@@ -88,10 +100,9 @@ export default function ProjectAdministrationPage() {
               <option value="Operations">Operations</option>
             </select>
             <select
-              className="admin-form-select"
+              className="filter-select"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ width: '140px' }}
             >
               <option value="">All Status</option>
               <option value="Active">Active</option>
@@ -99,10 +110,12 @@ export default function ProjectAdministrationPage() {
               <option value="Archived">Archived</option>
             </select>
           </div>
-          <div className="admin-toolbar-right">
-            <button className="admin-btn-secondary">Project Categories</button>
-            <button className="admin-btn-secondary">Project Types</button>
-            <button className="admin-btn-primary">Create Project</button>
+          <div className="toolbar-right">
+            <a href="#" className="toolbar-link">📂 Categories</a>
+            <a href="#" className="toolbar-link">📋 Types</a>
+            <button className="btn-create-project">
+              <span>+</span> Create Project
+            </button>
           </div>
         </div>
 

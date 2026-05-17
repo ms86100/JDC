@@ -20,7 +20,6 @@ import KanbanBoardPage from './features/boards/pages/KanbanBoardPage';
 import AuditLogsPage from './features/audit/pages/AuditLogsPage';
 import MigrationPage from './features/migration/pages/MigrationPage';
 import AdminRoutes from './features/admin/routes/AdminRoutes';
-import JiraAdminLayout from './features/admin/components/JiraAdminLayout';
 import SystemSettingsPage from './features/admin/pages/SystemSettingsPage';
 import UserManagementPage from './features/admin/pages/UserManagementPage';
 import ProgramsPage from './features/plans/pages/ProgramsPage';
@@ -72,7 +71,6 @@ function App() {
               <Route path="board/classic" element={<KanbanBoardPage />} />
               <Route path="audit" element={<AuditLogsPage />} />
               <Route path="migration" element={<MigrationPage />} />
-              <Route path="admin/*" element={<AdminRoutes />} />
               <Route path="programs" element={<ProgramsPage />} />
               <Route path="programs/create" element={<CreateProgramPage />} />
               <Route path="programs/:programId" element={<ProgramDetailPage />} />
@@ -80,6 +78,14 @@ function App() {
               <Route path="plans/create" element={<CreatePlanPage />} />
               <Route path="plans/:planId" element={<PlanDetailPage />} />
             </Route>
+            <Route
+              path="/admin/*"
+              element={
+                <ProtectedRoute>
+                  <AdminRoutes />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
