@@ -5,7 +5,7 @@ export default function ReportsPage() {
     <div className="dc-page">
       <div className="dc-page-header" style={{ marginBottom: 24 }}>
         <h1 className="dc-page-title">Reports</h1>
-        <p className="dc-page-subtitle">View and manage reports for your Jira instance</p>
+        <p className="dc-page-subtitle">View and manage reports for your Systems and Avionics instance</p>
       </div>
 
       <div className="dc-card">

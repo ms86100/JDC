@@ -17,7 +17,7 @@ public class ProjectSprintPermissionResponse {
     private UUID projectId;
     private String permissionKey;
     private String principalType;
-    private UUID principalId;
+    private String principalId;
     private LocalDateTime createdAt;
     private UUID createdBy;
 }

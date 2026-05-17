@@ -43,3 +43,17 @@ Desktop.ini
 *.key
 credentials.json
 secrets.json
+# Build artifacts
+*.jar.original
+*.tmp
+*.bak
+
+# Environment files
+.env.local
+.env.production
+
+# Temp files
+*.tmp
+*.temp
+plan-*.txt
+test-*.sh

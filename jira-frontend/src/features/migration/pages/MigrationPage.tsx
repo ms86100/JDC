@@ -32,7 +32,7 @@ const STEP_LABELS: Record<MigrationStep, string> = {
   complete: 'Complete',
 };
 
-// Target fields for mapping (standard Jira fields)
+// Target fields for mapping (standard Systems and Avionics fields)
 const TARGET_FIELDS = [
   { field: 'summary', displayName: 'Summary', dataType: 'STRING', required: true, description: 'Issue title or summary' },
   { field: 'description', displayName: 'Description', dataType: 'TEXT', required: false, description: 'Detailed description' },
@@ -609,7 +609,7 @@ export default function MigrationPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Import / Export</h1>
         <p className="text-gray-500 mt-1">
-          Import data from CSV or Jira DC backups, export projects
+          Import data from CSV or Systems and Avionics backups, export projects
         </p>
       </div>
 

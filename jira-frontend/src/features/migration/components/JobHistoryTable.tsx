@@ -25,7 +25,7 @@ const STATUS_BADGES: Record<string, { bg: string; text: string; icon: string }> 
 
 const JOB_TYPE_LABELS: Record<string, string> = {
   CSV: 'CSV Import',
-  JIRA_DC: 'Jira DC Import',
+  JIRA_DC: 'Systems and Avionics Import',
   PROJECT_IMPORT: 'Project Import',
   PROJECT_EXPORT: 'Project Export',
 };
@@ -200,7 +200,7 @@ export default function JobHistoryTable({
           >
             <option value="ALL">All Types</option>
             <option value="CSV">CSV Import</option>
-            <option value="JIRA_DC">Jira DC Import</option>
+            <option value="JIRA_DC">Systems and Avionics Import</option>
             <option value="PROJECT_IMPORT">Project Import</option>
             <option value="PROJECT_EXPORT">Project Export</option>
           </select>

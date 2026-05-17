@@ -117,7 +117,7 @@ const MOCK_RULES: AutomationRule[] = [
     name: 'Auto-assign Bug to QA Lead',
     description: 'Automatically assigns any new Bug to the QA Lead',
     projectId: 'proj-1',
-    projectName: 'Jira Platform',
+    projectName: 'Systems and Avionics',
     triggerType: 'ISSUE_CREATED',
     conditions: [{ field: 'issueType', operator: 'EQUALS', value: 'Bug' }],
     actions: [{ type: 'ASSIGN_ISSUE', config: { assigneeId: 'qa-lead-1' } }],
@@ -132,7 +132,7 @@ const MOCK_RULES: AutomationRule[] = [
     name: 'High Priority Alert',
     description: 'Send notification when a Critical priority issue is created',
     projectId: 'proj-1',
-    projectName: 'Jira Platform',
+    projectName: 'Systems and Avionics',
     triggerType: 'ISSUE_CREATED',
     conditions: [{ field: 'priority', operator: 'EQUALS', value: 'Critical' }],
     actions: [{ type: 'SEND_NOTIFICATION', config: { recipients: ['project-lead'], message: 'High priority issue created' } }],
@@ -366,7 +366,7 @@ export default function AutomationPage() {
                   onChange={(e) => setProjectFilter(e.target.value)}
                 >
                   <option value="">All Projects</option>
-                  <option value="proj-1">Jira Platform</option>
+                  <option value="proj-1">Systems and Avionics</option>
                   <option value="proj-2">Mobile App</option>
                 </select>
                 <select
@@ -517,7 +517,7 @@ export default function AutomationPage() {
             <div className="settings-section">
               <h3>Automation Settings</h3>
               <p className="settings-description">
-                Configure global automation settings for your Jira instance.
+                Configure global automation settings for your Systems and Avionics instance.
               </p>
 
               <div className="settings-form">
@@ -600,7 +600,7 @@ export default function AutomationPage() {
                       onChange={(e) => setRuleProject(e.target.value)}
                     >
                       <option value="">All Projects</option>
-                      <option value="proj-1">Jira Platform</option>
+                      <option value="proj-1">Systems and Avionics</option>
                       <option value="proj-2">Mobile App</option>
                     </select>
                   </div>

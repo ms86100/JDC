@@ -92,7 +92,7 @@ export function useMigrationJob(options: UseMigrationJobOptions = {}) {
     },
   });
 
-  // Jira DC Import mutation
+  // Systems and Avionics Import mutation
   const jiraDcImportMutation = useMutation({
     mutationFn: async (file: File): Promise<MigrationJob> => {
       const response = await migrationApi.startJiraDcImport(file);
@@ -265,7 +265,7 @@ export function useMigrationJob(options: UseMigrationJobOptions = {}) {
           job = await csvImportMutation.mutateAsync({ file: params.file });
           break;
         case 'jira-dc':
-          if (!params.file) throw new Error('File is required for Jira DC import');
+          if (!params.file) throw new Error('File is required for Systems and Avionics import');
           job = await jiraDcImportMutation.mutateAsync(params.file);
           break;
         case 'project':

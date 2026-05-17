@@ -40,26 +40,27 @@ public class ProjectService {
     public ProjectResponse createProjectViaWizard(CreateProjectWizardRequest request, UUID currentUserId) {
         log.info("Creating project via wizard: {} by user: {}", request.getName(), currentUserId);
 
-        // Validate project key uniqueness
-        if (projectRepository.existsByProjectKey(request.getProjectKey())) {
-            throw new DuplicateResourceException("Project with key '" + request.getProjectKey() + "' already exists");
-        }
-
-        // Get template if provided
-        ProjectTemplate template = null;
-        String category = null;
-        String defaultAssigneeType = "PROJECT_LEAD";
-        Boolean allowIssueCreation = true;
-
-        if (request.getTemplateId() != null) {
-            template = projectTemplateRepository.findById(request.getTemplateId())
-                    .orElse(null);
-            if (template != null) {
-                category = template.getName().toLowerCase();
-                defaultAssigneeType = template.getDefaultAssigneeType();
-                allowIssueCreation = template.getAllowIssueCreation();
+        try {
+            // Validate project key uniqueness
+            if (projectRepository.existsByProjectKey(request.getProjectKey())) {
+                throw new DuplicateResourceException("Project with key '" + request.getProjectKey() + "' already exists");
             }
-        }
+
+            // Get template if provided
+            ProjectTemplate template = null;
+            String category = null;
+            String defaultAssigneeType = "PROJECT_LEAD";
+            Boolean allowIssueCreation = true;
+
+            if (request.getTemplateId() != null) {
+                template = projectTemplateRepository.findById(request.getTemplateId())
+                        .orElse(null);
+                if (template != null) {
+                    category = template.getName().toLowerCase();
+                    defaultAssigneeType = template.getDefaultAssigneeType();
+                    allowIssueCreation = template.getAllowIssueCreation();
+                }
+            }
 
         // Override with explicit values from request if provided
         if (request.getDefaultAssigneeType() != null) {
@@ -104,6 +105,15 @@ public class ProjectService {
 
         log.info("Project created successfully via wizard with key: {}", request.getProjectKey());
         return mapToProjectResponse(project);
+        } catch (Exception e) {
+            log.error("Error creating project via wizard: {} - {}", request.getProjectKey(), e.getMessage(), e);
+            // Re-throw with more context
+            if (e instanceof DuplicateResourceException || e instanceof ResourceNotFoundException ||
+                e instanceof InvalidOperationException) {
+                throw e;
+            }
+            throw new RuntimeException("Failed to create project: " + e.getMessage(), e);
+        }
     }
 
     // Keep legacy method for backward compatibility

@@ -44,7 +44,7 @@ export default function AdminRoutes() {
       <Route path="reports" element={<ReportsPage />} />
       <Route path="insights" element={<InsightsPage />} />
 
-      {/* User Management - Jira Style */}
+      {/* User Management - Systems and Avionics Style */}
       <Route path="users" element={<JiraUserBrowser />} />
       <Route path="users/create" element={<JiraCreateUser />} />
       <Route path="groups" element={<JiraGroupsBrowser />} />

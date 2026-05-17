@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import JiraAdminLayout from '../components/JiraAdminLayout';
-import { useJiraUsers, useJiraGroups, useDeleteJiraGroup } from '../hooks/useAdminApi';
-import type { JiraUser, JiraGroup } from '../hooks/useAdminApi';
+import { useJiraUsers, useJiraGroups } from '../hooks/useAdminApi';
+import type { JiraUser } from '../hooks/useAdminApi';
 import './JiraUserBrowser.css';
 
 export default function JiraUserBrowser() {
@@ -36,7 +35,6 @@ export default function JiraUserBrowser() {
   };
 
   return (
-    <JiraAdminLayout>
       <div className="user-browser">
         <div className="user-browser-header">
           <h1 className="user-browser-title">Users</h1>
@@ -81,7 +79,7 @@ export default function JiraUserBrowser() {
               >
                 <option value="ALL">All Users</option>
                 <option value="NONE">None</option>
-                <option value="jira-software">Jira Software</option>
+                <option value="jira-software">Systems and Avionics</option>
               </select>
             </div>
             <div className="filter-field">
@@ -149,7 +147,6 @@ export default function JiraUserBrowser() {
           </tbody>
         </table>
       </div>
-    </JiraAdminLayout>
   );
 }
 
@@ -189,7 +186,7 @@ function UserRow({ user }: { user: JiraUser }) {
         <span className="application-badge">{user.applications?.join(', ') || '-'}</span>
       </td>
       <td>
-        <span className="directory-name">{user.directoryName || 'Jira Internal Directory'}</span>
+        <span className="directory-name">{user.directoryName || 'Systems and Avionics Internal Directory'}</span>
       </td>
       <td>
         <div className="action-links">

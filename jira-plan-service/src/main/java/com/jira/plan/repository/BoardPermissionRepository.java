@@ -14,11 +14,11 @@ public interface BoardPermissionRepository extends JpaRepository<BoardPermission
 
     List<BoardPermission> findByBoardConfigIdAndPermissionType(UUID boardId, String permissionType);
 
-    List<BoardPermission> findByBoardConfigIdAndPrincipalTypeAndPrincipalId(UUID boardId, String principalType, UUID principalId);
+    List<BoardPermission> findByBoardConfigIdAndPrincipalTypeAndPrincipalId(UUID boardId, String principalType, String principalId);
 
-    boolean existsByBoardConfigIdAndPermissionTypeAndPrincipalId(UUID boardId, String permissionType, UUID principalId);
+    boolean existsByBoardConfigIdAndPermissionTypeAndPrincipalId(UUID boardId, String permissionType, String principalId);
 
-    boolean existsByBoardConfigIdAndPrincipalId(UUID boardId, UUID principalId);
+    boolean existsByBoardConfigIdAndPrincipalId(UUID boardId, String principalId);
 
     void deleteByBoardConfigId(UUID boardId);
 }

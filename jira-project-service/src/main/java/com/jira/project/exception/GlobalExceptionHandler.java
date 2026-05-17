@@ -3,6 +3,7 @@ package com.jira.project.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -112,6 +113,25 @@ public class GlobalExceptionHandler {
                 .service(SERVICE_NAME)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
+            DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.error("Data integrity violation at {}: {}", request.getRequestURI(), ex.getMessage());
+        String message = "Database constraint violation";
+        if (ex.getMessage() != null && ex.getMessage().contains("project_schemes_project_id_key")) {
+            message = "Project scheme already exists";
+        }
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("Conflict")
+                .message(message)
+                .path(request.getRequestURI())
+                .service(SERVICE_NAME)
+                .build();
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(Exception.class)

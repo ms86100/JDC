@@ -184,7 +184,7 @@ export function useValidation(options: UseValidationOptions = {}) {
             validRowCount--;
           }
 
-          // Check for required field patterns (common Jira fields)
+          // Check for required field patterns (common Systems and Avionics fields)
           const requiredFields = ['summary', 'description', 'issuetype', 'priority', 'project'];
           requiredFields.forEach((field) => {
             const fieldIndex = headers.findIndex(
@@ -292,7 +292,7 @@ export function useValidation(options: UseValidationOptions = {}) {
     (headers: string[], targetFields: Array<{ field: string; dataType: string; required: boolean }>): FieldMapping[] => {
       const mappings: FieldMapping[] = [];
 
-      // Standard Jira CSV field mappings
+      // Standard Systems and Avionics CSV field mappings
       const standardMappings: Record<string, string[]> = {
         summary: ['summary', 'title', 'name', 'subject'],
         description: ['description', 'desc', 'body', 'details'],

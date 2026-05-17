@@ -160,7 +160,7 @@ export const migrationApi = {
     });
   },
 
-  // Jira DC Import
+  // Systems and Avionics Import
   startJiraDcImport: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);

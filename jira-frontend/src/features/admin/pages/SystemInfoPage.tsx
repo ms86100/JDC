@@ -10,7 +10,7 @@ export default function SystemInfoPage() {
       <div className="dc-page">
         <div className="dc-page-header" style={{ marginBottom: 24 }}>
           <h1 className="dc-page-title">System Information</h1>
-          <p className="dc-page-subtitle">View information about your Jira installation</p>
+          <p className="dc-page-subtitle">View information about your Systems and Avionics installation</p>
         </div>
 
         <div className="dc-tabs" style={{ marginBottom: 16 }}>
@@ -36,7 +36,7 @@ export default function SystemInfoPage() {
 
         <div className="dc-card" style={{ marginBottom: 16 }}>
           <div className="dc-card-header">
-            <h3 className="dc-card-title">Jira Information</h3>
+            <h3 className="dc-card-title">Systems and Avionics Information</h3>
             <button className="dc-btn dc-btn-sm dc-btn-secondary">View log</button>
           </div>
           <div className="dc-card-body">
@@ -44,7 +44,7 @@ export default function SystemInfoPage() {
               <tbody>
                 <tr>
                   <td>Version</td>
-                  <td>Jira DC 11.3.0.240912130</td>
+                  <td>Systems and Avionics 11.3.0.240912130</td>
                 </tr>
                 <tr>
                   <td>Build</td>
@@ -60,7 +60,7 @@ export default function SystemInfoPage() {
                 </tr>
                 <tr>
                   <td>Active Directory</td>
-                  <td>Atlassian Crowd</td>
+                  <td>Systems and Avionics Directory</td>
                 </tr>
                 <tr>
                   <td>Server ID</td>

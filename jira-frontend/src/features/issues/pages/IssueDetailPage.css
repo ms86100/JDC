@@ -1035,58 +1035,477 @@
 .idc-work-label { color: #5e6c84; }
 .idc-work-value { font-weight: 500; color: #172b4d; font-family: monospace; }
 
-/* People Tab */
-.idc-people-tab { }
+/* ============================================================
+   PEOPLE SECTION (Modern Card-Based)
+   ============================================================ */
+.idc-people-section {
+  background: white;
+  border: 1px solid #dfe1e6;
+  border-radius: 8px;
+  overflow: hidden;
+}
 
-.idc-people-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.idc-people-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: #42526e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 14px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dfe1e6;
 }
 
 .idc-people-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  font-size: 13px;
-  padding: 4px 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f4f5f7;
+  transition: background 0.1s ease;
+}
+
+.idc-people-row:last-child {
+  border-bottom: none;
+}
+
+.idc-people-row:hover {
+  background: #fafbfc;
 }
 
 /* ============================================================
-   RIGHT COLUMN
+   RIGHT COLUMN - MODERN CARD-BASED DESIGN
+   ============================================================ */
+.idc-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Modern Section Cards */
+.idc-sidebar-section {
+  background: white;
+  border: 1px solid #dfe1e6;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.idc-sidebar-section:hover {
+  box-shadow: 0 1px 3px rgba(9, 30, 66, 0.08);
+}
+
+.idc-sidebar-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #42526e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+  padding: 10px 14px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dfe1e6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.idc-sidebar-section-title::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  background: #0052CC;
+  border-radius: 2px;
+}
+
+/* Modern Sidebar Items */
+.idc-sidebar-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f4f5f7;
+  transition: background 0.1s ease;
+}
+
+.idc-sidebar-item:last-child {
+  border-bottom: none;
+}
+
+.idc-sidebar-item:hover {
+  background: #fafbfc;
+}
+
+.idc-sidebar-label {
+  font-size: 12px;
+  color: #6b778c;
+  font-weight: 500;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.idc-sidebar-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #172b4d;
+  text-align: right;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  max-width: 180px;
+}
+
+/* User Chips - Modern Style */
+.idc-user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 2px;
+  background: #f4f5f7;
+  border-radius: 16px;
+  transition: background 0.15s ease;
+}
+
+.idc-user-chip:hover {
+  background: #ebecf0;
+}
+
+.idc-user-avatar-sm {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6554c0 0%, #5065a8 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.idc-user-avatar-green {
+  background: linear-gradient(135deg, #00875A 0%, #006644 100%);
+}
+
+.idc-user-avatar-blue {
+  background: linear-gradient(135deg, #0052CC 0%, #0047B3 100%);
+}
+
+.idc-user-avatar-orange {
+  background: linear-gradient(135deg, #FF8B00 0%, #cc7000 100%);
+}
+
+/* Vote/Watch Buttons */
+.idc-vote-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.idc-vote-btn {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: #0052CC;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+
+.idc-vote-btn:hover {
+  background: #DEEBFF;
+}
+
+/* Components, Labels, Versions - Modern Tags */
+.idc-components,
+.idc-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.idc-component-tag,
+.idc-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: #E9F2FF;
+  color: #0052CC;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.idc-component-tag:hover,
+.idc-label:hover {
+  background: #DEEBFF;
+  transform: translateY(-1px);
+}
+
+.idc-version-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.idc-version-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: #E5ECFA;
+  color: #42526e;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Sprint, Epic Links */
+.idc-sprint-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #0052CC;
+  font-weight: 500;
+  padding: 2px 6px;
+  background: #E9F2FF;
+  border-radius: 4px;
+}
+
+.idc-sprint-tag::before {
+  content: '🏃';
+  font-size: 10px;
+}
+
+.idc-epic-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #0052CC;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 2px 6px;
+  background: #E9F2FF;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.idc-epic-link:hover {
+  background: #DEEBFF;
+  text-decoration: none;
+}
+
+.idc-epic-icon {
+  font-size: 12px;
+}
+
+/* Story Points */
+.idc-story-points {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, #E5ECFA 0%, #d4daf5 100%);
+  color: #42526e;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'SF Mono', Monaco, monospace;
+}
+
+/* Time Tracking - Modern Display */
+.idc-time-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  border-bottom: 1px solid #f4f5f7;
+}
+
+.idc-time-row:last-child {
+  border-bottom: none;
+}
+
+.idc-time-label {
+  font-size: 12px;
+  color: #6b778c;
+}
+
+.idc-time-value {
+  font-size: 12px;
+  color: #172b4d;
+  font-weight: 500;
+  font-family: 'SF Mono', Monaco, monospace;
+}
+
+/* Work Ratio Progress Bar */
+.idc-work-ratio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.idc-work-ratio-bar {
+  width: 60px;
+  height: 6px;
+  background: #dfe1e6;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.idc-work-ratio-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00875A 0%, #00b38f 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.idc-work-ratio-fill.warning {
+  background: linear-gradient(90deg, #FF8B00 0%, #ffa500 100%);
+}
+
+.idc-work-ratio-fill.danger {
+  background: linear-gradient(90deg, #D04423 0%, #ff6b4a 100%);
+}
+
+/* Linked Issues - Modern List */
+.idc-linked-list {
+  padding: 8px 14px;
+}
+
+.idc-linked-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f4f5f7;
+}
+
+.idc-linked-item:last-child {
+  border-bottom: none;
+}
+
+.idc-linked-type {
+  font-size: 10px;
+  color: #6b778c;
+  background: #f4f5f7;
+  padding: 1px 4px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.idc-linked-key {
+  font-size: 12px;
+  color: #0052CC;
+  font-weight: 500;
+  font-family: monospace;
+}
+
+.idc-linked-title {
+  font-size: 12px;
+  color: #42526e;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* No Value State */
+.idc-no-value {
+  color: #b3bac5;
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* Team Badge */
+.idc-team-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: #fff0e6;
+  color: #bf4800;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Right Column Actions */
+.idc-right-action {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #0052CC;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  margin: -4px -8px;
+}
+
+.idc-right-action:hover {
+  background: #DEEBFF;
+}
+
+/* ============================================================
+   LEGACY RIGHT SECTION (for backwards compatibility)
    ============================================================ */
 .idc-right-section {
   background: white;
   border: 1px solid #dfe1e6;
-  border-radius: 3px;
-  padding: 12px;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .idc-right-title {
   font-size: 11px;
   font-weight: 600;
-  color: #5e6c84;
+  color: #42526e;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin: 0 0 10px;
+  margin: 0;
+  padding: 10px 14px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dfe1e6;
 }
 
 .idc-right-rows {
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
 .idc-right-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 28px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f4f5f7;
+  transition: background 0.1s ease;
+}
+
+.idc-right-row:hover {
+  background: #fafbfc;
+}
+
+.idc-right-row:last-child {
+  border-bottom: none;
 }
 
 .idc-right-label {
-  font-size: 13px;
-  color: #5e6c84;
+  font-size: 12px;
+  color: #6b778c;
   font-weight: 500;
 }
 
@@ -1098,36 +1517,7 @@
   color: #172b4d;
 }
 
-.idc-right-action {
-  background: none;
-  border: none;
-  font-size: 12px;
-  color: #0052CC;
-  cursor: pointer;
-  font-family: inherit;
-  padding: 2px 4px;
-  border-radius: 3px;
-  transition: background 0.1s;
-}
-
-.idc-right-action:hover {
-  background: #DEEBFF;
-}
-
-.idc-user-avatar-sm {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #6554c0;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
+/* Small Avatar Legacy */
 .idc-user-name-sm {
   font-size: 12px;
   font-weight: 500;
@@ -1139,53 +1529,57 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 6px;
+  padding: 2px 8px;
   background: #f4f5f7;
   border: 1px solid #dfe1e6;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 12px;
   color: #172b4d;
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.1s;
+  transition: all 0.15s ease;
 }
 
 .idc-priority-btn:hover,
 .idc-type-btn:hover {
   background: #ebecf0;
+  transform: translateY(-1px);
 }
 
 .idc-story-points-sm {
-  font-family: monospace;
-  font-weight: 600;
-  background: #E5ECFA;
-  padding: 1px 6px;
-  border-radius: 3px;
+  display: inline-flex;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, #E5ECFA 0%, #d4daf5 100%);
+  color: #42526e;
+  border-radius: 4px;
   font-size: 12px;
+  font-weight: 600;
+  font-family: 'SF Mono', Monaco, monospace;
 }
 
 .idc-log-work-btn {
-  width: 100%;
-  margin-top: 8px;
-  padding: 4px 8px;
-  background: none;
+  width: calc(100% - 28px);
+  margin: 8px 14px 12px;
+  padding: 8px 12px;
+  background: white;
   border: 1px solid #dfe1e6;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 12px;
   color: #505F79;
   cursor: pointer;
   font-family: inherit;
-  text-align: left;
-  transition: background 0.1s;
+  text-align: center;
+  transition: all 0.15s ease;
 }
 
 .idc-log-work-btn:hover {
   background: #f4f5f7;
+  border-color: #b3bac5;
 }
 
 .idc-labels-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   flex-wrap: wrap;
   gap: 4px;
@@ -1196,32 +1590,38 @@
   font-size: 12px;
   font-weight: 500;
   text-decoration: none;
+  padding: 2px 6px;
+  background: #E9F2FF;
+  border-radius: 4px;
+  transition: all 0.15s ease;
 }
 
 .idc-parent-link:hover {
-  text-decoration: underline;
+  background: #DEEBFF;
+  text-decoration: none;
 }
 
 .idc-actions-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  padding: 8px 14px;
 }
 
 .idc-action-link {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
+  gap: 8px;
+  padding: 6px 8px;
   background: none;
   border: none;
   font-size: 12px;
   color: #505F79;
   cursor: pointer;
   font-family: inherit;
-  border-radius: 3px;
+  border-radius: 4px;
   text-align: left;
-  transition: background 0.1s, color 0.1s;
+  transition: all 0.15s ease;
 }
 
 .idc-action-link:hover {
@@ -1232,6 +1632,12 @@
 .idc-action-link-danger:hover {
   background: #ffebe6;
   color: #bf2600;
+}
+
+.idc-user-name-sm {
+  font-size: 12px;
+  font-weight: 500;
+  color: #172b4d;
 }
 
 /* ============================================================

@@ -8,7 +8,9 @@ import com.jira.plan.entity.BoardConfig;
 import com.jira.plan.entity.BoardPermission;
 import com.jira.plan.entity.ProjectSprintPermission;
 import com.jira.plan.exception.ResourceNotFoundException;
-import com.jira.plan.repository.*;
+import com.jira.plan.repository.BoardConfigRepository;
+import com.jira.plan.repository.BoardPermissionRepository;
+import com.jira.plan.repository.ProjectSprintPermissionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,7 +31,6 @@ public class BoardPermissionService {
     private final BoardPermissionRepository boardPermissionRepository;
     private final ProjectSprintPermissionRepository projectSprintPermissionRepository;
     private final BoardConfigRepository boardConfigRepository;
-    private final UserGroupMembershipRepository userGroupMembershipRepository;
 
     // Permission types
     public static final String PERMISSION_VIEW = "VIEW";
@@ -86,38 +87,27 @@ public class BoardPermissionService {
 
     @Transactional(readOnly = true)
     public boolean hasPermission(UUID boardId, String permissionType, UUID userId) {
+        String userIdStr = userId.toString();
         // Check if user is board admin (admins have all permissions)
-        if (boardPermissionRepository.existsByBoardConfigIdAndPermissionTypeAndPrincipalId(boardId, PERMISSION_ADMIN, userId)) {
+        if (boardPermissionRepository.existsByBoardConfigIdAndPermissionTypeAndPrincipalId(boardId, PERMISSION_ADMIN, userIdStr)) {
             return true;
         }
 
         // Check for specific permission granted directly to user
-        if (boardPermissionRepository.existsByBoardConfigIdAndPermissionTypeAndPrincipalId(boardId, permissionType, userId)) {
+        if (boardPermissionRepository.existsByBoardConfigIdAndPermissionTypeAndPrincipalId(boardId, permissionType, userIdStr)) {
             return true;
         }
 
-        // Check group memberships and group-based permissions
-        List<UUID> userGroups = userGroupMembershipRepository.findGroupIdsByUserId(userId.toString());
-        for (UUID groupId : userGroups) {
-            if (boardPermissionRepository.existsByBoardConfigIdAndPermissionTypeAndPrincipalId(boardId, permissionType, groupId)) {
-                return true;
-            }
-        }
-
+        // Group-based permission checks are disabled due to cross-schema dependency issue
         return false;
     }
 
     @Transactional(readOnly = true)
     public List<String> getEffectivePermissions(UUID boardId, UUID userId) {
-        List<BoardPermission> directPermissions = boardPermissionRepository.findByBoardConfigIdAndPrincipalTypeAndPrincipalId(boardId, "USER", userId);
+        String userIdStr = userId.toString();
+        List<BoardPermission> directPermissions = boardPermissionRepository.findByBoardConfigIdAndPrincipalTypeAndPrincipalId(boardId, "USER", userIdStr);
 
-        // Also get group-based permissions
-        List<UUID> userGroups = userGroupMembershipRepository.findGroupIdsByUserId(userId.toString());
-        for (UUID groupId : userGroups) {
-            List<BoardPermission> groupPerms = boardPermissionRepository.findByBoardConfigIdAndPrincipalTypeAndPrincipalId(boardId, "GROUP", groupId);
-            directPermissions.addAll(groupPerms);
-        }
-
+        // Group-based permission checks are disabled due to cross-schema dependency issue
         return directPermissions.stream()
             .map(BoardPermission::getPermissionType)
             .distinct()
@@ -179,7 +169,7 @@ public class BoardPermissionService {
     @Transactional(readOnly = true)
     public boolean hasProjectSprintPermission(UUID projectId, String permissionKey, UUID userId) {
         return projectSprintPermissionRepository.existsByProjectIdAndPermissionKeyAndPrincipalId(
-            projectId, permissionKey, userId);
+            projectId, permissionKey, userId.toString());
     }
 
     @Transactional(readOnly = true)

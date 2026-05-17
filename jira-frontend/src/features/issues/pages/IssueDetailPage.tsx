@@ -10,7 +10,7 @@ import './IssueDetailPage.css';
 type TabType = 'details' | 'people' | 'activity' | 'comment' | 'work';
 
 /**
- * Full Issue Response - All Jira DC Mandatory Fields
+ * Full Issue Response - All Systems and Avionics Mandatory Fields
  */
 interface FullIssueResponse extends IssueResponse {
   // Core Metadata
@@ -284,7 +284,7 @@ export default function IssueDetailPage() {
         <span className="idc-breadcrumb-key">{issue.issueKey}</span>
       </div>
 
-      {/* Issue Header - Jira DC Style */}
+      {/* Issue Header - Systems and Avionics Style */}
       <div className="idc-issue-header">
         <div className="idc-issue-header-top">
           {/* Type + Status badges */}
@@ -361,7 +361,7 @@ export default function IssueDetailPage() {
         )}
       </div>
 
-      {/* Two Column Layout - Jira DC Style */}
+      {/* Two Column Layout - Systems and Avionics Style */}
       <div className="idc-issue-body">
         {/* ========== LEFT PRIMARY CONTENT COLUMN ========== */}
         <div className="idc-left-col">

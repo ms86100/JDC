@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import JiraAdminLayout from '../components/JiraAdminLayout';
 import { useJiraGroupByName } from '../hooks/useAdminApi';
 import './JiraViewGroup.css';
 
@@ -12,38 +11,31 @@ export default function JiraViewGroup() {
 
   if (!groupName) {
     return (
-      <JiraAdminLayout>
-        <div className="view-group-error">
-          <p>No group specified. Please select a group from the{' '}
-            <Link to="/admin/groups">Groups list</Link>.
-          </p>
-        </div>
-      </JiraAdminLayout>
+      <div className="view-group-error">
+        <p>No group specified. Please select a group from the{' '}
+          <Link to="/admin/groups">Groups list</Link>.
+        </p>
+      </div>
     );
   }
 
   if (isLoading) {
     return (
-      <JiraAdminLayout>
-        <div className="view-group-loading">Loading...</div>
-      </JiraAdminLayout>
+      <div className="view-group-loading">Loading...</div>
     );
   }
 
   if (error || !group) {
     return (
-      <JiraAdminLayout>
-        <div className="view-group-error">
-          <p>Group not found: {groupName}</p>
-          <Link to="/admin/groups">← Back to Groups</Link>
-        </div>
-      </JiraAdminLayout>
+      <div className="view-group-error">
+        <p>Group not found: {groupName}</p>
+        <Link to="/admin/groups">← Back to Groups</Link>
+      </div>
     );
   }
 
   return (
-    <JiraAdminLayout>
-      <div className="view-group">
+    <div className="view-group">
         {/* Breadcrumb */}
         <div className="view-group-breadcrumb">
           <Link to="/admin/groups" className="breadcrumb-link">Groups</Link>
@@ -100,7 +92,6 @@ export default function JiraViewGroup() {
           </div>
         </div>
       </div>
-    </JiraAdminLayout>
   );
 }
 

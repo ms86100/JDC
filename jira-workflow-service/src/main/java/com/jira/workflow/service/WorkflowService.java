@@ -122,6 +122,56 @@ public class WorkflowService {
     }
 
     @Transactional(readOnly = true)
+    public TransitionResponse getTransition(UUID transitionId) {
+        log.debug("Fetching transition: {}", transitionId);
+        WorkflowTransition transition = workflowTransitionRepository.findById(transitionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Transition", "id", transitionId));
+        return mapToTransitionResponse(transition);
+    }
+
+    @Transactional
+    public TransitionResponse updateTransition(UUID transitionId, UpdateTransitionRequest request) {
+        log.info("Updating transition: {}", transitionId);
+
+        WorkflowTransition transition = workflowTransitionRepository.findById(transitionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Transition", "id", transitionId));
+
+        if (request.getName() != null) transition.setName(request.getName());
+        if (request.getDescription() != null) transition.setDescription(request.getDescription());
+        if (request.getIcon() != null) transition.setIcon(request.getIcon());
+        if (request.getType() != null) transition.setType(request.getType());
+        if (request.getTriggerType() != null) transition.setTriggerType(request.getTriggerType());
+        if (request.getDisplayOrder() != null) transition.setDisplayOrder(request.getDisplayOrder());
+        if (request.getRequiresApproval() != null) transition.setRequiresApproval(request.getRequiresApproval());
+        if (request.getApprovalGroupId() != null) transition.setApprovalGroupId(request.getApprovalGroupId());
+        if (request.getAllowAssigneeOverride() != null) transition.setAllowAssigneeOverride(request.getAllowAssigneeOverride());
+        if (request.getAllowUnassign() != null) transition.setAllowUnassign(request.getAllowUnassign());
+        if (request.getFieldsRequired() != null) transition.setFieldsRequired(request.getFieldsRequired());
+        if (request.getFieldsHidden() != null) transition.setFieldsHidden(request.getFieldsHidden());
+        if (request.getPermissionCheck() != null) transition.setPermissionCheck(request.getPermissionCheck());
+        if (request.getUserGroupIds() != null) transition.setUserGroupIds(request.getUserGroupIds());
+        if (request.getAllowLoop() != null) transition.setAllowLoop(request.getAllowLoop());
+        if (request.getMaxLoopCount() != null) transition.setMaxLoopCount(request.getMaxLoopCount());
+        if (request.getScreenId() != null) transition.setScreenId(request.getScreenId());
+
+        transition = workflowTransitionRepository.save(transition);
+        log.info("Transition updated: {}", transitionId);
+
+        return mapToTransitionResponse(transition);
+    }
+
+    @Transactional
+    public void deleteTransition(UUID transitionId) {
+        log.info("Deleting transition: {}", transitionId);
+
+        WorkflowTransition transition = workflowTransitionRepository.findById(transitionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Transition", "id", transitionId));
+
+        workflowTransitionRepository.delete(transition);
+        log.info("Transition deleted: {}", transitionId);
+    }
+
+    @Transactional(readOnly = true)
     public List<TransitionResponse> getTransitionsForProject(UUID projectId) {
         log.debug("Fetching transitions for project: {}", projectId);
 

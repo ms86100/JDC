@@ -16,9 +16,9 @@ public interface ProjectSprintPermissionRepository extends JpaRepository<Project
 
     List<ProjectSprintPermission> findByPermissionKey(String permissionKey);
 
-    List<ProjectSprintPermission> findByPrincipalTypeAndPrincipalId(String principalType, UUID principalId);
+    List<ProjectSprintPermission> findByPrincipalTypeAndPrincipalId(String principalType, String principalId);
 
-    boolean existsByProjectIdAndPermissionKeyAndPrincipalId(UUID projectId, String permissionKey, UUID principalId);
+    boolean existsByProjectIdAndPermissionKeyAndPrincipalId(UUID projectId, String permissionKey, String principalId);
 
     void deleteByProjectId(UUID projectId);
 }

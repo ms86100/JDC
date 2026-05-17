@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { issueApi, IssueResponse } from '../../../api/issueApi';
 import CreateIssueModal from '../components/CreateIssueModal';
 import BulkOperationsModal from '../components/BulkOperationsModal';
+import './IssuesPage.css';
 
 export default function IssuesPage() {
   const queryClient = useQueryClient();
@@ -186,24 +187,6 @@ export default function IssuesPage() {
         />
       )}
 
-      <style>{`
-        .ab-header-actions {
-          display: flex;
-          gap: var(--ab-spacing-sm);
-        }
-
-        .ab-table tbody tr.selected {
-          background: var(--ab-primary-50);
-        }
-
-        .ab-table th, .ab-table td {
-          padding: var(--ab-spacing-sm);
-        }
-
-        .ab-table input[type="checkbox"] {
-          cursor: pointer;
-        }
-      `}</style>
     </div>
   );
 }

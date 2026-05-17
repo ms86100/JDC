@@ -139,7 +139,7 @@ export default function CreatePlanPage() {
         <div className="create-page-header">
           <h1 className="create-page-title">Create plan</h1>
           <p className="create-page-description">
-            Connect to issue sources in Jira Software to create a timeline that's always in sync with your work.
+            Connect to issue sources in Systems and Avionics to create a timeline that's always in sync with your work.
           </p>
           <p className="required-fields-note">
             Required fields are marked with an asterisk <span className="required">*</span>

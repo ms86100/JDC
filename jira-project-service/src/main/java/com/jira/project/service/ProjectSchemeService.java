@@ -43,12 +43,22 @@ public class ProjectSchemeService {
 
     @Transactional
     public ProjectScheme createProjectScheme(Project project, UUID templateId) {
+        log.info("Creating project scheme for project: {} with template: {}", project.getId(), templateId);
+
+        // Check if scheme already exists for this project (idempotency)
+        if (projectSchemeRepository.existsByProjectId(project.getId())) {
+            log.debug("Project scheme already exists for project: {}, returning existing", project.getId());
+            return projectSchemeRepository.findByProjectId(project.getId()).orElse(null);
+        }
+
+        log.debug("No existing scheme found, creating new one for project: {}", project.getId());
         ProjectScheme.ProjectSchemeBuilder builder = ProjectScheme.builder()
                 .project(project);
 
         // First, try to assign template-specific schemes if templateId is provided
         if (templateId != null) {
             List<TemplateSchemeMapping> templateSchemes = templateSchemeMappingRepository.findByTemplateId(templateId);
+            log.debug("Found {} template scheme mappings for template: {}", templateSchemes.size(), templateId);
 
             if (!templateSchemes.isEmpty()) {
                 log.debug("Assigning template-specific schemes for template: {}", templateId);
@@ -56,6 +66,8 @@ public class ProjectSchemeService {
                 for (TemplateSchemeMapping mapping : templateSchemes) {
                     UUID schemeId = mapping.getSchemeId();
                     String schemeName = mapping.getSchemeName();
+
+                    log.debug("Processing scheme mapping - type: {}, name: {}, id: {}", mapping.getSchemeType(), schemeName, schemeId);
 
                     switch (mapping.getSchemeType()) {
                         case TemplateSchemeMapping.SCHEME_TYPE_ISSUE_TYPE:

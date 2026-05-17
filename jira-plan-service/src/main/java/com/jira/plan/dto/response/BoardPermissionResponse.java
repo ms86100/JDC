@@ -17,7 +17,7 @@ public class BoardPermissionResponse {
     private UUID boardId;
     private String permissionType;
     private String principalType;
-    private UUID principalId;
+    private String principalId;
     private LocalDateTime grantedAt;
     private UUID grantedBy;
 }

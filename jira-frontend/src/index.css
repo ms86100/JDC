@@ -1,3 +1,6 @@
+/* Systems and Avionics — design tokens (must load first) */
+@import './styles/tokens.css';
+
 /* Airbus Design System Theme */
 @import './styles/airbus-theme.css';
 
@@ -6,6 +9,9 @@
 
 /* Jira Platform Custom Styles */
 @import './features/dashboard/DashboardStyles.css';
+
+/* Jira Data Center visual overlay — Phase 4 (load LAST so it overrides) */
+@import './styles/jira-dc-overlay.css';
 
 @tailwind base;
 @tailwind components;

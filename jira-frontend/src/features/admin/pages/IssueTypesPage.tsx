@@ -127,7 +127,7 @@ export default function IssueTypesPage() {
       <div className="it-header">
         <div className="it-header-content">
           <h1 className="it-title">Issue Types</h1>
-          <p className="it-subtitle">Configure the types of issues available in your Jira instance</p>
+          <p className="it-subtitle">Configure the types of issues available in your Systems and Avionics instance</p>
         </div>
         <button className="it-btn it-btn-primary" onClick={() => setShowCreateModal(true)}>
           <span className="it-btn-icon">+</span>

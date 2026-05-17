@@ -381,7 +381,7 @@ export const useAuditLogs = (params?: { userId?: string; category?: string; acti
   });
 };
 
-// ==================== Jira User Management API ====================
+// ==================== Systems and Avionics User Management API ====================
 
 export interface JiraUser {
   id: string;
@@ -430,7 +430,7 @@ export interface JiraSchemeInfo {
   name: string;
 }
 
-// Jira User Management API
+// Systems and Avionics User Management API
 const jiraUserApi = {
   // Users
   getUsers: (params?: { search?: string; status?: string; page?: number; size?: number }) =>
@@ -449,7 +449,7 @@ const jiraUserApi = {
   deleteGroup: (groupId: string) => apiClient.delete(`/user-service/rest/admin/1.0/groups/${groupId}`),
 };
 
-// Jira User Management Hooks
+// Systems and Avionics User Management Hooks
 export const useJiraUsers = (params?: { search?: string; status?: string; page?: number; size?: number }) => {
   return useQuery({
     queryKey: ['jira', 'users', params],
@@ -484,7 +484,7 @@ export const useCreateJiraUser = () => {
       queryClient.invalidateQueries({ queryKey: ['jira', 'users'] });
     },
     onError: (error: Error) => {
-      console.error('Failed to create Jira user:', error.message);
+      console.error('Failed to create Systems and Avionics user:', error.message);
     },
   });
 };
@@ -497,7 +497,7 @@ export const useCreateJiraGroup = () => {
       queryClient.invalidateQueries({ queryKey: ['jira', 'groups'] });
     },
     onError: (error: Error) => {
-      console.error('Failed to create Jira group:', error.message);
+      console.error('Failed to create Systems and Avionics group:', error.message);
     },
   });
 };
@@ -510,7 +510,7 @@ export const useDeleteJiraGroup = () => {
       queryClient.invalidateQueries({ queryKey: ['jira', 'groups'] });
     },
     onError: (error: Error) => {
-      console.error('Failed to delete Jira group:', error.message);
+      console.error('Failed to delete Systems and Avionics group:', error.message);
     },
   });
 };
@@ -523,7 +523,7 @@ export const useDeleteJiraUser = () => {
       queryClient.invalidateQueries({ queryKey: ['jira', 'users'] });
     },
     onError: (error: Error) => {
-      console.error('Failed to delete Jira user:', error.message);
+      console.error('Failed to delete Systems and Avionics user:', error.message);
     },
   });
 };

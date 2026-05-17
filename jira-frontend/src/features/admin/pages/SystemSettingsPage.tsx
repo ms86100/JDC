@@ -14,7 +14,7 @@ export default function SystemSettingsPage() {
         <div className="setting-item">
           <div className="setting-info">
             <label className="setting-label">Base URL</label>
-            <p className="setting-description">The URL used to access Jira</p>
+            <p className="setting-description">The URL used to access Systems and Avionics</p>
           </div>
           <input type="text" className="admin-form-input setting-input" defaultValue="https://jira.example.com" />
         </div>
@@ -54,7 +54,7 @@ export default function SystemSettingsPage() {
             <label className="setting-label">Application Title</label>
             <p className="setting-description">Title shown in browser tab</p>
           </div>
-          <input type="text" className="admin-form-input setting-input" defaultValue="Jira" />
+          <input type="text" className="admin-form-input setting-input" defaultValue="Systems and Avionics" />
         </div>
         <div className="setting-item">
           <div className="setting-info">
@@ -273,7 +273,7 @@ export default function SystemSettingsPage() {
             </button>
             <button className="import-tool-btn">
               <span className="import-tool-icon">J</span>
-              <span>Jira</span>
+              <span>Systems and Avionics</span>
             </button>
             <button className="import-tool-btn">
               <span className="import-tool-icon">B</span>
@@ -295,7 +295,7 @@ export default function SystemSettingsPage() {
       <div className="license-info-card">
         <div className="license-status">
           <span className="license-status-badge active">Active</span>
-          <span className="license-type">Jira Data Center - Standard</span>
+          <span className="license-type">Systems and Avionics - Standard</span>
         </div>
         <div className="license-details">
           <div className="license-detail">

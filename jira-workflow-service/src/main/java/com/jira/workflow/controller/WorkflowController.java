@@ -65,6 +65,31 @@ public class WorkflowController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @GetMapping("/transitions/{transitionId}")
+    @Operation(summary = "Get transition by ID", description = "Returns a specific transition")
+    public ResponseEntity<TransitionResponse> getTransition(
+            @Parameter(description = "Transition ID") @PathVariable UUID transitionId) {
+        TransitionResponse response = workflowService.getTransition(transitionId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/transitions/{transitionId}")
+    @Operation(summary = "Update transition", description = "Updates an existing transition")
+    public ResponseEntity<TransitionResponse> updateTransition(
+            @Parameter(description = "Transition ID") @PathVariable UUID transitionId,
+            @Valid @RequestBody UpdateTransitionRequest request) {
+        TransitionResponse response = workflowService.updateTransition(transitionId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/transitions/{transitionId}")
+    @Operation(summary = "Delete transition", description = "Deletes a transition")
+    public ResponseEntity<Void> deleteTransition(
+            @Parameter(description = "Transition ID") @PathVariable UUID transitionId) {
+        workflowService.deleteTransition(transitionId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/project/{projectId}/transitions")
     @Operation(summary = "List project transitions", description = "Returns all transitions for the project's default workflow")
     public ResponseEntity<List<TransitionResponse>> getTransitionsForProject(

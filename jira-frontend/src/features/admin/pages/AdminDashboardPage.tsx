@@ -56,7 +56,7 @@ const adminCategories: AdminCategory[] = [
         description: 'Configure system-wide access controls',
         icon: '🔐',
         path: '/admin/permissions',
-        features: ['Admin permissions', 'System access', 'Jira permissions'],
+        features: ['Admin permissions', 'System access', 'Systems and Avionics permissions'],
       },
     ],
   },
@@ -328,8 +328,8 @@ export default function AdminDashboardPage() {
       <div className="admin-dashboard">
         <div className="admin-dashboard-header">
           <div>
-            <h1>Jira Administration</h1>
-            <p>Manage your Jira instance configuration</p>
+            <h1>Systems and Avionics Administration</h1>
+            <p>Manage your Systems and Avionics instance configuration</p>
           </div>
         </div>
 

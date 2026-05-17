@@ -390,6 +390,70 @@ services:
       start_period: 60s
 
   # =============================================================================
+  # VERSION SERVICE
+  # =============================================================================
+  version-service:
+    build:
+      context: ./jira-version-service
+      dockerfile: Dockerfile
+    container_name: jira-version-service
+    ports:
+      - "8096:8096"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: version_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8096/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # =============================================================================
+  # COMPONENT SERVICE
+  # =============================================================================
+  component-service:
+    build:
+      context: ./jira-component-service
+      dockerfile: Dockerfile
+    container_name: jira-component-service
+    ports:
+      - "8097:8097"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: component_db
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      JAVA_OPTS: -Xms256m -Xmx512m
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8097/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # =============================================================================
   # PLAN SERVICE
   # =============================================================================
   plan-service:

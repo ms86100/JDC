@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import JiraAdminLayout from '../components/JiraAdminLayout';
 import { useJiraGroups, useCreateJiraGroup, useDeleteJiraGroup } from '../hooks/useAdminApi';
 import type { JiraGroup } from '../hooks/useAdminApi';
 import './JiraGroupsBrowser.css';
@@ -52,7 +51,6 @@ export default function JiraGroupsBrowser() {
   };
 
   return (
-    <JiraAdminLayout>
       <div className="groups-browser">
         <div className="groups-browser-header">
           <h1 className="groups-browser-title">Groups</h1>
@@ -143,7 +141,6 @@ export default function JiraGroupsBrowser() {
           </tbody>
         </table>
       </div>
-    </JiraAdminLayout>
   );
 }
 

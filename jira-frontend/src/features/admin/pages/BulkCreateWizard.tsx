@@ -78,9 +78,9 @@ export default function BulkCreateWizard({ initialStep = 0 }: BulkCreateWizardPr
 
         {/* System Info */}
         <div className="bulk-wizard-system-info">
-          <span>Jira Data Center 11.3.0</span>
+          <span>Systems and Avionics 11.3.0</span>
           <span className="bulk-info-separator">|</span>
-          <span>Supported by Atlassian</span>
+          <span>Supported by Systems and Avionics</span>
         </div>
       </div>
     </AdminLayout>
@@ -255,14 +255,14 @@ function BulkMapFieldsStep() {
 
       <div className="bulk-form-section">
         <p className="bulk-instructions">
-          Map CSV columns to Jira issue fields.
+          Map CSV columns to Systems and Avionics issue fields.
         </p>
 
         <table className="bulk-mapping-table">
           <thead>
             <tr>
               <th>CSV Column</th>
-              <th>Jira Field</th>
+              <th>Systems and Avionics Field</th>
               <th></th>
             </tr>
           </thead>
@@ -329,14 +329,14 @@ function BulkMapValuesStep() {
 
       <div className="bulk-form-section">
         <p className="bulk-instructions">
-          Map CSV values to Jira status/priority/issue type values.
+          Map CSV values to Systems and Avionics status/priority/issue type values.
         </p>
 
         <table className="bulk-mapping-table">
           <thead>
             <tr>
               <th>CSV Value</th>
-              <th>Jira Value</th>
+              <th>Systems and Avionics Value</th>
               <th></th>
             </tr>
           </thead>
@@ -366,7 +366,7 @@ function BulkMapValuesStep() {
                       newMappings[index] = { ...newMappings[index], jiraValue: e.target.value };
                       setValueMappings(newMappings);
                     }}
-                    placeholder="Jira value"
+                    placeholder="Systems and Avionics value"
                   />
                 </td>
                 <td>

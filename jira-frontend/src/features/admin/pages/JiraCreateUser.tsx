@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import JiraAdminLayout from '../components/JiraAdminLayout';
 import { useCreateJiraUser } from '../hooks/useAdminApi';
 import './JiraCreateUser.css';
 
@@ -98,7 +97,6 @@ export default function JiraCreateUser() {
   };
 
   return (
-    <JiraAdminLayout>
       <div className="create-user-page">
         {/* Breadcrumb */}
         <div className="create-user-breadcrumb">
@@ -219,7 +217,7 @@ export default function JiraCreateUser() {
                       <path d="M2 12L12 17L22 12" stroke="#0052CC" strokeWidth="2"/>
                     </svg>
                   </div>
-                  <span className="application-name">Jira Software</span>
+                  <span className="application-name">Systems and Avionics</span>
                 </div>
               </div>
             </div>
@@ -269,6 +267,5 @@ export default function JiraCreateUser() {
           </form>
         </div>
       </div>
-    </JiraAdminLayout>
   );
 }

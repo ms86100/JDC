@@ -5,6 +5,7 @@ import com.jira.admin.service.IssueAdministrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -81,10 +82,32 @@ public class IssueAdministrationController {
         return ResponseEntity.ok(issueAdministrationService.getStatuses());
     }
 
+    @GetMapping("/statuses/{statusId}")
+    @Operation(summary = "Get status by ID")
+    public ResponseEntity<StatusEntity> getStatus(@PathVariable String statusId) {
+        return ResponseEntity.ok(issueAdministrationService.getStatus(statusId));
+    }
+
     @PostMapping("/statuses")
     @Operation(summary = "Create status")
     public ResponseEntity<StatusEntity> createStatus(@RequestBody Map<String, Object> data) {
-        return ResponseEntity.ok(issueAdministrationService.createStatus(data));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(issueAdministrationService.createStatus(data));
+    }
+
+    @PutMapping("/statuses/{statusId}")
+    @Operation(summary = "Update status")
+    public ResponseEntity<StatusEntity> updateStatus(
+            @PathVariable String statusId,
+            @RequestBody Map<String, Object> updates) {
+        return ResponseEntity.ok(issueAdministrationService.updateStatus(statusId, updates));
+    }
+
+    @DeleteMapping("/statuses/{statusId}")
+    @Operation(summary = "Delete status")
+    public ResponseEntity<Void> deleteStatus(@PathVariable String statusId) {
+        issueAdministrationService.deleteStatus(statusId);
+        return ResponseEntity.noContent().build();
     }
 
     // ==================== Issue Type Schemes ====================

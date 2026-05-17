@@ -1,43 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import apiClient from '../../../api/axiosClient';
-
-interface Workflow {
-  id: string;
-  name: string;
-  description: string;
-  isDraft: boolean;
-  isActive: boolean;
-  isSystem: boolean;
-  isDefault?: boolean;
-  projectId?: string;
-  draftOfWorkflowId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  statusCount?: number;
-  transitionCount?: number;
-  statuses?: WorkflowStatus[];
-  transitions?: WorkflowTransition[];
-}
-
-interface WorkflowStatus {
-  id: string;
-  name: string;
-  description?: string;
-  category?: string;
-  color?: string;
-  sequence?: number;
-}
-
-interface WorkflowTransition {
-  id: string;
-  name: string;
-  description?: string;
-  fromStatusId: string;
-  toStatusId: string;
-  displayOrder?: number;
-  type?: string;
-}
+import { workflowApi, Workflow, WorkflowStatus, WorkflowTransition } from '../../../api/workflowApi';
 
 const API_BASE = '/api/workflows';
 
@@ -55,11 +18,9 @@ export default function WorkflowPage() {
   const fetchWorkflows = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}`);
-      if (!res.ok) throw new Error('Failed to fetch workflows');
-      const data = await res.json();
-      setWorkflows(Array.isArray(data) ? data : []);
-    } catch (err) {
+      const res = await workflowApi.getAll();
+      setWorkflows(Array.isArray(res.data) ? res.data : []);
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
@@ -73,22 +34,14 @@ export default function WorkflowPage() {
   const handleCreateWorkflow = async () => {
     if (!workflowForm.name.trim()) return;
     try {
-      const res = await fetch(`${API_BASE}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...workflowForm,
-          projectId: '00000000-0000-0000-0000-000000000001'
-        }),
+      await workflowApi.create({
+        ...workflowForm,
+        projectId: '00000000-0000-0000-0000-000000000001'
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || err.error || 'Failed to create workflow');
-      }
       await fetchWorkflows();
       setShowAddWorkflow(false);
       setWorkflowForm({ name: '', description: '' });
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to create workflow');
     }
   };
@@ -96,13 +49,9 @@ export default function WorkflowPage() {
   const handleDeleteWorkflow = async (id: string) => {
     if (!confirm('Are you sure you want to delete this workflow?')) return;
     try {
-      const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || err.error || 'Failed to delete workflow');
-      }
+      await workflowApi.delete(id);
       await fetchWorkflows();
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to delete workflow');
     }
   };
@@ -346,10 +295,9 @@ function WorkflowDetailView({ workflow, onBack, onRefresh }: WorkflowDetailViewP
   const fetchWorkflowDetails = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/${workflow.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setStatuses(data.statuses || []);
+      const res = await workflowApi.getById(workflow.id);
+      if (res.data) {
+        setStatuses(res.data.statuses || []);
       }
     } catch (err) {
       console.error('Failed to fetch workflow details:', err);

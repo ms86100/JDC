@@ -45,15 +45,31 @@ public class SprintService {
 
     @Transactional(readOnly = true)
     public List<SprintResponse> getSprintsByProject(UUID projectId) {
-        List<Sprint> sprints;
-        if (projectId != null) {
-            sprints = sprintRepository.findByProjectIdOrderByCreatedAtDesc(projectId);
-        } else {
-            sprints = sprintRepository.findAll();
+        try {
+            List<Sprint> sprints;
+            if (projectId != null) {
+                sprints = sprintRepository.findByProjectIdOrderByCreatedAtDesc(projectId);
+            } else {
+                sprints = sprintRepository.findAll();
+            }
+            return sprints.stream()
+                    .map(sprint -> enrichSprintResponseSafe(SprintResponse.from(sprint)))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching sprints: {}", e.getMessage(), e);
+            throw e;
         }
-        return sprints.stream()
-                .map(sprint -> enrichSprintResponse(SprintResponse.from(sprint)))
-                .collect(Collectors.toList());
+    }
+
+    private SprintResponse enrichSprintResponseSafe(SprintResponse response) {
+        try {
+            return enrichSprintResponse(response);
+        } catch (Exception e) {
+            log.warn("Error enriching sprint {}: {}", response.getId(), e.getMessage());
+            response.setIssueCount(0);
+            response.setCompletedIssueCount(0);
+            return response;
+        }
     }
 
     @Transactional(readOnly = true)
@@ -187,11 +203,18 @@ public class SprintService {
     }
 
     private SprintResponse enrichSprintResponse(SprintResponse response) {
-        int issueCount = sprintIssueRepository.countBySprintId(response.getId());
-        response.setIssueCount(issueCount);
-        // For completed count, we'd need to check issue statuses
-        // This would require calling issue-service, so we'll leave it as 0 for now
-        response.setCompletedIssueCount(0);
-        return response;
+        try {
+            int issueCount = sprintIssueRepository.countBySprintId(response.getId());
+            response.setIssueCount(issueCount);
+            // For completed count, we'd need to check issue statuses
+            // This would require calling issue-service, so we'll leave it as 0 for now
+            response.setCompletedIssueCount(0);
+            return response;
+        } catch (Exception e) {
+            log.warn("Error counting issues for sprint {}: {}", response.getId(), e.getMessage());
+            response.setIssueCount(0);
+            response.setCompletedIssueCount(0);
+            return response;
+        }
     }
 }

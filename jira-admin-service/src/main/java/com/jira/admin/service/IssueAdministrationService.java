@@ -134,6 +134,12 @@ public class IssueAdministrationService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public StatusEntity getStatus(String statusId) {
+        return statusRepository.findById(statusId)
+                .orElseThrow(() -> new IllegalArgumentException("Status not found: " + statusId));
+    }
+
     @Transactional
     public StatusEntity createStatus(Map<String, Object> data) {
         long count = statusRepository.count();
@@ -150,6 +156,33 @@ public class IssueAdministrationService {
         logAudit("CREATE", "STATUS", status.getId(), status.getName(), "Status created");
 
         return status;
+    }
+
+    @Transactional
+    public StatusEntity updateStatus(String statusId, Map<String, Object> updates) {
+        StatusEntity status = statusRepository.findById(statusId)
+                .orElseThrow(() -> new IllegalArgumentException("Status not found: " + statusId));
+
+        if (updates.containsKey("name")) status.setName((String) updates.get("name"));
+        if (updates.containsKey("description")) status.setDescription((String) updates.get("description"));
+        if (updates.containsKey("statusCategory")) status.setStatusCategory((String) updates.get("statusCategory"));
+        if (updates.containsKey("iconUrl")) status.setIconUrl((String) updates.get("iconUrl"));
+        if (updates.containsKey("statusColor")) status.setStatusColor((String) updates.get("statusColor"));
+        if (updates.containsKey("sequence")) status.setSequence((Integer) updates.get("sequence"));
+
+        status = statusRepository.save(status);
+        logAudit("UPDATE", "STATUS", status.getId(), status.getName(), "Status updated");
+
+        return status;
+    }
+
+    @Transactional
+    public void deleteStatus(String statusId) {
+        StatusEntity status = statusRepository.findById(statusId)
+                .orElseThrow(() -> new IllegalArgumentException("Status not found: " + statusId));
+
+        statusRepository.delete(status);
+        logAudit("DELETE", "STATUS", statusId, status.getName(), "Status deleted");
     }
 
     // ==================== Issue Type Schemes ====================

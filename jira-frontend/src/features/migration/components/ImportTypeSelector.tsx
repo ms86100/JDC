@@ -21,8 +21,8 @@ const IMPORT_TYPES = [
   },
   {
     type: 'jira-dc' as const,
-    title: 'Jira DC Backup',
-    description: 'Import from Jira Data Center XML backup file. Preserves workflows, custom fields, and history.',
+    title: 'Systems and Avionics Backup',
+    description: 'Import from Systems and Avionics XML backup file. Preserves workflows, custom fields, and history.',
     icon: '🔄',
     iconBg: 'bg-purple-100',
     iconColor: 'text-purple-600',
@@ -187,7 +187,7 @@ export default function ImportTypeSelector({
           <p className="text-blue-800 text-sm font-medium">Need help choosing?</p>
           <p className="text-blue-600 text-xs mt-1">
             <strong>CSV Import:</strong> Best for importing data from spreadsheets or other systems.
-            <strong> Jira DC Backup:</strong> Use when migrating from Jira Data Center with full fidelity.
+            <strong> Systems and Avionics Backup:</strong> Use when migrating from Systems and Avionics with full fidelity.
             <strong> Project Copy:</strong> Duplicate an existing project within your platform.
             <strong> Project Export:</strong> Create backups or export data for use in other systems.
           </p>

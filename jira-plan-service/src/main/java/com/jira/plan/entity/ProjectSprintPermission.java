@@ -35,7 +35,7 @@ public class ProjectSprintPermission {
     private String principalType;  // USER, GROUP
 
     @Column(name = "principal_id", nullable = false)
-    private UUID principalId;
+    private String principalId;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

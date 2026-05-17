@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { projectApi, ProjectResponse } from '../../../api/projectApi';
 import { issueApi, IssueResponse } from '../../../api/issueApi';
 import CreateIssueModal from '../../issues/components/CreateIssueModal';
+import '../styles/ProjectDetailPage.css';
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
