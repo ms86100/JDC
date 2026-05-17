@@ -16,6 +16,7 @@ public interface WorkflowDraftRepository extends JpaRepository<WorkflowDraft, UU
 
     Optional<WorkflowDraft> findByWorkflowIdAndDraftStatus(UUID workflowId, String draftStatus);
 
+    @Query("SELECT wd FROM WorkflowDraft wd WHERE wd.workflowId = :workflowId AND wd.draftStatus = 'ACTIVE'")
     Optional<WorkflowDraft> findByWorkflowIdAndDraftStatusActive(UUID workflowId);
 
     @Query("SELECT wd FROM WorkflowDraft wd WHERE wd.workflowId = :workflowId AND wd.draftStatus = 'ACTIVE'")

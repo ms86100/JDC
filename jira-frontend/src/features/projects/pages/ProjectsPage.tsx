@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { projectApi, ProjectResponse } from '../../../api/projectApi';
 import CreateProjectWizard from '../components/CreateProjectWizard';
@@ -9,6 +9,7 @@ type ViewMode = 'grid' | 'list';
 type FilterType = 'all' | 'software' | 'business' | 'archived';
 
 export default function ProjectsPage() {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [filter, setFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -312,7 +313,10 @@ export default function ProjectsPage() {
                         <Link to={`/projects/${project.id}`} className="ab-btn ab-btn-ghost ab-btn-sm">
                           View
                         </Link>
-                        <button className="ab-btn ab-btn-ghost ab-btn-sm">
+                        <button
+                          className="ab-btn ab-btn-ghost ab-btn-sm"
+                          onClick={() => navigate(`/projects/${project.id}/settings`)}
+                        >
                           Settings
                         </button>
                       </div>

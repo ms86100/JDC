@@ -1,52 +1,66 @@
 /* CreateIssueModal - Two-column layout with all Jira DC fields */
 
 /* ============================================================
+   MODAL SIZE - Override base modal width
+   ============================================================ */
+.create-issue-modal {
+  max-width: 1000px !important;
+  width: 1000px !important;
+  min-width: 900px;
+}
+
+/* ============================================================
    MODAL BODY - TWO COLUMN LAYOUT
    ============================================================ */
 .create-issue-body {
   display: flex !important;
-  gap: 24px;
-  padding: 20px;
+  gap: 32px;
+  padding: 24px;
   max-height: calc(80vh - 200px) !important;
+  overflow-y: auto;
 }
 
 .form-column {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .left-col {
-  flex: 1.2;
+  flex: 1.3;
+  min-width: 0;
 }
 
 .right-col {
   flex: 1;
+  min-width: 0;
 }
 
 /* ============================================================
-   FORM GROUPS
+   FORM GROUPS - Better alignment
    ============================================================ */
 .create-issue-body .ab-form-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  margin-bottom: 4px;
 }
 
 .create-issue-body .ab-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #5e6c84;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-bottom: 2px;
 }
 
 .create-issue-body .ab-input,
 .create-issue-body .ab-select,
 .create-issue-body .ab-textarea {
   height: 36px;
-  padding: 0 10px;
+  padding: 0 12px;
   border: 1px solid #dfe1e6;
   border-radius: 3px;
   font-size: 14px;
@@ -61,7 +75,7 @@
 .create-issue-body .ab-textarea {
   height: auto;
   min-height: 60px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   resize: vertical;
 }
 
@@ -70,49 +84,58 @@
 .create-issue-body .ab-textarea:focus {
   outline: none;
   border-color: #4c9aff;
-  box-shadow: 0 0 0 1px #4c9aff;
+  box-shadow: 0 0 0 2px rgba(76, 154, 255, 0.2);
 }
 
 .create-issue-body .ab-select[multiple] {
   height: auto;
   min-height: 80px;
-  padding: 4px 10px;
+  padding: 6px 12px;
   overflow-y: auto;
 }
 
+/* Placeholder styling */
+.create-issue-body .ab-input::placeholder,
+.create-issue-body .ab-textarea::placeholder {
+  color: #a5adba;
+}
+
 /* ============================================================
-   LABELS INPUT
+   LABELS INPUT - Better alignment
    ============================================================ */
 .labels-input-wrapper {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
 .labels-input-wrapper .ab-input {
   flex: 1;
+  height: 36px;
 }
 
 .labels-input-wrapper .ab-btn {
   height: 36px;
-  padding: 0 12px;
+  padding: 0 16px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .labels-display {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .label-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   background: #DEEBFF;
   color: #0052CC;
   border-radius: 3px;
-  padding: 2px 4px 2px 8px;
+  padding: 4px 6px 4px 10px;
   font-size: 12px;
   font-weight: 500;
 }
@@ -121,9 +144,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
-  background: none;
+  width: 18px;
+  height: 18px;
+  background: rgba(0, 82, 204, 0.1);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -132,30 +155,31 @@
   padding: 0;
   margin: 0;
   line-height: 1;
+  transition: background 0.15s;
 }
 
 .label-tag button:hover {
-  background: rgba(0, 82, 204, 0.15);
+  background: rgba(0, 82, 204, 0.25);
 }
 
 /* ============================================================
-   LINKED ISSUES SECTION
+   LINKED ISSUES SECTION - Better styling
    ============================================================ */
 .linked-issues-section {
-  padding: 16px 20px;
+  padding: 20px 24px;
   border-top: 1px solid #dfe1e6;
-  background: #f8f9fa;
+  background: #f8fafc;
 }
 
 .linked-issues-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .linked-issues-header .ab-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #5e6c84;
   text-transform: uppercase;
@@ -164,8 +188,8 @@
 }
 
 .linked-issues-header .ab-btn {
-  height: 28px;
-  padding: 0 10px;
+  height: 30px;
+  padding: 0 12px;
   font-size: 12px;
 }
 
@@ -178,11 +202,16 @@
 .linked-issue-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 12px;
+  padding: 10px 14px;
   background: white;
   border: 1px solid #dfe1e6;
   border-radius: 3px;
+  transition: border-color 0.15s;
+}
+
+.linked-issue-item:hover {
+  border-color: #c1c7d0;
 }
 
 .link-type-badge {
@@ -250,11 +279,10 @@
   .form-column {
     width: 100%;
   }
-}
 
-/* ============================================================
-   MODAL SIZE
-   ============================================================ */
-.create-issue-modal {
-  max-width: 900px;
+  .create-issue-modal {
+    max-width: calc(100vw - 32px) !important;
+    width: calc(100vw - 32px) !important;
+    min-width: auto;
+  }
 }

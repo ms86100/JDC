@@ -37,6 +37,8 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/**", "/api-docs/**", "/swagger-ui/**").permitAll()
                 // Workflow endpoints - allow without auth for development
                 .requestMatchers("/api/workflows/**").permitAll()
+                // Workflow scheme endpoints - allow without auth for development
+                .requestMatchers("/api/workflow-schemes/**").permitAll()
                 // Admin endpoints - allow without auth for development
                 .requestMatchers("/api/admin/**").permitAll()
                 // All other requests require authentication

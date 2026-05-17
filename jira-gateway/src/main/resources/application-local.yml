@@ -67,6 +67,10 @@ spring:
           uri: http://localhost:8084
           predicates:
             - Path=/api/admin/issues/**
+        - id: workflow-scheme-service
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/workflow-schemes/**
         - id: comment-service
           uri: http://localhost:8086
           predicates:

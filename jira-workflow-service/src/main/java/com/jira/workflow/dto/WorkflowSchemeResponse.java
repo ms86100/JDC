@@ -26,15 +26,3 @@ public class WorkflowSchemeResponse {
     private UUID createdBy;
     private UUID updatedBy;
 }
-
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-class WorkflowSchemeMappingResponse {
-    private UUID id;
-    private UUID issueTypeId;
-    private UUID workflowId;
-    private String workflowName;
-    private LocalDateTime createdAt;
-}

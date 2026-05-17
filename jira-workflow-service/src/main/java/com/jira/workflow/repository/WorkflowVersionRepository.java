@@ -15,4 +15,6 @@ public interface WorkflowVersionRepository extends JpaRepository<WorkflowVersion
 
     @Query("SELECT MAX(wv.versionNumber) FROM WorkflowVersion wv WHERE wv.workflow.id = :workflowId")
     Optional<Integer> findMaxVersionNumber(UUID workflowId);
+
+    List<WorkflowVersion> findByWorkflowId(UUID workflowId);
 }

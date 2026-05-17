@@ -39,7 +39,7 @@ export default function JiraAdminLayout({ children }: JiraAdminLayoutProps) {
             <Link to="/issues" className="jira-nav-item">Issues</Link>
             <Link to="/plans" className="jira-nav-item">Plans</Link>
           </nav>
-          <Link to="/create" className="jira-create-btn">+ Create</Link>
+          <Link to="/projects/create" className="jira-create-btn">+ Create</Link>
         </div>
         <div className="jira-header-right">
           <div className="jira-search-box">

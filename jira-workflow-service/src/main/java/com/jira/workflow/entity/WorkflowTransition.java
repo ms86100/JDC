@@ -175,4 +175,77 @@ public class WorkflowTransition {
     public boolean requiresFields() {
         return fieldsRequired != null && !fieldsRequired.isEmpty();
     }
+
+    // JSON serialization helpers for conditions, validators, and post-functions
+    public String getConditions() {
+        if (conditionConditions == null) return "[]";
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            return mapper.writeValueAsString(conditionConditions);
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
+    public void setConditions(String conditions) {
+        if (conditions == null || conditions.isEmpty() || conditions.equals("[]")) {
+            this.conditionConditions = new ArrayList<>();
+            return;
+        }
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            this.conditionConditions = mapper.readValue(conditions,
+                mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+        } catch (Exception e) {
+            this.conditionConditions = new ArrayList<>();
+        }
+    }
+
+    public String getValidators() {
+        if (validatorValidators == null) return "[]";
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            return mapper.writeValueAsString(validatorValidators);
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
+    public void setValidators(String validators) {
+        if (validators == null || validators.isEmpty() || validators.equals("[]")) {
+            this.validatorValidators = new ArrayList<>();
+            return;
+        }
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            this.validatorValidators = mapper.readValue(validators,
+                mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+        } catch (Exception e) {
+            this.validatorValidators = new ArrayList<>();
+        }
+    }
+
+    public String getPostFunctions() {
+        if (postFunctionFunctions == null) return "[]";
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            return mapper.writeValueAsString(postFunctionFunctions);
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
+    public void setPostFunctions(String postFunctions) {
+        if (postFunctions == null || postFunctions.isEmpty() || postFunctions.equals("[]")) {
+            this.postFunctionFunctions = new ArrayList<>();
+            return;
+        }
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            this.postFunctionFunctions = mapper.readValue(postFunctions,
+                mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+        } catch (Exception e) {
+            this.postFunctionFunctions = new ArrayList<>();
+        }
+    }
 }

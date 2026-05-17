@@ -30,4 +30,7 @@ public class WorkflowSharing {
 
     @Column(name = "created_at", nullable = false)
     private java.time.LocalDateTime createdAt;
+public UUID getSchemeId() {
+        return schemeId;
+    }
 }

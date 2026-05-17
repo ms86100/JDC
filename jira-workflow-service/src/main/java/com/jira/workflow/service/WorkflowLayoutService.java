@@ -81,7 +81,7 @@ public class WorkflowLayoutService {
         log.info("Locking layout for workflow: {} by user: {}", workflowId, userId);
 
         Optional<WorkflowLayout> lockedLayout = workflowLayoutRepository
-                .findByWorkflowIdAndIsLockedTrue(workflowId);
+                .findByWorkflowIdAndLockedTrue(workflowId);
 
         if (lockedLayout.isPresent() && !userId.equals(lockedLayout.get().getLockedBy())) {
             throw new IllegalStateException("Layout is already locked by another user");

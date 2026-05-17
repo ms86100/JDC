@@ -7,6 +7,7 @@ import RegisterPage from './features/auth/pages/RegisterPage';
 import DashboardPage from './features/dashboard/pages/DashboardPage';
 import ProjectsPage from './features/projects/pages/ProjectsPage';
 import ProjectDetailPage from './features/projects/pages/ProjectDetailPage';
+import ProjectSettingsPage from './features/projects/pages/ProjectSettingsPage';
 import CreateProjectWizard from './features/projects/components/CreateProjectWizard';
 import IssuesPage from './features/issues/pages/IssuesPage';
 import IssueDetailPage from './features/issues/pages/IssueDetailPage';
@@ -60,6 +61,7 @@ function App() {
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="projects/create" element={<CreateProjectWizard />} />
               <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+              <Route path="projects/:projectId/settings" element={<ProjectSettingsPage />} />
               <Route path="issues" element={<IssuesPage />} />
               <Route path="issues/:issueId" element={<IssueDetailPage />} />
               <Route path="kanban" element={<KanbanBoard />} />

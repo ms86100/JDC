@@ -14,11 +14,3 @@ public class MigrationPreviewResponse {
     private Integer issueCount;
     private List<IssuePreview> issues;
 }
-
-@Data @Builder @NoArgsConstructor @AllArgsConstructor
-class IssuePreview {
-    private UUID issueId;
-    private String issueKey;
-    private String summary;
-    private UUID currentStatusId;
-}

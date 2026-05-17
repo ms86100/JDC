@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { projectApi, ProjectResponse } from '../../../api/projectApi';
 import { issueApi, IssueResponse } from '../../../api/issueApi';
@@ -7,6 +7,7 @@ import CreateIssueModal from '../../issues/components/CreateIssueModal';
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const { data: project, isLoading: projectLoading } = useQuery<ProjectResponse>({
@@ -52,9 +53,17 @@ export default function ProjectDetailPage() {
             Key: <span className="ab-badge ab-badge-primary">{project?.projectKey}</span>
           </p>
         </div>
-        <button className="ab-btn ab-btn-primary" onClick={() => setShowCreateModal(true)}>
-          <span>+</span> Create Issue
-        </button>
+        <div className="ab-header-actions">
+          <button
+            className="ab-btn ab-btn-secondary"
+            onClick={() => navigate(`/projects/${projectId}/settings`)}
+          >
+            Settings
+          </button>
+          <button className="ab-btn ab-btn-primary" onClick={() => setShowCreateModal(true)}>
+            <span>+</span> Create Issue
+          </button>
+        </div>
       </div>
 
       <div className="ab-card">

@@ -14,7 +14,6 @@ public class IssueTypeRequest {
 
     private String description;
 
-    @NotBlank(message = "Issue type key is required")
     private String issueTypeKey;
 
     private boolean isSubtask;

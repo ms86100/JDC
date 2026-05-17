@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../api/axiosClient';
-import AdminLayout from '../components/AdminLayout';
-import './IssueAdministrationPage.css';
 import './IssueTypesPage.css';
 
 interface IssueType {
@@ -16,7 +14,14 @@ interface IssueType {
   createdAt?: string;
 }
 
-// API functions
+const ISSUE_TYPE_ICONS: Record<string, { icon: string; color: string }> = {
+  bug: { icon: '🐛', color: '#d73a49' },
+  story: { icon: '📖', color: '#006644' },
+  task: { icon: '✅', color: '#0052cc' },
+  epic: { icon: '⚡', color: '#6b2db0' },
+  subtask: { icon: '📝', color: '#6554c0' },
+};
+
 const issueTypeApi = {
   getIssueTypes: () => apiClient.get<IssueType[]>('/api/admin/issues/issue-types'),
   createIssueType: (data: Partial<IssueType>) => apiClient.post<IssueType>('/api/admin/issues/issue-types', data),
@@ -45,7 +50,6 @@ export default function IssueTypesPage() {
     },
     onError: (err: Error) => {
       console.error('Failed to create issue type:', err.message);
-      alert('Failed to create issue type: ' + err.message);
     },
   });
 
@@ -59,7 +63,6 @@ export default function IssueTypesPage() {
     },
     onError: (err: Error) => {
       console.error('Failed to update issue type:', err.message);
-      alert('Failed to update issue type: ' + err.message);
     },
   });
 
@@ -70,7 +73,6 @@ export default function IssueTypesPage() {
     },
     onError: (err: Error) => {
       console.error('Failed to delete issue type:', err.message);
-      alert('Failed to delete issue type: ' + err.message);
     },
   });
 
@@ -81,16 +83,15 @@ export default function IssueTypesPage() {
     isSubtask: false,
   });
 
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
   const filteredIssueTypes = issueTypes?.filter(it =>
     it.name.toLowerCase().includes(search.toLowerCase()) ||
     it.issueTypeKey.toLowerCase().includes(search.toLowerCase())
   ) || [];
 
   const handleCreate = () => {
-    if (!formData.name || !formData.issueTypeKey) {
-      alert('Name and Issue Type Key are required');
-      return;
-    }
+    if (!formData.name || !formData.issueTypeKey) return;
     createMutation.mutate(formData);
   };
 
@@ -105,207 +106,221 @@ export default function IssueTypesPage() {
   };
 
   const handleDelete = (issueType: IssueType) => {
-    if (confirm(`Are you sure you want to delete "${issueType.name}"?`)) {
-      deleteMutation.mutate(issueType.id);
-    }
+    deleteMutation.mutate(issueType.id);
+    setDeleteConfirm(null);
   };
 
-  const getIssueTypeColor = (issueType: IssueType): string => {
-    if (issueType.color) return issueType.color;
-    const colors: Record<string, string> = {
-      bug: '#d73a49',
-      story: '#006644',
-      task: '#0052cc',
-      epic: '#6b2db0',
-    };
-    return colors[issueType.issueTypeKey?.toLowerCase()] || '#0052cc';
+  const getIssueTypeStyle = (issueType: IssueType) => {
+    const key = issueType.issueTypeKey?.toLowerCase();
+    if (issueType.isSubtask) return ISSUE_TYPE_ICONS.subtask;
+    if (key && ISSUE_TYPE_ICONS[key]) return ISSUE_TYPE_ICONS[key];
+    return { icon: issueType.name.charAt(0).toUpperCase(), color: '#0052cc' };
   };
 
-  const getIssueTypeIcon = (issueType: IssueType): string => {
-    const icons: Record<string, string> = {
-      bug: '🐛',
-      story: '📖',
-      task: '✅',
-      epic: '⚡',
-    };
-    return icons[issueType.issueTypeKey?.toLowerCase()] || issueType.name.charAt(0).toUpperCase();
+  const groupedIssueTypes = {
+    standard: filteredIssueTypes.filter(it => !it.isSubtask),
+    subtask: filteredIssueTypes.filter(it => it.isSubtask),
   };
 
   return (
-    <AdminLayout>
-    <div className="admin-page">
-      <div className="admin-page-header">
-        <h1 className="admin-page-title">Issue Types</h1>
-        <p className="admin-page-description">
-          Configure the types of issues available in your Jira instance.
-        </p>
+    <div className="it-page">
+      <div className="it-header">
+        <div className="it-header-content">
+          <h1 className="it-title">Issue Types</h1>
+          <p className="it-subtitle">Configure the types of issues available in your Jira instance</p>
         </div>
+        <button className="it-btn it-btn-primary" onClick={() => setShowCreateModal(true)}>
+          <span className="it-btn-icon">+</span>
+          Add Issue Type
+        </button>
+      </div>
 
-        <div className="admin-toolbar-modern">
-          <div className="toolbar-left">
-            <div className="search-input-wrapper">
-              <span className="search-icon">🔍</span>
-              <input
-                type="text"
-                placeholder="Search issue types..."
-                className="search-input"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="toolbar-right">
-            <button className="btn-create-project" onClick={() => setShowCreateModal(true)}>
-              <span>+</span> Add Issue Type
-            </button>
-          </div>
-        </div>
-
-        <div className="admin-table-container">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Issue Type</th>
-                <th>Key</th>
-                <th>Description</th>
-                <th>Type</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '24px' }}>
-                    <div className="loading-spinner">Loading issue types...</div>
-                  </td>
-                </tr>
-              ) : isError ? (
-                <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: '#de350b' }}>
-                    Error loading issue types. Please check if the server is running.
-                    <br />
-                    <small>{(error as Error)?.message}</small>
-                  </td>
-                </tr>
-              ) : filteredIssueTypes.length === 0 ? (
-                <tr>
-                  <td colSpan={5}>
-                    <div className="admin-empty-state">
-                      <div className="admin-empty-state-icon">📋</div>
-                      <div className="admin-empty-state-title">No issue types found</div>
-                      <div className="admin-empty-state-description">
-                        {search ? 'No issue types match your search criteria.' : 'Get started by creating your first issue type.'}
-                      </div>
-                      {!search && (
-                        <button className="admin-btn-primary" onClick={() => setShowCreateModal(true)}>
-                          + Add Issue Type
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredIssueTypes.map((issueType) => (
-                  <tr key={issueType.id}>
-                    <td>
-                      <div className="issue-type-cell">
-                        <span className="issue-type-icon" style={{ background: getIssueTypeColor(issueType) }}>
-                          {getIssueTypeIcon(issueType)}
-                        </span>
-                        <span className="issue-type-name">{issueType.name}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <code className="issue-type-key">{issueType.issueTypeKey}</code>
-                    </td>
-                    <td className="description-cell">{issueType.description || 'No description'}</td>
-                    <td>
-                      <span className={`admin-status ${issueType.isSubtask ? 'admin-status-pending' : 'admin-status-active'}`}>
-                        {issueType.isSubtask ? 'Subtask' : 'Standard'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="action-buttons">
-                        <button className="admin-btn-secondary" onClick={() => openEditModal(issueType)}>
-                          Edit
-                        </button>
-                        <button
-                          className="admin-btn-secondary admin-btn-danger-text"
-                          onClick={() => handleDelete(issueType)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      <div className="it-toolbar">
+        <div className="it-search-wrapper">
+          <svg className="it-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input
+            type="text"
+            className="it-search-input"
+            placeholder="Search issue types..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button className="it-search-clear" onClick={() => setSearch('')}>×</button>
+          )}
         </div>
       </div>
 
+      {isLoading && (
+        <div className="it-loading">
+          <div className="it-spinner"></div>
+          <span>Loading issue types...</span>
+        </div>
+      )}
+
+      {isError && (
+        <div className="it-error-state">
+          <div className="it-error-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 8v4M12 16h.01"/>
+            </svg>
+          </div>
+          <h3>Error loading issue types</h3>
+          <p>Please check if the server is running</p>
+          <button className="it-btn it-btn-secondary" onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'issueTypes'] })}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!isLoading && !isError && filteredIssueTypes.length === 0 && (
+        <div className="it-empty-state">
+          <div className="it-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M9 9h6M9 12h6M9 15h4"/>
+            </svg>
+          </div>
+          <h3>{search ? 'No results found' : 'No issue types yet'}</h3>
+          <p>{search ? 'Try adjusting your search terms' : 'Get started by creating your first issue type'}</p>
+          {!search && (
+            <button className="it-btn it-btn-primary" onClick={() => setShowCreateModal(true)}>
+              + Add Issue Type
+            </button>
+          )}
+        </div>
+      )}
+
+      {!isLoading && !isError && filteredIssueTypes.length > 0 && (
+        <div className="it-content">
+          {groupedIssueTypes.standard.length > 0 && (
+            <section className="it-section">
+              <h2 className="it-section-title">Standard Issue Types</h2>
+              <div className="it-grid">
+                {groupedIssueTypes.standard.map((issueType) => (
+                  <IssueTypeCard
+                    key={issueType.id}
+                    issueType={issueType}
+                    style={getIssueTypeStyle(issueType)}
+                    onEdit={() => openEditModal(issueType)}
+                    onDelete={() => setDeleteConfirm(issueType.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {groupedIssueTypes.subtask.length > 0 && (
+            <section className="it-section">
+              <h2 className="it-section-title">Subtask Issue Types</h2>
+              <div className="it-grid">
+                {groupedIssueTypes.subtask.map((issueType) => (
+                  <IssueTypeCard
+                    key={issueType.id}
+                    issueType={issueType}
+                    style={getIssueTypeStyle(issueType)}
+                    onEdit={() => openEditModal(issueType)}
+                    onDelete={() => setDeleteConfirm(issueType.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      {deleteConfirm && (
+        <div className="it-modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="it-modal it-modal-confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="it-modal-icon it-modal-icon-warning">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <h3>Delete Issue Type</h3>
+            <p>Are you sure you want to delete this issue type? This action cannot be undone.</p>
+            <div className="it-modal-actions">
+              <button className="it-btn it-btn-secondary" onClick={() => setDeleteConfirm(null)}>
+                Cancel
+              </button>
+              <button className="it-btn it-btn-danger" onClick={() => handleDelete(issueTypes!.find(it => it.id === deleteConfirm)!)}>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="admin-modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="admin-modal-header">
-              <h2 className="admin-modal-title">Add Issue Type</h2>
-              <button className="admin-modal-close" onClick={() => setShowCreateModal(false)}>×</button>
+        <div className="it-modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="it-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="it-modal-header">
+              <h2>Add Issue Type</h2>
+              <button className="it-modal-close" onClick={() => setShowCreateModal(false)}>×</button>
             </div>
-            <div className="admin-modal-body">
-              <div className="admin-form-group">
-                <label className="admin-form-label admin-form-label-required">Name</label>
+            <div className="it-modal-body">
+              <div className="it-form-group">
+                <label>Name <span className="it-required">*</span></label>
                 <input
                   type="text"
-                  className="admin-form-input"
+                  className="it-input"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g., Bug, Story, Task"
                 />
               </div>
-              <div className="admin-form-group">
-                <label className="admin-form-label admin-form-label-required">Issue Type Key</label>
+              <div className="it-form-group">
+                <label>Issue Type Key <span className="it-required">*</span></label>
                 <input
                   type="text"
-                  className="admin-form-input"
+                  className="it-input it-input-key"
                   value={formData.issueTypeKey}
                   onChange={(e) => setFormData({ ...formData, issueTypeKey: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
                   placeholder="e.g., bug, story, task"
                 />
-                <span className="admin-form-hint">Lowercase letters and numbers only</span>
+                <span className="it-form-hint">Lowercase letters and numbers only</span>
               </div>
-              <div className="admin-form-group">
-                <label className="admin-form-label">Description</label>
+              <div className="it-form-group">
+                <label>Description</label>
                 <textarea
-                  className="admin-form-textarea"
+                  className="it-textarea"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Describe what this issue type represents"
+                  rows={3}
                 />
               </div>
-              <div className="admin-form-group">
-                <label className="admin-checkbox-label">
+              <div className="it-form-group">
+                <label className="it-checkbox-wrapper">
                   <input
                     type="checkbox"
                     checked={formData.isSubtask}
                     onChange={(e) => setFormData({ ...formData, isSubtask: e.target.checked })}
                   />
+                  <span className="it-checkbox-custom"></span>
                   <span>This is a subtask type</span>
                 </label>
-                <span className="admin-form-hint">Subtasks belong to a parent issue</span>
+                <span className="it-form-hint">Subtasks belong to a parent issue</span>
               </div>
             </div>
-            <div className="admin-modal-footer">
-              <button className="admin-btn-secondary" onClick={() => setShowCreateModal(false)}>
+            <div className="it-modal-footer">
+              <button className="it-btn it-btn-secondary" onClick={() => setShowCreateModal(false)}>
                 Cancel
               </button>
               <button
-                className="admin-btn-primary"
+                className="it-btn it-btn-primary"
                 onClick={handleCreate}
-                disabled={createMutation.isPending}
+                disabled={!formData.name || !formData.issueTypeKey || createMutation.isPending}
               >
-                {createMutation.isPending ? 'Creating...' : 'Add'}
+                {createMutation.isPending ? 'Adding...' : 'Add Issue Type'}
               </button>
             </div>
           </div>
@@ -314,46 +329,86 @@ export default function IssueTypesPage() {
 
       {/* Edit Modal */}
       {editMode && selectedIssueType && (
-        <div className="admin-modal-overlay" onClick={() => setEditMode(false)}>
-          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="admin-modal-header">
-              <h2 className="admin-modal-title">Edit Issue Type</h2>
-              <button className="admin-modal-close" onClick={() => setEditMode(false)}>×</button>
+        <div className="it-modal-overlay" onClick={() => setEditMode(false)}>
+          <div className="it-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="it-modal-header">
+              <h2>Edit Issue Type</h2>
+              <button className="it-modal-close" onClick={() => setEditMode(false)}>×</button>
             </div>
-            <div className="admin-modal-body">
-              <div className="admin-form-group">
-                <label className="admin-form-label">Name</label>
+            <div className="it-modal-body">
+              <div className="it-form-group">
+                <label>Name</label>
                 <input
                   type="text"
-                  className="admin-form-input"
+                  className="it-input"
                   value={selectedIssueType.name}
                   onChange={(e) => setSelectedIssueType({ ...selectedIssueType, name: e.target.value })}
                 />
               </div>
-              <div className="admin-form-group">
-                <label className="admin-form-label">Description</label>
+              <div className="it-form-group">
+                <label>Description</label>
                 <textarea
-                  className="admin-form-textarea"
+                  className="it-textarea"
                   value={selectedIssueType.description}
                   onChange={(e) => setSelectedIssueType({ ...selectedIssueType, description: e.target.value })}
+                  rows={3}
                 />
               </div>
             </div>
-            <div className="admin-modal-footer">
-              <button className="admin-btn-secondary" onClick={() => setEditMode(false)}>
+            <div className="it-modal-footer">
+              <button className="it-btn it-btn-secondary" onClick={() => setEditMode(false)}>
                 Cancel
               </button>
               <button
-                className="admin-btn-primary"
+                className="it-btn it-btn-primary"
                 onClick={handleSaveEdit}
                 disabled={updateMutation.isPending}
               >
-                {updateMutation.isPending ? 'Saving...' : 'Save'}
+                {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
         </div>
       )}
-    </AdminLayout>
+    </div>
+  );
+}
+
+interface IssueTypeCardProps {
+  issueType: IssueType;
+  style: { icon: string; color: string };
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function IssueTypeCard({ issueType, style, onEdit, onDelete }: IssueTypeCardProps) {
+  return (
+    <div className="it-card">
+      <div className="it-card-icon" style={{ backgroundColor: style.color }}>
+        {style.icon}
+      </div>
+      <div className="it-card-content">
+        <h3 className="it-card-name">{issueType.name}</h3>
+        <code className="it-card-key">{issueType.issueTypeKey}</code>
+        {issueType.description && (
+          <p className="it-card-description">{issueType.description}</p>
+        )}
+      </div>
+      <div className="it-card-actions">
+        <button className="it-btn it-btn-ghost" onClick={onEdit}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Edit
+        </button>
+        <button className="it-btn it-btn-ghost it-btn-danger" onClick={onDelete}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+          </svg>
+          Delete
+        </button>
+      </div>
+    </div>
   );
 }

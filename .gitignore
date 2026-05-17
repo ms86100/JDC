@@ -10,6 +10,10 @@ jira-*/target/
 *.war
 *.ear
 
+# Vite build output
+jira-frontend/dist/
+jira-frontend/node_modules/.vite/
+
 # Node modules
 jira-frontend/node_modules/
 platform-runtime/node_modules/

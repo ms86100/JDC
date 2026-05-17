@@ -33,7 +33,7 @@ public class WorkflowAdminController {
     @Operation(summary = "Create workflow scheme", description = "Creates a new workflow scheme")
     public ResponseEntity<WorkflowSchemeResponse> createScheme(
             @Valid @RequestBody CreateWorkflowSchemeRequest request,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         WorkflowSchemeResponse response = workflowSchemeService.createScheme(request, userId);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
@@ -58,7 +58,7 @@ public class WorkflowAdminController {
     public ResponseEntity<WorkflowSchemeResponse> updateScheme(
             @Parameter(description = "Scheme ID") @PathVariable UUID schemeId,
             @Valid @RequestBody CreateWorkflowSchemeRequest request,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         WorkflowSchemeResponse response = workflowSchemeService.updateScheme(schemeId, request, userId);
         return ResponseEntity.ok(response);
     }
@@ -103,7 +103,7 @@ public class WorkflowAdminController {
     @Operation(summary = "Create draft scheme", description = "Creates a draft copy of the scheme for editing")
     public ResponseEntity<WorkflowSchemeResponse> createDraft(
             @Parameter(description = "Scheme ID") @PathVariable UUID schemeId,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         WorkflowSchemeResponse response = workflowSchemeService.createDraft(schemeId, userId);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
@@ -112,7 +112,7 @@ public class WorkflowAdminController {
     @Operation(summary = "Publish draft scheme", description = "Publishes a draft scheme to replace the original")
     public ResponseEntity<WorkflowSchemeResponse> publishDraft(
             @Parameter(description = "Scheme ID") @PathVariable UUID schemeId,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         WorkflowSchemeResponse response = workflowSchemeService.publishDraft(schemeId, userId);
         return ResponseEntity.ok(response);
     }
@@ -123,7 +123,7 @@ public class WorkflowAdminController {
     @Operation(summary = "Create workflow draft", description = "Creates a draft copy of the workflow")
     public ResponseEntity<WorkflowDraftResponse> createWorkflowDraft(
             @Parameter(description = "Workflow ID") @PathVariable UUID workflowId,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         WorkflowDraftResponse response = workflowDraftService.createDraft(workflowId, userId);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
@@ -149,7 +149,7 @@ public class WorkflowAdminController {
     public ResponseEntity<WorkflowDraftResponse> updateDraft(
             @Parameter(description = "Draft ID") @PathVariable UUID draftId,
             @RequestBody String draftData,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         WorkflowDraftResponse response = workflowDraftService.updateDraft(draftId, draftData, userId);
         return ResponseEntity.ok(response);
     }
@@ -159,7 +159,7 @@ public class WorkflowAdminController {
     public ResponseEntity<WorkflowResponse> publishDraft(
             @Parameter(description = "Draft ID") @PathVariable UUID draftId,
             @RequestParam(required = false) String changeDescription,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         WorkflowResponse response = workflowDraftService.publishDraft(draftId, userId, changeDescription);
         return ResponseEntity.ok(response);
     }
@@ -168,7 +168,7 @@ public class WorkflowAdminController {
     @Operation(summary = "Discard draft", description = "Discards and deletes the draft")
     public ResponseEntity<Void> discardDraft(
             @Parameter(description = "Draft ID") @PathVariable UUID draftId,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         workflowDraftService.discardDraft(draftId, userId);
         return ResponseEntity.noContent().build();
     }
@@ -194,7 +194,7 @@ public class WorkflowAdminController {
     public ResponseEntity<WorkflowResponse> rollbackToVersion(
             @Parameter(description = "Workflow ID") @PathVariable UUID workflowId,
             @Parameter(description = "Version number") @PathVariable Integer versionNumber,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         WorkflowResponse response = workflowDraftService.rollbackToVersion(workflowId, versionNumber, userId);
         return ResponseEntity.ok(response);
     }
@@ -206,7 +206,7 @@ public class WorkflowAdminController {
             @RequestParam String newName,
             @RequestParam(required = false) String newDescription,
             @RequestParam(required = false) UUID targetProjectId,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         WorkflowResponse response = workflowDraftService.copyWorkflow(
                 workflowId, newName, newDescription, targetProjectId, userId);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -219,7 +219,7 @@ public class WorkflowAdminController {
     public ResponseEntity<WorkflowLayoutResponse> saveLayout(
             @Parameter(description = "Workflow ID") @PathVariable UUID workflowId,
             @RequestBody String layoutData,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         WorkflowLayoutResponse response = workflowLayoutService.createOrUpdateLayout(workflowId, layoutData, userId);
         return ResponseEntity.ok(response);
     }
@@ -236,7 +236,7 @@ public class WorkflowAdminController {
     @Operation(summary = "Lock layout", description = "Locks the layout for editing")
     public ResponseEntity<WorkflowLayoutResponse> lockLayout(
             @Parameter(description = "Workflow ID") @PathVariable UUID workflowId,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         WorkflowLayoutResponse response = workflowLayoutService.lockLayout(workflowId, userId);
         return ResponseEntity.ok(response);
     }
@@ -245,7 +245,7 @@ public class WorkflowAdminController {
     @Operation(summary = "Unlock layout", description = "Unlocks the layout")
     public ResponseEntity<WorkflowLayoutResponse> unlockLayout(
             @Parameter(description = "Workflow ID") @PathVariable UUID workflowId,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         WorkflowLayoutResponse response = workflowLayoutService.unlockLayout(workflowId, userId);
         return ResponseEntity.ok(response);
     }
@@ -254,7 +254,7 @@ public class WorkflowAdminController {
     @Operation(summary = "Auto layout", description = "Auto-arranges the workflow diagram layout")
     public ResponseEntity<WorkflowLayoutResponse> autoLayout(
             @Parameter(description = "Workflow ID") @PathVariable UUID workflowId,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         WorkflowLayoutResponse response = workflowLayoutService.autoLayout(workflowId, userId);
         return ResponseEntity.ok(response);
     }

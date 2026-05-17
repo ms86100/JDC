@@ -61,7 +61,7 @@ export default function JiraGlobalLayout({
               </Link>
             ))}
           </div>
-          <button className="ab-create-btn" onClick={() => navigate('/projects/new')}>
+          <button className="ab-create-btn" onClick={() => navigate('/projects/create')}>
             <span>+</span> Create
           </button>
         </div>

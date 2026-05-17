@@ -15,7 +15,8 @@ public interface WorkflowLayoutRepository extends JpaRepository<WorkflowLayout, 
 
     Optional<WorkflowLayout> findTopByWorkflowIdOrderByLayoutVersionDesc(UUID workflowId);
 
-    Optional<WorkflowLayout> findByWorkflowIdAndIsLockedTrue(UUID workflowId);
+    @org.springframework.data.jpa.repository.Query("SELECT wl FROM WorkflowLayout wl WHERE wl.workflowId = :workflowId AND wl.isLocked = true")
+    Optional<WorkflowLayout> findByWorkflowIdAndLockedTrue(UUID workflowId);
 
     boolean existsByWorkflowId(UUID workflowId);
 

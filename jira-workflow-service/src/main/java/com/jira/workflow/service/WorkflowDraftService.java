@@ -103,12 +103,12 @@ public class WorkflowDraftService {
                 .orElseThrow(() -> new ResourceNotFoundException("WorkflowDraft", "id", draftId));
 
         draft.setDraftData(draftData);
-        draft = workflowDraftRepository.save(draft);
+        final WorkflowDraft savedDraft = workflowDraftRepository.save(draft);
 
-        Workflow workflow = workflowRepository.findById(draft.getWorkflowId())
-                .orElseThrow(() -> new ResourceNotFoundException("Workflow", "id", draft.getWorkflowId()));
+        Workflow workflow = workflowRepository.findById(savedDraft.getWorkflowId())
+                .orElseThrow(() -> new ResourceNotFoundException("Workflow", "id", savedDraft.getWorkflowId()));
 
-        return mapToResponse(draft, workflow);
+        return mapToResponse(savedDraft, workflow);
     }
 
     @Transactional
@@ -261,9 +261,10 @@ public class WorkflowDraftService {
                     .displayOrder(originalTransition.getDisplayOrder())
                     .type(originalTransition.getType())
                     .icon(originalTransition.getIcon())
-                    .conditions(originalTransition.getConditions())
-                    .validators(originalTransition.getValidators())
-                    .postFunctions(originalTransition.getPostFunctions())
+                    .conditionConditions(originalTransition.getConditionConditions())
+                    .conditionOperator(originalTransition.getConditionOperator())
+                    .validatorValidators(originalTransition.getValidatorValidators())
+                    .postFunctionFunctions(originalTransition.getPostFunctionFunctions())
                     .screenId(originalTransition.getScreenId())
                     .permissionCheck(originalTransition.getPermissionCheck())
                     .userGroupIds(originalTransition.getUserGroupIds())

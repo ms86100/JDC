@@ -249,7 +249,6 @@ public class WorkflowSchemeService {
         }
 
         draft.setIsActive(false);
-        draft.setDraftStatus(WorkflowDraft.STATUS_PUBLISHED);
         workflowSchemeRepository.save(draft);
 
         return mapToResponse(original);

@@ -12,7 +12,8 @@ public interface WorkflowTransitionTriggerRepository extends JpaRepository<Workf
 
     List<WorkflowTransitionTrigger> findByTransitionId(UUID transitionId);
 
-    List<WorkflowTransitionTrigger> findByTransitionIdAndIsEnabledTrue(UUID transitionId);
+    @org.springframework.data.jpa.repository.Query("SELECT wt FROM WorkflowTransitionTrigger wt WHERE wt.transitionId = :transitionId AND wt.isEnabled = true")
+    List<WorkflowTransitionTrigger> findByTransitionIdAndEnabledTrue(UUID transitionId);
 
     List<WorkflowTransitionTrigger> findByTriggerType(String triggerType);
 
