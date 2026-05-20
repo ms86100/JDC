@@ -247,10 +247,6 @@ public class ProjectService {
         projectRoleRepository.deleteByProjectId(projectId);
         log.debug("Deleted project roles for project: {}", projectId);
 
-        // Delete project templates if any
-        projectTemplateRepository.deleteByProjectId(projectId);
-        log.debug("Deleted project templates for project: {}", projectId);
-
         // Finally delete the project
         projectRepository.delete(project);
         log.info("Project deleted successfully: {}", projectId);

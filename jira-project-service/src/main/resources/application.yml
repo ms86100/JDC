@@ -47,3 +47,7 @@ logging:
     com.jira: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
+
+issue:
+  service:
+    url: http://localhost:8084
