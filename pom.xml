@@ -32,9 +32,10 @@
         <module>jira-audit-service</module>
         <module>jira-sprint-service</module>
         <module>jira-attachment-service</module>
-        <!-- jira-migration-service - skipped due to compilation issues -->
+        <module>jira-migration-service</module>
         <module>jira-plan-service</module>
         <module>jira-admin-service</module>
+        <module>jira-test-service</module>
     </modules>
 
     <properties>

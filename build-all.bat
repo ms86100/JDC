@@ -43,7 +43,7 @@ mvn -version | findstr "Apache"
 echo.
 
 :: Build each service
-set "SERVICES=jira-auth-service jira-user-service jira-project-service jira-issue-service jira-workflow-service jira-comment-service jira-notification-service jira-search-service jira-audit-service jira-attachment-service jira-sprint-service jira-plan-service jira-admin-service jira-gateway jira-migration-service"
+set "SERVICES=jira-auth-service jira-user-service jira-project-service jira-issue-service jira-workflow-service jira-comment-service jira-notification-service jira-search-service jira-audit-service jira-attachment-service jira-sprint-service jira-plan-service jira-admin-service jira-gateway jira-migration-service jira-test-service"
 
 echo [INFO] Building all microservices...
 echo.

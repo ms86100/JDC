@@ -21,6 +21,7 @@ import os
 import webbrowser
 import signal
 import json
+import shutil
 import urllib.request
 import urllib.error
 from pathlib import Path
@@ -246,17 +247,20 @@ def _get_defaults():
             "plan":       {"port": 8092, "dir": "jira-plan-service",        "jar": "jira-plan-service-1.0.0.jar",        "deps": ["auth"]},
             "admin":      {"port": 8093, "dir": "jira-admin-service",       "jar": "jira-admin-service-1.0.0.jar",        "deps": ["auth"]},
             "migration":  {"port": 8094, "dir": "jira-migration-service",  "jar": "jira-migration-service-1.0.0.jar",   "deps": ["auth"]},
+            "test":       {"port": 8086, "dir": "jira-test-service",       "jar": "jira-test-service-1.0.0.jar",        "deps": ["auth"]},
         },
         "frontend": {"port": 3000, "dir": "jira-frontend", "open_browser": True},
         "startup": {
             "build_if_missing": True,
             "health_check_path": "/actuator/health",
-            "health_timeout": 90,
+            "health_timeout": 180,
             "health_poll_interval": 2,
+            "max_parallel": 3,
+            "protected_ports": [5432],
             "shutdown_timeout": 15,
             "log_dir": "logs",
             "cleanup_on_start": True,
-            "java_opts": "-Xms256m -Xmx512m",
+            "java_opts": "-Xms128m -Xmx384m -XX:+UseG1GC",
             "maven_flags": "-DskipTests",
         },
     }
@@ -264,6 +268,24 @@ def _get_defaults():
 # ============================================================
 # UTILITIES
 # ============================================================
+PROTECTED_PORTS_DEFAULT = {5432}
+
+
+def resolve_executable(name):
+    """Resolve CLI on Windows (npm.cmd, mvn.cmd) and Unix."""
+    if os.path.isabs(name) and os.path.isfile(name):
+        return name
+    found = shutil.which(name)
+    if found:
+        return found
+    if sys.platform == "win32":
+        for suffix in (".cmd", ".exe", ".bat"):
+            found = shutil.which(name + suffix)
+            if found:
+                return found
+    return name
+
+
 def check_port(port):
     """Return True if port is open on localhost."""
     import socket
@@ -276,19 +298,26 @@ def check_port(port):
     finally:
         s.close()
 
-def check_health(port, path="/actuator/health", timeout=5):
-    """Return True if service responds with 2xx on health endpoint."""
-    try:
-        url = f"http://localhost:{port}{path}"
-        req = urllib.request.Request(url)
-        req.add_header("User-Agent", "JiraPlatformLauncher/1.0")
-        resp = urllib.request.urlopen(req, timeout=timeout)
-        return 200 <= resp.status < 300
-    except Exception:
-        return False
+def check_health(port, path="/actuator/health", timeout=5, paths=None):
+    """Return True if service responds with 2xx on a health endpoint."""
+    candidates = paths if paths else [path]
+    if path and path not in candidates:
+        candidates = [path] + list(candidates)
+    for candidate in candidates:
+        try:
+            url = f"http://localhost:{port}{candidate}"
+            req = urllib.request.Request(url)
+            req.add_header("User-Agent", "JiraPlatformLauncher/1.0")
+            resp = urllib.request.urlopen(req, timeout=timeout)
+            if 200 <= resp.status < 300:
+                return True
+        except Exception:
+            continue
+    return False
 
-def wait_for_health(port, path="/actuator/health", timeout=90, poll_interval=2):
-    """Poll health endpoint until up or timeout."""
+
+def wait_for_health(port, path="/actuator/health", timeout=90, poll_interval=2, paths=None):
+    """Poll health endpoint until up or timeout. Falls back to port-open near deadline."""
     start = time.time()
     try:
         timeout = int(str(timeout).strip())
@@ -298,9 +327,10 @@ def wait_for_health(port, path="/actuator/health", timeout=90, poll_interval=2):
         poll_interval = int(str(poll_interval).strip())
     except (ValueError, TypeError):
         poll_interval = 2
+    health_paths = paths or [path, "/actuator/health/liveness", "/actuator/health"]
     remaining = timeout
     while remaining > 0:
-        if check_health(port, path):
+        if check_health(port, path=path, timeout=5, paths=health_paths):
             elapsed = time.time() - start
             return True, round(elapsed, 1)
         time.sleep(poll_interval)
@@ -358,17 +388,26 @@ def kill_port(port):
         except Exception:
             pass
 
+def jar_is_runnable(jar_path):
+    """Spring Boot fat JARs are typically multi-MB; thin JARs fail at runtime."""
+    try:
+        return jar_path.exists() and jar_path.stat().st_size >= 5_000_000
+    except OSError:
+        return False
+
+
 def build_service(dir_path, jar_name, maven_flags="-DskipTests"):
     """Build a service's JAR using Maven. Returns True on success."""
     service_dir = BASE_DIR / dir_path
     jar_path = service_dir / "target" / jar_name
 
-    if jar_path.exists():
+    if jar_is_runnable(jar_path):
         return True
 
+    mvn = resolve_executable("mvn")
     log(f"  Building {dir_path} (first run)...", color="yellow")
     result = subprocess.run(
-        ["mvn", "clean", "package", maven_flags],
+        [mvn, "clean", "package", maven_flags],
         cwd=str(service_dir),
         capture_output=True,
         text=True,
@@ -463,9 +502,29 @@ class ServiceManager:
         self.healthy = set()
         self.build_if_missing = self.startup_cfg.get("build_if_missing", True)
         self.health_path = self.startup_cfg.get("health_check_path", "/actuator/health")
-        self.health_timeout = self.startup_cfg.get("health_timeout", 90)
+        try:
+            self.health_timeout = int(self.startup_cfg.get("health_timeout", 180))
+        except (TypeError, ValueError):
+            self.health_timeout = 180
+        try:
+            self.health_poll_interval = int(self.startup_cfg.get("health_poll_interval", 2))
+        except (TypeError, ValueError):
+            self.health_poll_interval = 2
+        try:
+            self.max_parallel = int(self.startup_cfg.get("max_parallel", 3))
+        except (TypeError, ValueError):
+            self.max_parallel = 3
+        raw_ports = self.startup_cfg.get("protected_ports", [5432])
+        self.protected_ports = set()
+        for p in raw_ports if isinstance(raw_ports, (list, tuple)) else [raw_ports]:
+            try:
+                self.protected_ports.add(int(p))
+            except (TypeError, ValueError):
+                pass
+        if not self.protected_ports:
+            self.protected_ports = {5432}
         self.shutdown_timeout = self.startup_cfg.get("shutdown_timeout", 15)
-        self.java_opts = self.startup_cfg.get("java_opts", "-Xms256m -Xmx512m")
+        self.java_opts = self.startup_cfg.get("java_opts", "-Xms128m -Xmx384m -XX:+UseG1GC")
         self.open_browser = self.frontend_cfg.get("open_browser", True)
         self.frontend_port = self.frontend_cfg.get("port", 3000)
 
@@ -491,12 +550,16 @@ class ServiceManager:
             log("Build complete.", color="green")
             return
 
-        # ---- Service waves ----
-        order = topo_sort(self.services_cfg)
-        waves = group_by_wave(order, self.services_cfg)
+        # ---- Service waves (only JVM services with a JAR) ----
+        startable = {
+            name: cfg for name, cfg in self.services_cfg.items()
+            if cfg.get("jar") and cfg.get("dir")
+        }
+        order = topo_sort(startable)
+        waves = group_by_wave(order, startable)
 
         log("")
-        log(f"  Starting {len(self.services_cfg)} services in {len(waves)} wave(s)...", color="gray")
+        log(f"  Starting {len(startable)} services in {len(waves)} wave(s)...", color="gray")
 
         for wave_i, wave in enumerate(waves):
             wave_num = wave_i + 1
@@ -504,29 +567,44 @@ class ServiceManager:
             log("")
             log(f"  Wave {wave_num}/{len(waves)}: {wave_names}", color="cyan")
 
-            procs = []
-            for name in wave:
-                if name in self.healthy:
-                    log(f"    {name:15s} already running", color="gray")
-                    continue
-                if name in self.failed:
-                    log(f"    {name:15s} failed, skipping", color="red")
-                    continue
-                p = self._start_service(name)
-                procs.append((name, p))
+            # Start at most max_parallel JVMs at a time to avoid native OOM
+            pending = [n for n in wave if n not in self.healthy and n not in self.failed]
+            for chunk_start in range(0, len(pending), self.max_parallel):
+                chunk = pending[chunk_start:chunk_start + self.max_parallel]
+                if len(chunk) < len(pending):
+                    log(f"    batch {chunk_start // self.max_parallel + 1}: {', '.join(chunk)}", color="gray")
 
-            # Wait for all in wave to become healthy
-            for name, p in procs:
-                if p is None:
-                    continue
-                port = self.services_cfg[name].get("port")
-                ok, elapsed = wait_for_health(port, self.health_path, self.health_timeout)
-                if ok:
-                    self.healthy.add(name)
-                    log(f"    {name:15s} ✓ (port {port}, {elapsed}s)", color="green")
-                else:
-                    self.failed.add(name)
-                    log(f"    {name:15s} ✗ health check failed after {elapsed}s", color="red")
+                procs = []
+                for name in chunk:
+                    if name in self.healthy:
+                        log(f"    {name:15s} already running", color="gray")
+                        continue
+                    if name in self.failed:
+                        log(f"    {name:15s} failed, skipping", color="red")
+                        continue
+                    p = self._start_service(name)
+                    procs.append((name, p))
+
+                for name, p in procs:
+                    if p is None:
+                        continue
+                    port = startable[name].get("port")
+                    health_path = startable[name].get("health", self.health_path)
+                    svc_timeout = startable[name].get("health_timeout", self.health_timeout)
+                    try:
+                        svc_timeout = int(svc_timeout)
+                    except (TypeError, ValueError):
+                        svc_timeout = self.health_timeout
+                    ok, elapsed = wait_for_health(
+                        port, health_path, svc_timeout, self.health_poll_interval
+                    )
+                    if ok:
+                        self.healthy.add(name)
+                        log(f"    {name:15s} ✓ (port {port}, {elapsed}s)", color="green")
+                    else:
+                        self.failed.add(name)
+                        log(f"    {name:15s} ✗ health check failed after {elapsed}s — see logs/{name}.log", color="red")
+                        self._stop_process(name, p, port)
 
         # ---- Frontend ----
         self.start_frontend()
@@ -562,13 +640,14 @@ class ServiceManager:
             log("  Java:    NOT FOUND — install Java 21+", color="red")
 
         # Maven
+        mvn = resolve_executable("mvn")
         try:
-            result = subprocess.run(["mvn", "-version"], capture_output=True, text=True, timeout=10)
-            for line in result.stdout.splitlines()[:1]:
+            result = subprocess.run([mvn, "-version"], capture_output=True, text=True, timeout=10)
+            for line in (result.stdout or result.stderr).splitlines()[:1]:
                 log(f"  Maven:   {line.strip()}", color="green")
                 break
         except Exception:
-            log("  Maven:   NOT FOUND", color="red")
+            log("  Maven:   NOT FOUND — install Maven or add to PATH", color="red")
 
         # Node
         try:
@@ -594,13 +673,28 @@ class ServiceManager:
         ports_in_use = []
         for name, cfg in self.services_cfg.items():
             port = cfg.get("port")
-            if port and check_port(port):
+            if port is None:
+                continue
+            try:
+                port_num = int(port)
+            except (TypeError, ValueError):
+                continue
+            if port_num in self.protected_ports:
+                continue
+            if check_port(port_num):
                 proc_name = get_process_on_port(port)
-                ports_in_use.append((port, name, proc_name))
+                ports_in_use.append((port_num, name, proc_name))
 
         # Frontend
-        if check_port(self.frontend_port):
-            ports_in_use.append((self.frontend_port, "frontend", get_process_on_port(self.frontend_port)))
+        try:
+            fe_port = int(self.frontend_port)
+        except (TypeError, ValueError):
+            fe_port = 3000
+        for fe_port in {fe_port, 3001}:
+            if fe_port in self.protected_ports:
+                continue
+            if check_port(fe_port):
+                ports_in_use.append((fe_port, "frontend", get_process_on_port(fe_port)))
 
         if not ports_in_use:
             return
@@ -669,7 +763,7 @@ class ServiceManager:
             if not jar or not dir_name:
                 continue
             jar_path = BASE_DIR / dir_name / "target" / jar
-            if jar_path.exists():
+            if jar_is_runnable(jar_path):
                 continue
             if not build_service(dir_name, jar, self.startup_cfg.get("maven_flags", "-DskipTests")):
                 log(f"    {name} build failed", color="red")
@@ -687,6 +781,7 @@ class ServiceManager:
             "DB_PASSWORD": db.get("password", "jirapass123"),
             "JWT_SECRET": sec.get("jwt_secret", ""),
             "SPRING_PROFILES_ACTIVE": "local",
+            "MAIL_HEALTH_ENABLED": "false",
         }
 
         # Inject upstream service URLs as env vars for gateway routing
@@ -698,6 +793,24 @@ class ServiceManager:
 
         return env
 
+    def _stop_process(self, name, proc, port=None):
+        """Terminate a failed or orphaned service process and free its port."""
+        if proc and proc.poll() is None:
+            try:
+                proc.terminate()
+                proc.wait(timeout=5)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+        if port:
+            try:
+                kill_port(int(port))
+            except (TypeError, ValueError):
+                pass
+        self.running.pop(name, None)
+
     def _start_service(self, name):
         cfg = self.services_cfg[name]
         jar_name = cfg.get("jar")
@@ -708,12 +821,13 @@ class ServiceManager:
             return None
 
         jar_path = BASE_DIR / dir_name / "target" / jar_name
-        if not jar_path.exists():
+        if not jar_is_runnable(jar_path):
             if self.build_if_missing:
                 if not build_service(dir_name, jar_name):
                     self.failed.add(name)
                     return None
             else:
+                log(f"    {name:15s} missing or invalid JAR: {jar_path}", color="red")
                 self.failed.add(name)
                 return None
 
@@ -728,6 +842,7 @@ class ServiceManager:
             "-jar", str(jar_path),
             f"--server.port={port}",
             "--spring.profiles.active=local",
+            "--management.health.mail.enabled=false",
         ]
 
         proc = subprocess.Popen(
@@ -751,22 +866,36 @@ class ServiceManager:
         log(f"  Starting frontend (port {self.frontend_port})...", color="yellow")
         log_file = open(str(LOGS_DIR / "frontend.log"), "w")
 
+        npm = resolve_executable("npm")
         proc = subprocess.Popen(
-            ["npm", "run", "dev"],
+            [npm, "run", "dev", "--", "--port", str(self.frontend_port), "--strictPort"],
             cwd=str(FRONTEND_DIR),
             stdout=log_file, stderr=subprocess.STDOUT,
             env={**os.environ, "PORT": str(self.frontend_port)},
+            shell=(sys.platform == "win32" and npm.endswith((".cmd", ".bat"))),
         )
         self.running["frontend"] = {
             "proc": proc, "port": self.frontend_port,
             "log_file": log_file, "start_time": time.time(),
         }
 
-        ok, _ = wait_for_port(self.frontend_port, 60)
+        ok = False
+        for _ in range(45):
+            if check_health(self.frontend_port, "/", timeout=3, paths=["/"]):
+                ok = True
+                break
+            if check_port(self.frontend_port):
+                ok = True
+                break
+            if proc.poll() is not None:
+                break
+            time.sleep(2)
         if ok:
             log(f"  Frontend ready on :{self.frontend_port}", color="green")
+            self.healthy.add("frontend")
         else:
-            log("  Frontend failed to start", color="red")
+            log("  Frontend failed to start — see logs/frontend.log", color="red")
+            self.failed.add("frontend")
 
     def print_status(self):
         log("")
@@ -795,7 +924,8 @@ class ServiceManager:
             log(f"  {name:<15} {port:<6} {status:<12} {elapsed:<8} {pid:<8}", color=clr)
 
         separator(char="─")
-        log(f"  Healthy: {len(self.healthy)}/{len(self.services_cfg)} services", color="green" if self.healthy == set(self.services_cfg.keys()) else "yellow")
+        startable_names = {n for n, c in self.services_cfg.items() if c.get("jar")}
+        log(f"  Healthy: {len(self.healthy)}/{len(startable_names)} services", color="green" if self.healthy >= startable_names else "yellow")
         log(f"  Frontend: http://localhost:{self.frontend_port}", color="cyan")
         log(f"  Gateway:  http://localhost:{self.services_cfg.get('gateway', {}).get('port', 8080)}", color="cyan")
         separator(char="═")
