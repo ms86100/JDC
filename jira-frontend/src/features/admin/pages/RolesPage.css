@@ -1,0 +1,76 @@
+/* Roles Page Styles */
+
+.role-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.role-name {
+  font-weight: 500;
+  color: #172b4d;
+}
+
+.role-default-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: #e3fcef;
+  color: #006644;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.role-type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.role-type-default {
+  background: #deebff;
+  color: #0c2d57;
+}
+
+.role-type-custom {
+  background: #fff4d5;
+  color: #172b4d;
+}
+
+.admin-alert {
+  padding: 10px 16px;
+  border-radius: 3px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.admin-alert-success {
+  background: #e3fcef;
+  color: #006644;
+  border: 1px solid #36b37e;
+}
+
+.admin-alert-error {
+  background: #ffebe6;
+  color: #bf2600;
+  border: 1px solid #de350b;
+}
+
+.admin-form-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dfe1e6;
+  border-radius: 3px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.admin-form-textarea:focus {
+  outline: none;
+  border-color: #4c9aff;
+  box-shadow: 0 0 0 1px #4c9aff;
+}

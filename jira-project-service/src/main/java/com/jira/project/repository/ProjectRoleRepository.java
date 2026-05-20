@@ -2,6 +2,9 @@ package com.jira.project.repository;
 
 import com.jira.project.entity.ProjectRole;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,4 +19,8 @@ public interface ProjectRoleRepository extends JpaRepository<ProjectRole, UUID> 
     Optional<ProjectRole> findByProjectIdAndName(UUID projectId, String name);
 
     Optional<ProjectRole> findByName(String name);
+
+    @Modifying
+    @Query("DELETE FROM ProjectRole pr WHERE pr.projectId = :projectId")
+    void deleteByProjectId(@Param("projectId") UUID projectId);
 }

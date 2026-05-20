@@ -1,9 +1,11 @@
 package com.jira.admin.controller;
 
+import com.jira.admin.dto.*;
 import com.jira.admin.entity.*;
 import com.jira.admin.service.IssueAdministrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Issue Administration Controller - Issue types, priorities, statuses, workflows, screens
@@ -60,6 +63,21 @@ public class IssueAdministrationController {
         return ResponseEntity.ok(issueAdministrationService.createPriority(data));
     }
 
+    @PutMapping("/priorities/{priorityId}")
+    @Operation(summary = "Update priority")
+    public ResponseEntity<PriorityEntity> updatePriority(
+            @PathVariable String priorityId,
+            @RequestBody Map<String, Object> updates) {
+        return ResponseEntity.ok(issueAdministrationService.updatePriority(priorityId, updates));
+    }
+
+    @DeleteMapping("/priorities/{priorityId}")
+    @Operation(summary = "Delete priority")
+    public ResponseEntity<Void> deletePriority(@PathVariable String priorityId) {
+        issueAdministrationService.deletePriority(priorityId);
+        return ResponseEntity.noContent().build();
+    }
+
     // ==================== Resolutions ====================
 
     @GetMapping("/resolutions")
@@ -78,29 +96,32 @@ public class IssueAdministrationController {
 
     @GetMapping("/statuses")
     @Operation(summary = "Get all statuses")
-    public ResponseEntity<List<StatusEntity>> getStatuses() {
-        return ResponseEntity.ok(issueAdministrationService.getStatuses());
+    public ResponseEntity<List<StatusResponse>> getStatuses() {
+        List<StatusResponse> statuses = issueAdministrationService.getStatuses().stream()
+                .map(StatusResponse::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(statuses);
     }
 
     @GetMapping("/statuses/{statusId}")
     @Operation(summary = "Get status by ID")
-    public ResponseEntity<StatusEntity> getStatus(@PathVariable String statusId) {
-        return ResponseEntity.ok(issueAdministrationService.getStatus(statusId));
+    public ResponseEntity<StatusResponse> getStatus(@PathVariable String statusId) {
+        return ResponseEntity.ok(StatusResponse.fromEntity(issueAdministrationService.getStatus(statusId)));
     }
 
     @PostMapping("/statuses")
     @Operation(summary = "Create status")
-    public ResponseEntity<StatusEntity> createStatus(@RequestBody Map<String, Object> data) {
+    public ResponseEntity<StatusResponse> createStatus(@Valid @RequestBody CreateStatusRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(issueAdministrationService.createStatus(data));
+                .body(StatusResponse.fromEntity(issueAdministrationService.createStatus(request)));
     }
 
     @PutMapping("/statuses/{statusId}")
     @Operation(summary = "Update status")
-    public ResponseEntity<StatusEntity> updateStatus(
+    public ResponseEntity<StatusResponse> updateStatus(
             @PathVariable String statusId,
-            @RequestBody Map<String, Object> updates) {
-        return ResponseEntity.ok(issueAdministrationService.updateStatus(statusId, updates));
+            @Valid @RequestBody UpdateStatusRequest request) {
+        return ResponseEntity.ok(StatusResponse.fromEntity(issueAdministrationService.updateStatus(statusId, request)));
     }
 
     @DeleteMapping("/statuses/{statusId}")

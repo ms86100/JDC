@@ -87,11 +87,11 @@ public class ExportJobProcessor {
             // Mark completed
             MigrationJob job = migrationJobRepository.findById(jobId).orElseThrow();
             job.setFilePath(exportFile.toString());
-            job.setResultMetadata(objectMapper.writeValueAsString(Map.of(
+            job.setResultMetadata(Map.of(
                     "exportFormat", exportFormat,
                     "entityCounts", entityCounts,
                     "fileSize", Files.size(exportFile)
-            )));
+            ));
             migrationJobRepository.save(job);
 
             migrationService.markJobCompleted(jobId, job.getResultMetadata());

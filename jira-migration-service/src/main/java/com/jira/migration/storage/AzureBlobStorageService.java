@@ -53,6 +53,13 @@ public class AzureBlobStorageService implements AttachmentStorageService {
     @PostConstruct
     public void init() {
         try {
+            if (config.getAzure() == null || config.getAzure().getConnectionString() == null) {
+                log.info("Azure Blob storage not configured, skipping initialization");
+                this.blobServiceClient = null;
+                this.containerClient = null;
+                return;
+            }
+
             String connectionString = config.getAzure().getConnectionString();
 
             this.blobServiceClient = new BlobServiceClientBuilder()
@@ -70,8 +77,9 @@ public class AzureBlobStorageService implements AttachmentStorageService {
             log.info("Azure Blob storage initialized for container: {}", containerName);
 
         } catch (Exception e) {
-            log.error("Failed to initialize Azure Blob storage", e);
-            throw new RuntimeException("Failed to initialize Azure Blob storage", e);
+            log.warn("Failed to initialize Azure Blob storage: {}, will fall back to local storage", e.getMessage());
+            this.blobServiceClient = null;
+            this.containerClient = null;
         }
     }
 

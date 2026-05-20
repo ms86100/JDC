@@ -51,4 +51,7 @@ public interface PlanItemRepository extends JpaRepository<PlanItem, UUID> {
 
     @Query("SELECT pi FROM PlanItem pi WHERE pi.sourceType = :sourceType AND pi.sourceId = :sourceId")
     List<PlanItem> findBySourceInfo(@Param("sourceType") String sourceType, @Param("sourceId") String sourceId);
+
+    @Query("SELECT pi FROM PlanItem pi WHERE pi.planId = :planId AND pi.isActive = true ORDER BY pi.sortOrder ASC")
+    List<PlanItem> findByPlanIdAndIsActiveTrue(@Param("planId") UUID planId);
 }

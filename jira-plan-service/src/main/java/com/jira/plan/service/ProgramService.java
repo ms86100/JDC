@@ -100,6 +100,12 @@ public class ProgramService {
     }
 
     private ProgramResponse toResponse(Program program) {
+        int planCount = 0;
+        try {
+            planCount = program.getPlans() != null ? program.getPlans().size() : 0;
+        } catch (Exception e) {
+            // LazyInitializationException - plans not loaded, use count query instead
+        }
         return ProgramResponse.builder()
                 .id(program.getId())
                 .name(program.getName())
@@ -107,7 +113,7 @@ public class ProgramService {
                 .ownerId(program.getOwnerId())
                 .accessType(program.getAccessType())
                 .isActive(program.getIsActive())
-                .planCount(program.getPlans().size())
+                .planCount(planCount)
                 .createdAt(program.getCreatedAt())
                 .updatedAt(program.getUpdatedAt())
                 .build();

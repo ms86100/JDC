@@ -87,7 +87,12 @@
             <groupId>com.jira</groupId>
             <artifactId>jira-project-service</artifactId>
             <version>${project.version}</version>
-            <classifier>classes</classifier>
+        </dependency>
+        <!-- Admin service entities (PriorityEntity, StatusEntity) -->
+        <dependency>
+            <groupId>com.jira</groupId>
+            <artifactId>jira-admin-service</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- Database -->

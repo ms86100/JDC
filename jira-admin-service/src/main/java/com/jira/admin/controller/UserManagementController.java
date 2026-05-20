@@ -101,6 +101,12 @@ public class UserManagementController {
         return ResponseEntity.ok(userManagementService.createGroup(name, description, type));
     }
 
+    @GetMapping("/groups/{groupId}/members")
+    @Operation(summary = "Get all members of a group")
+    public ResponseEntity<List<UserEntity>> getGroupMembers(@PathVariable String groupId) {
+        return ResponseEntity.ok(userManagementService.getGroupMembers(groupId));
+    }
+
     @PostMapping("/groups/{groupId}/members/{userId}")
     @Operation(summary = "Add user to group")
     public ResponseEntity<Void> addUserToGroup(

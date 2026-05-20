@@ -3,9 +3,12 @@ package com.jira.migration.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -43,16 +46,18 @@ public class MigrationJob {
     @Builder.Default
     private Integer failedEntities = 0;
 
-    @Column(name = "progress_percentage", precision = 5, scale = 2)
+    @Column(name = "progress_percentage", precision = 5)
     @Builder.Default
     private Double progressPercentage = 0.0;
 
     // Configuration stored as JSON
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "config", columnDefinition = "jsonb")
-    private String config;
+    private Map<String, Object> config;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "options", columnDefinition = "jsonb")
-    private String options;
+    private Map<String, Object> options;
 
     // User tracking
     @Column(name = "initiated_by")
@@ -72,8 +77,9 @@ public class MigrationJob {
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "error_details", columnDefinition = "jsonb")
-    private String errorDetails;
+    private Map<String, Object> errorDetails;
 
     // Source/target info
     @Column(name = "source_project_id")
@@ -98,8 +104,9 @@ public class MigrationJob {
     private UUID rollbackJobId;
 
     // Result metadata
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "result_metadata", columnDefinition = "jsonb")
-    private String resultMetadata;
+    private Map<String, Object> resultMetadata;
 
     public void incrementProcessed() {
         this.processedEntities++;

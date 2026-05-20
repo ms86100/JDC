@@ -4,6 +4,7 @@ import com.jira.migration.entity.EntityStatus;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -22,11 +23,11 @@ public class EntityStatusResponse {
     private String errorMessage;
     private Integer errorRow;
     private String errorField;
-    private String errorContext;
+    private Map<String, Object> errorContext;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
     private Integer durationMs;
-    private String validationErrors;
+    private Map<String, Object> validationErrors;
     private String warnings;
 
     public static EntityStatusResponse fromEntity(EntityStatus status) {

@@ -15,9 +15,11 @@ import com.jira.project.repository.ProjectTemplateRepository;
 import com.jira.project.repository.TemplateSchemeDefaultRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
 import java.util.List;
@@ -35,6 +37,10 @@ public class ProjectService {
     private final ProjectTemplateRepository projectTemplateRepository;
     private final TemplateSchemeDefaultRepository templateSchemeDefaultRepository;
     private final ProjectSchemeService projectSchemeService;
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${issue.service.url}")
+    private String issueServiceUrl;
 
     @Transactional
     public ProjectResponse createProjectViaWizard(CreateProjectWizardRequest request, UUID currentUserId) {
@@ -227,12 +233,51 @@ public class ProjectService {
     public void deleteProject(UUID projectId) {
         log.info("Deleting project: {}", projectId);
 
-        if (!projectRepository.existsById(projectId)) {
-            throw new ResourceNotFoundException("Project", "id", projectId);
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
+
+        // Cascade delete related entities to prevent orphaned data
+        cascadeDeleteRelatedEntities(projectId);
+
+        // Delete project members first (foreign key constraint)
+        projectMemberRepository.deleteByProjectId(projectId);
+        log.debug("Deleted project members for project: {}", projectId);
+
+        // Delete project roles
+        projectRoleRepository.deleteByProjectId(projectId);
+        log.debug("Deleted project roles for project: {}", projectId);
+
+        // Delete project templates if any
+        projectTemplateRepository.deleteByProjectId(projectId);
+        log.debug("Deleted project templates for project: {}", projectId);
+
+        // Finally delete the project
+        projectRepository.delete(project);
+        log.info("Project deleted successfully: {}", projectId);
+    }
+
+    /**
+     * Cascades deletion to related entities in other services.
+     * This ensures referential integrity when deleting a project.
+     */
+    private void cascadeDeleteRelatedEntities(UUID projectId) {
+        log.info("Cascading delete for project: {}", projectId);
+
+        // Delete all issues for this project via issue service REST API
+        try {
+            String issuesUrl = String.format("%s/api/issues/project/%s", issueServiceUrl, projectId);
+            restTemplate.delete(issuesUrl);
+            log.debug("Deleted issues for project: {}", projectId);
+        } catch (Exception e) {
+            log.warn("Could not cascade delete issues for project {}: {}", projectId, e.getMessage());
+            // Continue with project deletion even if issues deletion fails
+            // In production, this should be a distributed transaction
         }
 
-        projectRepository.deleteById(projectId);
-        log.info("Project deleted successfully: {}", projectId);
+        // Note: In a production system with proper database setup:
+        // - Foreign keys would have ON DELETE CASCADE
+        // - Or we'd use @OneToMany(cascade = CascadeType.ALL) in entities
+        // - Or we'd use distributed transactions (Saga pattern)
     }
 
     @Transactional

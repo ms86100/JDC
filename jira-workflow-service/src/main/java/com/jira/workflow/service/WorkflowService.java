@@ -95,6 +95,60 @@ public class WorkflowService {
     }
 
     @Transactional
+    public WorkflowResponse updateWorkflow(UUID workflowId, UpdateWorkflowRequest request) {
+        log.info("Updating workflow: {}", workflowId);
+
+        Workflow workflow = workflowRepository.findById(workflowId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workflow", "id", workflowId));
+
+        if (request.getName() != null) {
+            workflow.setName(request.getName());
+        }
+        if (request.getDescription() != null) {
+            workflow.setDescription(request.getDescription());
+        }
+        if (request.isDefault()) {
+            if (workflow.getProjectId() != null) {
+                workflowRepository.findByProjectIdAndIsDefaultTrue(workflow.getProjectId())
+                        .filter(w -> !w.getId().equals(workflowId))
+                        .ifPresent(existing -> {
+                            existing.setIsDefault(false);
+                            workflowRepository.save(existing);
+                        });
+            }
+            workflow.setIsDefault(true);
+        }
+
+        workflow = workflowRepository.save(workflow);
+        log.info("Workflow updated: {}", workflowId);
+
+        return mapToWorkflowResponse(workflow);
+    }
+
+    @Transactional
+    public void deleteWorkflow(UUID workflowId) {
+        log.info("Deleting workflow: {}", workflowId);
+
+        Workflow workflow = workflowRepository.findById(workflowId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workflow", "id", workflowId));
+
+        // Delete workflow statuses first
+        workflowStatusRepository.deleteByWorkflowId(workflowId);
+
+        // Delete transitions and related data
+        List<WorkflowTransition> transitions = workflowTransitionRepository.findByWorkflowId(workflowId);
+        for (WorkflowTransition transition : transitions) {
+            workflowConditionRepository.deleteByTransitionId(transition.getId());
+            workflowValidatorRepository.deleteByTransitionId(transition.getId());
+            workflowPostFunctionRepository.deleteByTransitionId(transition.getId());
+        }
+        workflowTransitionRepository.deleteByWorkflowId(workflowId);
+
+        workflowRepository.delete(workflow);
+        log.info("Workflow deleted: {}", workflowId);
+    }
+
+    @Transactional
     public TransitionResponse addTransition(CreateTransitionRequest request) {
         log.info("Adding transition to workflow: {}", request.getWorkflowId());
 
@@ -202,6 +256,32 @@ public class WorkflowService {
                 .findFirst()
                 .orElse(workflows.get(0));
 
+        // Orphan Status Detection: Verify both statuses are part of this workflow
+        List<WorkflowStatus> workflowStatuses = workflowStatusRepository.findByWorkflowId(workflow.getId());
+        Set<UUID> statusIds = workflowStatuses.stream()
+                .map(WorkflowStatus::getStatusId)
+                .collect(Collectors.toSet());
+
+        // Check if fromStatus is part of workflow
+        if (!statusIds.contains(fromStatusId)) {
+            return ValidateTransitionResponse.builder()
+                    .fromStatusId(fromStatusId)
+                    .toStatusId(toStatusId)
+                    .valid(false)
+                    .message("Invalid transition - source status is not part of this workflow")
+                    .build();
+        }
+
+        // Check if toStatus is part of workflow
+        if (!statusIds.contains(toStatusId)) {
+            return ValidateTransitionResponse.builder()
+                    .fromStatusId(fromStatusId)
+                    .toStatusId(toStatusId)
+                    .valid(false)
+                    .message("Invalid transition - destination status is not part of this workflow")
+                    .build();
+        }
+
         boolean valid = workflowTransitionRepository
                 .findByWorkflowIdAndFromStatusIdAndToStatusId(workflow.getId(), fromStatusId, toStatusId)
                 .isPresent();
@@ -307,6 +387,33 @@ public class WorkflowService {
         return mapToPostFunctionResponse(postFunction);
     }
 
+    @Transactional
+    public void deleteCondition(UUID conditionId) {
+        log.info("Deleting condition: {}", conditionId);
+        WorkflowCondition condition = workflowConditionRepository.findById(conditionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Condition", "id", conditionId));
+        workflowConditionRepository.delete(condition);
+        log.info("Condition deleted: {}", conditionId);
+    }
+
+    @Transactional
+    public void deleteValidator(UUID validatorId) {
+        log.info("Deleting validator: {}", validatorId);
+        WorkflowValidator validator = workflowValidatorRepository.findById(validatorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Validator", "id", validatorId));
+        workflowValidatorRepository.delete(validator);
+        log.info("Validator deleted: {}", validatorId);
+    }
+
+    @Transactional
+    public void deletePostFunction(UUID functionId) {
+        log.info("Deleting post-function: {}", functionId);
+        WorkflowPostFunction postFunction = workflowPostFunctionRepository.findById(functionId)
+                .orElseThrow(() -> new ResourceNotFoundException("PostFunction", "id", functionId));
+        workflowPostFunctionRepository.delete(postFunction);
+        log.info("Post-function deleted: {}", functionId);
+    }
+
     /**
      * Validate if a transition can be performed
      */
@@ -407,9 +514,30 @@ public class WorkflowService {
                     log.debug("Linked issue status condition not yet implemented");
                     return true; // Requires additional implementation
 
+                case WorkflowCondition.TYPE_PREVIOUS_STATUS:
+                    // Check if issue was in previous status
+                    log.debug("Previous status condition not yet implemented");
+                    return true; // Requires additional implementation
+
+                case WorkflowCondition.TYPE_SPRINT_STATUS:
+                    // Check sprint status condition
+                    log.debug("Sprint status condition not yet implemented");
+                    return true; // Requires additional implementation
+
+                case WorkflowCondition.TYPE_SUBTASK_STATUS:
+                    // Check subtask status condition
+                    log.debug("Subtask status condition not yet implemented");
+                    return true; // Requires additional implementation
+
+                case WorkflowCondition.TYPE_SCRIPT:
+                    // Groovy script condition - would need script engine
+                    log.debug("Script condition not yet implemented");
+                    return true; // Requires additional implementation
+
                 default:
-                    log.warn("Unknown condition type: {}", conditionType);
-                    return true; // Allow by default for unknown conditions
+                    // FAIL-SAFE: Unknown conditions should block by default for security
+                    log.warn("Unknown condition type: {}, blocking for safety", conditionType);
+                    return false;
             }
         } catch (Exception e) {
             log.error("Error evaluating condition {}: {}", conditionType, e.getMessage());
@@ -634,15 +762,58 @@ public class WorkflowService {
 
             case "PERMISSION":
                 // Would check if user has specific permission
+                log.debug("Permission validator not yet fully implemented");
                 return true;
 
             case "DATE_RANGE":
                 // Would validate date is within range
+                log.debug("Date range validator not yet implemented");
+                return true;
+
+            case "REGEX":
+                // Would validate field against regex pattern
+                log.debug("Regex validator not yet implemented");
+                return true;
+
+            case "USER_PERMISSION":
+                // Would check user permission
+                log.debug("User permission validator not yet implemented");
+                return true;
+
+            case "SUBTASK_RESOLUTION":
+                // Would validate subtask resolution
+                log.debug("Subtask resolution validator not yet implemented");
+                return true;
+
+            case "LINKED_ISSUE_RESOLUTION":
+                // Would validate linked issue resolution
+                log.debug("Linked issue resolution validator not yet implemented");
+                return true;
+
+            case "ATTACHMENT_COUNT":
+                // Would validate attachment count
+                log.debug("Attachment count validator not yet implemented");
+                return true;
+
+            case "COMMENT_REQUIRED":
+                // Would require comment for transition
+                log.debug("Comment required validator not yet implemented");
+                return true;
+
+            case "TIME_TRACKING":
+                // Would validate time tracking
+                log.debug("Time tracking validator not yet implemented");
+                return true;
+
+            case "SCRIPT":
+                // Script-based validator
+                log.debug("Script validator not yet implemented");
                 return true;
 
             default:
-                log.debug("Validator type {} not implemented, allowing by default", validatorType);
-                return true;
+                // FAIL-SAFE: Unknown validators should block by default for security
+                log.warn("Unknown validator type: {}, blocking for safety", validatorType);
+                return false;
         }
     }
 

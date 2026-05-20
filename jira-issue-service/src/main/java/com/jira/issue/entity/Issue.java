@@ -14,7 +14,18 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "issues", schema = "jira_issue")
+@Table(name = "issues", schema = "jira_issue",
+    indexes = {
+        @Index(name = "idx_issue_project_id", columnList = "project_id"),
+        @Index(name = "idx_issue_status", columnList = "status"),
+        @Index(name = "idx_issue_assignee_id", columnList = "assignee_id"),
+        @Index(name = "idx_issue_reporter_id", columnList = "reporter_id"),
+        @Index(name = "idx_issue_epic_id", columnList = "epic_id"),
+        @Index(name = "idx_issue_parent_issue_id", columnList = "parent_issue_id"),
+        @Index(name = "idx_issue_issue_key", columnList = "issue_key"),
+        @Index(name = "idx_issue_created_at", columnList = "created_at")
+    }
+)
 @Data
 @Builder
 @NoArgsConstructor

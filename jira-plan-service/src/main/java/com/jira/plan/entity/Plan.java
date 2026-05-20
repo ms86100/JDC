@@ -3,6 +3,7 @@ package com.jira.plan.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
@@ -37,8 +38,8 @@ public class Plan {
     @Column(name = "owner_id", nullable = false)
     private UUID ownerId;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    @Convert(converter = MapToJsonConverter.class)
     @Builder.Default
     private Map<String, Object> settings = Map.of();
 

@@ -18,7 +18,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin/issues")
 @RequiredArgsConstructor
-@Tag(name = "Issue Administration", description = "Admin endpoints for issue types, priorities, and statuses")
+@Tag(name = "Issue Administration", description = "Admin endpoints for issue types")
 @CrossOrigin(origins = "*")
 public class IssueAdminController {
 
@@ -66,37 +66,5 @@ public class IssueAdminController {
             @Parameter(description = "Issue Type ID") @PathVariable UUID id) {
         issueTypeService.deleteIssueType(id);
         return ResponseEntity.noContent().build();
-    }
-
-    // ==================== Priorities ====================
-
-    @GetMapping("/priorities")
-    @Operation(summary = "Get all priorities", description = "Returns all available priorities")
-    public ResponseEntity<List<IssueTypeResponse>> getPriorities() {
-        return ResponseEntity.ok(issueTypeService.getAllPriorities());
-    }
-
-    @PostMapping("/priorities")
-    @Operation(summary = "Create priority", description = "Creates a new priority")
-    public ResponseEntity<IssueTypeResponse> createPriority(
-            @Valid @RequestBody IssueTypeRequest request) {
-        IssueTypeResponse response = issueTypeService.createPriority(request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
-    }
-
-    // ==================== Statuses ====================
-
-    @GetMapping("/statuses")
-    @Operation(summary = "Get all statuses", description = "Returns all available statuses")
-    public ResponseEntity<List<IssueTypeResponse>> getStatuses() {
-        return ResponseEntity.ok(issueTypeService.getAllStatuses());
-    }
-
-    @PostMapping("/statuses")
-    @Operation(summary = "Create status", description = "Creates a new status")
-    public ResponseEntity<IssueTypeResponse> createStatus(
-            @Valid @RequestBody IssueTypeRequest request) {
-        IssueTypeResponse response = issueTypeService.createStatus(request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 }

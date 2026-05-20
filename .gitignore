@@ -57,3 +57,4 @@ secrets.json
 *.temp
 plan-*.txt
 test-*.sh
+.claude/

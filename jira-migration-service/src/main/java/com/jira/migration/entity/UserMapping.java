@@ -41,7 +41,7 @@ public class UserMapping {
     @Column(name = "mapping_type", nullable = false, length = 20)
     private String mappingType; // EXACT_MATCH, EMAIL_MATCH, CREATE_NEW, MANUAL
 
-    @Column(name = "confidence_score", precision = 5, scale = 2)
+    @Column(name = "confidence_score", precision = 5)
     private Double confidenceScore; // 0-100 for fuzzy matches
 
     @CreationTimestamp

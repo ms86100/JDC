@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -410,7 +411,8 @@ public class DeadLetterQueueService {
         Map<String, Long> byEntityType = new HashMap<>();
         Map<String, Long> byStatus = new HashMap<>();
         long totalRetries = 0;
-        Instant oldestEntry = null;
+        LocalDateTime oldestEntryTs = null;
+        Instant oldestEntryInstant = null;
 
         List<DlqEntry> allEntries = dlqEntryRepository.findAll();
         for (DlqEntry entry : allEntries) {
@@ -418,9 +420,13 @@ public class DeadLetterQueueService {
             byEntityType.merge(entry.getEntityType(), 1L, Long::sum);
             byStatus.merge(entry.getStatus().name(), 1L, Long::sum);
             totalRetries += entry.getAttemptCount();
-            if (oldestEntry == null || entry.getFirstFailure().isBefore(oldestEntry)) {
-                oldestEntry = entry.getFirstFailure();
+            if (oldestEntryTs == null || entry.getFirstFailure().isBefore(oldestEntryTs)) {
+                oldestEntryTs = entry.getFirstFailure();
             }
+        }
+
+        if (oldestEntryTs != null) {
+            oldestEntryInstant = oldestEntryTs.toInstant(ZoneOffset.UTC);
         }
 
         long pendingCount = dlqEntryRepository.countPending();
@@ -433,7 +439,7 @@ public class DeadLetterQueueService {
                 .byEntityType(byEntityType)
                 .byStatus(byStatus)
                 .totalRetryAttempts(totalRetries)
-                .oldestEntry(oldestEntry)
+                .oldestEntry(oldestEntryInstant)
                 .queueCapacity(dlqConfig.getMaxQueueSize())
                 .queueUsagePercentage(totalEntries > 0 ? (double) totalEntries / dlqConfig.getMaxQueueSize() * 100 : 0)
                 .build();
@@ -558,10 +564,10 @@ public class DeadLetterQueueService {
             String entityType = operation.getEntityType();
 
             if (entityKey != null && jobId != null) {
-                List<EntityStatus> statuses = entityStatusRepository.findByJobIdAndEntityTypeAndSourceIdentifier(
+                Optional<EntityStatus> statusOpt = entityStatusRepository.findByJobIdAndEntityTypeAndSourceIdentifier(
                         jobId, entityType, entityKey);
-                if (!statuses.isEmpty()) {
-                    EntityStatus status = statuses.get(0);
+                if (statusOpt.isPresent()) {
+                    EntityStatus status = statusOpt.get();
                     status.setStatus(success ? "RETRY_SUCCESS" : "RETRY_FAILED");
                     status.setProcessedAt(LocalDateTime.now());
                     entityStatusRepository.save(status);

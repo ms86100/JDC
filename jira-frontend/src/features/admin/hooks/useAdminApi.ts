@@ -123,6 +123,81 @@ export interface AuditLog {
   severity: string;
 }
 
+// ==================== Schemes ====================
+
+export interface PermissionScheme {
+  id: string;
+  name: string;
+  description: string;
+  projectCount: number;
+  permissionCount: number;
+  isDefault: boolean;
+}
+
+export interface NotificationScheme {
+  id: string;
+  name: string;
+  description: string;
+  projectCount: number;
+  eventCount: number;
+  isDefault: boolean;
+}
+
+export interface SecurityScheme {
+  id: string;
+  name: string;
+  description: string;
+  projectCount: number;
+  securityLevelCount: number;
+  isDefault: boolean;
+}
+
+// ==================== Roles ====================
+
+export interface ProjectRole {
+  id: string;
+  name: string;
+  description: string;
+  isDefault: boolean;
+  memberCount: number;
+}
+
+// ==================== Password Policy ====================
+
+export interface PasswordPolicy {
+  id: string;
+  name: string;
+  minLength: number;
+  requireUppercase: boolean;
+  requireLowercase: boolean;
+  requireDigit: boolean;
+  requireSpecial: boolean;
+  maxAge: number; // days, 0 = never
+  preventReuse: number; // count, 0 = allow reuse
+  isDefault: boolean;
+}
+
+// ==================== Sessions ====================
+
+export interface UserSession {
+  id: string;
+  userId: string;
+  userName: string;
+  displayName: string;
+  ipAddress: string;
+  userAgent: string;
+  loginTime: string;
+  lastActive: string;
+  expiresAt: string;
+  isCurrent: boolean;
+}
+
+export interface SessionPolicy {
+  sessionTimeout: number; // minutes
+  maxSessions: number; // 0 = unlimited
+  allowMultipleSessions: boolean;
+}
+
 // ==================== API Functions ====================
 
 const adminApi = {
@@ -179,6 +254,47 @@ const adminApi = {
   getAuditLogs: (params?: { userId?: string; category?: string; action?: string; page?: number; size?: number }) =>
     apiClient.get<{ content: AuditLog[]; totalElements: number }>('/api/admin/audit', { params }),
   getAuditStatistics: () => apiClient.get('/api/admin/audit/statistics'),
+
+  // Permission Schemes
+  getPermissionSchemes: () => apiClient.get<PermissionScheme[]>('/api/admin/permission-schemes'),
+  createPermissionScheme: (data: Partial<PermissionScheme>) => apiClient.post<PermissionScheme>('/api/admin/permission-schemes', data),
+  updatePermissionScheme: (id: string, data: Partial<PermissionScheme>) => apiClient.put<PermissionScheme>(`/api/admin/permission-schemes/${id}`, data),
+  deletePermissionScheme: (id: string) => apiClient.delete(`/api/admin/permission-schemes/${id}`),
+  copyPermissionScheme: (id: string) => apiClient.post<PermissionScheme>(`/api/admin/permission-schemes/${id}/copy`),
+
+  // Notification Schemes
+  getNotificationSchemes: () => apiClient.get<NotificationScheme[]>('/api/admin/notification-schemes'),
+  createNotificationScheme: (data: Partial<NotificationScheme>) => apiClient.post<NotificationScheme>('/api/admin/notification-schemes', data),
+  updateNotificationScheme: (id: string, data: Partial<NotificationScheme>) => apiClient.put<NotificationScheme>(`/api/admin/notification-schemes/${id}`, data),
+  deleteNotificationScheme: (id: string) => apiClient.delete(`/api/admin/notification-schemes/${id}`),
+  copyNotificationScheme: (id: string) => apiClient.post<NotificationScheme>(`/api/admin/notification-schemes/${id}/copy`),
+
+  // Security Schemes
+  getSecuritySchemes: () => apiClient.get<SecurityScheme[]>('/api/admin/security-schemes'),
+  createSecurityScheme: (data: Partial<SecurityScheme>) => apiClient.post<SecurityScheme>('/api/admin/security-schemes', data),
+  updateSecurityScheme: (id: string, data: Partial<SecurityScheme>) => apiClient.put<SecurityScheme>(`/api/admin/security-schemes/${id}`, data),
+  deleteSecurityScheme: (id: string) => apiClient.delete(`/api/admin/security-schemes/${id}`),
+  copySecurityScheme: (id: string) => apiClient.post<SecurityScheme>(`/api/admin/security-schemes/${id}/copy`),
+
+  // Project Roles
+  getProjectRoles: () => apiClient.get<ProjectRole[]>('/api/admin/project-roles'),
+  createProjectRole: (data: Partial<ProjectRole>) => apiClient.post<ProjectRole>('/api/admin/project-roles', data),
+  updateProjectRole: (id: string, data: Partial<ProjectRole>) => apiClient.put<ProjectRole>(`/api/admin/project-roles/${id}`, data),
+  deleteProjectRole: (id: string) => apiClient.delete(`/api/admin/project-roles/${id}`),
+
+  // Password Policies
+  getPasswordPolicies: () => apiClient.get<PasswordPolicy[]>('/api/admin/password-policies'),
+  createPasswordPolicy: (data: Partial<PasswordPolicy>) => apiClient.post<PasswordPolicy>('/api/admin/password-policies', data),
+  updatePasswordPolicy: (id: string, data: Partial<PasswordPolicy>) => apiClient.put<PasswordPolicy>(`/api/admin/password-policies/${id}`, data),
+  deletePasswordPolicy: (id: string) => apiClient.delete(`/api/admin/password-policies/${id}`),
+  setDefaultPasswordPolicy: (id: string) => apiClient.post(`/api/admin/password-policies/${id}/default`),
+
+  // Sessions
+  getUserSessions: () => apiClient.get<UserSession[]>('/api/admin/sessions'),
+  revokeSession: (sessionId: string) => apiClient.post(`/api/admin/sessions/${sessionId}/revoke`),
+  revokeAllSessions: (userId?: string) => apiClient.post(`/api/admin/sessions/revoke-all`, { userId }),
+  getSessionPolicy: () => apiClient.get<SessionPolicy>('/api/admin/sessions/policy'),
+  updateSessionPolicy: (policy: SessionPolicy) => apiClient.put<SessionPolicy>('/api/admin/sessions/policy', policy),
 };
 
 // ==================== React Query Hooks ====================
@@ -458,6 +574,15 @@ export const useJiraUsers = (params?: { search?: string; status?: string; page?:
   });
 };
 
+export const useJiraUser = (userId: string) => {
+  return useQuery({
+    queryKey: ['jira', 'user', userId],
+    queryFn: () => jiraUserApi.getUser(userId),
+    select: (res) => res.data,
+    enabled: !!userId,
+  });
+};
+
 export const useJiraGroups = (params?: { search?: string; page?: number; size?: number }) => {
   return useQuery({
     queryKey: ['jira', 'groups', params],
@@ -524,6 +649,338 @@ export const useDeleteJiraUser = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to delete Systems and Avionics user:', error.message);
+    },
+  });
+};
+
+export const useAddUserToGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
+      apiClient.post(`/api/admin/users/groups/${groupId}/members/${userId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jira', 'groupMembers'] });
+      queryClient.invalidateQueries({ queryKey: ['jira', 'groups'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to add user to group:', error.message);
+    },
+  });
+};
+
+export const useRemoveUserFromGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
+      apiClient.delete(`/api/admin/users/groups/${groupId}/members/${userId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jira', 'groupMembers'] });
+      queryClient.invalidateQueries({ queryKey: ['jira', 'groups'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to remove user from group:', error.message);
+    },
+  });
+};
+
+export const useJiraGroupMembers = (groupId: string) => {
+  return useQuery({
+    queryKey: ['jira', 'groupMembers', groupId],
+    queryFn: () => apiClient.get<User[]>(`/api/admin/users/groups/${groupId}/members`),
+    select: (res) => res.data,
+    enabled: !!groupId,
+  });
+};
+
+// ==================== Permission Scheme Hooks ====================
+
+export const usePermissionSchemes = () => {
+  return useQuery({
+    queryKey: ['admin', 'permissionSchemes'],
+    queryFn: () => adminApi.getPermissionSchemes(),
+    select: (res) => res.data,
+  });
+};
+
+export const useCreatePermissionScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<PermissionScheme>) => adminApi.createPermissionScheme(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'permissionSchemes'] });
+    },
+  });
+};
+
+export const useUpdatePermissionScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<PermissionScheme> }) =>
+      adminApi.updatePermissionScheme(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'permissionSchemes'] });
+    },
+  });
+};
+
+export const useDeletePermissionScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminApi.deletePermissionScheme(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'permissionSchemes'] });
+    },
+  });
+};
+
+export const useCopyPermissionScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminApi.copyPermissionScheme(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'permissionSchemes'] });
+    },
+  });
+};
+
+// ==================== Notification Scheme Hooks ====================
+
+export const useNotificationSchemes = () => {
+  return useQuery({
+    queryKey: ['admin', 'notificationSchemes'],
+    queryFn: () => adminApi.getNotificationSchemes(),
+    select: (res) => res.data,
+  });
+};
+
+export const useCreateNotificationScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<NotificationScheme>) => adminApi.createNotificationScheme(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'notificationSchemes'] });
+    },
+  });
+};
+
+export const useUpdateNotificationScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<NotificationScheme> }) =>
+      adminApi.updateNotificationScheme(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'notificationSchemes'] });
+    },
+  });
+};
+
+export const useDeleteNotificationScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminApi.deleteNotificationScheme(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'notificationSchemes'] });
+    },
+  });
+};
+
+export const useCopyNotificationScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminApi.copyNotificationScheme(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'notificationSchemes'] });
+    },
+  });
+};
+
+// ==================== Security Scheme Hooks ====================
+
+export const useSecuritySchemes = () => {
+  return useQuery({
+    queryKey: ['admin', 'securitySchemes'],
+    queryFn: () => adminApi.getSecuritySchemes(),
+    select: (res) => res.data,
+  });
+};
+
+export const useCreateSecurityScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<SecurityScheme>) => adminApi.createSecurityScheme(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'securitySchemes'] });
+    },
+  });
+};
+
+export const useUpdateSecurityScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<SecurityScheme> }) =>
+      adminApi.updateSecurityScheme(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'securitySchemes'] });
+    },
+  });
+};
+
+export const useDeleteSecurityScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminApi.deleteSecurityScheme(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'securitySchemes'] });
+    },
+  });
+};
+
+export const useCopySecurityScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminApi.copySecurityScheme(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'securitySchemes'] });
+    },
+  });
+};
+
+// ==================== Project Role Hooks ====================
+
+export const useProjectRoles = () => {
+  return useQuery({
+    queryKey: ['admin', 'projectRoles'],
+    queryFn: () => adminApi.getProjectRoles(),
+    select: (res) => res.data,
+  });
+};
+
+export const useCreateProjectRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<ProjectRole>) => adminApi.createProjectRole(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'projectRoles'] });
+    },
+  });
+};
+
+export const useUpdateProjectRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<ProjectRole> }) =>
+      adminApi.updateProjectRole(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'projectRoles'] });
+    },
+  });
+};
+
+export const useDeleteProjectRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminApi.deleteProjectRole(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'projectRoles'] });
+    },
+  });
+};
+
+// ==================== Password Policy Hooks ====================
+
+export const usePasswordPolicies = () => {
+  return useQuery({
+    queryKey: ['admin', 'passwordPolicies'],
+    queryFn: () => adminApi.getPasswordPolicies(),
+    select: (res) => res.data,
+  });
+};
+
+export const useCreatePasswordPolicy = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<PasswordPolicy>) => adminApi.createPasswordPolicy(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'passwordPolicies'] });
+    },
+  });
+};
+
+export const useUpdatePasswordPolicy = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<PasswordPolicy> }) =>
+      adminApi.updatePasswordPolicy(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'passwordPolicies'] });
+    },
+  });
+};
+
+export const useDeletePasswordPolicy = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminApi.deletePasswordPolicy(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'passwordPolicies'] });
+    },
+  });
+};
+
+export const useSetDefaultPasswordPolicy = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminApi.setDefaultPasswordPolicy(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'passwordPolicies'] });
+    },
+  });
+};
+
+// ==================== Session Hooks ====================
+
+export const useUserSessions = () => {
+  return useQuery({
+    queryKey: ['admin', 'userSessions'],
+    queryFn: () => adminApi.getUserSessions(),
+    select: (res) => res.data,
+  });
+};
+
+export const useRevokeSession = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (sessionId: string) => adminApi.revokeSession(sessionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'userSessions'] });
+    },
+  });
+};
+
+export const useRevokeAllSessions = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId?: string) => adminApi.revokeAllSessions(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'userSessions'] });
+    },
+  });
+};
+
+export const useSessionPolicy = () => {
+  return useQuery({
+    queryKey: ['admin', 'sessionPolicy'],
+    queryFn: () => adminApi.getSessionPolicy(),
+    select: (res) => res.data,
+  });
+};
+
+export const useUpdateSessionPolicy = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (policy: SessionPolicy) => adminApi.updateSessionPolicy(policy),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sessionPolicy'] });
     },
   });
 };

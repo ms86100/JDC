@@ -7,21 +7,24 @@ import com.jira.plan.entity.Plan;
 import com.jira.plan.exception.ResourceNotFoundException;
 import com.jira.plan.repository.IssueDependencyRepository;
 import com.jira.plan.repository.PlanRepository;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DependencyService {
 
     private final IssueDependencyRepository dependencyRepository;
     private final PlanRepository planRepository;
+    private final ScheduleEngine scheduleEngine;
+    private final CriticalPathService criticalPathService;
 
     @Transactional(readOnly = true)
     public List<DependencyResponse> getDependenciesByPlanId(UUID planId) {
@@ -58,7 +61,123 @@ public class DependencyService {
                 .build();
 
         dependency = dependencyRepository.save(dependency);
+
+        // Trigger schedule recalculation for affected items
+        propagateScheduleChanges(planId, request.getBlockedIssueId());
+
+        log.info("Created dependency and triggered schedule propagation for plan: {}", planId);
         return toResponse(dependency);
+    }
+
+    /**
+     * Propagates schedule changes to downstream items when a dependency changes.
+     */
+    public void propagateScheduleChanges(UUID planId, UUID changedItemId) {
+        log.info("Propagating schedule changes for item {} in plan {}", changedItemId, planId);
+
+        List<IssueDependency> dependencies = dependencyRepository.findByPlanId(planId);
+        Set<UUID> affectedItems = findDownstreamAffectedItems(changedItemId, dependencies);
+
+        if (!affectedItems.isEmpty()) {
+            ScheduleEngine.ScheduleResult result = scheduleEngine.propagateScheduleChanges(planId, changedItemId, 0);
+            log.info("Schedule propagation complete: {} items affected", result.getAffectedItemIds().size());
+        }
+    }
+
+    /**
+     * Finds all items that would be affected by a change to the given item.
+     * Walks the dependency graph downstream (items that the changed item blocks).
+     */
+    private Set<UUID> findDownstreamAffectedItems(UUID itemId, List<IssueDependency> dependencies) {
+        Set<UUID> affected = new HashSet<>();
+        Queue<UUID> toProcess = new LinkedList<>();
+        toProcess.offer(itemId);
+
+        Map<UUID, List<UUID>> blockedBy = new HashMap<>();
+        for (IssueDependency dep : dependencies) {
+            blockedBy.computeIfAbsent(dep.getBlockingIssueId(), k -> new ArrayList<>())
+                    .add(dep.getBlockedIssueId());
+        }
+
+        while (!toProcess.isEmpty()) {
+            UUID current = toProcess.poll();
+            List<UUID> blocked = blockedBy.get(current);
+            if (blocked != null) {
+                for (UUID blockedId : blocked) {
+                    if (!affected.contains(blockedId)) {
+                        affected.add(blockedId);
+                        toProcess.offer(blockedId);
+                    }
+                }
+            }
+        }
+
+        return affected;
+    }
+
+    /**
+     * Gets all items upstream of a given item (items that block this item).
+     */
+    public Set<UUID> findUpstreamDependencies(UUID itemId, UUID planId) {
+        List<IssueDependency> dependencies = dependencyRepository.findByPlanId(planId);
+        Set<UUID> upstream = new HashSet<>();
+        Queue<UUID> toProcess = new LinkedList<>();
+        toProcess.offer(itemId);
+
+        Map<UUID, List<UUID>> blockedBy = new HashMap<>();
+        for (IssueDependency dep : dependencies) {
+            blockedBy.computeIfAbsent(dep.getBlockedIssueId(), k -> new ArrayList<>())
+                    .add(dep.getBlockingIssueId());
+        }
+
+        while (!toProcess.isEmpty()) {
+            UUID current = toProcess.poll();
+            List<UUID> blockers = blockedBy.get(current);
+            if (blockers != null) {
+                for (UUID blockerId : blockers) {
+                    if (!upstream.contains(blockerId)) {
+                        upstream.add(blockerId);
+                        toProcess.offer(blockerId);
+                    }
+                }
+            }
+        }
+
+        return upstream;
+    }
+
+    /**
+     * Analyzes the impact of removing a dependency.
+     */
+    public DependencyImpactAnalysis analyzeDependencyImpact(UUID planId, UUID dependencyId) {
+        IssueDependency dependency = findDependencyById(dependencyId);
+
+        Set<UUID> upstreamBlockers = findUpstreamDependencies(dependency.getBlockingIssueId(), planId);
+        Set<UUID> downstreamBlocked = findDownstreamAffectedItems(dependency.getBlockedIssueId(),
+                dependencyRepository.findByPlanId(planId));
+
+        CriticalPathService.CriticalPathResult cpm = criticalPathService.calculateCriticalPath(planId);
+        boolean onCriticalPath = cpm.getCriticalPath().stream()
+                .anyMatch(node -> node.getIssueId().equals(dependency.getBlockedIssueId()));
+
+        int impactScore = 0;
+        if (onCriticalPath) impactScore += 50;
+        impactScore += Math.min(downstreamBlocked.size() * 5, 30);
+        impactScore += Math.min(upstreamBlockers.size() * 5, 20);
+
+        String impactLevel = impactScore > 60 ? "HIGH" : impactScore > 30 ? "MEDIUM" : "LOW";
+
+        return DependencyImpactAnalysis.builder()
+                .dependencyId(dependencyId)
+                .blockingIssueId(dependency.getBlockingIssueId())
+                .blockedIssueId(dependency.getBlockedIssueId())
+                .onCriticalPath(onCriticalPath)
+                .upstreamDependencyCount(upstreamBlockers.size())
+                .downstreamDependencyCount(downstreamBlocked.size())
+                .impactScore(impactScore)
+                .impactLevel(impactLevel)
+                .affectedItemIds(new ArrayList<>(downstreamBlocked))
+                .build();
     }
 
     /**
@@ -92,7 +211,13 @@ public class DependencyService {
     @Transactional
     public void deleteDependency(UUID planId, UUID dependencyId) {
         IssueDependency dependency = findDependencyById(dependencyId);
+        UUID blockedIssueId = dependency.getBlockedIssueId();
         dependencyRepository.delete(dependency);
+
+        // Trigger schedule recalculation after dependency removal
+        propagateScheduleChanges(planId, blockedIssueId);
+
+        log.info("Deleted dependency and triggered schedule propagation for plan: {}", planId);
     }
 
     private Plan findPlanById(UUID id) {
@@ -114,5 +239,26 @@ public class DependencyService {
                 .dependencyType(dependency.getDependencyType())
                 .createdAt(dependency.getCreatedAt())
                 .build();
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class DependencyImpactAnalysis {
+        private UUID dependencyId;
+        private UUID blockingIssueId;
+        private UUID blockedIssueId;
+        @Builder.Default
+        private boolean onCriticalPath = false;
+        @Builder.Default
+        private int upstreamDependencyCount = 0;
+        @Builder.Default
+        private int downstreamDependencyCount = 0;
+        @Builder.Default
+        private int impactScore = 0;
+        private String impactLevel;
+        @Builder.Default
+        private List<UUID> affectedItemIds = List.of();
     }
 }

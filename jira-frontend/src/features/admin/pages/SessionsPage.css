@@ -1,0 +1,122 @@
+/* Sessions Page Styles */
+
+.ip-address {
+  font-family: monospace;
+  font-size: 13px;
+  color: #172b4d;
+}
+
+.user-agent {
+  display: block;
+  font-size: 11px;
+  color: #5e6c84;
+  margin-top: 2px;
+}
+
+.session-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.session-status-active {
+  background: #e3fcef;
+  color: #006644;
+}
+
+.session-status-current {
+  background: #deebff;
+  color: #0052cc;
+}
+
+.admin-alert {
+  padding: 10px 16px;
+  border-radius: 3px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.admin-alert-success {
+  background: #e3fcef;
+  color: #006644;
+  border: 1px solid #36b37e;
+}
+
+.admin-alert-error {
+  background: #ffebe6;
+  color: #bf2600;
+  border: 1px solid #de350b;
+}
+
+.form-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.form-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #172b4d;
+  cursor: pointer;
+}
+
+.form-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.form-help {
+  display: block;
+  font-size: 12px;
+  color: #5e6c84;
+  margin-top: 4px;
+}
+
+.admin-form-input-narrow {
+  width: 100px;
+}
+
+/* User cell styles */
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #0052cc;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #172b4d;
+}
+
+.user-username {
+  font-size: 12px;
+  color: #5e6c84;
+}

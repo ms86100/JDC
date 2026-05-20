@@ -3,9 +3,7 @@ package com.jira.migration.service.clients;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -36,9 +34,6 @@ public abstract class BaseServiceClient {
     private static final String AUTH_HEADER = "X-Auth-Token";
     private static final String REQUEST_ID_HEADER = "X-Request-ID";
     private static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
-
-    @Autowired
-    protected HttpServletRequest httpServletRequest;
 
     protected BaseServiceClient(RestTemplate restTemplate, ObjectMapper objectMapper,
                                   CircuitBreakerRegistry circuitBreakerRegistry,
@@ -80,21 +75,7 @@ public abstract class BaseServiceClient {
      * Extracts auth token from the current request context.
      */
     protected String getAuthToken() {
-        try {
-            if (httpServletRequest != null) {
-                String token = httpServletRequest.getHeader(AUTH_HEADER);
-                if (token != null) {
-                    return token;
-                }
-                // Also check for Bearer token
-                String authHeader = httpServletRequest.getHeader(HttpHeaders.AUTHORIZATION);
-                if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                    return authHeader.substring(7);
-                }
-            }
-        } catch (Exception e) {
-            log.debug("Could not extract auth token: {}", e.getMessage());
-        }
+        // Auth token will be handled by the migration service directly
         return null;
     }
 
@@ -102,20 +83,6 @@ public abstract class BaseServiceClient {
      * Extracts correlation ID from request or generates a new one.
      */
     protected String getCorrelationId() {
-        try {
-            if (httpServletRequest != null) {
-                String correlationId = httpServletRequest.getHeader(CORRELATION_ID_HEADER);
-                if (correlationId != null) {
-                    return correlationId;
-                }
-                String requestId = httpServletRequest.getHeader(REQUEST_ID_HEADER);
-                if (requestId != null) {
-                    return requestId;
-                }
-            }
-        } catch (Exception e) {
-            log.debug("Could not extract correlation ID: {}", e.getMessage());
-        }
         return java.util.UUID.randomUUID().toString();
     }
 

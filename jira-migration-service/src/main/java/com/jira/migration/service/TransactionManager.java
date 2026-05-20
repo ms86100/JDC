@@ -18,7 +18,7 @@ import java.util.*;
  * Provides transactional boundaries with proper rollback support
  * Ensures no partial corruption on import failure
  */
-@Service
+@Service("migrationTransactionManager")
 @RequiredArgsConstructor
 @Slf4j
 public class TransactionManager {

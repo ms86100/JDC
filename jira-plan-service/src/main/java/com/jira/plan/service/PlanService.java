@@ -43,11 +43,11 @@ public class PlanService {
     }
 
     @Transactional
-    public PlanResponse createPlan(CreatePlanRequest request) {
+    public PlanResponse createPlan(CreatePlanRequest request, UUID userId) {
         Plan plan = Plan.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .ownerId(request.getOwnerId())
+                .ownerId(request.getOwnerId() != null ? request.getOwnerId() : userId)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .settings(request.getSettings() != null ? request.getSettings() : Map.of())

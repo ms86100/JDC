@@ -1,5 +1,6 @@
 package com.jira.issue.dto;
 
+import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -12,8 +13,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UpdateIssueRequest {
 
+    @Size(max = 500, message = "Title must not exceed 500 characters")
     private String title;
-    private String description;
+
+    private String description;  // No length limit for description (may be rich text)
 
     // Assignee and priority
     private UUID assigneeId;
@@ -22,7 +25,11 @@ public class UpdateIssueRequest {
 
     // Epic fields
     private UUID epicId;
+
+    @Size(max = 255, message = "Epic name must not exceed 255 characters")
     private String epicName;
+
+    @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "Epic color must be a valid hex color (e.g., #FF5733)")
     private String epicColor;
 
     // Security level
@@ -36,12 +43,20 @@ public class UpdateIssueRequest {
     private UUID[] fixVersions;
 
     // Story points and rank
+    @Min(value = 0, message = "Story points cannot be negative")
+    @Max(value = 10000, message = "Story points cannot exceed 10000")
     private Integer storyPoints;
-    private String rank;
+
+    private String rank;  // LexoRank format - no specific pattern validation needed
 
     // Time tracking (in seconds)
+    @Min(value = 0, message = "Original estimate cannot be negative")
     private Long originalEstimate;
+
+    @Min(value = 0, message = "Remaining estimate cannot be negative")
     private Long remainingEstimate;
+
+    @Min(value = 0, message = "Time spent cannot be negative")
     private Long timeSpent;
 
     // Resolution
@@ -49,6 +64,7 @@ public class UpdateIssueRequest {
     private LocalDateTime resolutionDate;
 
     // Due date
+    @FutureOrPresent(message = "Due date cannot be in the past")
     private LocalDate dueDate;
 
     // Labels
@@ -61,5 +77,6 @@ public class UpdateIssueRequest {
     private UUID statusId;
 
     // Optimistic locking - required for updates to detect concurrent modifications
+    @Min(value = 0, message = "Version must be non-negative")
     private Long expectedVersion;
 }

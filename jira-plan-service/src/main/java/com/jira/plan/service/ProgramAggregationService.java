@@ -138,22 +138,46 @@ public class ProgramAggregationService {
     private List<CrossPlanDependency> findCrossPlanDependencies(List<AggregatedPlan> plans) {
         List<CrossPlanDependency> dependencies = new ArrayList<>();
         Map<String, AggregatedPlan> planIssueMap = new HashMap<>();
+        Map<String, PlanItem> issueLookup = new HashMap<>();
 
         for (AggregatedPlan plan : plans) {
             for (PlanItem issue : plan.getAllIssues()) {
                 String key = plan.getPlanId() + ":" + issue.getIssueKey();
                 planIssueMap.put(key, plan);
+                issueLookup.put(issue.getIssueKey(), issue);
             }
         }
 
         for (AggregatedPlan plan : plans) {
             for (PlanItem issue : plan.getAllIssues()) {
-                // Look for blocking relationships within the plan's issues
-                // that reference issues from other plans
+                if (issue.getParentId() != null) {
+                    PlanItem parent = issueLookup.get(issue.getIssueKey());
+                    if (parent != null) {
+                        AggregatedPlan parentPlan = findPlanForIssue(planIssueMap, parent.getParentId());
+                        if (parentPlan != null && !parentPlan.getPlanId().equals(plan.getPlanId())) {
+                            dependencies.add(CrossPlanDependency.builder()
+                                    .fromPlanId(plan.getPlanId().toString())
+                                    .fromIssueKey(issue.getIssueKey())
+                                    .toPlanId(parentPlan.getPlanId().toString())
+                                    .toIssueKey(parent.getIssueKey())
+                                    .dependencyType("PARENT")
+                                    .build());
+                        }
+                    }
+                }
             }
         }
 
         return dependencies;
+    }
+
+    private AggregatedPlan findPlanForIssue(Map<String, AggregatedPlan> planIssueMap, UUID issueId) {
+        for (Map.Entry<String, AggregatedPlan> entry : planIssueMap.entrySet()) {
+            if (entry.getKey().contains(issueId.toString())) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     private List<AggregatedRelease> aggregateReleases(List<AggregatedPlan> plans) {
@@ -161,8 +185,30 @@ public class ProgramAggregationService {
 
         for (AggregatedPlan plan : plans) {
             for (PlanItem issue : plan.getAllIssues()) {
-                // Extract version/release info from issue if available
-                // Group by release name
+                if (issue.getTargetDate() != null) {
+                    String releaseName = "Q" + ((issue.getTargetDate().getMonthValue() - 1) / 3 + 1)
+                            + " " + issue.getTargetDate().getYear();
+
+                    releaseMap.computeIfAbsent(releaseName, name -> AggregatedRelease.builder()
+                            .name(name)
+                            .releaseDate(issue.getTargetDate())
+                            .issueCount(0)
+                            .progress(0.0)
+                            .build());
+
+                    AggregatedRelease release = releaseMap.get(releaseName);
+                    release.setIssueCount(release.getIssueCount() + 1);
+
+                    if ("DONE".equals(issue.getStatusCategory())) {
+                        release.setProgress(release.getProgress() + 1);
+                    }
+                }
+            }
+        }
+
+        for (AggregatedRelease release : releaseMap.values()) {
+            if (release.getIssueCount() > 0) {
+                release.setProgress((release.getProgress() * 100.0) / release.getIssueCount());
             }
         }
 

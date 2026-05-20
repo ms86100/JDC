@@ -7,7 +7,6 @@ import com.jira.migration.repository.EntityStatusRepository;
 import com.jira.migration.repository.ProjectMappingRepository;
 import com.jira.migration.service.clients.*;
 import com.jira.migration.service.clients.dto.*;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,40 +14,57 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import java.util.*;
+
 /**
  * Issue Persister Handler
  * Handles issue creation with Epic/Story/Subtask hierarchy support using real service calls.
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class IssuePersisterHandler {
 
     private final ProjectMappingRepository projectMappingRepository;
     private final EntityStatusRepository entityStatusRepository;
-    private final IssueServiceClient issueServiceClient;
-    private final IssueLinkServiceClient issueLinkServiceClient;
+    private IssueServiceClient issueServiceClient;
+    private IssueLinkServiceClient issueLinkServiceClient;
 
     // Track created issues for rollback
     private final List<String> createdIssueIds = new ArrayList<>();
 
-    // Issue type hierarchy
-    private static final Map<String, String> PARENT_TYPE_MAP = Map.of(
-            "Epic", null,
-            "Story", "Epic",
-            "Task", null,
-            "Bug", null,
-            "Subtask", "Story"
-    );
+    public IssuePersisterHandler(
+            ProjectMappingRepository projectMappingRepository,
+            EntityStatusRepository entityStatusRepository) {
+        this.projectMappingRepository = projectMappingRepository;
+        this.entityStatusRepository = entityStatusRepository;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setServiceClients(IssueServiceClient issueServiceClient, IssueLinkServiceClient issueLinkServiceClient) {
+        this.issueServiceClient = issueServiceClient;
+        this.issueLinkServiceClient = issueLinkServiceClient;
+    }
+
+    // Issue type hierarchy - use HashMap to allow null values
+    private static final Map<String, String> PARENT_TYPE_MAP;
+    static {
+        Map<String, String> temp = new HashMap<>();
+        temp.put("Epic", null);
+        temp.put("Story", "Epic");
+        temp.put("Task", null);
+        temp.put("Bug", null);
+        temp.put("Subtask", "Story");
+        PARENT_TYPE_MAP = Collections.unmodifiableMap(temp);
+    }
 
     @Transactional(rollbackFor = Exception.class)
     public IssuePersisterResult persistIssue(Map<String, Object> issueData, UUID jobId) {
         IssuePersisterResult result = new IssuePersisterResult();
 
         try {
-            // 1. Extract and validate project
-            String projectKey = (String) issueData.get("projectKey");
-            String projectId = (String) issueData.get("projectId");
+            // 1. Extract and validate project (handle both project_key and projectKey)
+            String projectKey = (String) issueData.getOrDefault("projectKey", issueData.get("project_key"));
+            String projectId = (String) issueData.getOrDefault("projectId", issueData.get("project_id"));
 
             if (projectId == null) {
                 if (projectKey == null) {
@@ -61,8 +77,8 @@ public class IssuePersisterHandler {
                 projectId = projectMapping.getTargetId().toString();
             }
 
-            // 2. Extract and validate issue type
-            String issueType = (String) issueData.get("issueType");
+            // 2. Extract and validate issue type (handle both issue_type and issueType)
+            String issueType = (String) issueData.getOrDefault("issueType", issueData.get("issue_type"));
             if (issueType == null || issueType.isBlank()) {
                 throw new ValidationException("Issue type is required", "ISSUE_TYPE_REQUIRED", "issueType");
             }
@@ -92,7 +108,14 @@ public class IssuePersisterHandler {
             }
 
             // 7. Add labels if present
-            List<String> labels = (List<String>) issueData.get("labels");
+            List<String> labels = (List<String>) issueData.getOrDefault("labels", issueData.get("label"));
+            if (labels == null) {
+                // Try comma-separated string
+                String labelsStr = (String) issueData.getOrDefault("labels", issueData.get("label"));
+                if (labelsStr != null && labelsStr.contains(",")) {
+                    labels = Arrays.asList(labelsStr.split(","));
+                }
+            }
             if (labels != null && !labels.isEmpty()) {
                 addLabels(issueId, labels);
             }
@@ -159,14 +182,14 @@ public class IssuePersisterHandler {
     private CreateIssueRequest buildCreateIssueRequest(Map<String, Object> data, String projectId) {
         CreateIssueRequest.CreateIssueRequestBuilder builder = CreateIssueRequest.builder()
                 .projectId(projectId)
-                .issueType((String) data.get("issueType"))
-                .summary((String) data.getOrDefault("summary", ""))
-                .description((String) data.get("description"))
-                .status((String) data.getOrDefault("status", "Open"))
-                .priority((String) data.get("priority"))
-                .assigneeId((String) data.get("assigneeId"))
-                .reporterId((String) data.get("reporterId"))
-                .originalIssueKey((String) data.get("issueKey"));
+                .issueType((String) data.getOrDefault("issueType", data.get("issue_type")))
+                .summary((String) data.getOrDefault("summary", data.get("title")))
+                .description((String) data.getOrDefault("description", data.get("body")))
+                .status((String) data.getOrDefault("status", data.get("issue_status")))
+                .priority((String) data.getOrDefault("priority", data.get("issue_priority")))
+                .assigneeId((String) data.getOrDefault("assigneeId", data.get("assignee")))
+                .reporterId((String) data.getOrDefault("reporterId", data.get("reporter")))
+                .originalIssueKey((String) data.getOrDefault("originalIssueKey", data.get("issue_key")));
 
         // Handle labels
         Object labelsObj = data.get("labels");
@@ -175,26 +198,26 @@ public class IssuePersisterHandler {
         }
 
         // Handle parent
-        String parentId = (String) data.get("parentId");
-        String parentIssueKey = (String) data.get("parentIssueKey");
+        String parentId = (String) data.getOrDefault("parentId", data.get("parent_id"));
+        String parentIssueKey = (String) data.getOrDefault("parentIssueKey", data.get("parent_key"));
         if (parentId != null) {
             builder.parentId(parentId);
         }
 
         // Handle sprint
-        String sprintId = (String) data.get("sprintId");
+        String sprintId = (String) data.getOrDefault("sprintId", data.get("sprint_id"));
         if (sprintId != null) {
             builder.sprintId(sprintId);
         }
 
-        // Handle epic link
-        String epicId = (String) data.get("epicId");
+        // Handle epic link (also check epic_link)
+        String epicId = (String) data.getOrDefault("epicId", data.get("epic_id"));
         if (epicId != null) {
             builder.epicId(epicId);
         }
 
         // Handle due date
-        Object dueDate = data.get("dueDate");
+        Object dueDate = data.getOrDefault("dueDate", data.get("due_date"));
         if (dueDate != null) {
             try {
                 builder.dueDate(LocalDateTime.parse(dueDate.toString()));
@@ -204,7 +227,7 @@ public class IssuePersisterHandler {
         }
 
         // Handle story points
-        Object storyPoints = data.get("storyPoints");
+        Object storyPoints = data.getOrDefault("storyPoints", data.get("story_points"));
         if (storyPoints != null) {
             if (storyPoints instanceof Number) {
                 builder.storyPoints(((Number) storyPoints).doubleValue());
@@ -212,7 +235,7 @@ public class IssuePersisterHandler {
         }
 
         // Handle custom fields
-        Object customFields = data.get("customFields");
+        Object customFields = data.getOrDefault("customFields", data.get("custom_fields"));
         if (customFields instanceof Map) {
             @SuppressWarnings("unchecked")
             Map<String, Object> cf = (Map<String, Object>) customFields;

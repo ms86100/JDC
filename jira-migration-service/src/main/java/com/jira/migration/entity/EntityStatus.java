@@ -3,8 +3,11 @@ package com.jira.migration.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -52,7 +55,8 @@ public class EntityStatus {
     private String errorField; // Field that caused the error
 
     @Column(name = "error_context", columnDefinition = "jsonb")
-    private String errorContext; // Additional context
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> errorContext; // Additional context
 
     @CreationTimestamp
     @Column(name = "started_at")
@@ -66,9 +70,11 @@ public class EntityStatus {
 
     // Validation results
     @Column(name = "validation_errors", columnDefinition = "jsonb")
-    private String validationErrors;
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> validationErrors;
 
     @Column(name = "warnings", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String warnings;
 
     @Column(name = "source_identifier", length = 255)

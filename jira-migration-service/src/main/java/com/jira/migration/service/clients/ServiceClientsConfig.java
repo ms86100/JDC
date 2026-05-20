@@ -27,16 +27,16 @@ import java.util.Map;
 @Slf4j
 public class ServiceClientsConfig {
 
-    private String issueServiceUrl = "http://localhost:8081";
-    private String projectServiceUrl = "http://localhost:8082";
-    private String userServiceUrl = "http://localhost:8083";
-    private String workflowServiceUrl = "http://localhost:8084";
-    private String searchServiceUrl = "http://localhost:8085";
-    private String notificationServiceUrl = "http://localhost:8086";
-    private String sprintServiceUrl = "http://localhost:8087";
-    private String commentServiceUrl = "http://localhost:8088";
-    private String attachmentServiceUrl = "http://localhost:8089";
-    private String auditServiceUrl = "http://localhost:8090";
+    private String issueServiceUrl = "http://localhost:8084";
+    private String projectServiceUrl = "http://localhost:8083";
+    private String userServiceUrl = "http://localhost:8082";
+    private String workflowServiceUrl = "http://localhost:8085";
+    private String searchServiceUrl = "http://localhost:8088";
+    private String notificationServiceUrl = "http://localhost:8087";
+    private String sprintServiceUrl = "http://localhost:8091";
+    private String commentServiceUrl = "http://localhost:8086";
+    private String attachmentServiceUrl = "http://localhost:8090";
+    private String auditServiceUrl = "http://localhost:8089";
 
     private int connectTimeoutMs = 5000;
     private int readTimeoutMs = 30000;
@@ -74,28 +74,7 @@ public class ServiceClientsConfig {
                 .automaticTransitionFromOpenToHalfOpenEnabled(true)
                 .build();
 
-        CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(defaultConfig);
-
-        // Register circuit breakers for each service
-        registerCircuitBreaker(registry, "issueService", issueServiceUrl);
-        registerCircuitBreaker(registry, "projectService", projectServiceUrl);
-        registerCircuitBreaker(registry, "userService", userServiceUrl);
-        registerCircuitBreaker(registry, "workflowService", workflowServiceUrl);
-        registerCircuitBreaker(registry, "searchService", searchServiceUrl);
-        registerCircuitBreaker(registry, "notificationService", notificationServiceUrl);
-        registerCircuitBreaker(registry, "sprintService", sprintServiceUrl);
-        registerCircuitBreaker(registry, "commentService", commentServiceUrl);
-        registerCircuitBreaker(registry, "attachmentService", attachmentServiceUrl);
-        registerCircuitBreaker(registry, "auditService", auditServiceUrl);
-
-        log.info("CircuitBreakerRegistry configured with {} circuit breakers",
-                registry.getAllCircuitBreakers().size());
-        return registry;
-    }
-
-    private void registerCircuitBreaker(CircuitBreakerRegistry registry, String name, String baseUrl) {
-        CircuitBreaker circuitBreaker = registry.circuitBreaker(name);
-        log.debug("Registered circuit breaker '{}' for service at '{}'", name, baseUrl);
+        return CircuitBreakerRegistry.of(defaultConfig);
     }
 
     /**

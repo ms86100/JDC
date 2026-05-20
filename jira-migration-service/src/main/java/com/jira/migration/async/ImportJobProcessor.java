@@ -62,7 +62,8 @@ public class ImportJobProcessor {
     @Async("migrationTaskExecutor")
     public CompletableFuture<ImportResultResponse> processCsvImport(
             UUID jobId,
-            MultipartFile file,
+            byte[] fileContent,
+            String fileName,
             UUID templateId,
             Map<String, Object> options,
             UUID userId) {
@@ -76,9 +77,9 @@ public class ImportJobProcessor {
             // Send initial progress via WebSocket
             sendProgressUpdate(jobId, userIdStr, 0, 0, 0, "PARSING", null);
 
-            // Save uploaded file
+            // Create temp file from byte array content
             Path tempFile = Files.createTempFile("import-", ".csv");
-            file.transferTo(tempFile.toFile());
+            Files.write(tempFile, fileContent);
 
             // Parse CSV
             CsvParser.CsvParseResult parseResult = csvParser.parseFile(
@@ -170,9 +171,10 @@ public class ImportJobProcessor {
                     parseResult.getTotalRows(), failedCount, "COMPLETING", null);
 
             // Mark job completed and send notification
-            String resultMetadata = String.format(
-                    "{\"processed\": %d, \"failed\": %d, \"successRate\": %.2f}",
-                    processedCount, failedCount, (processedCount * 100.0 / (processedCount + failedCount))
+            Map<String, Object> resultMetadata = Map.of(
+                    "processed", processedCount,
+                    "failed", failedCount,
+                    "successRate", (processedCount * 100.0 / (processedCount + failedCount))
             );
             migrationService.markJobCompleted(jobId, resultMetadata);
 
@@ -195,7 +197,8 @@ public class ImportJobProcessor {
     @Async("migrationTaskExecutor")
     public CompletableFuture<ImportResultResponse> processJiraDcImport(
             UUID jobId,
-            MultipartFile file,
+            byte[] fileContent,
+            String fileName,
             Map<String, Object> options,
             UUID userId) {
 
@@ -208,9 +211,9 @@ public class ImportJobProcessor {
             // Send initial progress
             sendProgressUpdate(jobId, userIdStr, 0, 0, 0, "PARSING", null);
 
-            // Save uploaded file
+            // Create temp file from byte array content
             Path tempFile = Files.createTempFile("import-", ".xml");
-            file.transferTo(tempFile.toFile());
+            Files.write(tempFile, fileContent);
 
             // Read and parse XML
             String xmlContent = Files.readString(tempFile);
@@ -321,11 +324,11 @@ public class ImportJobProcessor {
                     parseResult.getTotalEntities(), totalFailed, "COMPLETING", null);
 
             // Mark completed
-            String resultMetadata = objectMapper.writeValueAsString(Map.of(
+            Map<String, Object> resultMetadata = Map.of(
                     "processedByType", processedByType,
                     "totalProcessed", totalProcessed,
                     "totalFailed", totalFailed
-            ));
+            );
             migrationService.markJobCompleted(jobId, resultMetadata);
 
             sendJobCompleted(jobId, userIdStr, totalProcessed, totalFailed);
@@ -412,9 +415,10 @@ public class ImportJobProcessor {
                 }
             }
 
-            String resultMetadata = String.format(
-                    "{\"projectImport\": true, \"sourceProject\": \"%s\", \"targetProject\": \"%s\"}",
-                    sourceProjectId, targetProjectId
+            Map<String, Object> resultMetadata = Map.of(
+                    "projectImport", true,
+                    "sourceProject", sourceProjectId.toString(),
+                    "targetProject", targetProjectId.toString()
             );
             migrationService.markJobCompleted(jobId, resultMetadata);
 

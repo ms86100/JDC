@@ -1,5 +1,6 @@
 package com.jira.admin.service;
 
+import com.jira.admin.dto.*;
 import com.jira.admin.entity.*;
 import com.jira.admin.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -83,9 +84,13 @@ public class IssueAdministrationService {
 
     @Transactional
     public PriorityEntity createPriority(Map<String, Object> data) {
+        String name = (String) data.get("name");
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("name is required");
+        }
         long count = priorityRepository.count();
         PriorityEntity priority = PriorityEntity.builder()
-                .name((String) data.get("name"))
+                .name(name)
                 .description((String) data.getOrDefault("description", ""))
                 .iconUrl((String) data.getOrDefault("iconUrl", ""))
                 .statusColor((String) data.getOrDefault("statusColor", "#6C757D"))
@@ -99,6 +104,33 @@ public class IssueAdministrationService {
         return priority;
     }
 
+    @Transactional
+    public PriorityEntity updatePriority(String priorityId, Map<String, Object> updates) {
+        PriorityEntity priority = priorityRepository.findById(priorityId)
+                .orElseThrow(() -> new IllegalArgumentException("Priority not found"));
+
+        if (updates.containsKey("name")) priority.setName((String) updates.get("name"));
+        if (updates.containsKey("description")) priority.setDescription((String) updates.get("description"));
+        if (updates.containsKey("iconUrl")) priority.setIconUrl((String) updates.get("iconUrl"));
+        if (updates.containsKey("statusColor")) priority.setStatusColor((String) updates.get("statusColor"));
+        if (updates.containsKey("sequence")) priority.setSequence((Integer) updates.get("sequence"));
+        if (updates.containsKey("isDefault")) priority.setIsDefault((Boolean) updates.get("isDefault"));
+
+        priority = priorityRepository.save(priority);
+        logAudit("UPDATE", "PRIORITY", priority.getId(), priority.getName(), "Priority updated");
+
+        return priority;
+    }
+
+    @Transactional
+    public void deletePriority(String priorityId) {
+        if (!priorityRepository.existsById(priorityId)) {
+            throw new IllegalArgumentException("Priority not found");
+        }
+        priorityRepository.deleteById(priorityId);
+        logAudit("DELETE", "PRIORITY", priorityId, null, "Priority deleted");
+    }
+
     // ==================== Resolutions ====================
 
     @Transactional(readOnly = true)
@@ -110,9 +142,13 @@ public class IssueAdministrationService {
 
     @Transactional
     public ResolutionEntity createResolution(Map<String, Object> data) {
+        String name = (String) data.get("name");
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("name is required");
+        }
         long count = resolutionRepository.count();
         ResolutionEntity resolution = ResolutionEntity.builder()
-                .name((String) data.get("name"))
+                .name(name)
                 .description((String) data.getOrDefault("description", ""))
                 .iconUrl((String) data.getOrDefault("iconUrl", ""))
                 .sequence((Integer) data.getOrDefault("sequence", (int) count + 1))
@@ -129,9 +165,7 @@ public class IssueAdministrationService {
 
     @Transactional(readOnly = true)
     public List<StatusEntity> getStatuses() {
-        return statusRepository.findAll().stream()
-                .sorted(Comparator.comparingInt(s -> s.getSequence() != null ? s.getSequence() : 0))
-                .collect(Collectors.toList());
+        return statusRepository.findByIsArchivedFalseOrderBySequenceAsc();
     }
 
     @Transactional(readOnly = true)
@@ -141,15 +175,26 @@ public class IssueAdministrationService {
     }
 
     @Transactional
-    public StatusEntity createStatus(Map<String, Object> data) {
+    public StatusEntity createStatus(CreateStatusRequest request) {
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            throw new IllegalArgumentException("name is required");
+        }
+        if (statusRepository.existsByName(request.getName())) {
+            throw new IllegalArgumentException("Status with name '" + request.getName() + "' already exists");
+        }
+
         long count = statusRepository.count();
         StatusEntity status = StatusEntity.builder()
-                .name((String) data.get("name"))
-                .description((String) data.getOrDefault("description", ""))
-                .statusCategory((String) data.getOrDefault("statusCategory", "TODO"))
-                .iconUrl((String) data.getOrDefault("iconUrl", ""))
-                .statusColor((String) data.getOrDefault("statusColor", "#6C757D"))
-                .sequence((Integer) data.getOrDefault("sequence", (int) count + 1))
+                .name(request.getName())
+                .description(request.getDescription())
+                .statusCategory(request.getStatusCategory() != null ? request.getStatusCategory() : StatusEntity.CATEGORY_TODO)
+                .iconUrl(request.getIconUrl())
+                .statusColor(request.getStatusColor() != null ? request.getStatusColor() : "#6C757D")
+                .sequence(request.getSequence() != null ? request.getSequence() : (int) count + 1)
+                .isDefault(request.getIsDefault() != null ? request.getIsDefault() : count == 0)
+                .lookupGroup(request.getLookupGroup())
+                .isActive(true)
+                .isArchived(false)
                 .build();
 
         status = statusRepository.save(status);
@@ -159,21 +204,84 @@ public class IssueAdministrationService {
     }
 
     @Transactional
-    public StatusEntity updateStatus(String statusId, Map<String, Object> updates) {
+    public StatusEntity createStatus(Map<String, Object> data) {
+        CreateStatusRequest request = CreateStatusRequest.builder()
+                .name((String) data.get("name"))
+                .description((String) data.get("description"))
+                .statusCategory((String) data.get("statusCategory"))
+                .statusColor((String) data.get("statusColor"))
+                .iconUrl((String) data.get("iconUrl"))
+                .sequence((Integer) data.get("sequence"))
+                .isDefault((Boolean) data.get("isDefault"))
+                .lookupGroup((String) data.get("lookupGroup"))
+                .build();
+        return createStatus(request);
+    }
+
+    @Transactional
+    public StatusEntity updateStatus(String statusId, UpdateStatusRequest request) {
         StatusEntity status = statusRepository.findById(statusId)
                 .orElseThrow(() -> new IllegalArgumentException("Status not found: " + statusId));
 
-        if (updates.containsKey("name")) status.setName((String) updates.get("name"));
-        if (updates.containsKey("description")) status.setDescription((String) updates.get("description"));
-        if (updates.containsKey("statusCategory")) status.setStatusCategory((String) updates.get("statusCategory"));
-        if (updates.containsKey("iconUrl")) status.setIconUrl((String) updates.get("iconUrl"));
-        if (updates.containsKey("statusColor")) status.setStatusColor((String) updates.get("statusColor"));
-        if (updates.containsKey("sequence")) status.setSequence((Integer) updates.get("sequence"));
+        if (request.getName() != null && !request.getName().isEmpty()) {
+            if (statusRepository.existsByNameAndIdNot(request.getName(), statusId)) {
+                throw new IllegalArgumentException("Status with name '" + request.getName() + "' already exists");
+            }
+            status.setName(request.getName());
+        }
+        if (request.getDescription() != null) status.setDescription(request.getDescription());
+        if (request.getStatusCategory() != null) status.setStatusCategory(request.getStatusCategory());
+        if (request.getIconUrl() != null) status.setIconUrl(request.getIconUrl());
+        if (request.getStatusColor() != null) status.setStatusColor(request.getStatusColor());
+        if (request.getSequence() != null) status.setSequence(request.getSequence());
+        if (request.getIsDefault() != null) status.setIsDefault(request.getIsDefault());
+        if (request.getIsActive() != null) status.setIsActive(request.getIsActive());
+        if (request.getIsArchived() != null) status.setIsArchived(request.getIsArchived());
+        if (request.getLookupGroup() != null) status.setLookupGroup(request.getLookupGroup());
 
         status = statusRepository.save(status);
         logAudit("UPDATE", "STATUS", status.getId(), status.getName(), "Status updated");
 
         return status;
+    }
+
+    @Transactional
+    public StatusEntity updateStatus(String statusId, Map<String, Object> updates) {
+        UpdateStatusRequest request = UpdateStatusRequest.builder()
+                .name((String) updates.get("name"))
+                .description((String) updates.get("description"))
+                .statusCategory((String) updates.get("statusCategory"))
+                .statusColor((String) updates.get("statusColor"))
+                .iconUrl((String) updates.get("iconUrl"))
+                .sequence((Integer) updates.get("sequence"))
+                .isDefault((Boolean) updates.get("isDefault"))
+                .isActive((Boolean) updates.get("isActive"))
+                .isArchived((Boolean) updates.get("isArchived"))
+                .lookupGroup((String) updates.get("lookupGroup"))
+                .build();
+        return updateStatus(statusId, request);
+    }
+
+    @Transactional
+    public void archiveStatus(String statusId) {
+        StatusEntity status = statusRepository.findById(statusId)
+                .orElseThrow(() -> new IllegalArgumentException("Status not found: " + statusId));
+
+        status.setIsArchived(true);
+        status.setIsActive(false);
+        statusRepository.save(status);
+        logAudit("ARCHIVE", "STATUS", statusId, status.getName(), "Status archived");
+    }
+
+    @Transactional
+    public void restoreStatus(String statusId) {
+        StatusEntity status = statusRepository.findById(statusId)
+                .orElseThrow(() -> new IllegalArgumentException("Status not found: " + statusId));
+
+        status.setIsArchived(false);
+        status.setIsActive(true);
+        statusRepository.save(status);
+        logAudit("RESTORE", "STATUS", statusId, status.getName(), "Status restored");
     }
 
     @Transactional
@@ -183,6 +291,11 @@ public class IssueAdministrationService {
 
         statusRepository.delete(status);
         logAudit("DELETE", "STATUS", statusId, status.getName(), "Status deleted");
+    }
+
+    @Transactional(readOnly = true)
+    public List<StatusEntity> getStatusesByCategory(String category) {
+        return statusRepository.findByStatusCategoryOrderBySequenceAsc(category);
     }
 
     // ==================== Issue Type Schemes ====================
@@ -342,7 +455,9 @@ public class IssueAdministrationService {
                 .orElseThrow(() -> new IllegalArgumentException("Screen not found"));
 
         ScreenTab tab = ScreenTab.builder()
+                .screen(screen)
                 .tabName(tabName)
+                .tabOrder(screen.getTabs().size())
                 .fieldIds("")
                 .build();
 

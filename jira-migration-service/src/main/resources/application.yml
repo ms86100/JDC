@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: jira-migration-service
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:jira_platform}
     username: ${DB_USERNAME:jiraadmin}
@@ -16,15 +20,19 @@ spring:
       connection-timeout: 20000
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        default_schema: public
+        default_schema: jira_migration
   flyway:
     enabled: false
+  data:
+    redis:
+      repositories:
+        enabled: false
 
   servlet:
     multipart:
@@ -52,3 +60,14 @@ logging:
     com.jira.migration: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
+
+job:
+  recovery:
+    enabled: false
+    checkInterruptedOnStartup: false
+
+cluster:
+  enabled: false
+  lock:
+    type: DATABASE
+  port: 8095

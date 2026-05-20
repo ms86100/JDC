@@ -3,6 +3,9 @@ package com.jira.admin.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "screens")
 @Data
@@ -24,8 +27,10 @@ public class ScreenEntity {
     @Column(name = "screen_type")
     private String screenType;
 
-    @Transient
-    private java.util.List<ScreenTab> tabs;
+    @OneToMany(mappedBy = "screen", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderColumn(name = "tab_order")
+    @Builder.Default
+    private List<ScreenTab> tabs = new ArrayList<>();
 
     @Column(name = "is_default")
     private Boolean isDefault = false;

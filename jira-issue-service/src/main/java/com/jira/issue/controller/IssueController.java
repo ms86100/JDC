@@ -8,15 +8,18 @@ import com.jira.issue.service.IssueService;
 import com.jira.issue.repository.IssueTypeRepository;
 import com.jira.issue.repository.IssuePriorityRepository;
 import com.jira.issue.repository.IssueStatusRepository;
+import com.jira.issue.exception.PermissionDeniedException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -34,11 +37,21 @@ public class IssueController {
     private final IssuePriorityRepository issuePriorityRepository;
     private final IssueStatusRepository issueStatusRepository;
 
+    @Value("${project.service.url}")
+    private String projectServiceUrl;
+
+    private final RestTemplate restTemplate = new RestTemplate();
+
     @PostMapping
     @Operation(summary = "Create a new issue", description = "Creates a new issue in the specified project")
     public ResponseEntity<IssueResponse> createIssue(
             @Valid @RequestBody CreateIssueRequest request,
             @RequestHeader("X-User-Id") UUID userId) {
+
+        // Check CREATE_ISSUES permission before allowing creation
+        if (userId != null && !hasPermission(userId, request.getProjectId(), "CREATE_ISSUES")) {
+            throw new PermissionDeniedException("CREATE_ISSUES", "project " + request.getProjectId());
+        }
 
         IssueResponse response = issueService.createIssue(request, userId);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -100,7 +113,16 @@ public class IssueController {
     @Operation(summary = "Update issue", description = "Updates issue details")
     public ResponseEntity<IssueResponse> updateIssue(
             @Parameter(description = "Issue ID") @PathVariable UUID id,
-            @Valid @RequestBody UpdateIssueRequest request) {
+            @Valid @RequestBody UpdateIssueRequest request,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+
+        // Get issue to find project ID for permission check
+        IssueResponse existingIssue = issueService.getIssue(id);
+
+        // Check EDIT_ISSUES permission
+        if (userId != null && !hasPermission(userId, existingIssue.getProjectId(), "EDIT_ISSUES")) {
+            throw new PermissionDeniedException("EDIT_ISSUES", "issue " + id);
+        }
 
         IssueResponse response = issueService.updateIssue(id, request);
         return ResponseEntity.ok(response);
@@ -111,7 +133,13 @@ public class IssueController {
     public ResponseEntity<IssueResponse> updateIssueStatus(
             @Parameter(description = "Issue ID") @PathVariable UUID id,
             @Valid @RequestBody UpdateIssueStatusRequest request,
-            @Parameter(description = "Project ID for workflow validation") @RequestParam UUID projectId) {
+            @Parameter(description = "Project ID for workflow validation") @RequestParam UUID projectId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+
+        // Check RESOLVE_ISSUES permission (status transitions typically require this)
+        if (userId != null && !hasPermission(userId, projectId, "RESOLVE_ISSUES")) {
+            throw new PermissionDeniedException("RESOLVE_ISSUES", "project " + projectId);
+        }
 
         IssueResponse response = issueService.updateIssueStatus(id, request.getStatusId(), projectId);
         return ResponseEntity.ok(response);
@@ -120,7 +148,16 @@ public class IssueController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete issue", description = "Deletes an issue")
     public ResponseEntity<Void> deleteIssue(
-            @Parameter(description = "Issue ID") @PathVariable UUID id) {
+            @Parameter(description = "Issue ID") @PathVariable UUID id,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+
+        // Get issue to find project ID for permission check
+        IssueResponse existingIssue = issueService.getIssue(id);
+
+        // Check DELETE_ISSUES permission
+        if (userId != null && !hasPermission(userId, existingIssue.getProjectId(), "DELETE_ISSUES")) {
+            throw new PermissionDeniedException("DELETE_ISSUES", "issue " + id);
+        }
 
         issueService.deleteIssue(id);
         return ResponseEntity.noContent().build();
@@ -142,5 +179,25 @@ public class IssueController {
     @Operation(summary = "Get statuses", description = "Returns all available statuses")
     public ResponseEntity<List<IssueStatus>> getStatuses() {
         return ResponseEntity.ok(issueStatusRepository.findAll());
+    }
+
+    /**
+     * Helper method to check permissions via project service REST API.
+     * In a production system, this would use a shared permission service or local cache.
+     */
+    private boolean hasPermission(UUID userId, UUID projectId, String permission) {
+        if (userId == null) {
+            return false; // No user = no permission
+        }
+        try {
+            String url = String.format("%s/api/projects/%s/permissions/check?userId=%s&permission=%s",
+                    projectServiceUrl, projectId, userId, permission);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+            return Boolean.TRUE.equals(response.get("hasPermission"));
+        } catch (Exception e) {
+            // If permission service is unavailable, deny access by default (fail-safe)
+            return false;
+        }
     }
 }

@@ -55,7 +55,7 @@ export default function JiraViewGroup() {
             )}
           </div>
           <div className="view-group-actions">
-            <Link to={`/admin/groups/view?name=${encodeURIComponent(group.name)}`} className="btn-secondary">
+            <Link to={`/admin/groups/members/${group.id}`} className="btn-secondary">
               View Users
             </Link>
             <Link to={`/admin/groups/members/${group.id}`} className="btn-secondary">

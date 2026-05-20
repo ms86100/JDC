@@ -39,8 +39,8 @@ public class MigrationService {
                 .importSource(request.getImportSource())
                 .sourceProjectId(request.getSourceProjectId())
                 .targetProjectId(request.getTargetProjectId())
-                .config(serialize(request.getConfig()))
-                .options(serialize(request.getOptions()))
+                .config(request.getConfig())
+                .options(request.getOptions())
                 .initiatedBy(userId)
                 .canRollback(true)
                 .build();
@@ -189,7 +189,7 @@ public class MigrationService {
     }
 
     @Transactional
-    public void markJobCompleted(UUID jobId, String resultMetadata) {
+    public void markJobCompleted(UUID jobId, Map<String, Object> resultMetadata) {
         MigrationJob job = migrationJobRepository.findById(jobId)
                 .orElseThrow(() -> new EntityNotFoundException("MigrationJob", jobId.toString()));
         job.markCompleted();
@@ -198,7 +198,7 @@ public class MigrationService {
     }
 
     @Transactional
-    public void markJobFailed(UUID jobId, String errorMessage, String errorDetails) {
+    public void markJobFailed(UUID jobId, String errorMessage, Map<String, Object> errorDetails) {
         MigrationJob job = migrationJobRepository.findById(jobId)
                 .orElseThrow(() -> new EntityNotFoundException("MigrationJob", jobId.toString()));
         job.markFailed(errorMessage);

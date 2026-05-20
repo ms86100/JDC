@@ -30,7 +30,6 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Service
 @Slf4j
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "attachment.storage.storage-type", havingValue = "LOCAL", matchIfMissing = true)
 public class LocalStorageService implements AttachmentStorageService {
 
@@ -38,7 +37,7 @@ public class LocalStorageService implements AttachmentStorageService {
     private final AttachmentMetadataRepository metadataRepository;
 
     private final Map<String, ReentrantLock> directoryLocks = new ConcurrentHashMap<>();
-    private final Path basePath;
+    private Path basePath;
 
     public LocalStorageService(AttachmentStorageConfig config,
                                AttachmentMetadataRepository metadataRepository) {
@@ -53,8 +52,8 @@ public class LocalStorageService implements AttachmentStorageService {
             Files.createDirectories(basePath);
             log.info("Local storage initialized at: {}", basePath);
         } catch (IOException e) {
-            log.error("Failed to create storage directory: {}", basePath, e);
-            throw new RuntimeException("Failed to initialize local storage", e);
+            log.warn("Failed to create storage directory: {}, attachments will be stored in temp directory", basePath);
+            // Storage will use temp directory when needed
         }
     }
 

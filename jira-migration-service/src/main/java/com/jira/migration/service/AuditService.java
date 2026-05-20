@@ -191,9 +191,13 @@ public class AuditService {
         return report.toString();
     }
 
-    private String merge(String existing, Map<String, Object> newData) {
-        // Simple merge logic - in production use proper JSON merging
-        return existing;
+    private Map<String, Object> merge(Map<String, Object> existing, Map<String, Object> newData) {
+        if (existing == null) return newData != null ? newData : new HashMap<>();
+        Map<String, Object> result = new HashMap<>(existing);
+        if (newData != null) {
+            result.putAll(newData);
+        }
+        return result;
     }
 
     @lombok.Data

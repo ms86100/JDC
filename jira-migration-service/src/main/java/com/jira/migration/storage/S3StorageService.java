@@ -56,6 +56,12 @@ public class S3StorageService implements AttachmentStorageService {
     @PostConstruct
     public void init() {
         try {
+            if (config.getS3() == null || config.getS3().getAccessKey() == null) {
+                log.info("S3 storage not configured, skipping initialization");
+                this.s3Client = null;
+                return;
+            }
+
             AwsBasicCredentials credentials = AwsBasicCredentials.create(
                     config.getS3().getAccessKey(),
                     config.getS3().getSecretKey()

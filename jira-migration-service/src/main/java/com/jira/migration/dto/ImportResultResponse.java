@@ -2,6 +2,7 @@ package com.jira.migration.dto;
 
 import lombok.*;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -19,7 +20,7 @@ public class ImportResultResponse {
     private List<EntityError> errors;
     private List<EntityWarning> warnings;
     private String errorSummary;
-    private String resultMetadata;
+    private Map<String, Object> resultMetadata;
 
     @Data
     @Builder

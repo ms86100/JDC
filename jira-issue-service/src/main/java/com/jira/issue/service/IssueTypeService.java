@@ -105,23 +105,6 @@ public class IssueTypeService {
         log.info("Deleted issue type: {}", id);
     }
 
-    // Placeholder methods for priorities and statuses
-    public List<IssueTypeResponse> getAllPriorities() {
-        return List.of();
-    }
-
-    public IssueTypeResponse createPriority(IssueTypeRequest request) {
-        return IssueTypeResponse.builder().build();
-    }
-
-    public List<IssueTypeResponse> getAllStatuses() {
-        return List.of();
-    }
-
-    public IssueTypeResponse createStatus(IssueTypeRequest request) {
-        return IssueTypeResponse.builder().build();
-    }
-
     private IssueTypeResponse mapToResponse(IssueType issueType) {
         return IssueTypeResponse.builder()
                 .id(issueType.getId())

@@ -162,6 +162,13 @@ public class UserManagementService {
         return groupRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
+    public List<UserEntity> getGroupMembers(String groupId) {
+        GroupEntity group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("Group not found: " + groupId));
+        return new ArrayList<>(group.getUsers());
+    }
+
     @Transactional
     public GroupEntity createGroup(String name, String description, String type) {
         GroupEntity group = GroupEntity.builder()

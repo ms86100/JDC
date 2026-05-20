@@ -56,6 +56,25 @@ public class WorkflowController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/{workflowId}")
+    @Operation(summary = "Update workflow", description = "Updates an existing workflow")
+    public ResponseEntity<WorkflowResponse> updateWorkflow(
+            @Parameter(description = "Workflow ID") @PathVariable UUID workflowId,
+            @Valid @RequestBody UpdateWorkflowRequest request) {
+
+        WorkflowResponse response = workflowService.updateWorkflow(workflowId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{workflowId}")
+    @Operation(summary = "Delete workflow", description = "Deletes a workflow")
+    public ResponseEntity<Void> deleteWorkflow(
+            @Parameter(description = "Workflow ID") @PathVariable UUID workflowId) {
+
+        workflowService.deleteWorkflow(workflowId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/transitions")
     @Operation(summary = "Add transition", description = "Adds a new transition to a workflow")
     public ResponseEntity<TransitionResponse> addTransition(
@@ -183,5 +202,32 @@ public class WorkflowController {
         request.setTransitionId(transitionId);
         PostFunctionResponse response = workflowService.addPostFunction(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @DeleteMapping("/transitions/{transitionId}/conditions/{conditionId}")
+    @Operation(summary = "Delete condition from transition")
+    public ResponseEntity<Void> deleteCondition(
+            @PathVariable UUID transitionId,
+            @PathVariable UUID conditionId) {
+        workflowService.deleteCondition(conditionId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/transitions/{transitionId}/validators/{validatorId}")
+    @Operation(summary = "Delete validator from transition")
+    public ResponseEntity<Void> deleteValidator(
+            @PathVariable UUID transitionId,
+            @PathVariable UUID validatorId) {
+        workflowService.deleteValidator(validatorId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/transitions/{transitionId}/post-functions/{functionId}")
+    @Operation(summary = "Delete post-function from transition")
+    public ResponseEntity<Void> deletePostFunction(
+            @PathVariable UUID transitionId,
+            @PathVariable UUID functionId) {
+        workflowService.deletePostFunction(functionId);
+        return ResponseEntity.noContent().build();
     }
 }

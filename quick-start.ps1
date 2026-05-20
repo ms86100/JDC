@@ -37,7 +37,8 @@ $services = @(
     @{ name = "attachment-service"; jar = "$ProjectRoot\jira-attachment-service\target\jira-attachment-service-1.0.0.jar"; port = 8090; deps = @("auth-service") },
     @{ name = "sprint-service"; jar = "$ProjectRoot\jira-sprint-service\target\jira-sprint-service-1.0.0.jar"; port = 8091; deps = @("auth-service") },
     @{ name = "plan-service"; jar = "$ProjectRoot\jira-plan-service\target\jira-plan-service-1.0.0.jar"; port = 8092; deps = @("auth-service") },
-    @{ name = "admin-service"; jar = "$ProjectRoot\jira-admin-service\target\jira-admin-service-1.0.0.jar"; port = 8093; deps = @("auth-service") }
+    @{ name = "admin-service"; jar = "$ProjectRoot\jira-admin-service\target\jira-admin-service-1.0.0.jar"; port = 8093; deps = @("auth-service") },
+    @{ name = "migration-service"; jar = "$ProjectRoot\jira-migration-service\target\jira-migration-service-1.0.0.jar"; port = 8095; deps = @("auth-service") }
 )
 
 function Start-ServiceWithRetry {

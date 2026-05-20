@@ -25,6 +25,15 @@ public interface IssueRepository extends JpaRepository<Issue, UUID>, JpaSpecific
            "FROM Issue i WHERE i.issueKey LIKE :projectKey || '-%'")
     Optional<Integer> findMaxIssueNumberByProjectKey(@Param("projectKey") String projectKey);
 
+    /**
+     * Locking version for concurrent key generation.
+     * Uses pessimistic locking to prevent race conditions in issue key generation.
+     */
+    @Query(value = "SELECT MAX(CAST(SUBSTRING(issue_key, LENGTH(:projectKey) + 2) AS integer)) " +
+           "FROM jira_issue WHERE issue_key LIKE CONCAT(:projectKey, '-%') FOR UPDATE",
+           nativeQuery = true)
+    Optional<Integer> findMaxIssueNumberByProjectKeyForUpdate(@Param("projectKey") String projectKey);
+
     List<Issue> findByParentIssueId(UUID parentIssueId);
 
     @Query("SELECT i FROM Issue i WHERE i.epicId = :epicId ORDER BY i.createdAt ASC")

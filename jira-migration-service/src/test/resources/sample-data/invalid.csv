@@ -1,9 +1,0 @@
-project_key,name,description,project_type,lead_username
-PROJ1,Valid Project,Valid description,COMPANY_MANAGED,admin
-,Missing Key Project,No project key,TEAM_MANAGED,admin
-PROJ2,,Missing Name,COMPANY_MANAGED,admin
-INVALIDKEY123,Invalid Key Format,Key has too many chars and lowercase,COMPANY_MANAGED,admin
-PROJ3,Test Project,Valid entry,INVALID_TYPE,admin
-,,Missing Everything,,
-PROJ4,Project Without Lead,,COMPANY_MANAGED,
-VALID,Short Key,Valid entry,COMPANY_MANAGED,admin

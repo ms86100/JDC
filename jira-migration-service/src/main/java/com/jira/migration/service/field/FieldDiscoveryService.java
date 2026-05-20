@@ -44,8 +44,6 @@ public class FieldDiscoveryService {
             Map.entry("story_points", "story_points"),
             Map.entry("storypoint", "story_points"),
             Map.entry("epiclink", "epic_link"),
-            Map.entry("epic_link", "epic_link"),
-            Map.entry("epiclink", "epic_link"),
             Map.entry("epicname", "epic_name"),
             Map.entry("epic_name", "epic_name"),
             Map.entry("epiccolor", "epic_color"),

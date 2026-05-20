@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 /**
  * Factory for obtaining the appropriate storage service based on configuration.
  */
@@ -14,16 +16,16 @@ import org.springframework.stereotype.Component;
 public class StorageFactory {
 
     private final AttachmentStorageConfig config;
-    private final LocalStorageService localStorageService;
-    private final S3StorageService s3StorageService;
-    private final AzureBlobStorageService azureBlobStorageService;
+    private final Optional<LocalStorageService> localStorageService;
+    private final Optional<S3StorageService> s3StorageService;
+    private final Optional<AzureBlobStorageService> azureBlobStorageService;
 
     @Autowired
     public StorageFactory(
             AttachmentStorageConfig config,
-            LocalStorageService localStorageService,
-            S3StorageService s3StorageService,
-            AzureBlobStorageService azureBlobStorageService) {
+            Optional<LocalStorageService> localStorageService,
+            Optional<S3StorageService> s3StorageService,
+            Optional<AzureBlobStorageService> azureBlobStorageService) {
         this.config = config;
         this.localStorageService = localStorageService;
         this.s3StorageService = s3StorageService;
@@ -34,8 +36,6 @@ public class StorageFactory {
 
     /**
      * Get the storage service based on the configured storage type.
-     *
-     * @return The appropriate storage service implementation
      */
     public AttachmentStorageService getStorageService() {
         return getStorageService(config.getStorageType());
@@ -43,9 +43,6 @@ public class StorageFactory {
 
     /**
      * Get a specific storage service by type.
-     *
-     * @param type The storage type to use
-     * @return The appropriate storage service implementation
      */
     public AttachmentStorageService getStorageService(StorageType type) {
         if (type == null) {
@@ -53,38 +50,23 @@ public class StorageFactory {
         }
 
         return switch (type) {
-            case LOCAL -> {
-                log.debug("Using local storage service");
-                yield localStorageService;
-            }
-            case S3 -> {
-                log.debug("Using S3 storage service");
-                yield s3StorageService;
-            }
-            case AZURE_BLOB -> {
-                log.debug("Using Azure Blob storage service");
-                yield azureBlobStorageService;
-            }
+            case LOCAL -> localStorageService.orElseThrow(() ->
+                new IllegalStateException("Local storage service not available"));
+            case S3 -> s3StorageService.orElseThrow(() ->
+                new IllegalStateException("S3 storage service not available"));
+            case AZURE_BLOB -> azureBlobStorageService.orElseThrow(() ->
+                new IllegalStateException("Azure Blob storage service not available"));
         };
     }
 
-    /**
-     * Get the current storage type.
-     */
     public StorageType getCurrentStorageType() {
         return config.getStorageType();
     }
 
-    /**
-     * Check if the storage is enabled.
-     */
     public boolean isStorageEnabled() {
         return config.isEnabled();
     }
 
-    /**
-     * Get the configured bucket/container name.
-     */
     public String getStorageLocation() {
         return switch (config.getStorageType()) {
             case LOCAL -> config.getBasePath();

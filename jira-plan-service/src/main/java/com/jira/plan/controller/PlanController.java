@@ -37,8 +37,10 @@ public class PlanController {
     }
 
     @PostMapping
-    public ResponseEntity<PlanResponse> createPlan(@Valid @RequestBody CreatePlanRequest request) {
-        PlanResponse response = planService.createPlan(request);
+    public ResponseEntity<PlanResponse> createPlan(
+            @Valid @RequestBody CreatePlanRequest request,
+            @RequestHeader("X-User-Id") UUID userId) {
+        PlanResponse response = planService.createPlan(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

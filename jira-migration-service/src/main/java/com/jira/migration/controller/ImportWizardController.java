@@ -340,7 +340,7 @@ public class ImportWizardController {
         MigrationJobResponse job = migrationService.startImport(migrationRequest, userId);
 
         // Update session with job ID
-        job.setResultMetadata(sessionId.toString());
+        job.setResultMetadata(Map.of("sessionId", sessionId.toString()));
 
         return ResponseEntity.accepted().body(job);
     }

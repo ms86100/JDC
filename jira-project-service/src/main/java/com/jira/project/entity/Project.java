@@ -9,7 +9,16 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "projects", schema = "jira_project")
+@Table(name = "projects", schema = "jira_project",
+    indexes = {
+        @Index(name = "idx_project_key", columnList = "project_key"),
+        @Index(name = "idx_project_lead_user_id", columnList = "lead_user_id"),
+        @Index(name = "idx_project_template_id", columnList = "template_id"),
+        @Index(name = "idx_project_type", columnList = "project_type"),
+        @Index(name = "idx_project_archived", columnList = "archived"),
+        @Index(name = "idx_project_created_at", columnList = "created_at")
+    }
+)
 @Data
 @Builder
 @NoArgsConstructor

@@ -47,6 +47,11 @@ public class ClusterNodeRegistry {
 
     @PostConstruct
     public void initialize() {
+        if (!clusterConfig.isEnabled()) {
+            log.info("Cluster coordination is disabled, skipping node registration");
+            return;
+        }
+
         // Generate node ID if not set
         if (clusterConfig.getNodeId() == null || clusterConfig.getNodeId().isEmpty()) {
             String nodeId = generateNodeId();

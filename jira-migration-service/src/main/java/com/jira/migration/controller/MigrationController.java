@@ -47,10 +47,14 @@ public class MigrationController {
             @RequestParam(value = "templateId", required = false) UUID templateId,
             @RequestParam(value = "targetProjectId", required = false) UUID targetProjectId,
             @RequestParam(value = "options", required = false) String optionsJson,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader("X-User-Id") UUID userId) throws Exception {
 
         log.info("Starting CSV import: file={}, template={}, project={}",
                 file.getOriginalFilename(), templateId, targetProjectId);
+
+        // Read file content BEFORE async processing to avoid temp file cleanup issues
+        byte[] fileContent = file.getBytes();
+        String fileName = file.getOriginalFilename();
 
         StartMigrationRequest request = StartMigrationRequest.builder()
                 .jobType("IMPORT")
@@ -61,8 +65,8 @@ public class MigrationController {
 
         MigrationJobResponse job = migrationService.startImport(request, userId);
 
-        // Start async processing
-        importJobProcessor.processCsvImport(job.getId(), file, templateId,
+        // Start async processing with file content instead of MultipartFile
+        importJobProcessor.processCsvImport(job.getId(), fileContent, fileName, templateId,
                 optionsJson != null ? parseJson(optionsJson) : Map.of(), userId);
 
         return ResponseEntity.accepted().body(job);
@@ -73,9 +77,13 @@ public class MigrationController {
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "targetProjectId", required = false) UUID targetProjectId,
             @RequestParam(value = "options", required = false) String optionsJson,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader("X-User-Id") UUID userId) throws Exception {
 
         log.info("Starting Jira DC import: file={}", file.getOriginalFilename());
+
+        // Read file content BEFORE async processing
+        byte[] fileContent = file.getBytes();
+        String fileName = file.getOriginalFilename();
 
         StartMigrationRequest request = StartMigrationRequest.builder()
                 .jobType("IMPORT")
@@ -85,8 +93,8 @@ public class MigrationController {
 
         MigrationJobResponse job = migrationService.startImport(request, userId);
 
-        // Start async processing
-        importJobProcessor.processJiraDcImport(job.getId(), file,
+        // Start async processing with file content
+        importJobProcessor.processJiraDcImport(job.getId(), fileContent, fileName,
                 optionsJson != null ? parseJson(optionsJson) : Map.of(), userId);
 
         return ResponseEntity.accepted().body(job);

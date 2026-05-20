@@ -39,7 +39,7 @@ export default function JiraUserBrowser() {
         <div className="user-browser-header">
           <h1 className="user-browser-title">Users</h1>
           <div className="user-browser-actions">
-            <button className="btn-secondary">Invite users</button>
+            <button className="btn-secondary" onClick={() => alert('Invite users feature coming soon')}>Invite users</button>
             <Link to="/admin/users/create" className="btn-primary">Create user</Link>
           </div>
         </div>
@@ -191,7 +191,12 @@ function UserRow({ user }: { user: JiraUser }) {
       <td>
         <div className="action-links">
           <Link to={`/admin/users/edit/${user.id}`} className="action-link">Edit</Link>
-          <button className="action-link action-link-danger">...</button>
+          <button className="action-link action-link-danger" onClick={() => {
+            if (confirm(`Delete user "${user.displayName}"?`)) {
+              // Placeholder for delete functionality
+              console.log('Delete user:', user.id);
+            }
+          }}>...</button>
         </div>
       </td>
     </tr>

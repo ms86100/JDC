@@ -4,6 +4,8 @@ import com.jira.project.dto.*;
 import com.jira.project.service.ProjectService;
 import com.jira.project.service.ProjectTypeService;
 import com.jira.project.service.ProjectSchemeService;
+import com.jira.project.service.PermissionCheckService;
+import com.jira.project.exception.PermissionDeniedException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -25,6 +28,7 @@ public class ProjectController {
     private final ProjectService projectService;
     private final ProjectTypeService projectTypeService;
     private final ProjectSchemeService projectSchemeService;
+    private final PermissionCheckService permissionCheckService;
 
     @PostMapping("/wizard")
     @Operation(summary = "Create project via wizard", description = "Creates a new project using the multi-step wizard flow with full configuration")
@@ -123,7 +127,13 @@ public class ProjectController {
     @Operation(summary = "Update project", description = "Updates project details")
     public ResponseEntity<ProjectResponse> updateProject(
             @Parameter(description = "Project ID") @PathVariable UUID id,
-            @Valid @RequestBody UpdateProjectRequest request) {
+            @Valid @RequestBody UpdateProjectRequest request,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+
+        // Check ADMINISTER_PROJECTS permission before allowing update
+        if (userId != null && !permissionCheckService.canAdministerProject(userId, id)) {
+            throw new PermissionDeniedException("ADMINISTER_PROJECTS", "project " + id);
+        }
 
         ProjectResponse response = projectService.updateProject(id, request);
         return ResponseEntity.ok(response);
@@ -132,7 +142,13 @@ public class ProjectController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete project", description = "Deletes a project and all associated data")
     public ResponseEntity<Void> deleteProject(
-            @Parameter(description = "Project ID") @PathVariable UUID id) {
+            @Parameter(description = "Project ID") @PathVariable UUID id,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+
+        // Check ADMINISTER_PROJECTS permission before allowing delete
+        if (userId != null && !permissionCheckService.canAdministerProject(userId, id)) {
+            throw new PermissionDeniedException("ADMINISTER_PROJECTS", "project " + id);
+        }
 
         projectService.deleteProject(id);
         return ResponseEntity.noContent().build();
@@ -142,7 +158,13 @@ public class ProjectController {
     @Operation(summary = "Add project member", description = "Adds a user as a member of the project with a specific role")
     public ResponseEntity<ProjectMemberResponse> addMember(
             @Parameter(description = "Project ID") @PathVariable UUID id,
-            @Valid @RequestBody ProjectMemberRequest request) {
+            @Valid @RequestBody ProjectMemberRequest request,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+
+        // Check ADMINISTER_PROJECTS permission before allowing member addition
+        if (userId != null && !permissionCheckService.canAdministerProject(userId, id)) {
+            throw new PermissionDeniedException("ADMINISTER_PROJECTS", "project " + id);
+        }
 
         ProjectMemberResponse response = projectService.addMember(id, request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -155,5 +177,16 @@ public class ProjectController {
 
         List<ProjectMemberResponse> members = projectService.getProjectMembers(id);
         return ResponseEntity.ok(members);
+    }
+
+    @GetMapping("/{id}/permissions/check")
+    @Operation(summary = "Check user permission", description = "Check if a user has a specific permission in this project")
+    public ResponseEntity<Map<String, Object>> checkPermission(
+            @Parameter(description = "Project ID") @PathVariable UUID id,
+            @Parameter(description = "User ID") @RequestParam UUID userId,
+            @Parameter(description = "Permission key") @RequestParam String permission) {
+
+        boolean hasPermission = permissionCheckService.hasPermission(userId, id, permission);
+        return ResponseEntity.ok(Map.of("hasPermission", hasPermission));
     }
 }

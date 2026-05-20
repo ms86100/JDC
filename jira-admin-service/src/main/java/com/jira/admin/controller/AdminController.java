@@ -1,9 +1,12 @@
 package com.jira.admin.controller;
 
+import com.jira.admin.dto.*;
 import com.jira.admin.entity.*;
 import com.jira.admin.service.AdminService;
+import com.jira.admin.service.IssueAdministrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +23,7 @@ import java.util.Map;
 public class AdminController {
 
     private final AdminService adminService;
+    private final IssueAdministrationService issueAdminService;
 
     // ==================== System Settings ====================
 
@@ -111,5 +115,69 @@ public class AdminController {
     @Operation(summary = "Get system health status")
     public ResponseEntity<Map<String, Object>> getHealth() {
         return ResponseEntity.ok(adminService.getSystemHealth());
+    }
+
+    // ==================== Statuses (Issue Administration) ====================
+
+    @GetMapping("/statuses")
+    @Operation(summary = "List all statuses", description = "Returns all non-archived statuses sorted by sequence")
+    public ResponseEntity<List<StatusResponse>> listStatuses(
+            @RequestParam(required = false) String category) {
+        List<StatusResponse> statuses;
+        if (category != null && !category.isEmpty()) {
+            statuses = issueAdminService.getStatusesByCategory(category).stream()
+                    .map(StatusResponse::fromEntity)
+                    .toList();
+        } else {
+            statuses = issueAdminService.getStatuses().stream()
+                    .map(StatusResponse::fromEntity)
+                    .toList();
+        }
+        return ResponseEntity.ok(statuses);
+    }
+
+    @GetMapping("/statuses/{statusId}")
+    @Operation(summary = "Get status by ID")
+    public ResponseEntity<StatusResponse> getStatus(@PathVariable String statusId) {
+        StatusResponse response = StatusResponse.fromEntity(issueAdminService.getStatus(statusId));
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/statuses")
+    @Operation(summary = "Create a new status")
+    public ResponseEntity<StatusResponse> createStatus(
+            @Valid @RequestBody CreateStatusRequest request) {
+        StatusResponse response = StatusResponse.fromEntity(issueAdminService.createStatus(request));
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @PutMapping("/statuses/{statusId}")
+    @Operation(summary = "Update an existing status")
+    public ResponseEntity<StatusResponse> updateStatus(
+            @PathVariable String statusId,
+            @Valid @RequestBody UpdateStatusRequest request) {
+        StatusResponse response = StatusResponse.fromEntity(issueAdminService.updateStatus(statusId, request));
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/statuses/{statusId}/archive")
+    @Operation(summary = "Archive a status (soft delete)")
+    public ResponseEntity<Void> archiveStatus(@PathVariable String statusId) {
+        issueAdminService.archiveStatus(statusId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/statuses/{statusId}/restore")
+    @Operation(summary = "Restore an archived status")
+    public ResponseEntity<Void> restoreStatus(@PathVariable String statusId) {
+        issueAdminService.restoreStatus(statusId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/statuses/{statusId}")
+    @Operation(summary = "Delete a status permanently")
+    public ResponseEntity<Void> deleteStatus(@PathVariable String statusId) {
+        issueAdminService.deleteStatus(statusId);
+        return ResponseEntity.noContent().build();
     }
 }

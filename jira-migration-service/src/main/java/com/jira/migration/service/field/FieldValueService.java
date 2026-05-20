@@ -248,7 +248,8 @@ public class FieldValueService {
                     List<?> list = parseAsList(value);
                     @SuppressWarnings("unchecked")
                     List<Object> objList = new java.util.ArrayList<>(list);
-                    fieldValue.setArrayValue(objList.stream().map(Object::toString).toList());
+                    List<Object> stringList = objList.stream().map(Object::toString).collect(java.util.stream.Collectors.toList());
+                    fieldValue.setArrayValue(stringList);
                     fieldValue.setFormattedValue(formatMultiSelectValue(list, fieldDef));
                 } catch (Exception e) {
                     fieldValue.setStringValue(value != null ? value.toString() : null);

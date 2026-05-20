@@ -4,6 +4,7 @@ import com.jira.migration.entity.MigrationJob;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -19,20 +20,20 @@ public class MigrationJobResponse {
     private Integer processedEntities;
     private Integer failedEntities;
     private Double progressPercentage;
-    private String config;
-    private String options;
+    private Map<String, Object> config;
+    private Map<String, Object> options;
     private UUID initiatedBy;
     private LocalDateTime initiatedAt;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
     private String errorMessage;
-    private String errorDetails;
+    private Map<String, Object> errorDetails;
     private UUID sourceProjectId;
     private UUID targetProjectId;
     private String filePath;
     private Boolean canRollback;
     private UUID rollbackJobId;
-    private String resultMetadata;
+    private Map<String, Object> resultMetadata;
 
     public static MigrationJobResponse fromEntity(MigrationJob job) {
         return MigrationJobResponse.builder()

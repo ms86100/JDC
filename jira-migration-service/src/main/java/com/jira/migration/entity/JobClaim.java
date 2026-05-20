@@ -43,7 +43,7 @@ public class JobClaim {
     @Builder.Default
     private Integer priority = 0;
 
-    @Column(name = "progress_percentage", precision = 5, scale = 2)
+    @Column(name = "progress_percentage", precision = 5)
     @Builder.Default
     private Double progressPercentage = 0.0;
 
