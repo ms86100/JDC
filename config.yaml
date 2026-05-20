@@ -110,6 +110,7 @@ services:
     dir: "jira-workflow-service"
     jar: "jira-workflow-service-1.0.0.jar"
     health: "/actuator/health"
+    health_timeout: 240
     deps: ["auth"]
 
   comment:
@@ -152,6 +153,7 @@ services:
     dir: "jira-sprint-service"
     jar: "jira-sprint-service-1.0.0.jar"
     health: "/actuator/health"
+    health_timeout: 240
     deps: ["auth"]
 
   plan:
@@ -173,6 +175,7 @@ services:
     dir: "jira-migration-service"
     jar: "jira-migration-service-1.0.0.jar"
     health: "/actuator/health"
+    health_timeout: 300
     deps: ["auth"]
 
 # ---------------------------------------------------------------------------
@@ -195,8 +198,10 @@ startup:
 
   # Health check settings
   health_check_path: "/actuator/health"
-  health_timeout: 90        # seconds to wait per service
+  health_timeout: 180       # seconds to wait per service (heavy JVMs need more time)
   health_poll_interval: 2   # seconds between health checks
+  max_parallel: 3           # max JVMs started at once (prevents OOM on 16GB machines)
+  protected_ports: [5432]   # never kill processes on these ports (PostgreSQL)
 
   # Process management
   shutdown_timeout: 15       # seconds to wait before force-kill
@@ -208,7 +213,7 @@ startup:
   cleanup_on_start: true
 
   # JVM options for all Java services
-  java_opts: "-Xms256m -Xmx512m"
+  java_opts: "-Xms128m -Xmx384m -XX:+UseG1GC"
 
 # ---------------------------------------------------------------------------
 # PORTS (for reference — actual values come from services.*.port above)

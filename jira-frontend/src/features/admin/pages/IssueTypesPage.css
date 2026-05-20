@@ -641,3 +641,26 @@
     border-top: 1px solid var(--it-gray-100);
   }
 }
+
+.it-action-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #ffebe6;
+  border: 1px solid #ff8f73;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #172b4d;
+}
+
+.it-action-error button {
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: #5e6c84;
+}

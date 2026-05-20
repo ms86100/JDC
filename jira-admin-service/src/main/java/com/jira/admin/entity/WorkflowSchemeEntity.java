@@ -3,6 +3,9 @@ package com.jira.admin.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Legacy admin view of workflow schemes. Canonical data lives in jira-workflow-service.
+ */
 @Entity
 @Table(name = "workflow_schemes")
 @Data

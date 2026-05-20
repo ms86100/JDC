@@ -1,0 +1,28 @@
+<html>
+<head>
+    <title>Test Coverage Report</title>
+</head>
+<body>
+    <div class="coverage-report">
+        <h2>Requirements Test Coverage</h2>
+        <table class="coverage-table">
+            <thead>
+                <tr>
+                    <th>Requirement</th>
+                    <th>Linked Tests</th>
+                    <th>Coverage Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                #foreach($req in $requirements)
+                <tr>
+                    <td>$req.key</td>
+                    <td>$req.testCount</td>
+                    <td class="coverage-$req.status">$req.status</td>
+                </tr>
+                #end
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

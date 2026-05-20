@@ -1,5 +1,6 @@
 package com.jira.admin.service;
 
+import com.jira.admin.dto.IssueTypeSchemeResponse;
 import com.jira.admin.dto.*;
 import com.jira.admin.entity.*;
 import com.jira.admin.repository.*;
@@ -25,7 +26,13 @@ public class IssueAdministrationService {
     private final ResolutionRepository resolutionRepository;
     private final StatusRepository statusRepository;
     private final IssueTypeSchemeRepository issueTypeSchemeRepository;
+    private final ProjectRepository projectRepository;
+    private final ProjectCatalogSyncService projectCatalogSyncService;
+    private final IssueSchemeBridgeService issueSchemeBridgeService;
     private final WorkflowRepository workflowRepository;
+    private final WorkflowAdminProxyService workflowAdminProxyService;
+    private final WorkflowSchemeAdminProxyService workflowSchemeAdminProxyService;
+    private final WorkflowSchemeBridgeService workflowSchemeBridgeService;
     private final WorkflowSchemeRepository workflowSchemeRepository;
     private final ScreenRepository screenRepository;
     private final ScreenSchemeRepository screenSchemeRepository;
@@ -301,108 +308,232 @@ public class IssueAdministrationService {
     // ==================== Issue Type Schemes ====================
 
     @Transactional(readOnly = true)
-    public List<IssueTypeSchemeEntity> getIssueTypeSchemes() {
-        return issueTypeSchemeRepository.findAll();
+    public List<IssueTypeSchemeResponse> getIssueTypeSchemes() {
+        return issueTypeSchemeRepository.findAll().stream()
+                .map(this::toSchemeResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public IssueTypeSchemeResponse getIssueTypeScheme(String schemeId) {
+        IssueTypeSchemeEntity scheme = issueTypeSchemeRepository.findById(schemeId)
+                .orElseThrow(() -> new IllegalArgumentException("Issue type scheme not found"));
+        return toSchemeResponse(scheme);
     }
 
     @Transactional
-    public IssueTypeSchemeEntity createIssueTypeScheme(Map<String, Object> data) {
-        Object idsObj = data.getOrDefault("issueTypeIds", new ArrayList<>());
-        String ids = idsObj instanceof List ? String.join(",", (List<String>) idsObj) : idsObj.toString();
+    public IssueTypeSchemeResponse createIssueTypeScheme(Map<String, Object> data) {
+        String name = (String) data.get("name");
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name is required");
+        }
 
         IssueTypeSchemeEntity scheme = IssueTypeSchemeEntity.builder()
-                .name((String) data.get("name"))
+                .name(name)
                 .description((String) data.getOrDefault("description", ""))
-                .issueTypeIds(ids)
-                .isDefault(false)
+                .issueTypeIds(joinIssueTypeIds(data.get("issueTypeIds")))
+                .defaultIssueType((String) data.get("defaultIssueType"))
+                .isDefault(Boolean.TRUE.equals(data.get("isDefault")))
+                .projectCount(0)
                 .build();
 
         scheme = issueTypeSchemeRepository.save(scheme);
         logAudit("CREATE", "ISSUE_TYPE_SCHEME", scheme.getId(), scheme.getName(), "Issue type scheme created");
 
-        return scheme;
+        return toSchemeResponse(scheme);
+    }
+
+    @Transactional
+    public IssueTypeSchemeResponse updateIssueTypeScheme(String schemeId, Map<String, Object> data) {
+        IssueTypeSchemeEntity scheme = issueTypeSchemeRepository.findById(schemeId)
+                .orElseThrow(() -> new IllegalArgumentException("Issue type scheme not found"));
+
+        if (data.containsKey("name")) scheme.setName((String) data.get("name"));
+        if (data.containsKey("description")) scheme.setDescription((String) data.get("description"));
+        if (data.containsKey("issueTypeIds")) scheme.setIssueTypeIds(joinIssueTypeIds(data.get("issueTypeIds")));
+        if (data.containsKey("defaultIssueType")) scheme.setDefaultIssueType((String) data.get("defaultIssueType"));
+        if (data.containsKey("isDefault")) scheme.setIsDefault((Boolean) data.get("isDefault"));
+
+        final IssueTypeSchemeEntity savedScheme = issueTypeSchemeRepository.save(scheme);
+        scheme = savedScheme;
+        logAudit("UPDATE", "ISSUE_TYPE_SCHEME", scheme.getId(), scheme.getName(), "Issue type scheme updated");
+
+        List<String> assignedProjectIds = projectRepository.findAll().stream()
+                .filter(p -> schemeId.equals(p.getIssueTypeScheme()) || savedScheme.getName().equals(p.getIssueTypeScheme()))
+                .map(ProjectEntity::getId)
+                .toList();
+        if (!assignedProjectIds.isEmpty()) {
+            issueSchemeBridgeService.pushSchemeToProjectService(scheme, assignedProjectIds);
+        }
+
+        return toSchemeResponse(scheme);
+    }
+
+    @Transactional
+    public void deleteIssueTypeScheme(String schemeId) {
+        IssueTypeSchemeEntity scheme = issueTypeSchemeRepository.findById(schemeId)
+                .orElseThrow(() -> new IllegalArgumentException("Issue type scheme not found"));
+
+        long projects = projectRepository.countByIssueTypeScheme(scheme.getId());
+        if (projects == 0) {
+            projects = projectRepository.countByIssueTypeScheme(scheme.getName());
+        }
+        if (projects > 0) {
+            throw new IllegalArgumentException(
+                    "Cannot delete scheme '" + scheme.getName() + "' — used by " + projects + " project(s)");
+        }
+
+        issueTypeSchemeRepository.delete(scheme);
+        logAudit("DELETE", "ISSUE_TYPE_SCHEME", schemeId, scheme.getName(), "Issue type scheme deleted");
+    }
+
+    @Transactional(readOnly = true)
+    public List<SchemeProjectAssignmentDto> getSchemeProjectAssignments(String schemeId) {
+        IssueTypeSchemeEntity scheme = issueTypeSchemeRepository.findById(schemeId)
+                .orElseThrow(() -> new IllegalArgumentException("Issue type scheme not found"));
+
+        if (projectRepository.count() == 0) {
+            projectCatalogSyncService.syncFromProjectService();
+        }
+
+        return projectRepository.findAll().stream()
+                .map(p -> toAssignmentDto(p, scheme))
+                .sorted(Comparator.comparing(SchemeProjectAssignmentDto::getName, String.CASE_INSENSITIVE_ORDER))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<SchemeProjectAssignmentDto> assignSchemeToProjects(String schemeId, List<String> projectIds) {
+        IssueTypeSchemeEntity scheme = issueTypeSchemeRepository.findById(schemeId)
+                .orElseThrow(() -> new IllegalArgumentException("Issue type scheme not found"));
+
+        if (projectRepository.count() == 0) {
+            projectCatalogSyncService.syncFromProjectService();
+        }
+
+        Set<String> selected = projectIds == null
+                ? Set.of()
+                : projectIds.stream().filter(Objects::nonNull).map(String::trim).filter(s -> !s.isEmpty())
+                        .collect(Collectors.toSet());
+
+        for (ProjectEntity project : projectRepository.findAll()) {
+            boolean hasScheme = schemeId.equals(project.getIssueTypeScheme())
+                    || scheme.getName().equals(project.getIssueTypeScheme());
+            boolean shouldAssign = selected.contains(project.getId());
+
+            if (shouldAssign) {
+                project.setIssueTypeScheme(schemeId);
+                projectRepository.save(project);
+            } else if (hasScheme) {
+                project.setIssueTypeScheme(null);
+                projectRepository.save(project);
+            }
+        }
+
+        if (!selected.isEmpty()) {
+            issueSchemeBridgeService.pushSchemeToProjectService(scheme, new ArrayList<>(selected));
+        }
+
+        logAudit("UPDATE", "ISSUE_TYPE_SCHEME", schemeId, scheme.getName(),
+                "Assigned scheme to " + selected.size() + " project(s)");
+
+        return getSchemeProjectAssignments(schemeId);
+    }
+
+    private SchemeProjectAssignmentDto toAssignmentDto(ProjectEntity project, IssueTypeSchemeEntity scheme) {
+        String currentId = project.getIssueTypeScheme();
+        boolean assigned = scheme.getId().equals(currentId) || scheme.getName().equals(currentId);
+        String currentName = null;
+        if (currentId != null && !currentId.isBlank()) {
+            currentName = issueTypeSchemeRepository.findById(currentId)
+                    .map(IssueTypeSchemeEntity::getName)
+                    .orElse(currentId);
+        }
+        return SchemeProjectAssignmentDto.builder()
+                .id(project.getId())
+                .projectKey(project.getProjectKey())
+                .name(project.getName())
+                .status(project.getStatus() != null ? project.getStatus().name() : "ACTIVE")
+                .assigned(assigned)
+                .currentSchemeId(currentId)
+                .currentSchemeName(currentName)
+                .build();
+    }
+
+    private IssueTypeSchemeResponse toSchemeResponse(IssueTypeSchemeEntity scheme) {
+        long projects = projectRepository.countByIssueTypeScheme(scheme.getId());
+        if (projects == 0) {
+            projects = projectRepository.countByIssueTypeScheme(scheme.getName());
+        }
+        return IssueTypeSchemeResponse.builder()
+                .id(scheme.getId())
+                .name(scheme.getName())
+                .description(scheme.getDescription())
+                .defaultIssueType(scheme.getDefaultIssueType())
+                .issueTypeIdList(parseIssueTypeIds(scheme.getIssueTypeIds()))
+                .projectCount((int) projects)
+                .isDefault(scheme.getIsDefault())
+                .build();
+    }
+
+    private List<String> parseIssueTypeIds(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    private String joinIssueTypeIds(Object idsObj) {
+        if (idsObj == null) {
+            return "";
+        }
+        if (idsObj instanceof List<?> list) {
+            return list.stream().map(Object::toString).map(String::trim).filter(s -> !s.isEmpty())
+                    .collect(Collectors.joining(","));
+        }
+        return idsObj.toString().trim();
     }
 
     // ==================== Workflows ====================
 
     @Transactional(readOnly = true)
     public List<WorkflowEntity> getWorkflows() {
-        return workflowRepository.findAll();
+        return workflowAdminProxyService.listWorkflows();
     }
 
     @Transactional(readOnly = true)
     public Optional<WorkflowEntity> getWorkflowById(String workflowId) {
-        return workflowRepository.findById(workflowId);
+        return workflowAdminProxyService.getWorkflow(workflowId);
     }
 
     @Transactional
     public WorkflowEntity createWorkflow(Map<String, Object> data) {
-        WorkflowEntity workflow = WorkflowEntity.builder()
-                .name((String) data.get("name"))
-                .description((String) data.getOrDefault("description", ""))
-                .workflowContent((String) data.getOrDefault("workflowContent", "{}"))
-                .isSystem(false)
-                .isActive(false)
-                .isDraft(true)
-                .version(1)
-                .build();
-
-        workflow = workflowRepository.save(workflow);
-        logAudit("CREATE", "WORKFLOW", workflow.getId(), workflow.getName(), "Workflow created (draft)");
-
+        WorkflowEntity workflow = workflowAdminProxyService.createWorkflow(data);
+        logAudit("CREATE", "WORKFLOW", workflow.getId(), workflow.getName(), "Workflow created (draft) via workflow-service");
         return workflow;
     }
 
     @Transactional
     public WorkflowEntity updateWorkflow(String workflowId, Map<String, Object> updates) {
-        WorkflowEntity workflow = workflowRepository.findById(workflowId)
-                .orElseThrow(() -> new IllegalArgumentException("Workflow not found"));
-
-        if (updates.containsKey("name")) workflow.setName((String) updates.get("name"));
-        if (updates.containsKey("description")) workflow.setDescription((String) updates.get("description"));
-        if (updates.containsKey("workflowContent")) {
-            workflow.setWorkflowContent((String) updates.get("workflowContent"));
-        }
-
-        workflow = workflowRepository.save(workflow);
-        logAudit("UPDATE", "WORKFLOW", workflow.getId(), workflow.getName(), "Workflow updated");
-
+        WorkflowEntity workflow = workflowAdminProxyService.updateWorkflow(workflowId, updates);
+        logAudit("UPDATE", "WORKFLOW", workflow.getId(), workflow.getName(), "Workflow updated via workflow-service");
         return workflow;
     }
 
     @Transactional
     public WorkflowEntity publishWorkflow(String workflowId) {
-        WorkflowEntity workflow = workflowRepository.findById(workflowId)
-                .orElseThrow(() -> new IllegalArgumentException("Workflow not found"));
-
-        workflow.setIsDraft(false);
-        workflow.setIsActive(true);
-        workflow.setVersion(workflow.getVersion() != null ? workflow.getVersion() + 1 : 1);
-
-        workflow = workflowRepository.save(workflow);
-        logAudit("PUBLISH", "WORKFLOW", workflow.getId(), workflow.getName(), "Workflow published");
-
+        WorkflowEntity workflow = workflowAdminProxyService.publishWorkflow(workflowId);
+        logAudit("PUBLISH", "WORKFLOW", workflow.getId(), workflow.getName(), "Workflow published via workflow-service");
         return workflow;
     }
 
     @Transactional
     public WorkflowEntity createDraftFromWorkflow(String workflowId) {
-        WorkflowEntity original = workflowRepository.findById(workflowId)
-                .orElseThrow(() -> new IllegalArgumentException("Workflow not found"));
-
-        WorkflowEntity draft = WorkflowEntity.builder()
-                .name(original.getName() + " (Draft)")
-                .description(original.getDescription())
-                .workflowContent(original.getWorkflowContent())
-                .isSystem(false)
-                .isActive(false)
-                .isDraft(true)
-                .version(original.getVersion())
-                .build();
-
-        draft = workflowRepository.save(draft);
-        logAudit("CREATE_DRAFT", "WORKFLOW", draft.getId(), draft.getName(), "Draft created from workflow " + original.getName());
-
+        WorkflowEntity draft = workflowAdminProxyService.createDraftFromWorkflow(workflowId);
+        logAudit("CREATE_DRAFT", "WORKFLOW", draft.getId(), draft.getName(), "Draft created via workflow-service");
         return draft;
     }
 
@@ -410,19 +541,19 @@ public class IssueAdministrationService {
 
     @Transactional(readOnly = true)
     public List<WorkflowSchemeEntity> getWorkflowSchemes() {
-        return workflowSchemeRepository.findAll();
+        return workflowSchemeAdminProxyService.listSchemes();
     }
 
     @Transactional
     public WorkflowSchemeEntity createWorkflowScheme(Map<String, Object> data) {
-        WorkflowSchemeEntity scheme = WorkflowSchemeEntity.builder()
-                .name((String) data.get("name"))
-                .description((String) data.getOrDefault("description", ""))
-                .defaultWorkflowId((String) data.get("defaultWorkflowId"))
-                .build();
+        WorkflowSchemeEntity scheme = workflowSchemeAdminProxyService.createScheme(data);
+        logAudit("CREATE", "WORKFLOW_SCHEME", scheme.getId(), scheme.getName(), "Workflow scheme created via workflow-service");
 
-        scheme = workflowSchemeRepository.save(scheme);
-        logAudit("CREATE", "WORKFLOW_SCHEME", scheme.getId(), scheme.getName(), "Workflow scheme created");
+        @SuppressWarnings("unchecked")
+        List<String> projectIds = (List<String>) data.get("projectIds");
+        if (projectIds != null && !projectIds.isEmpty()) {
+            workflowSchemeBridgeService.pushSchemeToProjects(scheme.getId(), projectIds);
+        }
 
         return scheme;
     }

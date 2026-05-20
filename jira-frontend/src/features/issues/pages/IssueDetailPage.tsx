@@ -5,6 +5,7 @@ import { issueApi, IssueResponse } from '../../../api/issueApi';
 import { commentApi } from '../../../api/commentApi';
 import { labelApi } from '../../../api/labelApi';
 import EditIssueModal from '../components/EditIssueModal';
+import TransitionScreenForm, { type AvailableTransition } from '../components/TransitionScreenForm';
 import './IssueDetailPage.css';
 
 type TabType = 'details' | 'people' | 'activity' | 'comment' | 'work';
@@ -126,7 +127,7 @@ export default function IssueDetailPage() {
 
   const { data: comments } = useQuery({
     queryKey: ['comments', issueId],
-    fn: async () => {
+    queryFn: async () => {
       const response = await commentApi.getByIssue(issueId!);
       return response.data;
     },
@@ -135,19 +136,25 @@ export default function IssueDetailPage() {
 
   const { data: priorities } = useQuery({
     queryKey: ['priorities'],
-    fn: async () => {
+    queryFn: async () => {
       const response = await issueApi.getPriorities();
       return response.data;
     },
   });
 
-  const { data: statuses } = useQuery({
-    queryKey: ['statuses'],
-    fn: async () => {
-      const response = await issueApi.getStatuses();
+  const { data: availableTransitions } = useQuery({
+    queryKey: ['issue-transitions', issueId, issue?.projectId],
+    queryFn: async () => {
+      if (!issueId || !issue?.projectId) return null;
+      const response = await issueApi.getAvailableTransitions(issueId, issue.projectId);
       return response.data;
     },
+    enabled: !!issueId && !!issue?.projectId,
   });
+
+  const [transitionComment, setTransitionComment] = useState('');
+  const [screenInput, setScreenInput] = useState<Record<string, unknown>>({});
+  const [pendingTransition, setPendingTransition] = useState<AvailableTransition | null>(null);
 
   const addCommentMutation = useMutation({
     mutationFn: (content: string) => commentApi.create({ issueId: issueId!, content }),
@@ -158,12 +165,44 @@ export default function IssueDetailPage() {
   });
 
   const transitionMutation = useMutation({
-    mutationFn: (statusId: string) => issueApi.transitionStatus(issueId!, statusId),
+    mutationFn: (payload: {
+      transitionId: string;
+      toStatusId: string;
+      comment?: string;
+      resolutionId?: string;
+      screenInput?: Record<string, unknown>;
+    }) =>
+      issueApi.transitionStatus(issueId!, issue!.projectId, {
+        transitionId: payload.transitionId,
+        statusId: payload.toStatusId,
+        comment: payload.comment,
+        resolutionId: payload.resolutionId,
+        screenInput: payload.screenInput,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
+      queryClient.invalidateQueries({ queryKey: ['issue-transitions', issueId] });
       setShowTransitionMenu(false);
+      setPendingTransition(null);
+      setTransitionComment('');
+      setScreenInput({});
     },
   });
+
+  const confirmTransition = () => {
+    if (!pendingTransition) return;
+    const resolutionId =
+      (screenInput.resolutionId as string) ||
+      (screenInput.resolution as string) ||
+      undefined;
+    transitionMutation.mutate({
+      transitionId: pendingTransition.id,
+      toStatusId: pendingTransition.toStatusId,
+      comment: transitionComment || (screenInput.comment as string) || undefined,
+      resolutionId,
+      screenInput: Object.keys(screenInput).length > 0 ? screenInput : undefined,
+    });
+  };
 
   // Helper functions
   const getStatusStyle = (status: string) => {
@@ -344,19 +383,50 @@ export default function IssueDetailPage() {
         {/* Transition Menu */}
         {showTransitionMenu && (
           <div className="idc-transition-menu">
-            <div className="idc-transition-header">Transition</div>
-            {statuses?.map((s) => (
-              <button
-                key={s.id}
-                className="idc-transition-option"
-                onClick={() => {
-                  transitionMutation.mutate(s.id);
-                  setShowTransitionMenu(false);
+            <div className="idc-transition-header">Workflow transitions</div>
+            {(availableTransitions?.transitions ?? []).length === 0 ? (
+              <div className="idc-transition-option" style={{ cursor: 'default', color: '#5e6c84' }}>
+                No transitions available
+              </div>
+            ) : (
+              availableTransitions!.transitions.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className="idc-transition-option"
+                  onClick={() => {
+                    setPendingTransition({
+                      id: t.id,
+                      name: t.name,
+                      description: t.description,
+                      toStatusId: t.toStatusId,
+                      hasScreen: t.hasScreen,
+                      screenFields: t.screenFields,
+                    });
+                    setScreenInput({});
+                    setTransitionComment('');
+                  }}
+                >
+                  {t.name}
+                  {t.hasScreen ? ' …' : ''}
+                </button>
+              ))
+            )}
+            {pendingTransition && (
+              <TransitionScreenForm
+                transition={pendingTransition}
+                comment={transitionComment}
+                onCommentChange={setTransitionComment}
+                screenInput={screenInput}
+                onScreenInputChange={setScreenInput}
+                onConfirm={confirmTransition}
+                onCancel={() => {
+                  setPendingTransition(null);
+                  setScreenInput({});
                 }}
-              >
-                {s.name}
-              </button>
-            ))}
+                isSubmitting={transitionMutation.isPending}
+              />
+            )}
           </div>
         )}
       </div>

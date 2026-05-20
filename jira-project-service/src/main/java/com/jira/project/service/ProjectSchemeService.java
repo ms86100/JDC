@@ -1,5 +1,7 @@
 package com.jira.project.service;
 
+import com.jira.project.dto.AssignIssueTypeSchemeRequest;
+import com.jira.project.dto.AssignWorkflowSchemeRequest;
 import com.jira.project.dto.ProjectSchemeResponse;
 import com.jira.project.entity.*;
 import com.jira.project.repository.*;
@@ -8,8 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -124,6 +125,136 @@ public class ProjectSchemeService {
 
         ProjectScheme projectScheme = builder.build();
         return projectSchemeRepository.save(projectScheme);
+    }
+
+    @Transactional
+    public int assignIssueTypeSchemeFromAdmin(AssignIssueTypeSchemeRequest request) {
+        if (request.getSchemeName() == null || request.getSchemeName().isBlank()) {
+            throw new IllegalArgumentException("schemeName is required");
+        }
+
+        IssueTypeScheme scheme = issueTypeSchemeRepository.findByName(request.getSchemeName())
+                .orElseGet(() -> issueTypeSchemeRepository.save(IssueTypeScheme.builder()
+                        .name(request.getSchemeName())
+                        .description(request.getDescription())
+                        .isDefault(false)
+                        .build()));
+
+        if (request.getDescription() != null) {
+            scheme.setDescription(request.getDescription());
+            issueTypeSchemeRepository.save(scheme);
+        }
+
+        UUID schemeId = scheme.getId();
+        List<IssueTypeSchemeMapping> existingMappings = issueTypeSchemeMappingRepository.findBySchemeId(schemeId);
+        issueTypeSchemeMappingRepository.deleteAll(existingMappings);
+
+        List<String> keys = request.getIssueTypeKeys() != null ? request.getIssueTypeKeys() : List.of();
+        String defaultKey = request.getDefaultIssueTypeKey();
+        if (defaultKey == null || defaultKey.isBlank()) {
+            defaultKey = keys.isEmpty() ? null : keys.get(0);
+        }
+
+        for (String key : keys) {
+            if (key == null || key.isBlank()) {
+                continue;
+            }
+            issueTypeSchemeMappingRepository.save(IssueTypeSchemeMapping.builder()
+                    .schemeId(schemeId)
+                    .issueTypeName(key)
+                    .isDefault(key.equals(defaultKey))
+                    .build());
+        }
+
+        Set<UUID> selected = new HashSet<>();
+        if (request.getProjectIds() != null) {
+            for (String id : request.getProjectIds()) {
+                try {
+                    selected.add(UUID.fromString(id));
+                } catch (IllegalArgumentException ignored) {
+                    log.warn("Skipping invalid project id in scheme assign: {}", id);
+                }
+            }
+        }
+
+        IssueTypeScheme fallback = issueTypeSchemeRepository.findByIsDefaultTrue().orElse(scheme);
+        int updated = 0;
+
+        for (ProjectScheme projectScheme : projectSchemeRepository.findAll()) {
+            UUID projectId = projectScheme.getProject().getId();
+            IssueTypeScheme current = projectScheme.getIssueTypeScheme();
+
+            if (selected.contains(projectId)) {
+                projectScheme.setIssueTypeScheme(scheme);
+                projectSchemeRepository.save(projectScheme);
+                updated++;
+            } else if (current != null && request.getSchemeName().equals(current.getName())) {
+                projectScheme.setIssueTypeScheme(fallback);
+                projectSchemeRepository.save(projectScheme);
+                updated++;
+            }
+        }
+
+        log.info("Assigned issue type scheme '{}' to {} project(s)", scheme.getName(), selected.size());
+        return updated;
+    }
+
+    @Transactional
+    public int assignWorkflowSchemeFromBridge(AssignWorkflowSchemeRequest request) {
+        if (request.getSchemeName() == null || request.getSchemeName().isBlank()) {
+            throw new IllegalArgumentException("schemeName is required");
+        }
+
+        WorkflowScheme scheme = null;
+        if (request.getSchemeId() != null) {
+            scheme = workflowSchemeRepository.findById(request.getSchemeId()).orElse(null);
+        }
+        if (scheme == null) {
+            scheme = workflowSchemeRepository.findByName(request.getSchemeName()).orElse(null);
+        }
+        if (scheme == null) {
+            scheme = workflowSchemeRepository.save(WorkflowScheme.builder()
+                    .name(request.getSchemeName())
+                    .description(request.getDescription())
+                    .isDefault(false)
+                    .build());
+        } else if (request.getDescription() != null) {
+            scheme.setDescription(request.getDescription());
+            workflowSchemeRepository.save(scheme);
+        }
+
+        Set<UUID> selected = new HashSet<>();
+        if (request.getProjectIds() != null) {
+            for (String id : request.getProjectIds()) {
+                try {
+                    selected.add(UUID.fromString(id));
+                } catch (IllegalArgumentException ignored) {
+                    log.warn("Skipping invalid project id in workflow scheme assign: {}", id);
+                }
+            }
+        }
+
+        WorkflowScheme fallback = workflowSchemeRepository.findByIsDefaultTrue().orElse(scheme);
+        final WorkflowScheme activeScheme = scheme;
+        int updated = 0;
+
+        for (ProjectScheme projectScheme : projectSchemeRepository.findAll()) {
+            UUID projectId = projectScheme.getProject().getId();
+            WorkflowScheme current = projectScheme.getWorkflowScheme();
+
+            if (selected.contains(projectId)) {
+                projectScheme.setWorkflowScheme(activeScheme);
+                projectSchemeRepository.save(projectScheme);
+                updated++;
+            } else if (current != null && request.getSchemeName().equals(current.getName())) {
+                projectScheme.setWorkflowScheme(fallback);
+                projectSchemeRepository.save(projectScheme);
+                updated++;
+            }
+        }
+
+        log.info("Assigned workflow scheme '{}' to {} project(s) in project-service", activeScheme.getName(), selected.size());
+        return updated;
     }
 
     private ProjectSchemeResponse buildSchemeResponse(ProjectScheme scheme) {

@@ -14,7 +14,6 @@ import java.util.UUID;
 @RequestMapping("/api/admin/workflows")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class WorkflowAdministrationController {
 
     private final WorkflowAdministrationService workflowAdminService;

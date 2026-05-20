@@ -1,11 +1,13 @@
 /* Jira DC Workflows Admin Page - Exact Match */
 
 .wf-page {
-  padding: 24px 32px;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
   color: #333;
-  max-width: 1400px;
 }
 
 /* ============================================================
@@ -13,8 +15,10 @@
    ============================================================ */
 .wf-page-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 16px;
 }
 
@@ -87,7 +91,9 @@
    ============================================================ */
 .wf-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 12px;
   margin-bottom: 16px;
 }
 
@@ -105,7 +111,9 @@
   background: white;
   border: 1px solid #DFE1E6;
   border-radius: 3px;
-  min-width: 240px;
+  min-width: min(100%, 240px);
+  flex: 1 1 200px;
+  max-width: 480px;
 }
 
 .wf-search-box:focus-within {
@@ -716,6 +724,82 @@
   color: #6B778C;
 }
 
+.wf-status-seq {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B778C;
+  min-width: 20px;
+}
+
+.wf-cat-todo { color: #42526E; }
+.wf-cat-in_progress { color: #974F0C; }
+.wf-cat-done { color: #006644; }
+
+.wf-detail-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.wf-detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wf-detail-summary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.wf-summary-pill {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #DEEBFF;
+  color: #0747A6;
+}
+
+.wf-detail-error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #FFEBE6;
+  color: #BF2600;
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.wf-transition-flow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.wf-flow-status {
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  background: white;
+  border: 2px solid #DFE1E6;
+  color: #172B4D;
+}
+
+.wf-flow-arrow {
+  color: #6B778C;
+  font-weight: 600;
+}
+
+.wf-transition-name {
+  display: block;
+}
+
 /* Transition Cards */
 .wf-transition-card {
   padding: 12px;
@@ -803,8 +887,18 @@
 
 /* Responsive */
 @media (max-width: 768px) {
-  .wf-page {
-    padding: 16px;
+  .wf-page-header-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .wf-search-box {
+    max-width: none;
+    width: 100%;
+  }
+
+  .wf-card {
+    overflow-x: auto;
   }
 
   .wf-modal {

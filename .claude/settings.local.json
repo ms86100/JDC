@@ -4,7 +4,29 @@
       "Bash(curl -s http://localhost:8080/actuator/health)",
       "Bash(curl -s http://localhost:8081/actuator/health)",
       "Bash(curl -s http://localhost:8083/actuator/health)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'id={d.get\\(\\\\\"id\\\\\",\\\\\"N/A\\\\\"\\)}, name={d.get\\(\\\\\"name\\\\\",\\\\\"N/A\\\\\"\\)}, status={\\\\\"PASS\\\\\" if d.get\\(\\\\\"name\\\\\"\\) == \\\\\"CRUD New Type UPDATED\\\\\" else \\\\\"FAIL\\\\\"}'\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Result: {d}'\\)\")",
+      "Bash(tasklist /FI \"PID eq 33096\")",
+      "Bash(taskkill //F //IM java.exe)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(powershell *)",
+      "Bash(tasklist //FI \"IMAGENAME eq java.exe\")",
+      "Bash(java -Xms256m -Xmx256m -jar jira-admin-service/target/jira-admin-service-1.0.0.jar --server.port=8093)",
+      "Bash(PGPASSWORD=UNIpay@123 psql -h localhost -U jiraadmin -d jira_platform -c \"SELECT schema_name FROM information_schema.schemata WHERE schema_name IN \\('jira_admin','jira_project','jira_auth'\\)\")",
+      "Bash(xargs grep *)",
+      "Bash(docker-compose restart *)",
+      "Bash(docker restart *)",
+      "Bash(taskkill *)",
+      "Bash(PGPASSWORD=UNIpay@123 psql *)",
+      "Bash(git reset *)",
+      "Bash(git commit *)",
+      "Bash(mv logs/admin*.log logs/admin/)",
+      "Bash(mv logs/attachment*.log logs/attachment/)",
+      "Bash(mv logs/audit*.log logs/audit/)",
+      "Bash(mv logs/auth*.log logs/auth/)",
+      "Bash(mv logs/comment*.log logs/comment/)"
     ]
   }
 }

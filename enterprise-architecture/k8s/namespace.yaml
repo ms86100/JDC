@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jira-platform
+  labels:
+    name: jira-platform
+    environment: production
+    app.kubernetes.io/name: jira-platform
+    app.kubernetes.io/managed-by: kubectl
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jira-platform-ingress
+  labels:
+    name: jira-platform-ingress

@@ -1,1 +1,129 @@
-/* SystemInfoPage uses shared styles from AdminLayout.css */
+/* System info — Airbus admin page components */
+
+.ab-admin-page {
+  max-width: 960px;
+}
+
+.ab-tab-panels {
+  margin-top: 0;
+}
+
+.ab-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 20px;
+  animation: ab-fade-in 0.2s ease;
+}
+
+@keyframes ab-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ab-info-panel {
+  background: var(--ab-white, #fff);
+  border: 1px solid #dfe1e6;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 32, 91, 0.06);
+}
+
+.ab-info-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  background: linear-gradient(90deg, #f4f5f7 0%, #fff 100%);
+  border-bottom: 1px solid #ebecf0;
+}
+
+.ab-info-panel-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #00205b;
+}
+
+.ab-info-dl {
+  margin: 0;
+  padding: 0;
+}
+
+.ab-info-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  border-bottom: 1px solid #ebecf0;
+}
+
+.ab-info-row:last-child {
+  border-bottom: none;
+}
+
+.ab-info-row dt {
+  margin: 0;
+  padding: 12px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #5e6c84;
+  background: #fafbfc;
+  border-right: 1px solid #ebecf0;
+}
+
+.ab-info-row dd {
+  margin: 0;
+  padding: 12px 20px;
+  font-size: 14px;
+  color: #172b4d;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.ab-info-mono {
+  font-family: var(--ab-font-mono, Consolas, monospace);
+  font-size: 13px;
+  color: #42526e;
+}
+
+.ab-memory-meter {
+  padding: 16px 20px;
+  background: var(--ab-white, #fff);
+  border: 1px solid #dfe1e6;
+  border-radius: 8px;
+}
+
+.ab-memory-meter-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: #5e6c84;
+  margin-bottom: 10px;
+}
+
+.ab-memory-meter-track {
+  height: 10px;
+  background: #ebecf0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.ab-memory-meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00205b, #0052cc);
+  border-radius: 6px;
+  transition: width 0.4s ease;
+}
+
+@media (max-width: 720px) {
+  .ab-info-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ab-info-row dt {
+    border-right: none;
+    border-bottom: 1px solid #ebecf0;
+    padding-bottom: 4px;
+  }
+}

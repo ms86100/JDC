@@ -1,6 +1,7 @@
 package com.jira.issue.controller;
 
 import com.jira.issue.dto.ChangeHistoryResponse;
+import com.jira.issue.dto.RecordChangeHistoryRequest;
 import com.jira.issue.service.ChangeHistoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -22,6 +23,15 @@ import java.util.UUID;
 public class ChangeHistoryController {
 
     private final ChangeHistoryService changeHistoryService;
+
+    @PostMapping("/internal")
+    @Operation(summary = "Record change history (workflow engine)")
+    public ResponseEntity<ChangeHistoryResponse> recordChangeHistoryInternal(
+            @PathVariable UUID issueId,
+            @RequestBody RecordChangeHistoryRequest request,
+            @RequestHeader(value = "X-Workflow-Internal", required = false) String internal) {
+        return ResponseEntity.ok(changeHistoryService.recordFromWorkflow(issueId, request));
+    }
 
     @GetMapping
     @Operation(summary = "Get change history", description = "Get all change history for an issue")

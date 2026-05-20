@@ -51,6 +51,12 @@ public interface IssueRepository extends JpaRepository<Issue, UUID>, JpaSpecific
     @Query("SELECT COUNT(i) FROM Issue i WHERE i.projectId = :projectId")
     long countByProjectId(@Param("projectId") UUID projectId);
 
+    @Query("SELECT COUNT(i) FROM Issue i WHERE i.issueType.id = :issueTypeId")
+    long countByIssueTypeId(@Param("issueTypeId") UUID issueTypeId);
+
     @Query("SELECT i FROM Issue i JOIN i.status s WHERE i.projectId = :projectId AND s.category = :category")
     List<Issue> findByProjectIdAndStatusCategory(@Param("projectId") UUID projectId, @Param("category") String category);
+
+    @Query("SELECT i FROM Issue i WHERE i.projectId = :projectId AND i.issueType.name = :typeName")
+    List<Issue> findByProjectIdAndIssueTypeName(@Param("projectId") UUID projectId, @Param("typeName") String typeName);
 }

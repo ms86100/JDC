@@ -24,6 +24,12 @@ spring:
   flyway:
     enabled: false
 
+jira:
+  services:
+    project-url: ${PROJECT_SERVICE_URL:http://localhost:8083}
+    issue-url: ${ISSUE_SERVICE_URL:http://localhost:8084}
+    workflow-url: ${WORKFLOW_SERVICE_URL:http://localhost:8085}
+
 springdoc:
   api-docs:
     path: /api-docs

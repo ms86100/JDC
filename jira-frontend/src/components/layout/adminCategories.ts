@@ -5,11 +5,11 @@
  */
 
 export interface AdminItem { label: string; path: string; }
-export interface AdminCategory { key: string; label: string; items: AdminItem[]; }
+export interface AdminCategory { key: string; label: string; icon: string; items: AdminItem[]; }
 
 export const ADMIN_CATEGORIES: AdminCategory[] = [
   {
-    key: 'system', label: 'System',
+    key: 'system', label: 'System', icon: '⚙',
     items: [
       { label: 'General',        path: '/admin/system/general' },
       { label: 'Appearance',     path: '/admin/system/appearance' },
@@ -23,7 +23,7 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     ],
   },
   {
-    key: 'users', label: 'Users & Security',
+    key: 'users', label: 'Users & Security', icon: '👤',
     items: [
       { label: 'Users',              path: '/admin/users' },
       { label: 'Create user',        path: '/admin/users/create' },
@@ -39,7 +39,7 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     ],
   },
   {
-    key: 'issues', label: 'Issues',
+    key: 'issues', label: 'Issues', icon: '📋',
     items: [
       { label: 'Issue types',         path: '/admin/issue-types' },
       { label: 'Issue type schemes',  path: '/admin/issue-type-schemes' },
@@ -50,7 +50,7 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     ],
   },
   {
-    key: 'workflows', label: 'Workflows & Screens',
+    key: 'workflows', label: 'Workflows & Screens', icon: '🔀',
     items: [
       { label: 'Workflows',        path: '/admin/workflows' },
       { label: 'Workflow schemes', path: '/admin/workflow-schemes' },
@@ -59,7 +59,7 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     ],
   },
   {
-    key: 'projects', label: 'Projects',
+    key: 'projects', label: 'Projects', icon: '📁',
     items: [
       { label: 'Project types',      path: '/admin/project-types' },
       { label: 'Project categories', path: '/admin/project-categories' },
@@ -67,7 +67,7 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     ],
   },
   {
-    key: 'fields', label: 'Custom Fields',
+    key: 'fields', label: 'Custom Fields', icon: '🏷',
     items: [
       { label: 'Custom fields',  path: '/admin/custom-fields' },
       { label: 'Field types',    path: '/admin/field-types' },
@@ -75,7 +75,7 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     ],
   },
   {
-    key: 'addons', label: 'Add-ons & Automation',
+    key: 'addons', label: 'Add-ons & Automation', icon: '⚡',
     items: [
       { label: 'Automation', path: '/admin/automation' },
       { label: 'Webhooks',   path: '/admin/webhooks' },
@@ -86,7 +86,7 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     ],
   },
   {
-    key: 'dc', label: 'Data Center',
+    key: 'dc', label: 'Data Center', icon: '🖥',
     items: [
       { label: 'Cluster',  path: '/admin/cluster' },
       { label: 'Cache',    path: '/admin/cache' },
@@ -96,7 +96,7 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     ],
   },
   {
-    key: 'audit', label: 'Audit',
+    key: 'audit', label: 'Audit', icon: '📊',
     items: [
       { label: 'Auditing',      path: '/admin/auditing' },
       { label: 'Dark features', path: '/admin/dark-features' },

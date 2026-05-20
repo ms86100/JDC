@@ -37,9 +37,14 @@ public class IssueService {
     private final WatcherRepository watcherRepository;
     private final IssueLinkRepository issueLinkRepository;
     private final IssueLinkTypeRepository issueLinkTypeRepository;
+    private final WorkflowTransitionClient workflowTransitionClient;
 
     @Value("${workflow.service.url}")
     private String workflowServiceUrl;
+
+    public String getWorkflowServiceUrl() {
+        return workflowServiceUrl;
+    }
 
     @Value("${project.service.url}")
     private String projectServiceUrl;
@@ -371,9 +376,96 @@ public class IssueService {
     }
 
     @Transactional
-    public IssueResponse updateIssueStatus(UUID issueId, UUID newStatusId, UUID projectId) {
-        log.info("Updating status for issue {} to {}", issueId, newStatusId);
+    public IssueResponse updateIssueStatus(UUID issueId, UpdateIssueStatusRequest request, UUID projectId, UUID userId) {
+        log.info("Updating status for issue {} via workflow engine", issueId);
 
+        UUID newStatusId = request.getStatusId();
+        if (newStatusId == null && request.getTransitionId() == null) {
+            throw new IllegalArgumentException("statusId or transitionId is required");
+        }
+
+        try {
+            workflowTransitionClient.executeTransition(
+                    issueId,
+                    projectId,
+                    userId,
+                    request.getTransitionId(),
+                    newStatusId,
+                    request.getComment(),
+                    request.getResolutionId(),
+                    request.getScreenInput());
+        } catch (InvalidTransitionException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Workflow engine unavailable, falling back to graph validation: {}", e.getMessage());
+            if (newStatusId == null) {
+                throw new InvalidTransitionException("Workflow service required when using transitionId only");
+            }
+            return updateIssueStatusDirect(issueId, newStatusId, projectId);
+        }
+
+        return getIssue(issueId);
+    }
+
+    /**
+     * Internal status update called by workflow post-functions (skips workflow re-entry).
+     */
+    @Transactional
+    public IssueResponse updateIssueStatusInternal(UUID issueId, UUID newStatusId, UUID projectId) {
+        return updateIssueStatusDirect(issueId, newStatusId, projectId);
+    }
+
+    /**
+     * Applies post-function field updates without re-entering the workflow engine.
+     */
+    @Transactional
+    public IssueResponse applyWorkflowInternalUpdate(UUID issueId, Map<String, Object> updates) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", issueId));
+
+        if (updates.containsKey("statusId")) {
+            UUID statusId = UUID.fromString(String.valueOf(updates.get("statusId")));
+            IssueStatus newStatus = issueStatusRepository.findById(statusId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Status", "id", statusId));
+            issue.setStatus(newStatus);
+        }
+        if (updates.containsKey("assigneeId")) {
+            Object raw = updates.get("assigneeId");
+            issue.setAssigneeId(raw == null || "null".equals(String.valueOf(raw)) ? null : UUID.fromString(String.valueOf(raw)));
+        }
+        if (updates.containsKey("resolutionId")) {
+            Object raw = updates.get("resolutionId");
+            issue.setResolutionId(raw == null || "null".equals(String.valueOf(raw)) ? null : UUID.fromString(String.valueOf(raw)));
+        }
+        if (updates.containsKey("priorityId")) {
+            UUID priorityId = UUID.fromString(String.valueOf(updates.get("priorityId")));
+            IssuePriority priority = issuePriorityRepository.findById(priorityId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Priority", "id", priorityId));
+            issue.setPriority(priority);
+        }
+        if (updates.containsKey("securityLevelId")) {
+            Object raw = updates.get("securityLevelId");
+            issue.setSecurityLevelId(raw == null ? null : UUID.fromString(String.valueOf(raw)));
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> screenInput = (Map<String, Object>) updates.get("screenInput");
+        if (screenInput != null) {
+            if (screenInput.containsKey("assigneeId")) {
+                Object raw = screenInput.get("assigneeId");
+                issue.setAssigneeId(raw == null ? null : UUID.fromString(String.valueOf(raw)));
+            }
+            if (screenInput.containsKey("resolutionId")) {
+                Object raw = screenInput.get("resolutionId");
+                issue.setResolutionId(raw == null ? null : UUID.fromString(String.valueOf(raw)));
+            }
+        }
+
+        issue = issueRepository.save(issue);
+        return mapToIssueResponse(issue);
+    }
+
+    private IssueResponse updateIssueStatusDirect(UUID issueId, UUID newStatusId, UUID projectId) {
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", issueId));
 
@@ -388,8 +480,7 @@ public class IssueService {
 
         issue.setStatus(newStatus);
         issue = issueRepository.save(issue);
-
-        log.info("Issue status updated successfully: {} -> {}", issue.getIssueKey(), newStatus.getName());
+        log.info("Issue status updated: {} -> {}", issue.getIssueKey(), newStatus.getName());
         return mapToIssueResponse(issue);
     }
 

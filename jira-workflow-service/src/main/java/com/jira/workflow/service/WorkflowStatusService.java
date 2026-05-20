@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -25,9 +24,7 @@ public class WorkflowStatusService {
 
     private final WorkflowStatusRepository workflowStatusRepository;
     private final WorkflowRepository workflowRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
-
-    private static final String ADMIN_SERVICE_URL = "http://localhost:8093";
+    private final WorkflowStatusCatalog statusCatalog;
 
     @Transactional(readOnly = true)
     public List<WorkflowStatusResponse> getWorkflowStatuses(UUID workflowId) {
@@ -37,10 +34,11 @@ public class WorkflowStatusService {
             throw new ResourceNotFoundException("Workflow", "id", workflowId);
         }
 
+        Map<String, WorkflowStatusCatalog.StatusMeta> catalog = statusCatalog.loadCatalog();
         List<WorkflowStatus> statuses = workflowStatusRepository.findByWorkflowIdOrderBySequenceAsc(workflowId);
 
         return statuses.stream()
-                .map(this::mapToResponse)
+                .map(ws -> mapToResponse(ws, catalog))
                 .collect(Collectors.toList());
     }
 
@@ -63,15 +61,11 @@ public class WorkflowStatusService {
                 .build();
 
         workflowStatus = workflowStatusRepository.save(workflowStatus);
-        log.info("Status added to workflow: {}", workflowStatus.getId());
-
-        return mapToResponse(workflowStatus);
+        return mapToResponse(workflowStatus, statusCatalog.loadCatalog());
     }
 
     @Transactional
     public void removeStatusFromWorkflow(UUID workflowId, UUID workflowStatusId) {
-        log.info("Removing status {} from workflow: {}", workflowStatusId, workflowId);
-
         WorkflowStatus workflowStatus = workflowStatusRepository.findById(workflowStatusId)
                 .orElseThrow(() -> new ResourceNotFoundException("WorkflowStatus", "id", workflowStatusId));
 
@@ -80,18 +74,12 @@ public class WorkflowStatusService {
         }
 
         workflowStatusRepository.delete(workflowStatus);
-        log.info("Status removed from workflow: {}", workflowStatusId);
     }
 
     @Transactional
     public List<WorkflowStatusResponse> reorderWorkflowStatuses(UUID workflowId, List<UUID> statusIds) {
-        log.info("Reordering statuses for workflow: {}", workflowId);
-
-        if (!workflowRepository.existsById(workflowId)) {
-            throw new ResourceNotFoundException("Workflow", "id", workflowId);
-        }
-
         List<WorkflowStatus> statuses = workflowStatusRepository.findByWorkflowIdOrderBySequenceAsc(workflowId);
+        Map<String, WorkflowStatusCatalog.StatusMeta> catalog = statusCatalog.loadCatalog();
 
         for (int i = 0; i < statusIds.size(); i++) {
             UUID statusId = statusIds.get(i);
@@ -103,38 +91,22 @@ public class WorkflowStatusService {
         }
 
         workflowStatusRepository.saveAll(statuses);
-        log.info("Statuses reordered for workflow: {}", workflowId);
-
         return workflowStatusRepository.findByWorkflowIdOrderBySequenceAsc(workflowId)
                 .stream()
-                .map(this::mapToResponse)
+                .map(ws -> mapToResponse(ws, catalog))
                 .collect(Collectors.toList());
     }
 
-    private WorkflowStatusResponse mapToResponse(WorkflowStatus workflowStatus) {
-        String statusName = null;
-        String statusCategory = null;
-        String statusColor = null;
-
-        try {
-            String url = ADMIN_SERVICE_URL + "/api/admin/statuses/" + workflowStatus.getStatusId();
-            Map<String, Object> statusData = restTemplate.getForObject(url, Map.class);
-            if (statusData != null) {
-                statusName = (String) statusData.get("name");
-                statusCategory = (String) statusData.get("statusCategory");
-                statusColor = (String) statusData.get("statusColor");
-            }
-        } catch (Exception e) {
-            log.warn("Failed to fetch status details for {}: {}", workflowStatus.getStatusId(), e.getMessage());
-        }
+    private WorkflowStatusResponse mapToResponse(WorkflowStatus workflowStatus, Map<String, WorkflowStatusCatalog.StatusMeta> catalog) {
+        WorkflowStatusCatalog.StatusMeta meta = statusCatalog.resolve(workflowStatus.getStatusId(), catalog);
 
         return WorkflowStatusResponse.builder()
                 .id(workflowStatus.getId())
                 .workflowId(workflowStatus.getWorkflowId())
                 .statusId(workflowStatus.getStatusId())
-                .statusName(statusName)
-                .statusCategory(statusCategory)
-                .statusColor(statusColor)
+                .statusName(meta.name())
+                .statusCategory(meta.category())
+                .statusColor(meta.color())
                 .sequence(workflowStatus.getSequence())
                 .createdAt(workflowStatus.getCreatedAt())
                 .build();

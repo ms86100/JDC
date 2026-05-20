@@ -295,10 +295,16 @@ function WorkflowDetailView({ workflow, onBack, onRefresh }: WorkflowDetailViewP
   const fetchWorkflowDetails = async () => {
     setLoading(true);
     try {
-      const res = await workflowApi.getById(workflow.id);
-      if (res.data) {
-        setStatuses(res.data.statuses || []);
-      }
+      const res = await workflowApi.getWorkflowDetail(workflow.id);
+      setStatuses(
+        (res.data.statuses || []).map((s) => ({
+          id: s.id,
+          name: s.statusName || String(s.statusId),
+          category: s.statusCategory,
+          color: s.statusColor,
+          sequence: s.sequence,
+        }))
+      );
     } catch (err) {
       console.error('Failed to fetch workflow details:', err);
     } finally {

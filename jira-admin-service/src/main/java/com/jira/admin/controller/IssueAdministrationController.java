@@ -135,14 +135,54 @@ public class IssueAdministrationController {
 
     @GetMapping("/issue-type-schemes")
     @Operation(summary = "Get all issue type schemes")
-    public ResponseEntity<List<IssueTypeSchemeEntity>> getIssueTypeSchemes() {
+    public ResponseEntity<List<IssueTypeSchemeResponse>> getIssueTypeSchemes() {
         return ResponseEntity.ok(issueAdministrationService.getIssueTypeSchemes());
+    }
+
+    @GetMapping("/issue-type-schemes/{schemeId}")
+    @Operation(summary = "Get issue type scheme by ID")
+    public ResponseEntity<IssueTypeSchemeResponse> getIssueTypeScheme(@PathVariable String schemeId) {
+        return ResponseEntity.ok(issueAdministrationService.getIssueTypeScheme(schemeId));
     }
 
     @PostMapping("/issue-type-schemes")
     @Operation(summary = "Create issue type scheme")
-    public ResponseEntity<IssueTypeSchemeEntity> createIssueTypeScheme(@RequestBody Map<String, Object> data) {
-        return ResponseEntity.ok(issueAdministrationService.createIssueTypeScheme(data));
+    public ResponseEntity<IssueTypeSchemeResponse> createIssueTypeScheme(@RequestBody Map<String, Object> data) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(issueAdministrationService.createIssueTypeScheme(data));
+    }
+
+    @PutMapping("/issue-type-schemes/{schemeId}")
+    @Operation(summary = "Update issue type scheme")
+    public ResponseEntity<IssueTypeSchemeResponse> updateIssueTypeScheme(
+            @PathVariable String schemeId,
+            @RequestBody Map<String, Object> data) {
+        return ResponseEntity.ok(issueAdministrationService.updateIssueTypeScheme(schemeId, data));
+    }
+
+    @DeleteMapping("/issue-type-schemes/{schemeId}")
+    @Operation(summary = "Delete issue type scheme")
+    public ResponseEntity<Void> deleteIssueTypeScheme(@PathVariable String schemeId) {
+        issueAdministrationService.deleteIssueTypeScheme(schemeId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/issue-type-schemes/{schemeId}/projects")
+    @Operation(summary = "List projects for scheme assignment")
+    public ResponseEntity<List<SchemeProjectAssignmentDto>> getSchemeProjectAssignments(
+            @PathVariable String schemeId) {
+        return ResponseEntity.ok(issueAdministrationService.getSchemeProjectAssignments(schemeId));
+    }
+
+    @PutMapping("/issue-type-schemes/{schemeId}/projects")
+    @Operation(summary = "Assign issue type scheme to projects")
+    public ResponseEntity<List<SchemeProjectAssignmentDto>> assignSchemeToProjects(
+            @PathVariable String schemeId,
+            @RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<String> projectIds = body.get("projectIds") instanceof List<?> list
+                ? list.stream().map(Object::toString).toList()
+                : List.of();
+        return ResponseEntity.ok(issueAdministrationService.assignSchemeToProjects(schemeId, projectIds));
     }
 
     // ==================== Workflows ====================

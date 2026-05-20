@@ -227,9 +227,18 @@ public class WorkflowAdminController {
     @GetMapping("/workflows/{workflowId}/layout")
     @Operation(summary = "Get layout", description = "Returns the visual layout for a workflow")
     public ResponseEntity<WorkflowLayoutResponse> getLayout(
-            @Parameter(description = "Workflow ID") @PathVariable UUID workflowId) {
-        WorkflowLayoutResponse response = workflowLayoutService.getLayout(workflowId);
+            @Parameter(description = "Workflow ID") @PathVariable UUID workflowId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+        WorkflowLayoutResponse response = workflowLayoutService.getOrCreateLayout(workflowId, userId);
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/workflows/{workflowId}/layout/positions")
+    @Operation(summary = "Sync designer node positions", description = "Updates node coordinates from React Flow designer")
+    public ResponseEntity<WorkflowLayoutResponse> syncLayoutPositions(
+            @Parameter(description = "Workflow ID") @PathVariable UUID workflowId,
+            @Valid @RequestBody SyncDesignerLayoutRequest request) {
+        return ResponseEntity.ok(workflowLayoutService.syncNodePositions(workflowId, request));
     }
 
     @PostMapping("/workflows/{workflowId}/layout/lock")

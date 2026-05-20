@@ -18,10 +18,23 @@ import java.util.stream.Collectors;
 @Slf4j
 public class WorkflowLayoutService {
 
+    private static final Map<String, String> KNOWN_STATUS_NAMES = Map.ofEntries(
+            Map.entry("00000000-0000-0000-0001-000000000001", "Backlog"),
+            Map.entry("00000000-0000-0000-0001-000000000002", "To Do"),
+            Map.entry("00000000-0000-0000-0001-000000000003", "In Progress"),
+            Map.entry("00000000-0000-0000-0001-000000000004", "In Review"),
+            Map.entry("00000000-0000-0000-0001-000000000005", "Done"),
+            Map.entry("00000000-0000-0000-0001-000000000006", "Open"),
+            Map.entry("00000000-0000-0000-0001-000000000007", "Resolved"),
+            Map.entry("00000000-0000-0000-0001-000000000008", "Closed"),
+            Map.entry("00000000-0000-0000-0001-000000000009", "Defined")
+    );
+
     private final WorkflowLayoutRepository workflowLayoutRepository;
     private final WorkflowLayoutNodeRepository workflowLayoutNodeRepository;
     private final WorkflowLayoutEdgeRepository workflowLayoutEdgeRepository;
     private final WorkflowRepository workflowRepository;
+    private final WorkflowStatusRepository workflowStatusRepository;
     private final WorkflowTransitionRepository workflowTransitionRepository;
     private final ObjectMapper objectMapper;
 
@@ -62,11 +75,26 @@ public class WorkflowLayoutService {
 
     @Transactional(readOnly = true)
     public WorkflowLayoutResponse getLayout(UUID workflowId) {
-        WorkflowLayout layout = workflowLayoutRepository
+        return workflowLayoutRepository
                 .findTopByWorkflowIdOrderByLayoutVersionDesc(workflowId)
+                .map(this::mapToResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("No layout found for workflow: " + workflowId));
+    }
 
-        return mapToResponse(layout);
+    /**
+     * Returns persisted layout or builds one from workflow statuses/transitions when missing or empty.
+     */
+    @Transactional
+    public WorkflowLayoutResponse getOrCreateLayout(UUID workflowId, UUID userId) {
+        Optional<WorkflowLayout> existing = workflowLayoutRepository
+                .findTopByWorkflowIdOrderByLayoutVersionDesc(workflowId);
+        if (existing.isPresent()) {
+            WorkflowLayoutResponse response = mapToResponse(existing.get());
+            if (response.getNodes() != null && !response.getNodes().isEmpty()) {
+                return response;
+            }
+        }
+        return autoLayout(workflowId, userId);
     }
 
     @Transactional(readOnly = true)
@@ -119,65 +147,111 @@ public class WorkflowLayoutService {
     public WorkflowLayoutResponse autoLayout(UUID workflowId, UUID userId) {
         log.info("Auto-layouting workflow: {}", workflowId);
 
-        Workflow workflow = workflowRepository.findById(workflowId)
+        workflowRepository.findById(workflowId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workflow", "id", workflowId));
-
-        List<WorkflowStatus> statuses = workflow.getStatuses();
-        Map<UUID, WorkflowLayoutNode> nodeMap = new HashMap<>();
-        double startX = 100;
-        double startY = 100;
-        double spacingX = 200;
-        double spacingY = 150;
-
-        int col = 0;
-        int row = 0;
-        for (WorkflowStatus status : statuses) {
-            WorkflowLayoutNode node = WorkflowLayoutNode.builder()
-                    .layoutId(null)
-                    .statusId(status.getStatusId())
-                    .nodeType(WorkflowLayoutNode.NODE_TYPE_STANDARD)
-                    .positionX(startX + (col * spacingX))
-                    .positionY(startY + (row * spacingY))
-                    .width(120.0)
-                    .height(60.0)
-                    .sortOrder(status.getSequence())
-                    .build();
-            node = workflowLayoutNodeRepository.save(node);
-            nodeMap.put(status.getId(), node);
-
-            row++;
-            if (row >= 5) {
-                row = 0;
-                col++;
-            }
-        }
-
-        List<WorkflowTransition> transitions = workflowTransitionRepository.findByWorkflowId(workflowId);
-        for (WorkflowTransition transition : transitions) {
-            WorkflowLayoutNode fromNode = findNodeByStatusId(nodeMap, transition.getFromStatusId());
-            WorkflowLayoutNode toNode = findNodeByStatusId(nodeMap, transition.getToStatusId());
-
-            WorkflowLayoutEdge edge = WorkflowLayoutEdge.builder()
-                    .layoutId(null)
-                    .transitionId(transition.getId())
-                    .fromNodeId(fromNode != null ? fromNode.getId() : null)
-                    .toNodeId(toNode != null ? toNode.getId() : null)
-                    .edgeType(WorkflowLayoutEdge.EDGE_TYPE_CURVED)
-                    .sortOrder(transition.getDisplayOrder())
-                    .build();
-            workflowLayoutEdgeRepository.save(edge);
-        }
 
         WorkflowLayout layout = workflowLayoutRepository
                 .findTopByWorkflowIdOrderByLayoutVersionDesc(workflowId)
                 .orElse(null);
 
         if (layout != null) {
+            workflowLayoutNodeRepository.deleteByLayoutId(layout.getId());
+            workflowLayoutEdgeRepository.deleteByLayoutId(layout.getId());
+            layout.setLayoutData("{\"nodes\":[],\"edges\":[]}");
+            layout.setLayoutVersion(layout.getLayoutVersion() + 1);
             layout.unlock();
-            workflowLayoutRepository.save(layout);
+        } else {
+            layout = WorkflowLayout.builder()
+                    .workflowId(workflowId)
+                    .layoutData("{\"nodes\":[],\"edges\":[]}")
+                    .layoutVersion(1)
+                    .isLocked(false)
+                    .build();
+            layout = workflowLayoutRepository.save(layout);
         }
 
-        return getLayout(workflowId);
+        final UUID layoutId = layout.getId();
+        List<WorkflowStatus> statuses = workflowStatusRepository.findByWorkflowIdOrderBySequenceAsc(workflowId);
+        Map<UUID, WorkflowLayoutNode> nodeByStatusId = new HashMap<>();
+        double startX = 100;
+        double startY = 100;
+        double spacingX = 220;
+        double spacingY = 120;
+
+        int col = 0;
+        int row = 0;
+        for (WorkflowStatus status : statuses) {
+            String nodeType = row == 0 && col == 0
+                    ? WorkflowLayoutNode.NODE_TYPE_INITIAL
+                    : WorkflowLayoutNode.NODE_TYPE_STANDARD;
+
+            WorkflowLayoutNode node = WorkflowLayoutNode.builder()
+                    .layoutId(layoutId)
+                    .statusId(status.getStatusId())
+                    .nodeType(nodeType)
+                    .positionX(startX + (col * spacingX))
+                    .positionY(startY + (row * spacingY))
+                    .width(140.0)
+                    .height(56.0)
+                    .label(resolveStatusLabel(status.getStatusId(), status.getSequence()))
+                    .sortOrder(status.getSequence() != null ? status.getSequence() : 0)
+                    .build();
+            node = workflowLayoutNodeRepository.save(node);
+            nodeByStatusId.put(status.getStatusId(), node);
+
+            row++;
+            if (row >= 4) {
+                row = 0;
+                col++;
+            }
+        }
+
+        List<WorkflowTransition> transitions = workflowTransitionRepository.findByWorkflowId(workflowId);
+        int edgeOrder = 0;
+        for (WorkflowTransition transition : transitions) {
+            WorkflowLayoutNode fromNode = nodeByStatusId.get(transition.getFromStatusId());
+            WorkflowLayoutNode toNode = nodeByStatusId.get(transition.getToStatusId());
+            if (fromNode == null || toNode == null) {
+                continue;
+            }
+
+            WorkflowLayoutEdge edge = WorkflowLayoutEdge.builder()
+                    .layoutId(layoutId)
+                    .transitionId(transition.getId())
+                    .fromNodeId(fromNode.getId())
+                    .toNodeId(toNode.getId())
+                    .edgeType(WorkflowLayoutEdge.EDGE_TYPE_CURVED)
+                    .sortOrder(transition.getDisplayOrder() != null ? transition.getDisplayOrder() : edgeOrder++)
+                    .build();
+            workflowLayoutEdgeRepository.save(edge);
+        }
+
+        layout = workflowLayoutRepository.save(layout);
+        return mapToResponse(layout);
+    }
+
+    @Transactional
+    public WorkflowLayoutResponse syncNodePositions(UUID workflowId, SyncDesignerLayoutRequest request) {
+        WorkflowLayout layout = workflowLayoutRepository
+                .findTopByWorkflowIdOrderByLayoutVersionDesc(workflowId)
+                .orElseThrow(() -> new ResourceNotFoundException("No layout found for workflow: " + workflowId));
+
+        for (SyncDesignerLayoutRequest.NodePosition pos : request.getNodes()) {
+            if (pos.getNodeId() == null) {
+                continue;
+            }
+            WorkflowLayoutNode node = workflowLayoutNodeRepository.findById(pos.getNodeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Layout node", "id", pos.getNodeId()));
+            if (pos.getPositionX() != null) {
+                node.setPositionX(pos.getPositionX());
+            }
+            if (pos.getPositionY() != null) {
+                node.setPositionY(pos.getPositionY());
+            }
+            workflowLayoutNodeRepository.save(node);
+        }
+
+        return mapToResponse(layout);
     }
 
     @Transactional
@@ -185,13 +259,6 @@ public class WorkflowLayoutService {
         workflowLayoutNodeRepository.deleteByLayoutId(layoutId);
         workflowLayoutEdgeRepository.deleteByLayoutId(layoutId);
         workflowLayoutRepository.deleteById(layoutId);
-    }
-
-    private WorkflowLayoutNode findNodeByStatusId(Map<UUID, WorkflowLayoutNode> nodeMap, UUID statusId) {
-        return nodeMap.values().stream()
-                .filter(n -> n.getStatusId().equals(statusId))
-                .findFirst()
-                .orElse(null);
     }
 
     private WorkflowLayoutResponse mapToResponse(WorkflowLayout layout) {
@@ -202,6 +269,7 @@ public class WorkflowLayoutService {
                 .map(n -> WorkflowLayoutNodeResponse.builder()
                         .id(n.getId())
                         .statusId(n.getStatusId())
+                        .statusName(resolveStatusLabel(n.getStatusId(), n.getSortOrder()))
                         .nodeType(n.getNodeType())
                         .positionX(n.getPositionX())
                         .positionY(n.getPositionY())
@@ -242,5 +310,15 @@ public class WorkflowLayoutService {
                 .createdAt(layout.getCreatedAt())
                 .updatedAt(layout.getUpdatedAt())
                 .build();
+    }
+
+    private String resolveStatusLabel(UUID statusId, Integer sequence) {
+        if (statusId != null) {
+            String known = KNOWN_STATUS_NAMES.get(statusId.toString());
+            if (known != null) {
+                return known;
+            }
+        }
+        return "Status " + (sequence != null ? sequence + 1 : 1);
     }
 }

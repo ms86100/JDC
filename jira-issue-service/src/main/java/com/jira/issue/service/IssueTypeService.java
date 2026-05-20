@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 public class IssueTypeService {
 
     private final IssueTypeRepository issueTypeRepository;
+    private final com.jira.issue.repository.IssueRepository issueRepository;
 
     @Transactional(readOnly = true)
     public List<IssueTypeResponse> getAllIssueTypes() {
@@ -86,6 +87,10 @@ public class IssueTypeService {
         if (request.getColor() != null) {
             issueType.setColor(request.getColor());
         }
+        issueType.setIsSubtask(request.isSubtask());
+        if (request.getSequence() > 0) {
+            issueType.setSequence(request.getSequence());
+        }
 
         issueType = issueTypeRepository.save(issueType);
         log.info("Updated issue type: {}", id);
@@ -97,8 +102,14 @@ public class IssueTypeService {
     public void deleteIssueType(UUID id) {
         log.info("Deleting issue type: {}", id);
 
-        if (!issueTypeRepository.existsById(id)) {
-            throw new ResourceNotFoundException("IssueType", "id", id);
+        IssueType issueType = issueTypeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("IssueType", "id", id));
+
+        long issueCount = issueRepository.countByIssueTypeId(id);
+        if (issueCount > 0) {
+            throw new IllegalArgumentException(
+                    "Cannot delete issue type '" + issueType.getName() + "' because it is used by "
+                            + issueCount + " issue(s). Migrate or reassign those issues first.");
         }
 
         issueTypeRepository.deleteById(id);
@@ -110,10 +121,13 @@ public class IssueTypeService {
                 .id(issueType.getId())
                 .name(issueType.getName())
                 .description(issueType.getDescription())
-                .issueTypeKey(issueType.getName().toLowerCase().replace(" ", "-"))
-                .isSubtask(false)
+                .issueTypeKey(issueType.getIssueTypeKey())
+                .isSubtask(Boolean.TRUE.equals(issueType.getIsSubtask()))
                 .icon(issueType.getIcon())
+                .color(issueType.getColor())
+                .sequence(issueType.getSequence() != null ? issueType.getSequence() : 0)
                 .createdAt(issueType.getCreatedAt())
+                .updatedAt(issueType.getUpdatedAt())
                 .build();
     }
 }

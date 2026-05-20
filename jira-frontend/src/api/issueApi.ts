@@ -164,9 +164,38 @@ export const issueApi = {
   update: (id: string, data: UpdateIssueRequest) => apiClient.put<IssueResponse>(`/api/issues/${id}`, data),
   delete: (id: string) => apiClient.delete(`/api/issues/${id}`),
 
-  // Status transitions
-  transitionStatus: (id: string, statusId: string) => apiClient.patch<IssueResponse>(`/api/issues/${id}/status`, { statusId }),
-  getAvailableTransitions: (id: string) => apiClient.get<{ fromStatusId: string; toStatusId: string; name: string }[]>(`/api/issues/${id}/transitions`),
+  // Status transitions (workflow engine)
+  transitionStatus: (id: string, projectId: string, data: {
+    statusId?: string;
+    transitionId?: string;
+    comment?: string;
+    resolutionId?: string;
+    screenInput?: Record<string, unknown>;
+  }) => apiClient.patch<IssueResponse>(`/api/issues/${id}/status`, data, { params: { projectId } }),
+
+  executeTransition: (data: {
+    issueId: string;
+    projectId: string;
+    transitionId: string;
+    comment?: string;
+    resolutionId?: string;
+    screenInput?: Record<string, unknown>;
+  }) => apiClient.post('/api/workflows/transitions/execute', data),
+
+  getAvailableTransitions: (id: string, projectId: string) =>
+    apiClient.get<{
+      issueId: string;
+      workflowId: string;
+      currentStatusId: string;
+      transitions: Array<{
+        id: string;
+        name: string;
+        description?: string;
+        toStatusId: string;
+        hasScreen?: boolean;
+        screenFields?: Array<{ fieldId: string; fieldName: string; required: boolean }>;
+      }>;
+    }>(`/api/issues/${id}/transitions`, { params: { projectId } }),
 
   // Watch & Vote
   watch: (id: string) => apiClient.post(`/api/issues/${id}/watch`),

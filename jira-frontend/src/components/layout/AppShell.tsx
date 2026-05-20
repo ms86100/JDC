@@ -18,7 +18,7 @@ import {
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { AppBrandMark } from './AppBrandMark';
 import { metaFor } from './routeMeta';
-import { ADMIN_CATEGORIES } from './adminCategories';
+import { AdminNavSidebar } from './AdminNavSidebar';
 import { Breadcrumbs } from '../ui/Breadcrumbs';
 
 const COLLAPSE_KEY = 'sa.sidebar.collapsed';
@@ -200,7 +200,7 @@ export const AppShell: React.FC<AppShellProps> = ({ mode, children }) => {
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* LEFT RAIL */}
         {isAdmin ? (
-          <AdminSidebar pathname={location.pathname} />
+          <AdminNavSidebar pathname={location.pathname} />
         ) : (
           <WorkspaceSidebar
             collapsed={collapsed}
@@ -210,20 +210,33 @@ export const AppShell: React.FC<AppShellProps> = ({ mode, children }) => {
         )}
 
         {/* MAIN */}
-        <main id="sa-main" role="main" tabIndex={-1}
-              style={{
-                flex: 1, minWidth: 0, overflow: 'auto', background: 'var(--sa-n50)',
-              }}>
+        <main
+          id="sa-main"
+          role="main"
+          tabIndex={-1}
+          className={isAdmin ? 'sa-admin-main' : undefined}
+          style={
+            isAdmin
+              ? { flex: 1, minWidth: 0, overflow: 'auto' }
+              : { flex: 1, minWidth: 0, overflow: 'auto', background: 'var(--sa-n50)' }
+          }
+        >
           {meta.breadcrumbs.length > 0 && (
-            <div style={{
-              padding: 'var(--sa-space-3) var(--sa-space-6) 0',
-              background: 'var(--sa-n50)',
-            }}>
+            <div
+              className={isAdmin ? 'dc-admin-breadcrumbs' : undefined}
+              style={{
+                padding: '12px 32px 0',
+                background: isAdmin ? '#f4f5f7' : 'var(--sa-n50)',
+              }}
+            >
               <Breadcrumbs items={meta.breadcrumbs} />
             </div>
           )}
-          <div style={{ padding: 'var(--sa-space-4) var(--sa-space-6) var(--sa-space-8)' }}>
-            {children ?? <Outlet />}
+          <div className={isAdmin ? 'sa-admin-main-inner' : undefined}
+               style={isAdmin ? undefined : { padding: 'var(--sa-space-4) var(--sa-space-6) var(--sa-space-8)' }}>
+            <div className={isAdmin ? 'sa-admin-content' : undefined}>
+              {children ?? <Outlet />}
+            </div>
           </div>
         </main>
       </div>
@@ -300,33 +313,6 @@ const SideLink: React.FC<{ name: string; path: string; collapsed: boolean }> = (
     }} />
     {!collapsed && <span>{name}</span>}
   </NavLink>
-);
-
-const AdminSidebar: React.FC<{ pathname: string }> = ({ pathname }) => (
-  <aside aria-label="Administration navigation" style={{
-    width: 260, flexShrink: 0, overflow: 'auto',
-    background: 'var(--sa-n0)', borderRight: '1px solid var(--sa-n200)',
-    padding: 'var(--sa-space-3) var(--sa-space-2)',
-  }}>
-    {ADMIN_CATEGORIES.map((cat) => (
-      <div key={cat.key} style={{ marginBottom: 'var(--sa-space-4)' }}>
-        <SideLabel>{cat.label}</SideLabel>
-        {cat.items.map((it) => {
-          const active = pathname === it.path;
-          return (
-            <Link key={it.path} to={it.path}
-                  style={{
-                    display: 'block', padding: '5px 10px', margin: '1px 0',
-                    borderRadius: 'var(--sa-radius-sm)',
-                    color: active ? 'var(--sa-brand-700)' : 'var(--sa-n700)',
-                    background: active ? 'var(--sa-brand-50)' : 'transparent',
-                    textDecoration: 'none', fontSize: 'var(--sa-fs-sm)',
-                  }}>{it.label}</Link>
-          );
-        })}
-      </div>
-    ))}
-  </aside>
 );
 
 export default AppShell;

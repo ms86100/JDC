@@ -148,6 +148,56 @@ public class Issue {
     @Column(name = "last_viewed_at")
     private LocalDateTime lastViewedAt;
 
+    // Test-specific fields (for issue_type = 'Test')
+    @Column(name = "test_type", length = 50)
+    @Builder.Default
+    private String testType = "MANUAL"; // MANUAL, AUTOMATED, BDD
+
+    @Column(name = "labels", columnDefinition = "text[]")
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Builder.Default
+    private String[] labels = new String[]{};
+
+    @Column(name = "archived")
+    @Builder.Default
+    private Boolean archived = false;
+
+    @Column(name = "test_status", length = 30)
+    @Builder.Default
+    private String testStatus = "DRAFT"; // DRAFT, READY, APPROVED, DEPRECATED
+
+    @Column(name = "test_priority", length = 20)
+    private String testPriority; // CRITICAL, HIGH, MEDIUM, LOW
+
+    @Column(name = "test_owner_id")
+    private UUID testOwnerId;
+
+    @Column(name = "test_steps", columnDefinition = "TEXT")
+    private String testSteps; // JSON array of test steps
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "requirement_keys", columnDefinition = "text[]")
+    @Builder.Default
+    private String[] requirementKeys = new String[]{};
+
+    @Column(name = "gherkin_feature_key", length = 255)
+    private String gherkinFeatureKey;
+
+    @Column(name = "gherkin_scenario_id", length = 255)
+    private String gherkinScenarioId;
+
+    @Column(name = "test_set_id")
+    private UUID testSetId;
+
+    @Column(name = "test_plan_id")
+    private UUID testPlanId;
+
+    @Column(name = "test_execution_id")
+    private UUID testExecutionId;
+
+    @Column(name = "test_repository_folder_id")
+    private UUID testRepositoryFolderId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

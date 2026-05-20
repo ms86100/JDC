@@ -1,0 +1,378 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-project-service
+  namespace: jira-platform
+  labels:
+    app: jira-project-service
+    version: v1
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: jira-project-service
+  template:
+    metadata:
+      labels:
+        app: jira-project-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8083"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: jira-project-service
+          image: jira-platform/jira-project-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8083
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: EUREKA_SERVER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: EUREKA_SERVER_URL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8083
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8083
+            initialDelaySeconds: 30
+            periodSeconds: 5
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - jira-project-service
+                topologyKey: kubernetes.io/hostname
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-project-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-project-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-workflow-service
+  namespace: jira-platform
+  labels:
+    app: jira-workflow-service
+    version: v1
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: jira-workflow-service
+  template:
+    metadata:
+      labels:
+        app: jira-workflow-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8085"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: jira-workflow-service
+          image: jira-platform/jira-workflow-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8085
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: EUREKA_SERVER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: EUREKA_SERVER_URL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8085
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8085
+            initialDelaySeconds: 30
+            periodSeconds: 5
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - jira-workflow-service
+                topologyKey: kubernetes.io/hostname
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-workflow-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-workflow-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-admin-service
+  namespace: jira-platform
+  labels:
+    app: jira-admin-service
+    version: v1
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-admin-service
+  template:
+    metadata:
+      labels:
+        app: jira-admin-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8082"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: jira-admin-service
+          image: jira-platform/jira-admin-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8082
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8082
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-gateway
+  namespace: jira-platform
+  labels:
+    app: jira-gateway
+    version: v1
+    component: gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: jira-gateway
+  template:
+    metadata:
+      labels:
+        app: jira-gateway
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "80"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: jira-gateway
+          image: jira-platform/jira-gateway:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: https
+              containerPort: 443
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: ISSUE_SERVICE_URL
+              value: "http://jira-issue-service.jira-platform.svc.cluster.local:8084"
+            - name: PROJECT_SERVICE_URL
+              value: "http://jira-project-service.jira-platform.svc.cluster.local:8083"
+            - name: WORKFLOW_SERVICE_URL
+              value: "http://jira-workflow-service.jira-platform.svc.cluster.local:8085"
+            - name: ADMIN_SERVICE_URL
+              value: "http://jira-admin-service.jira-platform.svc.cluster.local:8082"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - jira-gateway
+                topologyKey: kubernetes.io/hostname
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-gateway-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-gateway
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

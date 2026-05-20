@@ -2,6 +2,7 @@ package com.jira.issue.service;
 
 import com.jira.issue.dto.ChangeHistoryResponse;
 import com.jira.issue.dto.ChangeItemResponse;
+import com.jira.issue.dto.RecordChangeHistoryRequest;
 import com.jira.issue.entity.ChangeGroup;
 import com.jira.issue.entity.ChangeItem;
 import com.jira.issue.exception.ResourceNotFoundException;
@@ -25,6 +26,21 @@ public class ChangeHistoryService {
     private final ChangeGroupRepository changeGroupRepository;
     private final ChangeItemRepository changeItemRepository;
     private final IssueRepository issueRepository;
+
+    @Transactional
+    public ChangeHistoryResponse recordFromWorkflow(UUID issueId, RecordChangeHistoryRequest request) {
+        List<ChangeItemResponse> changes = request.getChanges() == null ? List.of() : request.getChanges().stream()
+                .map(c -> ChangeItemResponse.builder()
+                        .fieldType(c.getFieldType() != null ? c.getFieldType() : "jira")
+                        .field(c.getField())
+                        .oldValue(c.getOldValue())
+                        .oldString(c.getOldString())
+                        .newValue(c.getNewValue())
+                        .newString(c.getNewString())
+                        .build())
+                .toList();
+        return recordChange(issueId, request.getAuthorId(), request.getAuthorName(), changes);
+    }
 
     @Transactional
     public ChangeHistoryResponse recordChange(UUID issueId, UUID authorId, String authorName, List<ChangeItemResponse> changes) {

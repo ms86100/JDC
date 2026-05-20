@@ -29,6 +29,8 @@ import PlanDetailPage from './features/plans/pages/PlanDetailPage';
 import ManagePlansPage from './features/plans/pages/ManagePlansPage';
 import CreateProgramPage from './features/plans/pages/CreateProgramPage';
 import CreatePlanPage from './features/plans/pages/CreatePlanPage';
+import TestManagementPage from './features/tests/pages/TestManagementPage';
+import TestDetailPage from './features/tests/pages/TestDetailPage';
 
 const queryClient = new QueryClient();
 
@@ -79,6 +81,9 @@ function App() {
               <Route path="plans" element={<ManagePlansPage />} />
               <Route path="plans/create" element={<CreatePlanPage />} />
               <Route path="plans/:planId" element={<PlanDetailPage />} />
+              <Route path="tests" element={<TestManagementPage />} />
+              <Route path="tests/:projectId" element={<TestManagementPage />} />
+              <Route path="tests/detail/:testId" element={<TestDetailPage />} />
             </Route>
             <Route
               path="/admin/*"

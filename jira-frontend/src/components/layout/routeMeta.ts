@@ -4,6 +4,8 @@
  * Matches against location.pathname using longest-prefix semantics.
  */
 
+import { ADMIN_CATEGORIES } from './adminCategories';
+
 export interface RouteMeta {
   title: string;
   breadcrumbs: { label: string; href?: string }[];
@@ -35,11 +37,47 @@ export const ROUTE_META: { match: string | RegExp; meta: RouteMeta }[] = [
   { match: /^\/plans\/create/,      meta: { area: 'workspace', title: 'Create plan',   breadcrumbs: [{ label: 'Plans', href: '/plans' }, { label: 'Create' }] } },
   { match: /^\/plans\/[^/]+/,       meta: { area: 'workspace', title: 'Plan',         breadcrumbs: [{ label: 'Plans', href: '/plans' }, { label: 'Detail' }] } },
   { match: '/plans',             meta: { area: 'workspace', title: 'Plans',         breadcrumbs: [{ label: 'Plans' }] } },
-  // Admin
-  { match: '/admin',             meta: { area: 'admin', title: 'Administration', breadcrumbs: [{ label: 'Administration' }] } },
 ];
 
+function adminMetaFor(pathname: string): RouteMeta | null {
+  if (!pathname.startsWith('/admin')) return null;
+
+  if (pathname === '/admin' || pathname === '/admin/') {
+    return {
+      area: 'admin',
+      title: 'Administration',
+      breadcrumbs: [{ label: 'Administration' }],
+    };
+  }
+
+  let pageLabel = 'Settings';
+  let categoryLabel = 'Administration';
+
+  for (const cat of ADMIN_CATEGORIES) {
+    for (const it of cat.items) {
+      if (pathname === it.path || pathname.startsWith(`${it.path}/`)) {
+        pageLabel = it.label;
+        categoryLabel = cat.label;
+        break;
+      }
+    }
+  }
+
+  return {
+    area: 'admin',
+    title: pageLabel,
+    breadcrumbs: [
+      { label: 'Administration', href: '/admin' },
+      { label: categoryLabel },
+      { label: pageLabel },
+    ],
+  };
+}
+
 export function metaFor(pathname: string): RouteMeta {
+  const adminMeta = adminMetaFor(pathname);
+  if (adminMeta) return adminMeta;
+
   for (const { match, meta } of ROUTE_META) {
     if (typeof match === 'string') {
       if (pathname === match || pathname.startsWith(match + '/')) return meta;

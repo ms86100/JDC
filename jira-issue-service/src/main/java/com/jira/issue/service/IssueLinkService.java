@@ -2,9 +2,11 @@ package com.jira.issue.service;
 
 import com.jira.issue.dto.IssueLinkRequest;
 import com.jira.issue.dto.IssueLinkResponse;
+import com.jira.issue.dto.IssueLinkWorkflowContextResponse;
 import com.jira.issue.entity.Issue;
 import com.jira.issue.entity.IssueLink;
 import com.jira.issue.entity.IssueLinkType;
+import com.jira.issue.entity.IssueStatus;
 import com.jira.issue.exception.ResourceNotFoundException;
 import com.jira.issue.repository.IssueLinkRepository;
 import com.jira.issue.repository.IssueLinkTypeRepository;
@@ -55,6 +57,32 @@ public class IssueLinkService {
     }
 
     @Transactional(readOnly = true)
+    public List<IssueLinkWorkflowContextResponse> getLinksForWorkflow(UUID issueId) {
+        List<IssueLink> links = issueLinkRepository.findBySourceIssueIdOrTargetIssueId(issueId, issueId);
+        List<IssueLinkWorkflowContextResponse> result = new java.util.ArrayList<>();
+        for (IssueLink link : links) {
+            boolean outward = issueId.equals(link.getSourceIssueId());
+            UUID linkedIssueId = outward ? link.getTargetIssueId() : link.getSourceIssueId();
+            Issue linkedIssue = issueRepository.findById(linkedIssueId).orElse(null);
+            if (linkedIssue == null) {
+                continue;
+            }
+            String linkTypeName = resolveLinkTypeName(link.getLinkTypeId());
+            IssueStatus status = linkedIssue.getStatus();
+            result.add(IssueLinkWorkflowContextResponse.builder()
+                    .linkId(link.getId())
+                    .linkType(linkTypeName)
+                    .direction(outward ? "OUTWARD" : "INWARD")
+                    .linkedIssueId(linkedIssueId)
+                    .linkedIssueKey(linkedIssue.getIssueKey())
+                    .statusId(status != null ? status.getId() : null)
+                    .statusName(status != null ? status.getName() : null)
+                    .build());
+        }
+        return result;
+    }
+
+    @Transactional(readOnly = true)
     public List<IssueLinkResponse> getLinksByIssue(UUID issueId) {
         List<IssueLink> links = issueLinkRepository.findBySourceIssueIdOrTargetIssueId(issueId, issueId);
         return links.stream()
@@ -98,12 +126,7 @@ public class IssueLinkService {
         Issue sourceIssue = issueRepository.findById(link.getSourceIssueId()).orElse(null);
         Issue destIssue = issueRepository.findById(link.getTargetIssueId()).orElse(null);
 
-        String linkTypeName = "Related";
-        if (link.getLinkTypeId() != null) {
-            linkTypeName = issueLinkTypeRepository.findById(link.getLinkTypeId())
-                    .map(IssueLinkType::getName)
-                    .orElse("Related");
-        }
+        String linkTypeName = resolveLinkTypeName(link.getLinkTypeId());
 
         return IssueLinkResponse.builder()
                 .id(link.getId())
@@ -116,5 +139,14 @@ public class IssueLinkService {
                 .sequence(link.getSequence())
                 .createdAt(link.getCreatedAt())
                 .build();
+    }
+
+    private String resolveLinkTypeName(UUID linkTypeId) {
+        if (linkTypeId == null) {
+            return "Related";
+        }
+        return issueLinkTypeRepository.findById(linkTypeId)
+                .map(IssueLinkType::getName)
+                .orElse("Related");
     }
 }

@@ -355,6 +355,9 @@ public class ClusterNodeRegistry {
      */
     @Scheduled(fixedDelayString = "${cluster.heartbeat.interval-seconds:10}000")
     public void scheduledHeartbeat() {
+        if (!clusterConfig.isEnabled()) {
+            return;
+        }
         heartbeat();
     }
 
@@ -364,6 +367,9 @@ public class ClusterNodeRegistry {
     @Scheduled(fixedDelayString = "${cluster.heartbeat.cleanup-interval-seconds:60}000")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void cleanupStaleNodes() {
+        if (!clusterConfig.isEnabled()) {
+            return;
+        }
         try {
             Instant threshold = Instant.now().minus(clusterConfig.getHeartbeat().getTimeout().multipliedBy(2));
             int cleaned = clusterNodeRepository.cleanupStaleNodes(threshold);

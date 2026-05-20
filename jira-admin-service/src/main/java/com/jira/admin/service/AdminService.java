@@ -180,6 +180,7 @@ public class AdminService {
         if (updates.containsKey("allowComments")) project.setAllowComments((Boolean) updates.get("allowComments"));
         if (updates.containsKey("maxAttachments")) project.setMaxAttachments((Integer) updates.get("maxAttachments"));
         if (updates.containsKey("enableNotifications")) project.setEnableNotifications((Boolean) updates.get("enableNotifications"));
+        if (updates.containsKey("issueTypeScheme")) project.setIssueTypeScheme((String) updates.get("issueTypeScheme"));
 
         return projectRepository.save(project);
     }

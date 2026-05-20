@@ -2,6 +2,7 @@ package com.jira.issue.controller;
 
 import com.jira.issue.dto.IssueLinkRequest;
 import com.jira.issue.dto.IssueLinkResponse;
+import com.jira.issue.dto.IssueLinkWorkflowContextResponse;
 import com.jira.issue.service.IssueLinkService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,6 +37,13 @@ public class IssueLinkController {
             @Valid @RequestBody IssueLinkRequest request) {
         request.setSourceIssueId(issueId);
         return ResponseEntity.ok(issueLinkService.createIssueLink(request));
+    }
+
+    @GetMapping("/workflow-context")
+    @Operation(summary = "Get links with status for workflow conditions")
+    public ResponseEntity<List<IssueLinkWorkflowContextResponse>> getLinksForWorkflow(
+            @PathVariable UUID issueId) {
+        return ResponseEntity.ok(issueLinkService.getLinksForWorkflow(issueId));
     }
 
     @GetMapping

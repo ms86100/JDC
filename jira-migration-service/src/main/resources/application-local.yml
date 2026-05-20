@@ -3,3 +3,8 @@ spring:
     url: jdbc:postgresql://localhost:5432/jira_platform
     username: jiraadmin
     password: UNIpay@123
+
+management:
+  endpoint:
+    health:
+      show-details: always

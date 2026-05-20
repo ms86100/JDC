@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -141,7 +142,46 @@ public class IssueController {
             throw new PermissionDeniedException("RESOLVE_ISSUES", "project " + projectId);
         }
 
-        IssueResponse response = issueService.updateIssueStatus(id, request.getStatusId(), projectId);
+        IssueResponse response = issueService.updateIssueStatus(id, request, projectId, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{id}/status/internal")
+    @Operation(summary = "Internal status update (workflow engine only)")
+    public ResponseEntity<IssueResponse> updateIssueStatusInternal(
+            @PathVariable UUID id,
+            @RequestBody Map<String, Object> body,
+            @RequestParam UUID projectId) {
+        UUID statusId = UUID.fromString(String.valueOf(body.get("statusId")));
+        return ResponseEntity.ok(issueService.updateIssueStatusInternal(id, statusId, projectId));
+    }
+
+    @PatchMapping("/{id}/workflow/internal")
+    @Operation(summary = "Internal workflow post-function update")
+    public ResponseEntity<IssueResponse> workflowInternalUpdate(
+            @PathVariable UUID id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "X-Workflow-Internal", required = false) String internal) {
+        return ResponseEntity.ok(issueService.applyWorkflowInternalUpdate(id, body));
+    }
+
+    @GetMapping("/{id}/transitions")
+    @Operation(summary = "Available workflow transitions for issue")
+    public ResponseEntity<Object> getAvailableTransitions(
+            @PathVariable UUID id,
+            @RequestParam UUID projectId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+        String url = issueService.getWorkflowServiceUrl()
+                + "/api/workflows/issues/" + id + "/available-transitions?projectId=" + projectId;
+        HttpHeaders headers = new HttpHeaders();
+        if (userId != null) {
+            headers.set("X-User-Id", userId.toString());
+        }
+        Object response = restTemplate.exchange(
+                url,
+                org.springframework.http.HttpMethod.GET,
+                new org.springframework.http.HttpEntity<>(headers),
+                Object.class).getBody();
         return ResponseEntity.ok(response);
     }
 

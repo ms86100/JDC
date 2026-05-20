@@ -122,6 +122,10 @@ spring:
           uri: http://localhost:8094
           predicates:
             - Path=/api/migration/**
+        - id: integration-service
+          uri: http://localhost:8093
+          predicates:
+            - Path=/api/integration/**
         - id: admin-service
           uri: http://localhost:8093
           predicates:

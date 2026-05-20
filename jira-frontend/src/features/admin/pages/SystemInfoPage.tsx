@@ -1,137 +1,153 @@
 import React, { useState } from 'react';
-import AdminLayout from '../components/AdminLayout';
 import './SystemInfoPage.css';
 
+type TabId = 'system' | 'database' | 'memory';
+
+interface InfoRow {
+  label: string;
+  value: string;
+  mono?: boolean;
+}
+
+function InfoPanel({ title, action, rows }: { title: string; action?: React.ReactNode; rows: InfoRow[] }) {
+  return (
+    <section className="ab-info-panel">
+      <header className="ab-info-panel-header">
+        <h2 className="ab-info-panel-title">{title}</h2>
+        {action}
+      </header>
+      <dl className="ab-info-dl">
+        {rows.map((row) => (
+          <div key={row.label} className="ab-info-row">
+            <dt>{row.label}</dt>
+            <dd className={row.mono ? 'ab-info-mono' : undefined}>{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 export default function SystemInfoPage() {
-  const [activeTab, setActiveTab] = useState('system');
+  const [activeTab, setActiveTab] = useState<TabId>('system');
+
+  const memoryUsedGb = 4.05;
+  const memoryMaxGb = 8;
+  const memoryPct = Math.round((memoryUsedGb / memoryMaxGb) * 100);
 
   return (
-    <AdminLayout>
-      <div className="dc-page">
-        <div className="dc-page-header" style={{ marginBottom: 24 }}>
-          <h1 className="dc-page-title">System Information</h1>
-          <p className="dc-page-subtitle">View information about your Systems and Avionics installation</p>
-        </div>
+    <div className="dc-page ab-admin-page">
+      <header className="dc-page-header">
+        <h1 className="dc-page-title">System information</h1>
+        <p className="dc-page-subtitle">
+          View version, platform, database, and runtime details for your Systems and Avionics instance.
+        </p>
+      </header>
 
-        <div className="dc-tabs" style={{ marginBottom: 16 }}>
-          <button
-            className={`dc-tab ${activeTab === 'system' ? 'dc-tab-active' : ''}`}
-            onClick={() => setActiveTab('system')}
-          >
-            System Info
-          </button>
-          <button
-            className={`dc-tab ${activeTab === 'database' ? 'dc-tab-active' : ''}`}
-            onClick={() => setActiveTab('database')}
-          >
-            Database
-          </button>
-          <button
-            className={`dc-tab ${activeTab === 'connection' ? 'dc-tab-active' : ''}`}
-            onClick={() => setActiveTab('connection')}
-          >
-            Connection Pool
-          </button>
-        </div>
-
-        <div className="dc-card" style={{ marginBottom: 16 }}>
-          <div className="dc-card-header">
-            <h3 className="dc-card-title">Systems and Avionics Information</h3>
-            <button className="dc-btn dc-btn-sm dc-btn-secondary">View log</button>
-          </div>
-          <div className="dc-card-body">
-            <table className="dc-info-table">
-              <tbody>
-                <tr>
-                  <td>Version</td>
-                  <td>Systems and Avionics 11.3.0.240912130</td>
-                </tr>
-                <tr>
-                  <td>Build</td>
-                  <td>#80212</td>
-                </tr>
-                <tr>
-                  <td>Application Server</td>
-                  <td>Apache Tomcat 10.1.33</td>
-                </tr>
-                <tr>
-                  <td>Platform</td>
-                  <td>Linux 6.10.3-200.fc40.x86_64 (amd64)</td>
-                </tr>
-                <tr>
-                  <td>Active Directory</td>
-                  <td>Systems and Avionics Directory</td>
-                </tr>
-                <tr>
-                  <td>Server ID</td>
-                  <td>AAABLAAAGQABAAh8AAB</td>
-                </tr>
-                <tr>
-                  <td>Installation Date</td>
-                  <td>Jan 16, 2025</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="dc-card" style={{ marginBottom: 16 }}>
-          <div className="dc-card-header">
-            <h3 className="dc-card-title">Build Information</h3>
-          </div>
-          <div className="dc-card-body">
-            <table className="dc-info-table">
-              <tbody>
-                <tr>
-                  <td>Build Date</td>
-                  <td>Jan 16, 2025</td>
-                </tr>
-                <tr>
-                  <td>Build Revision</td>
-                  <td>80212a91dabc1234567890abcdef</td>
-                </tr>
-                <tr>
-                  <td>Database Type</td>
-                  <td>PostgreSQL 17.4</td>
-                </tr>
-                <tr>
-                  <td>Database Connection</td>
-                  <td>Direct JDBC</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="dc-card">
-          <div className="dc-card-header">
-            <h3 className="dc-card-title">Memory</h3>
-            <button className="dc-btn dc-btn-sm dc-btn-secondary">GC Log</button>
-          </div>
-          <div className="dc-card-body">
-            <table className="dc-info-table">
-              <tbody>
-                <tr>
-                  <td>Used</td>
-                  <td>4.05 GB</td>
-                </tr>
-                <tr>
-                  <td>Maximum</td>
-                  <td>8.00 GB</td>
-                </tr>
-                <tr>
-                  <td>Total Allocated</td>
-                  <td>8.00 GB</td>
-                </tr>
-                <tr>
-                  <td>Free</td>
-                  <td>3.95 GB</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <div className="dc-tabs" role="tablist" aria-label="System information sections">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'system'}
+          className={`dc-tab${activeTab === 'system' ? ' dc-tab-active' : ''}`}
+          onClick={() => setActiveTab('system')}
+        >
+          System info
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'database'}
+          className={`dc-tab${activeTab === 'database' ? ' dc-tab-active' : ''}`}
+          onClick={() => setActiveTab('database')}
+        >
+          Database
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'memory'}
+          className={`dc-tab${activeTab === 'memory' ? ' dc-tab-active' : ''}`}
+          onClick={() => setActiveTab('memory')}
+        >
+          Memory
+        </button>
       </div>
-    </AdminLayout>
+
+      <div className="ab-tab-panels">
+        {activeTab === 'system' && (
+          <div role="tabpanel" className="ab-tab-panel">
+            <InfoPanel
+              title="Systems and Avionics"
+              action={
+                <button type="button" className="dc-btn dc-btn-sm dc-btn-secondary">
+                  View log
+                </button>
+              }
+              rows={[
+                { label: 'Version', value: 'Systems and Avionics 11.3.0.240912130' },
+                { label: 'Build', value: '#80212', mono: true },
+                { label: 'Application server', value: 'Apache Tomcat 10.1.33' },
+                { label: 'Platform', value: 'Linux 6.10.3-200.fc40.x86_64 (amd64)' },
+                { label: 'Directory', value: 'Systems and Avionics Directory' },
+                { label: 'Server ID', value: 'AAABLAAAGQABAAh8AAB', mono: true },
+                { label: 'Installation date', value: '16 Jan 2025' },
+              ]}
+            />
+            <InfoPanel
+              title="Build"
+              rows={[
+                { label: 'Build date', value: '16 Jan 2025' },
+                { label: 'Build revision', value: '80212a91dabc1234567890abcdef', mono: true },
+              ]}
+            />
+          </div>
+        )}
+
+        {activeTab === 'database' && (
+          <div role="tabpanel" className="ab-tab-panel">
+            <InfoPanel
+              title="Database connection"
+              rows={[
+                { label: 'Database type', value: 'PostgreSQL 17.4' },
+                { label: 'Connection', value: 'Direct JDBC' },
+                { label: 'Host', value: 'localhost:5432' },
+                { label: 'Database name', value: 'jira_platform' },
+                { label: 'Pool status', value: 'Healthy' },
+                { label: 'Active connections', value: '12 / 20' },
+              ]}
+            />
+          </div>
+        )}
+
+        {activeTab === 'memory' && (
+          <div role="tabpanel" className="ab-tab-panel">
+            <InfoPanel
+              title="JVM memory"
+              action={
+                <button type="button" className="dc-btn dc-btn-sm dc-btn-secondary">
+                  GC log
+                </button>
+              }
+              rows={[
+                { label: 'Used', value: `${memoryUsedGb.toFixed(2)} GB` },
+                { label: 'Maximum', value: `${memoryMaxGb.toFixed(2)} GB` },
+                { label: 'Total allocated', value: `${memoryMaxGb.toFixed(2)} GB` },
+                { label: 'Free', value: `${(memoryMaxGb - memoryUsedGb).toFixed(2)} GB` },
+              ]}
+            />
+            <div className="ab-memory-meter">
+              <div className="ab-memory-meter-label">
+                <span>Heap utilisation</span>
+                <span>{memoryPct}%</span>
+              </div>
+              <div className="ab-memory-meter-track">
+                <div className="ab-memory-meter-fill" style={{ width: `${memoryPct}%` }} />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

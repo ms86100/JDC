@@ -37,7 +37,7 @@ public interface EntityStatusRepository extends JpaRepository<EntityStatus, UUID
                                                                       @Param("entityType") String entityType,
                                                                       @Param("sourceIdentifier") String sourceIdentifier);
 
-    List<EntityStatus> findByStatus(EntityStatus.Status status);
+    List<EntityStatus> findByStatus(String status);
 
     void deleteByJobId(UUID jobId);
 }

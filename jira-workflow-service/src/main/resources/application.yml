@@ -2,6 +2,8 @@ server:
   port: 8085
 
 spring:
+  main:
+    allow-circular-references: true
   application:
     name: jira-workflow-service
   datasource:
@@ -48,6 +50,19 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
+
+jira:
+  services:
+    issue-url: ${ISSUE_SERVICE_URL:http://localhost:8084}
+    admin-url: ${ADMIN_SERVICE_URL:http://localhost:8093}
+    user-url: ${USER_SERVICE_URL:http://localhost:8082}
+    notification-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8087}
+    search-url: ${SEARCH_SERVICE_URL:http://localhost:8088}
+    project-url: ${PROJECT_SERVICE_URL:http://localhost:8083}
+  workflow:
+    outbox:
+      batch-size: 50
+      poll-interval-ms: 5000
 
 logging:
   level:

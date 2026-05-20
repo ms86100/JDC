@@ -1335,7 +1335,7 @@ public class WorkflowAdministrationService {
         map.put("isDefault", scheme.getIsDefault());
         map.put("createdAt", scheme.getCreatedAt());
         map.put("updatedAt", scheme.getUpdatedAt());
-        map.put("mappingCount", scheme.getMappings() != null ? scheme.getMappings().size() : 0);
+        map.put("mappingCount", workflowSchemeMappingRepository.countBySchemeId(scheme.getId()));
         return map;
     }
 

@@ -1,0 +1,81 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: jira-platform-services
+  namespace: jira-platform
+  labels:
+    release: prometheus
+    app: jira-platform
+spec:
+  selector:
+    matchLabels:
+      app: jira-platform
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 15s
+    - port: http
+      path: /actuator/prometheus
+      targetPort: 8083
+      interval: 15s
+    - port: http
+      path: /actuator/prometheus
+      targetPort: 8084
+      interval: 15s
+    - port: http
+      path: /actuator/prometheus
+      targetPort: 8085
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: jira-platform-alerts
+  namespace: jira-platform
+  labels:
+    release: prometheus
+    app: jira-platform
+spec:
+  groups:
+    - name: jira-platform.rules
+      rules:
+        - alert: JiraServiceDown
+          expr: up{job="jira-platform-services"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Jira service {{ $labels.instance }} is down"
+            description: "{{ $labels.job }} has been down for more than 2 minutes."
+        - alert: HighTestExecutionFailureRate
+          expr: rate(jira_test_executions_failed_total[5m]) / rate(jira_test_executions_total[5m]) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High test execution failure rate"
+            description: "Test failure rate is above 10% for the last 5 minutes."
+        - alert: HighMemoryUsage
+          expr: (jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}) > 0.9
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High memory usage on {{ $labels.pod }}"
+            description: "Memory usage is above 90% for more than 5 minutes."
+        - alert: HighCPUUsage
+          expr: rate(process_cpu_seconds_total[5m]) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU usage on {{ $labels.pod }}"
+            description: "CPU usage is above 80% for more than 5 minutes."
+        - alert: SlowTestExecution
+          expr: histogram_quantile(0.95, rate(jira_execution_duration_seconds_bucket[5m])) > 30
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            summary: "Slow test execution"
+            description: "95th percentile test execution time is above 30 seconds."

@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../api/axiosClient';
+import { issueTypeSchemeApi, schemesForIssueType } from '../../../api/issueAdminApi';
 import './IssueTypesPage.css';
+import './AdminIssueConfig.css';
 
 interface IssueType {
   id: string;
@@ -36,9 +39,14 @@ export default function IssueTypesPage() {
   const [selectedIssueType, setSelectedIssueType] = useState<IssueType | null>(null);
   const [editMode, setEditMode] = useState(false);
 
-  const { data: issueTypes, isLoading, isError, error } = useQuery({
+  const { data: issueTypes, isLoading, isError } = useQuery({
     queryKey: ['admin', 'issueTypes'],
     queryFn: () => issueTypeApi.getIssueTypes().then(res => res.data),
+  });
+
+  const { data: schemes } = useQuery({
+    queryKey: ['admin', 'issueTypeSchemes'],
+    queryFn: () => issueTypeSchemeApi.list().then((r) => r.data),
   });
 
   const createMutation = useMutation({
@@ -60,9 +68,13 @@ export default function IssueTypesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'issueTypes'] });
       setEditMode(false);
       setSelectedIssueType(null);
+      setActionError(null);
     },
-    onError: (err: Error) => {
-      console.error('Failed to update issue type:', err.message);
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (err instanceof Error ? err.message : 'Failed to update issue type');
+      setActionError(msg);
     },
   });
 
@@ -70,9 +82,13 @@ export default function IssueTypesPage() {
     mutationFn: (id: string) => issueTypeApi.deleteIssueType(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'issueTypes'] });
+      setActionError(null);
     },
-    onError: (err: Error) => {
-      console.error('Failed to delete issue type:', err.message);
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (err instanceof Error ? err.message : 'Failed to delete issue type');
+      setActionError(msg);
     },
   });
 
@@ -84,6 +100,7 @@ export default function IssueTypesPage() {
   });
 
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const filteredIssueTypes = issueTypes?.filter(it =>
     it.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -102,12 +119,21 @@ export default function IssueTypesPage() {
 
   const handleSaveEdit = () => {
     if (!selectedIssueType) return;
-    updateMutation.mutate({ id: selectedIssueType.id, data: selectedIssueType });
+    updateMutation.mutate({
+      id: selectedIssueType.id,
+      data: {
+        name: selectedIssueType.name,
+        description: selectedIssueType.description,
+        isSubtask: selectedIssueType.isSubtask,
+      },
+    });
   };
 
   const handleDelete = (issueType: IssueType) => {
-    deleteMutation.mutate(issueType.id);
-    setDeleteConfirm(null);
+    setActionError(null);
+    deleteMutation.mutate(issueType.id, {
+      onSettled: () => setDeleteConfirm(null),
+    });
   };
 
   const getIssueTypeStyle = (issueType: IssueType) => {
@@ -117,23 +143,44 @@ export default function IssueTypesPage() {
     return { icon: issueType.name.charAt(0).toUpperCase(), color: '#0052cc' };
   };
 
-  const groupedIssueTypes = {
-    standard: filteredIssueTypes.filter(it => !it.isSubtask),
-    subtask: filteredIssueTypes.filter(it => it.isSubtask),
-  };
+  const sortedIssueTypes = useMemo(
+    () =>
+      [...filteredIssueTypes].sort((a, b) => {
+        if (a.isSubtask !== b.isSubtask) return a.isSubtask ? 1 : -1;
+        return a.name.localeCompare(b.name);
+      }),
+    [filteredIssueTypes]
+  );
+
+  const canDeleteType = (issueTypes?.length ?? 0) > 1;
 
   return (
-    <div className="it-page">
+    <div className="it-page dc-page">
       <div className="it-header">
         <div className="it-header-content">
           <h1 className="it-title">Issue Types</h1>
-          <p className="it-subtitle">Configure the types of issues available in your Systems and Avionics instance</p>
+          <p className="it-subtitle">
+            Configure issue types for your instance. Assign them to projects via{' '}
+            <Link to="/admin/issue-type-schemes" style={{ color: '#0052cc', fontWeight: 500 }}>
+              Issue type schemes
+            </Link>
+            .
+          </p>
         </div>
         <button className="it-btn it-btn-primary" onClick={() => setShowCreateModal(true)}>
           <span className="it-btn-icon">+</span>
           Add Issue Type
         </button>
       </div>
+
+      {actionError && (
+        <div className="it-action-error" role="alert">
+          {actionError}
+          <button type="button" onClick={() => setActionError(null)} aria-label="Dismiss">
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="it-toolbar">
         <div className="it-search-wrapper">
@@ -196,40 +243,75 @@ export default function IssueTypesPage() {
       )}
 
       {!isLoading && !isError && filteredIssueTypes.length > 0 && (
-        <div className="it-content">
-          {groupedIssueTypes.standard.length > 0 && (
-            <section className="it-section">
-              <h2 className="it-section-title">Standard Issue Types</h2>
-              <div className="it-grid">
-                {groupedIssueTypes.standard.map((issueType) => (
-                  <IssueTypeCard
-                    key={issueType.id}
-                    issueType={issueType}
-                    style={getIssueTypeStyle(issueType)}
-                    onEdit={() => openEditModal(issueType)}
-                    onDelete={() => setDeleteConfirm(issueType.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {groupedIssueTypes.subtask.length > 0 && (
-            <section className="it-section">
-              <h2 className="it-section-title">Subtask Issue Types</h2>
-              <div className="it-grid">
-                {groupedIssueTypes.subtask.map((issueType) => (
-                  <IssueTypeCard
-                    key={issueType.id}
-                    issueType={issueType}
-                    style={getIssueTypeStyle(issueType)}
-                    onEdit={() => openEditModal(issueType)}
-                    onDelete={() => setDeleteConfirm(issueType.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+        <div className="ab-recent-table-wrap ab-dc-issue-types-table">
+          <table className="ab-recent-table ab-issue-config-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Related schemes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedIssueTypes.map((issueType) => {
+                const style = getIssueTypeStyle(issueType);
+                const related = schemesForIssueType(schemes, issueType.id);
+                return (
+                  <tr key={issueType.id}>
+                    <td>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                        <span className="ab-it-icon" style={{ backgroundColor: style.color }}>
+                          {style.icon}
+                        </span>
+                        <div className="ab-it-name-cell">
+                          <strong>{issueType.name}</strong>
+                          <code style={{ fontSize: 11, color: '#5e6c84' }}>{issueType.issueTypeKey}</code>
+                          {issueType.description && (
+                            <div className="ab-it-desc">{issueType.description}</div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`ab-dc-type-pill${issueType.isSubtask ? ' subtask' : ''}`}>
+                        {issueType.isSubtask ? 'Sub-task' : 'Standard'}
+                      </span>
+                    </td>
+                    <td>
+                      {related.length > 0 ? (
+                        <ul className="ab-scheme-links">
+                          {related.map((s) => (
+                            <li key={s.id}>
+                              <Link to={`/admin/issue-type-schemes?schemeId=${s.id}`}>{s.name}</Link>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span style={{ fontSize: 13, color: '#97a0af' }}>No associated schemes</span>
+                      )}
+                    </td>
+                    <td>
+                      <div className="ab-ops-list">
+                        <button type="button" onClick={() => openEditModal(issueType)}>
+                          Edit
+                        </button>
+                        {canDeleteType && (
+                          <button
+                            type="button"
+                            className="danger"
+                            onClick={() => setDeleteConfirm(issueType.id)}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -337,6 +419,17 @@ export default function IssueTypesPage() {
             </div>
             <div className="it-modal-body">
               <div className="it-form-group">
+                <label>Issue type key</label>
+                <input
+                  type="text"
+                  className="it-input it-input-key"
+                  value={selectedIssueType.issueTypeKey}
+                  readOnly
+                  aria-readonly="true"
+                />
+                <span className="it-form-hint">Key cannot be changed after creation (Jira DC behaviour)</span>
+              </div>
+              <div className="it-form-group">
                 <label>Name</label>
                 <input
                   type="text"
@@ -344,6 +437,19 @@ export default function IssueTypesPage() {
                   value={selectedIssueType.name}
                   onChange={(e) => setSelectedIssueType({ ...selectedIssueType, name: e.target.value })}
                 />
+              </div>
+              <div className="it-form-group">
+                <label className="it-checkbox-wrapper">
+                  <input
+                    type="checkbox"
+                    checked={selectedIssueType.isSubtask}
+                    onChange={(e) =>
+                      setSelectedIssueType({ ...selectedIssueType, isSubtask: e.target.checked })
+                    }
+                  />
+                  <span className="it-checkbox-custom" />
+                  <span>This is a subtask type</span>
+                </label>
               </div>
               <div className="it-form-group">
                 <label>Description</label>
@@ -370,45 +476,6 @@ export default function IssueTypesPage() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-interface IssueTypeCardProps {
-  issueType: IssueType;
-  style: { icon: string; color: string };
-  onEdit: () => void;
-  onDelete: () => void;
-}
-
-function IssueTypeCard({ issueType, style, onEdit, onDelete }: IssueTypeCardProps) {
-  return (
-    <div className="it-card">
-      <div className="it-card-icon" style={{ backgroundColor: style.color }}>
-        {style.icon}
-      </div>
-      <div className="it-card-content">
-        <h3 className="it-card-name">{issueType.name}</h3>
-        <code className="it-card-key">{issueType.issueTypeKey}</code>
-        {issueType.description && (
-          <p className="it-card-description">{issueType.description}</p>
-        )}
-      </div>
-      <div className="it-card-actions">
-        <button className="it-btn it-btn-ghost" onClick={onEdit}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
-          Edit
-        </button>
-        <button className="it-btn it-btn-ghost it-btn-danger" onClick={onDelete}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-          </svg>
-          Delete
-        </button>
-      </div>
     </div>
   );
 }

@@ -59,6 +59,9 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    mail:
+      enabled: ${MAIL_HEALTH_ENABLED:false}
 
 springdoc:
   api-docs:

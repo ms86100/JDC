@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
+import { workflowApi } from '../../../api/workflowApi';
 import './WorkflowsPage.css';
 
 const API_BASE = '/api/workflows';
+const SCHEMES_API_BASE = '/api/workflow-schemes';
 
 interface WorkflowScheme {
   id: string;
@@ -53,15 +56,19 @@ interface WorkflowTransition {
   description?: string;
   fromStatusId: string;
   toStatusId: string;
+  fromStatusName?: string;
+  toStatusName?: string;
+  fromStatusColor?: string;
+  toStatusColor?: string;
   displayOrder?: number;
   type?: string;
-  conditions?: string;
-  validators?: string;
-  postFunctions?: string;
-  screenId?: string;
+  conditions?: unknown[];
+  validators?: unknown[];
+  postFunctions?: unknown[];
 }
 
 export default function WorkflowsPage() {
+  const navigate = useNavigate();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [schemes, setSchemes] = useState<WorkflowScheme[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,12 +88,11 @@ export default function WorkflowsPage() {
   const fetchWorkflows = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}`);
-      if (!res.ok) throw new Error('Failed to fetch workflows');
-      const data = await res.json();
-      setWorkflows(Array.isArray(data) ? data : []);
+      const res = await workflowApi.getAll();
+      setWorkflows(Array.isArray(res.data) ? res.data : []);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : 'Failed to fetch workflows');
     } finally {
       setLoading(false);
     }
@@ -94,10 +100,8 @@ export default function WorkflowsPage() {
 
   const fetchSchemes = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/schemes`);
-      if (!res.ok) throw new Error('Failed to fetch schemes');
-      const data = await res.json();
-      setSchemes(Array.isArray(data) ? data : []);
+      const res = await workflowApi.getSchemes();
+      setSchemes(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch schemes:', err);
     }
@@ -169,7 +173,7 @@ export default function WorkflowsPage() {
   const handleCreateScheme = async () => {
     if (!schemeForm.name.trim()) return;
     try {
-      const res = await fetch(`${API_BASE}/schemes`, {
+      const res = await fetch(SCHEMES_API_BASE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(schemeForm),
@@ -189,7 +193,7 @@ export default function WorkflowsPage() {
   const handleDeleteScheme = async (id: string) => {
     if (!confirm('Are you sure you want to delete this scheme?')) return;
     try {
-      const res = await fetch(`${API_BASE}/schemes/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${SCHEMES_API_BASE}/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Failed to delete scheme');
@@ -378,7 +382,12 @@ export default function WorkflowsPage() {
                               >
                                 Edit
                               </button>
-                              <button className="wf-action-btn">Diagram</button>
+                              <button
+                                className="wf-action-btn"
+                                onClick={() => navigate(`/admin/workflows/${wf.id}/designer`)}
+                              >
+                                Diagram
+                              </button>
                               <button
                                 className="wf-action-btn wf-action-copy"
                                 onClick={() => {
@@ -461,7 +470,12 @@ export default function WorkflowsPage() {
                               >
                                 Edit
                               </button>
-                              <button className="wf-action-btn">Diagram</button>
+                              <button
+                                className="wf-action-btn"
+                                onClick={() => navigate(`/admin/workflows/${wf.id}/designer`)}
+                              >
+                                Diagram
+                              </button>
                               <button
                                 className="wf-action-btn wf-action-copy"
                                 onClick={() => {
@@ -635,12 +649,14 @@ interface WorkflowDetailViewProps {
   onRefresh: () => void;
 }
 
-function WorkflowDetailView({ workflow, workflows, onBack, onRefresh }: WorkflowDetailViewProps) {
+function WorkflowDetailView({ workflow, workflows, onBack }: WorkflowDetailViewProps) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'statuses' | 'transitions' | 'versions'>('statuses');
   const [statuses, setStatuses] = useState<WorkflowStatus[]>([]);
   const [transitions, setTransitions] = useState<WorkflowTransition[]>([]);
   const [versions, setVersions] = useState<WorkflowVersion[]>([]);
   const [loading, setLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchWorkflowDetails();
@@ -648,36 +664,83 @@ function WorkflowDetailView({ workflow, workflows, onBack, onRefresh }: Workflow
 
   const fetchWorkflowDetails = async () => {
     setLoading(true);
+    setDetailError(null);
     try {
-      const [statusRes, versionRes] = await Promise.all([
-        fetch(`${API_BASE}/${workflow.id}`),
-        fetch(`${API_BASE}/${workflow.id}/versions`)
-      ]);
-      if (statusRes.ok) {
-        const data = await statusRes.json();
-        setStatuses(data.statuses || []);
-        setTransitions(data.transitions || []);
-      }
-      if (versionRes.ok) {
-        const vData = await versionRes.json();
-        setVersions(Array.isArray(vData) ? vData : []);
-      }
+      const res = await workflowApi.getWorkflowDetail(workflow.id);
+      const detail = res.data;
+
+      setStatuses(
+        (detail.statuses || []).map((s) => ({
+          id: s.id,
+          name: s.statusName || String(s.statusId),
+          category: s.statusCategory,
+          color: s.statusColor,
+          sequence: s.sequence,
+        }))
+      );
+      setTransitions(
+        (detail.transitions || []).map((t) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+          fromStatusId: t.fromStatusId,
+          toStatusId: t.toStatusId,
+          fromStatusName: t.fromStatusName,
+          toStatusName: t.toStatusName,
+          fromStatusColor: t.fromStatusColor,
+          toStatusColor: t.toStatusColor,
+          displayOrder: t.displayOrder,
+          type: t.type,
+          conditions: t.conditions,
+          validators: t.validators,
+          postFunctions: t.postFunctions,
+        }))
+      );
+      setVersions(Array.isArray(detail.versions) ? detail.versions : []);
     } catch (err) {
       console.error('Failed to fetch workflow details:', err);
+      setDetailError('Could not load workflow details. Check that workflow-service and issue-service are running.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const categoryLabel = (cat?: string) => {
+    if (!cat) return 'To Do';
+    if (cat === 'IN_PROGRESS') return 'In Progress';
+    if (cat === 'DONE') return 'Done';
+    return 'To Do';
   };
 
   return (
     <div className="wf-detail-page">
       <div className="wf-detail-header">
         <button className="wf-back-btn" onClick={onBack}>← Back to Workflows</button>
-        <h1 className="wf-detail-title">
-          {workflow.name}
-          {workflow.isDraft && <span className="wf-draft-badge">DRAFT</span>}
-        </h1>
-        <p className="wf-detail-description">{workflow.description}</p>
+        <div className="wf-detail-header-row">
+          <div>
+            <h1 className="wf-detail-title">
+              {workflow.name}
+              {workflow.isSystem && <span className="wf-system-badge">SYSTEM</span>}
+              {workflow.isDraft && <span className="wf-draft-badge">DRAFT</span>}
+            </h1>
+            <p className="wf-detail-description">{workflow.description}</p>
+          </div>
+          <div className="wf-detail-actions">
+            <button
+              type="button"
+              className="wf-btn wf-btn-primary"
+              onClick={() => navigate(`/admin/workflows/${workflow.id}/designer`)}
+            >
+              Open diagram editor
+            </button>
+          </div>
+        </div>
+        <div className="wf-detail-summary">
+          <span className="wf-summary-pill">{statuses.length} steps</span>
+          <span className="wf-summary-pill">{transitions.length} transitions</span>
+          <span className="wf-summary-pill">{versions.length} versions</span>
+        </div>
+        {detailError && <p className="wf-detail-error">{detailError}</p>}
       </div>
 
       <div className="wf-detail-tabs">
@@ -711,12 +774,15 @@ function WorkflowDetailView({ workflow, workflows, onBack, onRefresh }: Workflow
                 {statuses.length === 0 ? (
                   <p className="wf-empty">No statuses defined.</p>
                 ) : (
-                  statuses.map((status) => (
+                  statuses.map((status, index) => (
                     <div key={status.id} className="wf-status-card">
+                      <span className="wf-status-seq">{index + 1}</span>
                       <div className="wf-status-color" style={{ backgroundColor: status.color || '#6C757D' }} />
                       <div className="wf-status-info">
                         <strong>{status.name}</strong>
-                        <span className="wf-status-category">{status.category}</span>
+                        <span className={`wf-status-category wf-cat-${(status.category || 'TODO').toLowerCase()}`}>
+                          {categoryLabel(status.category)}
+                        </span>
                       </div>
                     </div>
                   ))
@@ -731,12 +797,29 @@ function WorkflowDetailView({ workflow, workflows, onBack, onRefresh }: Workflow
                 ) : (
                   transitions.map((transition) => (
                     <div key={transition.id} className="wf-transition-card">
-                      <strong>{transition.name}</strong>
-                      <p className="wf-transition-desc">{transition.description}</p>
-                      <div className="wf-transition-meta">
-                        <span>Type: {transition.type || 'MANUAL'}</span>
-                        <span>Order: {transition.displayOrder || 0}</span>
+                      <strong className="wf-transition-name">{transition.name}</strong>
+                      <div className="wf-transition-flow">
+                        <span
+                          className="wf-flow-status"
+                          style={{ borderColor: transition.fromStatusColor || '#6C757D' }}
+                        >
+                          {transition.fromStatusName || transition.fromStatusId}
+                        </span>
+                        <span className="wf-flow-arrow" aria-hidden="true">→</span>
+                        <span
+                          className="wf-flow-status"
+                          style={{ borderColor: transition.toStatusColor || '#6C757D' }}
+                        >
+                          {transition.toStatusName || transition.toStatusId}
+                        </span>
                       </div>
+                      {(transition.conditions?.length || transition.validators?.length || transition.postFunctions?.length) ? (
+                        <div className="wf-transition-meta">
+                          {transition.conditions?.length ? <span>{transition.conditions.length} conditions</span> : null}
+                          {transition.validators?.length ? <span>{transition.validators.length} validators</span> : null}
+                          {transition.postFunctions?.length ? <span>{transition.postFunctions.length} post-functions</span> : null}
+                        </div>
+                      ) : null}
                     </div>
                   ))
                 )}
@@ -746,7 +829,9 @@ function WorkflowDetailView({ workflow, workflows, onBack, onRefresh }: Workflow
             {activeTab === 'versions' && (
               <div className="wf-versions-list">
                 {versions.length === 0 ? (
-                  <p className="wf-empty">No versions recorded.</p>
+                  <p className="wf-empty">
+                    No version history yet. Versions are created when you edit and publish this workflow (Jira DC behavior).
+                  </p>
                 ) : (
                   versions.map((version) => (
                     <div key={version.id} className="wf-version-card">
@@ -793,10 +878,16 @@ function SchemeDetailView({ scheme, workflows, onBack, onRefresh }: SchemeDetail
   const fetchSchemeMappings = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/schemes/${scheme.id}`);
+      const res = await fetch(`${SCHEMES_API_BASE}/${scheme.id}`);
       if (res.ok) {
         const data = await res.json();
-        setMappings(data.mappings || []);
+        const raw = data.mappings || [];
+        setMappings(
+          raw.map((m: { issueTypeId: string; workflowId: string }) => ({
+            issueTypeId: String(m.issueTypeId),
+            workflowId: String(m.workflowId),
+          }))
+        );
       }
     } catch (err) {
       console.error('Failed to fetch scheme mappings:', err);
@@ -807,7 +898,7 @@ function SchemeDetailView({ scheme, workflows, onBack, onRefresh }: SchemeDetail
 
   const handleAssignWorkflow = async (issueTypeId: string, workflowId: string) => {
     try {
-      const res = await fetch(`${API_BASE}/schemes/${scheme.id}/mappings`, {
+      const res = await fetch(`${SCHEMES_API_BASE}/${scheme.id}/mappings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ issueTypeId, workflowId }),

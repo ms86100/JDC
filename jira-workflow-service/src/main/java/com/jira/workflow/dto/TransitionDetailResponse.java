@@ -20,6 +20,12 @@ public class TransitionDetailResponse {
     private String description;
     private UUID fromStatusId;
     private UUID toStatusId;
+    private String fromStatusName;
+    private String toStatusName;
+    private String fromStatusCategory;
+    private String toStatusCategory;
+    private String fromStatusColor;
+    private String toStatusColor;
     private Integer displayOrder;
     private String icon;
     private Boolean requiresApproval;

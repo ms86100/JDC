@@ -22,6 +22,7 @@ public class WorkflowSchemeService {
 
     private final WorkflowSchemeRepository workflowSchemeRepository;
     private final WorkflowSchemeMappingRepository workflowSchemeMappingRepository;
+    private final ProjectWorkflowSchemeRepository projectWorkflowSchemeRepository;
     private final WorkflowRepository workflowRepository;
     private final WorkflowSharingRepository workflowSharingRepository;
     private final WorkflowAuditLogRepository workflowAuditLogRepository;
@@ -258,25 +259,44 @@ public class WorkflowSchemeService {
     public Optional<UUID> getWorkflowForIssueType(UUID projectId, UUID issueTypeId) {
         log.debug("Getting workflow for project {} and issue type {}", projectId, issueTypeId);
 
-        List<WorkflowSharing> sharings = workflowSharingRepository.findByProjectId(projectId);
-        if (sharings.isEmpty()) {
-            WorkflowScheme defaultScheme = workflowSchemeRepository.findByIsDefaultTrue().orElse(null);
-            if (defaultScheme != null) {
-                return workflowSchemeMappingRepository
-                        .findBySchemeIdAndIssueTypeId(defaultScheme.getId(), issueTypeId)
-                        .map(m -> m.getWorkflow().getId());
+        if (projectId != null) {
+            Optional<UUID> fromProjectScheme = resolveFromProjectWorkflowScheme(projectId, issueTypeId);
+            if (fromProjectScheme.isPresent()) {
+                return fromProjectScheme;
             }
-            return Optional.empty();
         }
 
-        WorkflowScheme scheme = workflowSchemeRepository.findById(sharings.get(0).getSchemeId()).orElse(null);
-        if (scheme == null) {
-            return Optional.empty();
+        WorkflowScheme defaultScheme = workflowSchemeRepository.findByIsDefaultTrue().orElse(null);
+        if (defaultScheme != null && issueTypeId != null) {
+            return workflowSchemeMappingRepository
+                    .findBySchemeIdAndIssueTypeId(defaultScheme.getId(), issueTypeId)
+                    .map(m -> m.getWorkflow().getId())
+                    .or(() -> Optional.ofNullable(defaultScheme.getDefaultWorkflowId()));
         }
 
-        return workflowSchemeMappingRepository
-                .findBySchemeIdAndIssueTypeId(scheme.getId(), issueTypeId)
-                .map(m -> m.getWorkflow().getId());
+        return Optional.empty();
+    }
+
+    private Optional<UUID> resolveFromProjectWorkflowScheme(UUID projectId, UUID issueTypeId) {
+        return projectWorkflowSchemeRepository.findById(projectId)
+                .flatMap(pws -> resolveWorkflowFromScheme(pws.getSchemeId(), issueTypeId));
+    }
+
+    private Optional<UUID> resolveWorkflowFromScheme(UUID schemeId, UUID issueTypeId) {
+        if (schemeId == null) {
+            return Optional.empty();
+        }
+        if (issueTypeId != null) {
+            Optional<UUID> mapped = workflowSchemeMappingRepository
+                    .findBySchemeIdAndIssueTypeId(schemeId, issueTypeId)
+                    .map(m -> m.getWorkflow().getId());
+            if (mapped.isPresent()) {
+                return mapped;
+            }
+        }
+        return workflowSchemeRepository.findById(schemeId)
+                .map(WorkflowScheme::getDefaultWorkflowId)
+                .filter(id -> id != null);
     }
 
     private WorkflowSchemeResponse mapToResponse(WorkflowScheme scheme) {

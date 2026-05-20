@@ -3,6 +3,10 @@ package com.jira.admin.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Legacy admin-side workflow view. Writes are disabled — mutations proxy to
+ * jira-workflow-service (jira_workflow schema) via WorkflowAdminProxyService.
+ */
 @Entity
 @Table(name = "workflows")
 @Data

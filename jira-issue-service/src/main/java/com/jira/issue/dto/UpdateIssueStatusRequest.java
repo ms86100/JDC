@@ -11,6 +11,13 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UpdateIssueStatusRequest {
 
-    @NotNull(message = "Status ID is required")
+    /** Target status (used when transitionId omitted — engine resolves transition) */
     private UUID statusId;
+
+    /** Preferred: explicit workflow transition */
+    private UUID transitionId;
+
+    private String comment;
+    private UUID resolutionId;
+    private java.util.Map<String, Object> screenInput;
 }

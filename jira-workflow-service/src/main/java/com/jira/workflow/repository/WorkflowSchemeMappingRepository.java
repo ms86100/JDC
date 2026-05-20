@@ -14,4 +14,6 @@ public interface WorkflowSchemeMappingRepository extends JpaRepository<WorkflowS
     List<WorkflowSchemeMapping> findByWorkflowId(UUID workflowId);
     Optional<WorkflowSchemeMapping> findBySchemeIdAndIssueTypeId(UUID schemeId, UUID issueTypeId);
     void deleteBySchemeId(UUID schemeId);
+
+    long countBySchemeId(UUID schemeId);
 }

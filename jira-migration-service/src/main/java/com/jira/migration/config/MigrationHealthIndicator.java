@@ -96,7 +96,7 @@ public class MigrationHealthIndicator implements HealthIndicator {
 
     private long countRecentFailures() {
         LocalDateTime dayAgo = LocalDateTime.now().minusHours(24);
-        return entityStatusRepository.findByStatus(EntityStatus.Status.FAILED)
+        return entityStatusRepository.findByStatus("FAILED")
                 .stream()
                 .filter(e -> e.getCompletedAt() != null && e.getCompletedAt().isAfter(dayAgo))
                 .count();

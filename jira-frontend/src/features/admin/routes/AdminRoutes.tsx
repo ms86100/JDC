@@ -8,9 +8,14 @@ import JiraGroupsBrowser from '../pages/JiraGroupsBrowser';
 import JiraViewGroup from '../pages/JiraViewGroup';
 import BulkCreateWizard from '../pages/BulkCreateWizard';
 import IssueTypesPage from '../pages/IssueTypesPage';
+import IssueTypeSchemesPage from '../pages/IssueTypeSchemesPage';
+import ResolutionsPage from '../pages/ResolutionsPage';
+import FieldConfigurationPage from '../pages/FieldConfigurationPage';
+import ApplicationLinksPage from '../pages/ApplicationLinksPage';
 import PrioritiesPage from '../pages/PrioritiesPage';
 import StatusesPage from '../pages/StatusesPage';
 import WorkflowsPage from '../pages/WorkflowsPage';
+import WorkflowDesignerPage from '../../workflows/pages/WorkflowDesignerPage';
 import ScreensPage from '../pages/ScreensPage';
 import DataCenterPage from '../pages/DataCenterPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
@@ -75,14 +80,15 @@ export default function AdminRoutes() {
 
       {/* Issue Administration */}
       <Route path="issue-types" element={<IssueTypesPage />} />
-      <Route path="issue-type-schemes" element={<IssueTypesPage />} />
+      <Route path="issue-type-schemes" element={<IssueTypeSchemesPage />} />
       <Route path="priorities" element={<PrioritiesPage />} />
-      <Route path="resolutions" element={<IssueTypesPage />} />
+      <Route path="resolutions" element={<ResolutionsPage />} />
       <Route path="statuses" element={<StatusesPage />} />
-      <Route path="field-config" element={<IssueTypesPage />} />
+      <Route path="field-config" element={<FieldConfigurationPage />} />
 
       {/* Workflows & Screens */}
       <Route path="workflows" element={<WorkflowsPage />} />
+      <Route path="workflows/:workflowId/designer" element={<WorkflowDesignerPage />} />
       <Route path="workflow-schemes" element={<WorkflowsPage />} />
       <Route path="screens" element={<ScreensPage />} />
       <Route path="screen-schemes" element={<ScreensPage />} />
@@ -116,7 +122,7 @@ export default function AdminRoutes() {
       <Route path="api" element={<SystemSettingsPage />} />
       <Route path="webhooks" element={<WorkflowsPage />} />
       <Route path="oauth" element={<SystemSettingsPage />} />
-      <Route path="links" element={<SystemSettingsPage />} />
+      <Route path="links" element={<ApplicationLinksPage />} />
       <Route path="dark-features" element={<SystemSettingsPage />} />
       </Routes>
     </JiraAdminLayout>

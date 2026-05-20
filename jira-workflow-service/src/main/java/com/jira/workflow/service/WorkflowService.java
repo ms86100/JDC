@@ -21,6 +21,8 @@ import java.util.stream.IntStream;
 @Slf4j
 public class WorkflowService {
 
+    private final com.jira.workflow.engine.WorkflowExecutionEngine workflowExecutionEngine;
+
     private final WorkflowRepository workflowRepository;
     private final WorkflowStatusRepository workflowStatusRepository;
     private final WorkflowTransitionRepository workflowTransitionRepository;
@@ -257,7 +259,7 @@ public class WorkflowService {
                 .orElse(workflows.get(0));
 
         // Orphan Status Detection: Verify both statuses are part of this workflow
-        List<WorkflowStatus> workflowStatuses = workflowStatusRepository.findByWorkflowId(workflow.getId());
+        List<WorkflowStatus> workflowStatuses = workflowStatusRepository.findByWorkflowIdOrderBySequenceAsc(workflow.getId());
         Set<UUID> statusIds = workflowStatuses.stream()
                 .map(WorkflowStatus::getStatusId)
                 .collect(Collectors.toSet());
@@ -320,7 +322,7 @@ public class WorkflowService {
 
         List<WorkflowTransition> transitions = workflowTransitionRepository.findByWorkflowId(workflowId);
         return transitions.stream()
-                .map(this::mapToTransitionDetailResponse)
+                .map(this::mapTransitionDetail)
                 .collect(Collectors.toList());
     }
 
@@ -628,109 +630,14 @@ public class WorkflowService {
      */
     @Transactional
     public TransitionExecutionResponse executeTransition(UUID issueId, UUID transitionId, UUID userId) {
-        log.info("Executing transition {} for issue {} by user {}", transitionId, issueId, userId);
-
-        try {
-            // 1. Get transition
-            WorkflowTransition transition = workflowTransitionRepository.findById(transitionId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Transition", "id", transitionId));
-
-            // 2. Get issue to validate transition path
-            Map<String, Object> issueData = fetchIssueData(issueId);
-            UUID currentStatusId = parseUUID(issueData.getOrDefault("statusId", "").toString());
-
-            if (currentStatusId == null) {
-                return TransitionExecutionResponse.builder()
-                        .success(false)
-                        .error("Could not determine current issue status")
-                        .build();
-            }
-
-            // 3. Validate transition is allowed from current status
-            if (!transition.getFromStatusId().equals(currentStatusId)) {
-                return TransitionExecutionResponse.builder()
-                        .success(false)
-                        .error("Invalid transition path: cannot transition from current status to target status")
-                        .build();
-            }
-
-            // 4. Evaluate conditions (block if failed)
-            List<WorkflowCondition> conditions = workflowConditionRepository
-                    .findByTransitionIdOrderBySequenceAsc(transitionId);
-            List<String> conditionErrors = new ArrayList<>();
-            List<String> conditionWarnings = new ArrayList<>();
-
-            for (WorkflowCondition condition : conditions) {
-                boolean result = evaluateCondition(condition, userId, issueId);
-                if (condition.getNegate() != null && condition.getNegate()) {
-                    // Negated condition - warn if true
-                    if (result) {
-                        conditionWarnings.add("Condition not met: " + condition.getConditionType());
-                    }
-                } else {
-                    if (!result) {
-                        conditionErrors.add("Condition not met: " + condition.getConditionType());
-                    }
-                }
-            }
-
-            if (!conditionErrors.isEmpty()) {
-                return TransitionExecutionResponse.builder()
-                        .success(false)
-                        .error("Transition blocked by conditions")
-                        .errors(conditionErrors)
-                        .warnings(conditionWarnings)
-                        .build();
-            }
-
-            // 5. Execute validators (block if failed)
-            List<String> validationErrors = executeValidators(transitionId, issueData, userId);
-            if (!validationErrors.isEmpty()) {
-                return TransitionExecutionResponse.builder()
-                        .success(false)
-                        .error("Transition blocked by validators")
-                        .errors(validationErrors)
-                        .warnings(conditionWarnings)
-                        .build();
-            }
-
-            // 6. Update issue status via REST call
-            try {
-                String updateUrl = ISSUE_SERVICE_URL + "/api/issues/" + issueId + "/status";
-                Map<String, Object> statusUpdate = Map.of("statusId", transition.getToStatusId().toString());
-                restTemplate.put(updateUrl, statusUpdate);
-            } catch (Exception e) {
-                log.error("Failed to update issue status: {}", e.getMessage());
-                return TransitionExecutionResponse.builder()
-                        .success(false)
-                        .error("Failed to update issue status: " + e.getMessage())
-                        .warnings(conditionWarnings)
-                        .build();
-            }
-
-            // 7. Execute post-functions asynchronously
-            executePostFunctionsAsync(transitionId, issueId, userId);
-
-            log.info("Transition {} executed successfully for issue {}", transitionId, issueId);
-
-            return TransitionExecutionResponse.builder()
-                    .success(true)
-                    .newStatusId(transition.getToStatusId())
-                    .warnings(conditionWarnings)
-                    .build();
-
-        } catch (ResourceNotFoundException e) {
-            return TransitionExecutionResponse.builder()
-                    .success(false)
-                    .error(e.getMessage())
-                    .build();
-        } catch (Exception e) {
-            log.error("Error executing transition {} for issue {}: {}", transitionId, issueId, e.getMessage());
-            return TransitionExecutionResponse.builder()
-                    .success(false)
-                    .error("Internal error during transition: " + e.getMessage())
-                    .build();
-        }
+        Map<String, Object> issueData = fetchIssueData(issueId);
+        UUID projectId = parseUUID(issueData.get("projectId") != null ? issueData.get("projectId").toString() : null);
+        ExecuteTransitionRequest request = new ExecuteTransitionRequest();
+        request.setIssueId(issueId);
+        request.setTransitionId(transitionId);
+        request.setProjectId(projectId);
+        request.setUserId(userId);
+        return workflowExecutionEngine.execute(request);
     }
 
     private List<String> executeValidators(UUID transitionId, Map<String, Object> issueData, UUID userId) {
@@ -899,6 +806,7 @@ public class WorkflowService {
         List<UUID> statusIds = statuses.stream()
                 .map(WorkflowStatus::getStatusId)
                 .collect(Collectors.toList());
+        int transitionCount = workflowTransitionRepository.findByWorkflowId(workflow.getId()).size();
 
         return WorkflowResponse.builder()
                 .id(workflow.getId())
@@ -908,7 +816,10 @@ public class WorkflowService {
                 .isDefault(workflow.getIsDefault())
                 .isDraft(workflow.getIsDraft())
                 .isActive(workflow.getIsActive())
+                .isSystem(workflow.getIsSystem())
                 .statusIds(statusIds)
+                .statusCount(statuses.size())
+                .transitionCount(transitionCount)
                 .createdAt(workflow.getCreatedAt())
                 .updatedAt(workflow.getUpdatedAt())
                 .build();
@@ -936,7 +847,7 @@ public class WorkflowService {
                 .build();
     }
 
-    private TransitionDetailResponse mapToTransitionDetailResponse(WorkflowTransition transition) {
+    public TransitionDetailResponse mapTransitionDetail(WorkflowTransition transition) {
         List<WorkflowCondition> conditions = workflowConditionRepository.findByTransitionIdOrderBySequenceAsc(transition.getId());
         List<WorkflowValidator> validators = workflowValidatorRepository.findByTransitionIdOrderBySequenceAsc(transition.getId());
         List<WorkflowPostFunction> postFunctions = workflowPostFunctionRepository.findByTransitionIdOrderBySequenceAsc(transition.getId());

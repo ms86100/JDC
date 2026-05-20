@@ -1,6 +1,7 @@
 package com.jira.workflow.controller;
 
 import com.jira.workflow.dto.*;
+import com.jira.workflow.service.WorkflowDetailService;
 import com.jira.workflow.service.WorkflowService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class WorkflowController {
 
     private final WorkflowService workflowService;
+    private final WorkflowDetailService workflowDetailService;
 
     @PostMapping
     @Operation(summary = "Create a new workflow", description = "Creates a new workflow with optional statuses")
@@ -54,6 +56,14 @@ public class WorkflowController {
 
         WorkflowResponse response = workflowService.getWorkflow(workflowId);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{workflowId}/detail")
+    @Operation(summary = "Get full workflow detail", description = "Returns workflow with statuses, transitions (named), and versions")
+    public ResponseEntity<WorkflowDetailResponse> getWorkflowDetail(
+            @Parameter(description = "Workflow ID") @PathVariable UUID workflowId) {
+
+        return ResponseEntity.ok(workflowDetailService.getWorkflowDetail(workflowId));
     }
 
     @PutMapping("/{workflowId}")

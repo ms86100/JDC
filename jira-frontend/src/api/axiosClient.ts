@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:8080';
+// In dev, use relative URLs so Vite proxies /api → gateway (port 8080).
+const API_BASE =
+  import.meta.env.VITE_API_GATEWAY_URL ||
+  (import.meta.env.DEV ? '' : 'http://localhost:8080');
 
 const apiClient = axios.create({
   baseURL: API_BASE,

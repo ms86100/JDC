@@ -10,6 +10,10 @@
 /* Jira Platform Custom Styles */
 @import './features/dashboard/DashboardStyles.css';
 
+/* Administration — Jira DC shell + shared page primitives */
+@import './features/admin/styles/admin-shell.css';
+@import './features/admin/styles/admin-shared.css';
+
 /* Jira Data Center visual overlay — Phase 4 (load LAST so it overrides) */
 @import './styles/jira-dc-overlay.css';
 
