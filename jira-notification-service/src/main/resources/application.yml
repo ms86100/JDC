@@ -75,6 +75,8 @@ logging:
     com.jira.notification: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
+  file:
+    path: ${LOG_PATH:../../logs}/notification
 
 notification:
   email:

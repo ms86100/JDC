@@ -37,3 +37,7 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+logging:
+  file:
+    path: ${LOG_PATH:../../logs}/version

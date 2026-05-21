@@ -20,3 +20,5 @@ logging:
   level:
     root: INFO
     org.springframework.cloud.gateway: DEBUG
+  file:
+    path: ${LOG_PATH:../../logs}/gateway

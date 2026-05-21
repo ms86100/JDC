@@ -42,6 +42,8 @@ logging:
     com.jira.auth: DEBUG
     org.springframework.web: DEBUG
     org.springframework.security: DEBUG
+  file:
+    path: ${LOG_PATH:../../logs}/auth
 
 error:
   include-message: always

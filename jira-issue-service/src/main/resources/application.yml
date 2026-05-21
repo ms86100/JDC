@@ -77,6 +77,12 @@ project:
   service:
     url: ${PROJECT_SERVICE_URL:http://localhost:8083}
 
+jira:
+  permissions:
+    fail-open: false
+  workflow:
+    transition-fallback: false
+
 management:
   endpoints:
     web:
@@ -105,3 +111,5 @@ logging:
     org.hibernate.SQL: DEBUG
     org.springframework.kafka: INFO
     org.springframework.cache: DEBUG
+  file:
+    path: ${LOG_PATH:../../logs}/issue

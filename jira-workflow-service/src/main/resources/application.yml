@@ -69,3 +69,5 @@ logging:
     com.jira: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
+  file:
+    path: ${LOG_PATH:../../logs}/workflow

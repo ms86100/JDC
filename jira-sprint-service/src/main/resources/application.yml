@@ -16,7 +16,8 @@ spring:
         format_sql: true
         default_schema: jira_sprint
   flyway:
-    enabled: false
+    enabled: true
+    locations: classpath:db/migration
 
 server:
   port: ${SERVER_PORT:8091}
@@ -35,3 +36,7 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+logging:
+  file:
+    path: ${LOG_PATH:../../logs}/sprint

@@ -22,7 +22,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        default_schema: test_management
+        default_schema: public
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -49,6 +49,8 @@ logging:
     com.jira: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: INFO
+  file:
+    path: ${LOG_PATH:../../logs}/test
 
 issue:
   service:

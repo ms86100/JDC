@@ -50,3 +50,5 @@ logging:
     root: INFO
     com.jira: DEBUG
     org.hibernate.SQL: WARN
+  file:
+    path: ${LOG_PATH:../../logs}/admin

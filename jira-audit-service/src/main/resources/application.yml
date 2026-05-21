@@ -51,3 +51,5 @@ logging:
     com.jira.audit: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
+  file:
+    path: ${LOG_PATH:../../logs}/audit
