@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import testApi, { TestImportResponse } from '../../../api/testApi';
+import combinedApi, { TestImportResponse } from '../../../api/testApi';
 
 interface ImportPanelProps {
   projectId: string;
@@ -17,7 +17,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({ projectId, onImportCom
 
   const loadHistory = async () => {
     try {
-      const response = await testApi.getImportHistory(projectId);
+      const response = await combinedApi.getImportHistory(projectId);
       setHistory(response);
     } catch (error) {
       console.error('Failed to load import history:', error);
@@ -48,8 +48,8 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({ projectId, onImportCom
 
     try {
       const response = importType === 'CUCUMBER'
-        ? await testApi.importCucumber(projectId, selectedFile)
-        : await testApi.importJUnit(projectId, selectedFile);
+        ? await combinedApi.importCucumber(projectId, selectedFile)
+        : await combinedApi.importJUnit(projectId, selectedFile);
       setImportResult(response);
       onImportComplete?.();
       loadHistory();

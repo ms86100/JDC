@@ -23,17 +23,4 @@ public class ImpactAnalysisResponse {
     private BigDecimal confidenceScore;
     private String analyzedBy;
     private LocalDateTime createdAt;
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class TestImpactDto {
-        private UUID testId;
-        private String testIssueKey;
-        private String testName;
-        private String impactLevel; // HIGH, MEDIUM, LOW
-        private BigDecimal riskScore;
-        private String reason;
-    }
 }

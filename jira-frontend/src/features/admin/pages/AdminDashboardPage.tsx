@@ -107,7 +107,6 @@ export default function AdminDashboardPage() {
 
       <div className="admin-search-section">
         <div className="admin-search-box">
-          <span className="search-icon" aria-hidden="true">⌕</span>
           <input
             type="search"
             placeholder="Search admin settings..."

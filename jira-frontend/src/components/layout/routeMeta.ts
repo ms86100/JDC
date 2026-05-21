@@ -4,8 +4,6 @@
  * Matches against location.pathname using longest-prefix semantics.
  */
 
-import { ADMIN_CATEGORIES } from './adminCategories';
-
 export interface RouteMeta {
   title: string;
   breadcrumbs: { label: string; href?: string }[];
@@ -31,53 +29,17 @@ export const ROUTE_META: { match: string | RegExp; meta: RouteMeta }[] = [
   { match: '/notifications',     meta: { area: 'workspace', title: 'Notifications', breadcrumbs: [{ label: 'Notifications' }] } },
   { match: '/audit',             meta: { area: 'workspace', title: 'Audit logs',    breadcrumbs: [{ label: 'Operations' }, { label: 'Audit logs' }] } },
   { match: '/migration',         meta: { area: 'workspace', title: 'Migration',     breadcrumbs: [{ label: 'Operations' }, { label: 'Migration' }] } },
-  { match: /^\/programs\/create/,   meta: { area: 'workspace', title: 'Create program',breadcrumbs: [{ label: 'Plans', href: '/programs' }, { label: 'Create program' }] } },
-  { match: /^\/programs\/[^/]+/,    meta: { area: 'workspace', title: 'Program',      breadcrumbs: [{ label: 'Plans', href: '/programs' }, { label: 'Program' }] } },
-  { match: '/programs',          meta: { area: 'workspace', title: 'Programs',      breadcrumbs: [{ label: 'Plans' }, { label: 'Programs' }] } },
+  { match: /^\/programs\/create/,   meta: { area: 'workspace', title: 'Create program',breadcrumbs: [{ label: 'Programs', href: '/programs' }, { label: 'Create' }] } },
+  { match: /^\/programs\/[^/]+/,    meta: { area: 'workspace', title: 'Program',      breadcrumbs: [{ label: 'Programs', href: '/programs' }, { label: 'Overview' }] } },
+  { match: '/programs',          meta: { area: 'workspace', title: 'Programs',      breadcrumbs: [{ label: 'Programs' }] } },
   { match: /^\/plans\/create/,      meta: { area: 'workspace', title: 'Create plan',   breadcrumbs: [{ label: 'Plans', href: '/plans' }, { label: 'Create' }] } },
   { match: /^\/plans\/[^/]+/,       meta: { area: 'workspace', title: 'Plan',         breadcrumbs: [{ label: 'Plans', href: '/plans' }, { label: 'Detail' }] } },
   { match: '/plans',             meta: { area: 'workspace', title: 'Plans',         breadcrumbs: [{ label: 'Plans' }] } },
+  // Admin
+  { match: '/admin',             meta: { area: 'admin', title: 'Administration', breadcrumbs: [{ label: 'Administration' }] } },
 ];
 
-function adminMetaFor(pathname: string): RouteMeta | null {
-  if (!pathname.startsWith('/admin')) return null;
-
-  if (pathname === '/admin' || pathname === '/admin/') {
-    return {
-      area: 'admin',
-      title: 'Administration',
-      breadcrumbs: [{ label: 'Administration' }],
-    };
-  }
-
-  let pageLabel = 'Settings';
-  let categoryLabel = 'Administration';
-
-  for (const cat of ADMIN_CATEGORIES) {
-    for (const it of cat.items) {
-      if (pathname === it.path || pathname.startsWith(`${it.path}/`)) {
-        pageLabel = it.label;
-        categoryLabel = cat.label;
-        break;
-      }
-    }
-  }
-
-  return {
-    area: 'admin',
-    title: pageLabel,
-    breadcrumbs: [
-      { label: 'Administration', href: '/admin' },
-      { label: categoryLabel },
-      { label: pageLabel },
-    ],
-  };
-}
-
 export function metaFor(pathname: string): RouteMeta {
-  const adminMeta = adminMetaFor(pathname);
-  if (adminMeta) return adminMeta;
-
   for (const { match, meta } of ROUTE_META) {
     if (typeof match === 'string') {
       if (pathname === match || pathname.startsWith(match + '/')) return meta;

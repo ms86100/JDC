@@ -43,6 +43,10 @@ public class ProjectScheme {
     @JoinColumn(name = "screen_scheme_id")
     private ScreenScheme screenScheme;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "field_configuration_scheme_id")
+    private FieldConfigurationScheme fieldConfigurationScheme;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

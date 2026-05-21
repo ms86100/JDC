@@ -1,5 +1,6 @@
 package com.jira.migration.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,7 +17,10 @@ import java.util.List;
  * Simplified for testing - all endpoints accessible.
  */
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final MigrationHeaderAuthFilter migrationHeaderAuthFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -26,6 +30,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
+            .addFilterBefore(migrationHeaderAuthFilter, org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                 .anyRequest().permitAll()
             );

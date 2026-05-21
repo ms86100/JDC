@@ -13,4 +13,6 @@ public interface WorkflowSchemeWorkflowRepository extends JpaRepository<Workflow
     List<WorkflowSchemeWorkflow> findBySchemeId(UUID schemeId);
 
     List<WorkflowSchemeWorkflow> findBySchemeIdAndIssueTypeNameIsNull(UUID schemeId);
+
+    List<WorkflowSchemeWorkflow> findBySchemeIdAndIssueTypeNameIsNotNull(UUID schemeId);
 }

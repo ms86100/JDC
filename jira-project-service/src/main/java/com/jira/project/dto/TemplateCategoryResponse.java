@@ -15,7 +15,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TemplateCategoryResponse {
+    private String categoryKey;
     private String categoryName;
+    private String categoryDescription;
     private String categoryIcon;
+    private String categoryIconEmoji;
+    private Integer sortOrder;
     private List<ProjectTemplateResponse> templates;
 }

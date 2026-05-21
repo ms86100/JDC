@@ -2,6 +2,7 @@ package com.jira.test.service;
 
 import com.jira.test.dto.*;
 import com.jira.test.entity.*;
+import com.jira.test.event.*;
 import com.jira.test.exception.*;
 import com.jira.test.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class TraceabilityService {
     private final DefectLinkRepository defectLinkRepository;
     private final TestExecutionRepository executionRepository;
     private final StepResultRepository stepResultRepository;
+    private final EventPublisherService eventPublisher;
 
     @Transactional
     public RequirementLinkResponse linkRequirementToTest(RequirementLinkRequest request) {
@@ -42,6 +44,9 @@ public class TraceabilityService {
                 .build();
 
         link = requirementLinkRepository.save(link);
+
+        // Publish RequirementUpdatedEvent
+        publishRequirementUpdatedEvent(link, "REQUIREMENT_LINKED", null, "COVERED");
 
         log.info("Requirement linked with id: {}", link.getId());
         return mapToRequirementLinkResponse(link);
@@ -155,8 +160,63 @@ public class TraceabilityService {
 
         defectLink = defectLinkRepository.save(defectLink);
 
+        // Publish DefectLinkedEvent
+        publishDefectLinkedEvent(execution, stepResultId, defectKey, severity);
+
         log.info("Defect linked with id: {}", defectLink.getId());
         return mapToDefectLinkResponse(defectLink);
+    }
+
+    private void publishRequirementUpdatedEvent(RequirementLink link, String changeType,
+                                                String previousValue, String newValue) {
+        try {
+            // Get project ID from test
+            UUID projectId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+            Optional<TestIssue> test = testIssueRepository.findById(link.getTestId());
+            if (test.isPresent()) {
+                projectId = test.get().getProjectId();
+            }
+
+            RequirementUpdatedEvent event = RequirementUpdatedEvent.builder()
+                    .source(this)
+                    .projectId(projectId)
+                    .requirementId(link.getId())
+                    .requirementKey(link.getRequirementKey())
+                    .changeType(changeType)
+                    .previousValue(previousValue)
+                    .newValue(newValue)
+                    .affectedTestIds(List.of(link.getTestId()))
+                    .build();
+            eventPublisher.publish(event);
+            log.info("Published RequirementUpdatedEvent for: {}", link.getRequirementKey());
+        } catch (Exception e) {
+            log.error("Failed to publish RequirementUpdatedEvent: {}", e.getMessage(), e);
+        }
+    }
+
+    private void publishDefectLinkedEvent(TestExecution execution, UUID stepResultId,
+                                          String defectKey, String severity) {
+        try {
+            DefectLinkedEvent event = DefectLinkedEvent.builder()
+                    .source(this)
+                    .projectId(extractProjectId(execution))
+                    .executionId(execution.getId())
+                    .stepResultId(stepResultId)
+                    .defectKey(defectKey)
+                    .severity(severity)
+                    .linkedBy(execution.getTesterId() != null ? execution.getTesterId().toString() : "SYSTEM")
+                    .affectedTestIds(List.of(execution.getTestId() != null ? execution.getTestId().toString() : ""))
+                    .build();
+            eventPublisher.publish(event);
+            log.info("Published DefectLinkedEvent for: {}", defectKey);
+        } catch (Exception e) {
+            log.error("Failed to publish DefectLinkedEvent: {}", e.getMessage(), e);
+        }
+    }
+
+    private UUID extractProjectId(TestExecution execution) {
+        // In a real implementation, extract from execution's associated entities
+        return UUID.fromString("00000000-0000-0000-0000-000000000001");
     }
 
     private String getLastExecutionStatus(UUID testId) {

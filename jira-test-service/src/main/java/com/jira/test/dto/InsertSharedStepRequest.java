@@ -15,6 +15,9 @@ public class InsertSharedStepRequest {
     @NotNull(message = "Test ID is required")
     private UUID testId;
 
+    @NotNull(message = "Project ID is required")
+    private UUID projectId;
+
     @NotNull(message = "Shared Step ID is required")
     private UUID sharedStepId;
 

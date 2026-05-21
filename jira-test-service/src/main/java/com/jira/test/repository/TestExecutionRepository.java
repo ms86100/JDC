@@ -17,6 +17,8 @@ public interface TestExecutionRepository extends JpaRepository<TestExecution, UU
 
     List<TestExecution> findByTestId(UUID testId);
 
+    List<TestExecution> findByTestIdOrderByCreatedAtDesc(UUID testId);
+
     List<TestExecution> findByTesterId(UUID testerId);
 
     @Query("SELECT e FROM TestExecution e WHERE e.testSetId = :setId ORDER BY e.createdAt DESC")
@@ -30,4 +32,9 @@ public interface TestExecutionRepository extends JpaRepository<TestExecution, UU
 
     @Query("SELECT AVG(CAST(e.passedTests AS float) / NULLIF(e.totalTests, 0) * 100) FROM TestExecution e WHERE e.testSetId = :setId AND e.totalTests > 0")
     Double getAveragePassRateForSet(@Param("setId") UUID setId);
+
+    @Query("SELECT e FROM TestExecution e WHERE e.createdAt >= :since")
+    List<TestExecution> findByExecutedAtAfter(@Param("since") LocalDateTime since);
+
+    boolean existsByProjectId(UUID projectId);
 }

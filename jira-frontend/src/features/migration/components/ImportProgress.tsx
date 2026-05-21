@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { JobProgress, EntityProgress } from '../types/migration';
+import JobPauseResumeControls from './JobPauseResumeControls';
 
 interface ImportProgressProps {
   progress: JobProgress;
@@ -7,6 +8,7 @@ interface ImportProgressProps {
   onCancel?: () => void;
   onViewLogs?: () => void;
   showLogs?: boolean;
+  onOpenJobConsole?: () => void;
 }
 
 const STATUS_ICONS: Record<string, string> = {
@@ -37,6 +39,7 @@ export default function ImportProgress({
   onCancel,
   onViewLogs,
   showLogs = false,
+  onOpenJobConsole,
 }: ImportProgressProps) {
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [logs, setLogs] = useState<Array<{ timestamp: Date; message: string; type: 'info' | 'error' | 'success' }>>([]);
@@ -54,10 +57,30 @@ export default function ImportProgress({
     return () => clearInterval(interval);
   }, [progress.startedAt]);
 
-  // Auto-scroll logs
+  useEffect(() => {
+    if (progress.recentLogs?.length) {
+      setLogs(
+        progress.recentLogs.map((l) => ({
+          timestamp: l.timestamp ? new Date(l.timestamp) : new Date(),
+          message: l.message || '',
+          type: (l.level === 'ERROR' ? 'error' : l.level === 'WARN' ? 'info' : 'success') as
+            | 'info'
+            | 'error'
+            | 'success',
+        }))
+      );
+    }
+  }, [progress.recentLogs]);
+
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
 
   // Format elapsed time
   const formatElapsedTime = (seconds: number): string => {
@@ -123,12 +146,26 @@ export default function ImportProgress({
               </h3>
               <p className="text-sm text-gray-500 mt-1">
                 Job ID: {progress.jobId}
+                {progress.currentPhase && (
+                  <span className="ml-2 text-indigo-600">Phase: {progress.currentPhase}</span>
+                )}
                 {isPolling && <span className="ml-2 text-blue-500">● Live</span>}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            <JobPauseResumeControls jobId={progress.jobId} jobStatus={progress.jobStatus} />
+            {onOpenJobConsole && (
+              <button
+                type="button"
+                data-testid="import-progress-job-console"
+                onClick={onOpenJobConsole}
+                className="px-3 py-2 text-sm bg-indigo-100 text-indigo-800 hover:bg-indigo-200 rounded-md transition-colors"
+              >
+                Job console
+              </button>
+            )}
             {onViewLogs && (
               <button
                 onClick={onViewLogs}
@@ -154,6 +191,28 @@ export default function ImportProgress({
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-sm font-medium text-gray-700">Overall Progress</h4>
           <div className="flex items-center gap-4 text-sm">
+            {(progress.attachmentBytesWritten ?? 0) > 0 && (
+              <span className="text-gray-600">
+                Attachments: {formatBytes(progress.attachmentBytesWritten ?? 0)}
+                {progress.attachmentsCompleted != null &&
+                  ` (${progress.attachmentsCompleted} files)`}
+              </span>
+            )}
+            {(progress.incrementalSkipped ?? 0) > 0 && (
+              <span className="text-gray-600">
+                Incremental skipped: {progress.incrementalSkipped}
+              </span>
+            )}
+            {progress.attachmentChunked && progress.attachmentChunkTotal != null && (
+              <span className="text-indigo-600">
+                Chunk {progress.attachmentChunkIndex ?? 0}/{progress.attachmentChunkTotal}
+                {progress.attachmentCurrentFile && (
+                  <span className="text-gray-500 ml-1 truncate max-w-[140px] inline-block align-bottom">
+                    {progress.attachmentCurrentFile}
+                  </span>
+                )}
+              </span>
+            )}
             {progress.processedEntities > 0 && (
               <span className="text-gray-500">
                 {progress.processedEntities.toLocaleString()} / {progress.totalEntities.toLocaleString()} entities
@@ -173,6 +232,23 @@ export default function ImportProgress({
             style={{ width: `${progress.progressPercentage}%` }}
           />
         </div>
+
+        {progress.stages && Object.keys(progress.stages).length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            {Object.entries(progress.stages).map(([name, stage]) => {
+              const pct = stage.total > 0 ? Math.round((stage.completed / stage.total) * 100) : 0;
+              return (
+                <div key={name} className="rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
+                  <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">{name}</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">
+                    {stage.completed} / {stage.total}
+                    <span className="text-gray-500 font-normal ml-1">({pct}%)</span>
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
@@ -307,6 +383,8 @@ export default function ImportProgress({
               }`}>
                 {progress.processedEntities.toLocaleString()} entities processed
                 {progress.failedEntities > 0 && `, ${progress.failedEntities.toLocaleString()} failed`}
+                {(progress.incrementalSkipped ?? 0) > 0 &&
+                  `, ${progress.incrementalSkipped} skipped (incremental delta)`}
               </p>
             </div>
           </div>

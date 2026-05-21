@@ -2,6 +2,7 @@ package com.jira.test.service;
 
 import com.jira.test.dto.*;
 import com.jira.test.entity.*;
+import com.jira.test.event.*;
 import com.jira.test.exception.*;
 import com.jira.test.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class CiCdImportService {
     private final TestService testService;
     private final TestSetRepository testSetRepository;
     private final TestSetItemRepository testSetItemRepository;
+    private final EventPublisherService eventPublisher;
 
     @Transactional
     public JunitImportResponse importJUnitXml(JunitImportRequest request) {
@@ -45,6 +47,9 @@ public class CiCdImportService {
         int passed = 0;
         int failed = 0;
         int skipped = 0;
+        int successCount = 0;
+        int failureCount = 0;
+        UUID batchId = UUID.randomUUID();
 
         try {
             JUnitParseResult parseResult = parseJUnitResults(request.getXmlContent());
@@ -101,6 +106,7 @@ public class CiCdImportService {
                                 .build();
                         test = testIssueRepository.save(test);
                         createdTests.add(mapToTestResponse(test));
+                        successCount++;
                     }
 
                     StepResult stepResult = StepResult.builder()
@@ -119,6 +125,7 @@ public class CiCdImportService {
                 } catch (Exception e) {
                     log.warn("Failed to process test case '{}': {}", testCase.name, e.getMessage());
                     errors.add("Test case '" + testCase.name + "': " + e.getMessage());
+                    failureCount++;
                 }
             }
 
@@ -129,8 +136,13 @@ public class CiCdImportService {
 
             log.info("JUnit import completed: {} passed, {} failed, {} skipped", passed, failed, skipped);
 
+            // Publish TestImportedEvent
+            String ciSource = detectCiSource(request.getCiBuildUrl());
+            publishTestImportedEvent(request.getProjectId(), batchId, ciSource, "JUNIT_XML",
+                    parseResult.total, successCount, failureCount, errors, testSet != null ? testSet.getId() : null);
+
             return JunitImportResponse.builder()
-                    .batchId(UUID.randomUUID())
+                    .batchId(batchId)
                     .status(errors.isEmpty() ? "COMPLETED" : "COMPLETED_WITH_ERRORS")
                     .totalTests(parseResult.total)
                     .passed(passed)
@@ -142,8 +154,13 @@ public class CiCdImportService {
 
         } catch (Exception e) {
             log.error("Failed to parse JUnit XML: {}", e.getMessage(), e);
+
+            // Publish failure event
+            publishTestImportedEvent(request.getProjectId(), batchId, "JUNIT", "JUNIT_XML",
+                    0, 0, 1, List.of(e.getMessage()), null);
+
             return JunitImportResponse.builder()
-                    .batchId(UUID.randomUUID())
+                    .batchId(batchId)
                     .status("FAILED")
                     .totalTests(0)
                     .passed(0)
@@ -152,6 +169,29 @@ public class CiCdImportService {
                     .message("Failed to parse JUnit XML: " + e.getMessage())
                     .createdTests(List.of())
                     .build();
+        }
+    }
+
+    private void publishTestImportedEvent(UUID projectId, UUID batchId, String importSource,
+                                          String importType, int totalImported, int successCount,
+                                          int failureCount, List<String> errors, UUID testPlanId) {
+        try {
+            TestImportedEvent event = TestImportedEvent.builder()
+                    .source(this)
+                    .projectId(projectId)
+                    .batchId(batchId)
+                    .importSource(importSource)
+                    .importType(importType)
+                    .totalImported(totalImported)
+                    .successCount(successCount)
+                    .failureCount(failureCount)
+                    .errors(errors)
+                    .testPlanId(testPlanId)
+                    .build();
+            eventPublisher.publish(event);
+            log.info("Published TestImportedEvent for JUnit batch: {}", batchId);
+        } catch (Exception e) {
+            log.error("Failed to publish TestImportedEvent: {}", e.getMessage(), e);
         }
     }
 

@@ -9,9 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +30,8 @@ public class TemplateService {
 
     private final ProjectTemplateRepository projectTemplateRepository;
     private final ProjectTypeRepository projectTypeRepository;
+    private final TemplateCategoryRepository templateCategoryRepository;
+    private final TemplateCapabilityRepository templateCapabilityRepository;
     private final TemplateWorkflowStatusRepository templateWorkflowStatusRepository;
     private final TemplateWorkflowTransitionRepository templateWorkflowTransitionRepository;
     private final TemplateIssueTypeRepository templateIssueTypeRepository;
@@ -39,28 +39,88 @@ public class TemplateService {
     private final StatusDefinitionRepository statusDefinitionRepository;
 
     /**
+     * Full catalog for Create Project wizard (Jira DC-style two-panel UI).
+     */
+    public TemplateCatalogResponse getTemplateCatalog() {
+        log.debug("Fetching template catalog");
+
+        List<ProjectTemplate> activeTemplates = projectTemplateRepository.findAll().stream()
+                .filter(ProjectTemplate::getIsActive)
+                .sorted(Comparator.comparing(ProjectTemplate::getSortOrder))
+                .collect(Collectors.toList());
+
+        Map<UUID, List<TemplateCapabilityDto>> capabilitiesByTemplate = loadCapabilities(activeTemplates);
+
+        List<TemplateCategory> categories = templateCategoryRepository.findByIsActiveTrueOrderBySortOrderAsc();
+        List<TemplateCatalogResponse.TemplateCategoryCatalogDto> categoryDtos = new ArrayList<>();
+
+        for (TemplateCategory category : categories) {
+            List<ProjectTemplateResponse> templates = activeTemplates.stream()
+                    .filter(t -> t.getTemplateCategory() != null
+                            && category.getId().equals(t.getTemplateCategory().getId()))
+                    .map(t -> mapToTemplateResponse(t, capabilitiesByTemplate.get(t.getId())))
+                    .collect(Collectors.toList());
+
+            if (!templates.isEmpty()) {
+                categoryDtos.add(TemplateCatalogResponse.TemplateCategoryCatalogDto.builder()
+                        .categoryKey(category.getCategoryKey())
+                        .name(category.getName())
+                        .description(category.getDescription())
+                        .icon(category.getIcon())
+                        .iconEmoji(category.getIconEmoji())
+                        .sortOrder(category.getSortOrder())
+                        .templates(templates)
+                        .build());
+            }
+        }
+
+        // Uncategorized fallback (legacy templates without category_id)
+        List<ProjectTemplateResponse> uncategorized = activeTemplates.stream()
+                .filter(t -> t.getTemplateCategory() == null)
+                .map(t -> mapToTemplateResponse(t, capabilitiesByTemplate.get(t.getId())))
+                .collect(Collectors.toList());
+
+        if (!uncategorized.isEmpty()) {
+            categoryDtos.add(TemplateCatalogResponse.TemplateCategoryCatalogDto.builder()
+                    .categoryKey("OTHER")
+                    .name("Other")
+                    .description("Additional project templates")
+                    .icon("folder")
+                    .iconEmoji("📁")
+                    .sortOrder(99)
+                    .templates(uncategorized)
+                    .build());
+        }
+
+        List<ProjectTemplateResponse> recommended = activeTemplates.stream()
+                .filter(t -> Boolean.TRUE.equals(t.getIsRecommended()))
+                .map(t -> mapToTemplateResponse(t, capabilitiesByTemplate.get(t.getId())))
+                .collect(Collectors.toList());
+
+        return TemplateCatalogResponse.builder()
+                .categories(categoryDtos)
+                .recommended(recommended)
+                .recentlyUsed(List.of())
+                .build();
+    }
+
+    /**
      * Get all active templates grouped by category
      */
     public List<TemplateCategoryResponse> getTemplatesByCategory() {
         log.debug("Fetching templates grouped by category");
 
-        List<ProjectTemplate> templates = projectTemplateRepository.findAll().stream()
-                .filter(ProjectTemplate::getIsActive)
-                .collect(Collectors.toList());
+        TemplateCatalogResponse catalog = getTemplateCatalog();
 
-        // Group by category
-        Map<String, List<ProjectTemplate>> byCategory = templates.stream()
-                .collect(Collectors.groupingBy(
-                        t -> t.getCategory() != null ? t.getCategory() : "SOFTWARE"
-                ));
-
-        return byCategory.entrySet().stream()
-                .map(entry -> TemplateCategoryResponse.builder()
-                        .categoryName(entry.getKey())
-                        .categoryIcon(getCategoryIcon(entry.getKey()))
-                        .templates(entry.getValue().stream()
-                                .map(this::mapToTemplateResponse)
-                                .collect(Collectors.toList()))
+        return catalog.getCategories().stream()
+                .map(cat -> TemplateCategoryResponse.builder()
+                        .categoryKey(cat.getCategoryKey())
+                        .categoryName(cat.getName())
+                        .categoryDescription(cat.getDescription())
+                        .categoryIcon(cat.getIcon())
+                        .categoryIconEmoji(cat.getIconEmoji())
+                        .sortOrder(cat.getSortOrder())
+                        .templates(cat.getTemplates())
                         .build())
                 .collect(Collectors.toList());
     }
@@ -191,17 +251,30 @@ public class TemplateService {
 
     // ============ Helper Methods ============
 
-    private String getCategoryIcon(String category) {
-        return switch (category.toUpperCase()) {
-            case "BUSINESS" -> "briefcase";
-            case "SOFTWARE" -> "code";
-            case "TEAM_MANAGED" -> "users";
-            default -> "folder";
-        };
+    private Map<UUID, List<TemplateCapabilityDto>> loadCapabilities(List<ProjectTemplate> templates) {
+        if (templates.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> ids = templates.stream().map(ProjectTemplate::getId).collect(Collectors.toList());
+        return templateCapabilityRepository.findByTemplateIdInOrderBySortOrderAsc(ids).stream()
+                .collect(Collectors.groupingBy(
+                        TemplateCapability::getTemplateId,
+                        Collectors.mapping(c -> TemplateCapabilityDto.builder()
+                                .key(c.getCapabilityKey())
+                                .label(c.getCapabilityLabel())
+                                .group(c.getCapabilityGroup())
+                                .build(), Collectors.toList())
+                ));
     }
 
     private ProjectTemplateResponse mapToTemplateResponse(ProjectTemplate template) {
+        return mapToTemplateResponse(template, List.of());
+    }
+
+    private ProjectTemplateResponse mapToTemplateResponse(ProjectTemplate template, List<TemplateCapabilityDto> capabilities) {
         ProjectType type = template.getType();
+        TemplateCategory cat = template.getTemplateCategory();
+
         return ProjectTemplateResponse.builder()
                 .id(template.getId())
                 .typeId(type.getId())
@@ -209,13 +282,42 @@ public class TemplateService {
                 .name(template.getName())
                 .description(template.getDescription())
                 .icon(template.getIcon())
-                .color(template.getColor())
+                .color(template.getColor() != null ? template.getColor() : template.getPreviewAccent())
                 .defaultAssigneeType(template.getDefaultAssigneeType())
                 .allowIssueCreation(template.getAllowIssueCreation())
                 .sortOrder(template.getSortOrder())
                 .isActive(template.getIsActive())
                 .createdAt(template.getCreatedAt())
+                .categoryKey(cat != null ? cat.getCategoryKey() : template.getCategory())
+                .categoryName(cat != null ? cat.getName() : null)
+                .templateType(template.getTemplateType())
+                .workflowType(template.getWorkflowType())
+                .workflowTypeLabel(formatWorkflowTypeLabel(template.getWorkflowType()))
+                .shortDescription(template.getShortDescription())
+                .iconEmoji(template.getIconEmoji())
+                .useCases(template.getUseCases())
+                .instructions(template.getInstructions())
+                .previewAccent(template.getPreviewAccent() != null ? template.getPreviewAccent() : template.getColor())
+                .recommended(template.getIsRecommended())
+                .projectTypeCategory(type.getCategory())
+                .capabilities(capabilities != null ? capabilities : List.of())
                 .build();
+    }
+
+    private String formatWorkflowTypeLabel(String workflowType) {
+        if (workflowType == null) {
+            return "General";
+        }
+        return switch (workflowType) {
+            case "AGILE_SCRUM" -> "Agile · Scrum";
+            case "AGILE_KANBAN" -> "Agile · Kanban";
+            case "DEFECT_TRACKING" -> "Defect Tracking";
+            case "TASK" -> "Task-based";
+            case "PORTFOLIO" -> "Portfolio";
+            case "PROCESS" -> "Process-based";
+            case "TEAM_MANAGED" -> "Team-managed";
+            default -> workflowType.replace('_', ' ');
+        };
     }
 
     private TemplateIssueTypeDto mapToIssueTypeDto(TemplateIssueType issueType) {

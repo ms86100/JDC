@@ -21,6 +21,7 @@
         <java.version>21</java.version>
         <springdoc.version>2.5.0</springdoc.version>
         <opencsv.version>5.9</opencsv.version>
+        <poi.version>5.2.5</poi.version>
         <snakeyaml.version>2.2</snakeyaml.version>
     </properties>
 
@@ -69,6 +70,13 @@
             <groupId>com.opencsv</groupId>
             <artifactId>opencsv</artifactId>
             <version>${opencsv.version}</version>
+        </dependency>
+
+        <!-- Excel (.xlsx) Parsing -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
         </dependency>
 
         <!-- XML Parsing -->
@@ -203,6 +211,24 @@
                             <version>1.18.42</version>
                         </path>
                     </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <configuration>
+                    <url>jdbc:postgresql://localhost:5432/jira_platform</url>
+                    <user>jiraadmin</user>
+                    <password>UNIpay@123</password>
+                    <schemas>
+                        <schema>jira_migration</schema>
+                    </schemas>
+                    <defaultSchema>jira_migration</defaultSchema>
+                    <locations>
+                        <location>classpath:db/migration</location>
+                    </locations>
+                    <table>flyway_schema_history</table>
+                    <baselineOnMigrate>true</baselineOnMigrate>
                 </configuration>
             </plugin>
             <plugin>

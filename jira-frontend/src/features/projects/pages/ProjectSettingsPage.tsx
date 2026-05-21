@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectApi, ProjectResponse } from '../../../api/projectApi';
+import ProjectWorkflowSchemePanel from '../components/ProjectWorkflowSchemePanel';
 import '../styles/ProjectSettingsPage.css';
+import '../../workflows/pages/workflow-management.css';
 
 type SettingsTab = 'details' | 'members' | 'workflows' | 'components' | 'versions' | 'permissions';
 
@@ -212,7 +214,7 @@ export default function ProjectSettingsPage() {
           </div>
         )}
 
-        {activeTab === 'workflows' && (
+        {activeTab === 'workflows' && projectId && (
           <div className="ab-settings-section">
             <div className="ab-card">
               <div className="ab-card-header">
@@ -222,10 +224,10 @@ export default function ProjectSettingsPage() {
                 </button>
               </div>
               <div className="ab-card-body">
-                <div className="ab-workflow-info">
-                  <p>Configure workflows for this project to define how issues progress through statuses.</p>
-                  <Link to="/workflows" className="ab-link">Go to Workflow Administration →</Link>
-                </div>
+                <ProjectWorkflowSchemePanel projectId={projectId} />
+                <p className="wf-muted" style={{ marginTop: 16 }}>
+                  <Link to="/workflows" className="ab-link">Open workflow administration →</Link>
+                </p>
               </div>
             </div>
           </div>

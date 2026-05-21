@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { issueApi, IssueResponse } from '../../../api/issueApi';
 import { commentApi } from '../../../api/commentApi';
 import { labelApi } from '../../../api/labelApi';
@@ -13,7 +13,10 @@ type TabType = 'details' | 'people' | 'activity' | 'comment' | 'work';
 /**
  * Full Issue Response - All Systems and Avionics Mandatory Fields
  */
-interface FullIssueResponse extends IssueResponse {
+interface FullIssueResponse extends Omit<IssueResponse, 'watchers'> {
+  // Override watchers to accept both formats
+  watchers?: string[] | Array<{ id: string; name: string; avatar: string }>;
+
   // Core Metadata
   projectName?: string;
   issueKey: string;
@@ -98,7 +101,6 @@ interface FullIssueResponse extends IssueResponse {
   votes?: number;
   voteCount?: number;
   watcherCount?: number;
-  watchers?: Array<{ id: string; name: string; avatar: string }>;
   linkedIssues?: Array<{ type: string; key: string; title: string }>;
   subtasks?: IssueResponse[];
   parent?: { id: string; key: string; title: string };
@@ -107,20 +109,28 @@ interface FullIssueResponse extends IssueResponse {
   customFields?: Record<string, any>;
 }
 
+const JDC_ISSUE_BASE = import.meta.env.VITE_JDC_ISSUE_URL || 'http://localhost:3000/issues';
+
 export default function IssueDetailPage() {
   const { issueId } = useParams<{ issueId: string }>();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (issueId) {
+      window.location.replace(`${JDC_ISSUE_BASE}/${issueId}`);
+    }
+  }, [issueId]);
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showTransitionMenu, setShowTransitionMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [newComment, setNewComment] = useState('');
 
-  const { data: issue, isLoading } = useQuery<FullIssueResponse>({
+  const { data: issue, isLoading } = useQuery({
     queryKey: ['issue', issueId],
     queryFn: async () => {
       const response = await issueApi.getById(issueId!);
-      return response.data;
+      return response.data as FullIssueResponse;
     },
     enabled: !!issueId,
   });
@@ -362,7 +372,7 @@ export default function IssueDetailPage() {
               className="idc-status-transition-btn"
               onClick={() => setShowTransitionMenu(!showTransitionMenu)}
             >
-              <span>To Do</span>
+              <span>{issue.status || 'Transition'}</span>
               <span className="idc-dropdown-caret">▾</span>
             </button>
           </div>

@@ -19,6 +19,7 @@ public class WorkflowEventOutboxProcessor {
 
     private final WorkflowEventOutboxRepository outboxRepository;
     private final WorkflowOutboxIntegrationClient integrationClient;
+    private final ProjectNotificationSchemeClient notificationSchemeClient;
 
     @Value("${jira.workflow.outbox.batch-size:50}")
     private int batchSize;
@@ -73,6 +74,10 @@ public class WorkflowEventOutboxProcessor {
             recipients.remove(actorId);
         }
 
+        UUID projectId = parseUuid(payload.get("projectId"));
+        Set<UUID> schemeRecipients = notificationSchemeClient.resolveRecipients(projectId, "ISSUE_TRANSITIONED");
+        recipients.addAll(schemeRecipients);
+
         for (UUID recipient : recipients) {
             try {
                 integrationClient.sendNotification(
@@ -86,6 +91,9 @@ public class WorkflowEventOutboxProcessor {
                 log.warn("Notification skipped for user {}: {}", recipient, e.getMessage());
             }
         }
+
+        integrationClient.broadcastIssueEvent(issueId, projectId, "issue.transitioned");
+        integrationClient.broadcastIssueEvent(issueId, projectId, "STATUS_CHANGED");
 
         String indexTitle = issueKey + (summary.isBlank() ? "" : " — " + summary);
         String indexContent = String.format("status transition %s → %s via %s",

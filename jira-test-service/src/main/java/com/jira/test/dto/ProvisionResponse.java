@@ -22,5 +22,6 @@ public class ProvisionResponse {
     private LocalDateTime expiresAt;
     private LocalDateTime provisionedAt;
     private String status;
+    private String provisioningStatus;
     private String errorMessage;
 }

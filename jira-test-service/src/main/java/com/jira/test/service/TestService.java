@@ -43,6 +43,7 @@ public class TestService {
                 .priority(request.getPriority())
                 .ownerId(request.getOwnerId())
                 .requirementKeys(request.getRequirementKeys())
+                .folderId(request.getFolderId())
                 .build();
 
         test = testIssueRepository.save(test);
@@ -266,6 +267,7 @@ public class TestService {
                 .gherkinFeatureKey(test.getGherkinFeatureKey())
                 .gherkinScenarioId(test.getGherkinScenarioId())
                 .testSetId(test.getTestSetId())
+                .folderId(test.getFolderId())
                 .archived(test.getArchived())
                 .steps(steps)
                 .createdAt(test.getCreatedAt())

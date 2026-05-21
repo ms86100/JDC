@@ -6,7 +6,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -24,6 +26,9 @@ public class TransitionExecutionResponse {
 
     @Builder.Default
     private List<String> warnings = new ArrayList<>();
+
+    @Builder.Default
+    private Map<String, String> validationErrors = new LinkedHashMap<>();
 
     private UUID newStatusId;
 

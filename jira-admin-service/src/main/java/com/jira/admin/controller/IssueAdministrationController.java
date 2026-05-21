@@ -249,6 +249,12 @@ public class IssueAdministrationController {
         return ResponseEntity.ok(issueAdministrationService.getScreens());
     }
 
+    @GetMapping("/screens/{screenId}/fields")
+    @Operation(summary = "Get field layout for a screen")
+    public ResponseEntity<Map<String, Object>> getScreenFields(@PathVariable String screenId) {
+        return ResponseEntity.ok(issueAdministrationService.getScreenFields(screenId));
+    }
+
     @PostMapping("/screens")
     @Operation(summary = "Create screen")
     public ResponseEntity<ScreenEntity> createScreen(@RequestBody Map<String, Object> data) {

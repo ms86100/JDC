@@ -3,10 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './AuthStyles.css';
 
+const PLATFORM_NAME = 'System & Avionics Platform';
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [form, setForm] = useState({ username: '', password: '' });
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -17,8 +20,12 @@ export default function LoginPage() {
     try {
       await login(form.username, form.password);
       navigate('/projects');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
+      setError(message || 'Invalid credentials. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -26,42 +33,58 @@ export default function LoginPage() {
 
   return (
     <div className="ab-auth-page">
-      <div className="ab-auth-container">
-        <div className="ab-auth-header">
-          <div className="ab-auth-logo">
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <rect width="48" height="48" rx="8" fill="#0066FF"/>
-              <path d="M12 36V12L24 24L36 12V36" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+      <div className="ab-auth-shell">
+        <aside className="ab-auth-hero" aria-hidden="false">
+          <div className="ab-auth-hero-inner">
+            <div className="ab-auth-mark" aria-hidden="true">
+              SA
+            </div>
+            <h1 className="ab-auth-hero-title">{PLATFORM_NAME}</h1>
+            <p className="ab-auth-hero-tagline">
+              Enterprise program and systems engineering — requirements, workflows, and
+              traceability in one workspace.
+            </p>
+            <ul className="ab-auth-hero-features">
+              <li>Integrated workflow and issue management</li>
+              <li>Administration aligned with aerospace practices</li>
+              <li>Secure access for distributed engineering teams</li>
+            </ul>
           </div>
-          <h1 className="ab-auth-title">Jira Platform</h1>
-          <p className="ab-auth-subtitle">Enterprise Project Management powered by Airbus</p>
-        </div>
+        </aside>
 
-        <div className="ab-card ab-auth-card">
-          <form onSubmit={handleSubmit} className="ab-auth-form">
-            {error && (
-              <div className="ab-alert ab-alert-error">
-                {error}
-              </div>
-            )}
+        <main className="ab-auth-panel">
+          <header className="ab-auth-panel-header">
+            <h2 className="ab-auth-panel-title">Sign in</h2>
+            <p className="ab-auth-panel-subtitle">
+              Enter your credentials to access {PLATFORM_NAME}.
+            </p>
+          </header>
+
+          <form onSubmit={handleSubmit} className="ab-auth-form" noValidate>
+            {error && <div className="ab-alert-error" role="alert">{error}</div>}
 
             <div className="ab-form-group">
-              <label className="ab-label">Username or Email</label>
+              <label className="ab-label" htmlFor="login-username">
+                Username or email
+              </label>
               <input
+                id="login-username"
                 type="text"
                 className="ab-input"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
-                placeholder="Enter your username"
+                placeholder="e.g. jane.engineer"
                 required
                 autoComplete="username"
               />
             </div>
 
             <div className="ab-form-group">
-              <label className="ab-label">Password</label>
+              <label className="ab-label" htmlFor="login-password">
+                Password
+              </label>
               <input
+                id="login-password"
                 type="password"
                 className="ab-input"
                 value={form.password}
@@ -72,34 +95,34 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="ab-form-group ab-checkbox-group">
-              <label className="ab-checkbox-label">
-                <input type="checkbox" className="ab-checkbox" />
+            <div className="ab-auth-remember-row">
+              <label className="ab-auth-remember-label" htmlFor="login-remember">
+                <input
+                  id="login-remember"
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                />
                 <span>Remember me</span>
               </label>
-              <a href="#" className="ab-link-forgot">Forgot password?</a>
+              <a href="#" className="ab-link-forgot">
+                Forgot password?
+              </a>
             </div>
 
-            <button
-              type="submit"
-              className="ab-btn ab-btn-primary ab-btn-full"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+            <button type="submit" className="ab-auth-submit" disabled={isLoading}>
+              {isLoading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
-        </div>
 
-        <div className="ab-auth-footer">
-          <p>
-            Don't have an account?{' '}
-            <Link to="/register" className="ab-link">Create one</Link>
+          <p className="ab-auth-switch">
+            Don&apos;t have an account? <Link to="/register">Create one</Link>
           </p>
-        </div>
 
-        <div className="ab-auth-brand">
-          <span>Powered by Airbus Digital</span>
-        </div>
+          <footer className="ab-auth-powered">
+            Powered by <strong>Airbus Digital</strong>
+          </footer>
+        </main>
       </div>
     </div>
   );

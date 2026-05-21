@@ -10,6 +10,13 @@
   flex-shrink: 0;
   height: 100%;
   z-index: 20;
+  width: 220px;
+  transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Widen hit area while flyout is open so pointer can move rail → submenu without closing */
+.dc-admin-nav--flyout-open {
+  width: 492px;
 }
 
 .dc-admin-nav-categories {
@@ -424,11 +431,10 @@
 .admin-search-box {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
+  padding: 12px 16px;
   background: var(--ab-white, #fff);
-  border: 1px solid #dfe1e6;
-  border-radius: 10px;
+  border: 1px solid var(--ab-gray-200, #dfe1e6);
+  border-radius: var(--ab-radius-md, 8px);
   box-shadow: 0 2px 6px rgba(9, 30, 66, 0.04);
 }
 

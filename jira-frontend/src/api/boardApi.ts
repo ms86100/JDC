@@ -21,6 +21,7 @@ export interface BoardIssue {
   title: string;
   status: string;
   priority: string;
+  projectId?: string;
   assigneeId?: string;
   assigneeName?: string;
   reporterId?: string;

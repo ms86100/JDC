@@ -58,6 +58,29 @@ public class ProjectTemplate {
     @Column(name = "template_type", length = 50)
     private String templateType;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private TemplateCategory templateCategory;
+
+    @Column(name = "workflow_type", length = 50)
+    private String workflowType;
+
+    @Column(name = "short_description", length = 255)
+    private String shortDescription;
+
+    @Column(name = "icon_emoji", length = 10)
+    private String iconEmoji;
+
+    @Column(name = "is_recommended")
+    @Builder.Default
+    private Boolean isRecommended = false;
+
+    @Column(name = "use_cases", columnDefinition = "TEXT")
+    private String useCases;
+
+    @Column(name = "preview_accent", length = 7)
+    private String previewAccent;
+
     @Column(columnDefinition = "TEXT")
     private String instructions;
 

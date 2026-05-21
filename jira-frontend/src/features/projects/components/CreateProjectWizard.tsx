@@ -1,68 +1,126 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { projectApi, ProjectTemplate, CreateProjectWizardRequest, ProjectType } from '../../../api/projectApi';
+import {
+  projectApi,
+  CreateProjectWizardRequest,
+  TemplateDetails,
+} from '../../../api/projectApi';
+import {
+  templateApi,
+  CatalogTemplate,
+  TemplateCatalog,
+  TemplateWithWorkflow,
+} from '../../../api/templateApi';
 import '../styles/create-project-wizard.css';
+
+const STEPS = [
+  { id: 1, label: 'Template' },
+  { id: 2, label: 'Details' },
+  { id: 3, label: 'Review' },
+  { id: 4, label: 'Create' },
+] as const;
 
 interface WizardState {
   step: number;
-  projectType: 'COMPANY_MANAGED' | 'TEAM_MANAGED' | null;
-  template: ProjectTemplate | null;
+  template: CatalogTemplate | null;
   name: string;
   projectKey: string;
   description: string;
   leadUserId: string;
+  visibility: 'PUBLIC' | 'PRIVATE';
   defaultAssigneeType: string;
 }
 
 const INITIAL_STATE: WizardState = {
   step: 1,
-  projectType: null,
   template: null,
   name: '',
   projectKey: '',
   description: '',
   leadUserId: '',
+  visibility: 'PUBLIC',
   defaultAssigneeType: 'PROJECT_LEAD',
 };
+
+function TemplatePreviewGraphic({ template }: { template: CatalogTemplate }) {
+  const accent = template.previewAccent || template.color || '#0052CC';
+  return (
+    <div className="cpw-preview-graphic" style={{ '--preview-accent': accent } as React.CSSProperties}>
+      <div className="cpw-preview-board">
+        <div className="cpw-preview-col">
+          <span className="cpw-preview-col-label">To Do</span>
+          {[1, 2].map((i) => (
+            <div key={i} className="cpw-preview-card" />
+          ))}
+        </div>
+        <div className="cpw-preview-col cpw-preview-col--active">
+          <span className="cpw-preview-col-label">In Progress</span>
+          <div className="cpw-preview-card cpw-preview-card--highlight" />
+        </div>
+        <div className="cpw-preview-col">
+          <span className="cpw-preview-col-label">Done</span>
+          <div className="cpw-preview-card" />
+        </div>
+      </div>
+      <div className="cpw-preview-badge">{template.workflowTypeLabel || 'Workflow'}</div>
+    </div>
+  );
+}
 
 export default function CreateProjectWizard({ onClose }: { onClose?: () => void }) {
   const navigate = useNavigate();
   const [wizardState, setWizardState] = useState<WizardState>(INITIAL_STATE);
-  const [keyValidation, setKeyValidation] = useState<{ valid: boolean; available: boolean }>({
-    valid: true,
-    available: true,
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [keyValidation, setKeyValidation] = useState({ valid: true, available: true });
+
+  const handleClose = useCallback(() => {
+    if (onClose) onClose();
+    else navigate('/projects');
+  }, [onClose, navigate]);
+
+  const { data: catalog, isLoading: catalogLoading, error: catalogError } = useQuery({
+    queryKey: ['templateCatalog'],
+    queryFn: () => templateApi.getCatalog().then((r) => r.data),
+    retry: 2,
   });
 
-  // Close handler
-  const handleClose = () => {
-    if (onClose) {
-      onClose();
-    } else {
-      navigate('/projects');
+  const filteredCatalog = useMemo(
+    () => (catalog ? templateApi.searchCatalog(searchQuery, catalog) : null),
+    [catalog, searchQuery]
+  );
+
+  const activeCategoryKey = useMemo(() => {
+    if (!filteredCatalog) return null;
+    if (selectedCategoryKey) {
+      const exists = filteredCatalog.categories.some((c) => c.categoryKey === selectedCategoryKey);
+      if (exists) return selectedCategoryKey;
     }
-  };
+    return filteredCatalog.categories[0]?.categoryKey ?? null;
+  }, [filteredCatalog, selectedCategoryKey]);
 
-  // Fetch project types
-  const { data: projectTypes, isLoading: isLoadingTypes, error: typesError } = useQuery({
-    queryKey: ['projectTypes'],
-    queryFn: () => projectApi.getProjectTypes().then((res) => res.data),
-    retry: 2,
+  const activeCategory = useMemo(
+    () => filteredCatalog?.categories.find((c) => c.categoryKey === activeCategoryKey),
+    [filteredCatalog, activeCategoryKey]
+  );
+
+  const { data: templateWorkflow } = useQuery({
+    queryKey: ['templateWorkflow', wizardState.template?.id],
+    queryFn: () =>
+      templateApi
+        .getTemplateWithWorkflow(wizardState.template!.id)
+        .then((r) => r.data),
+    enabled: !!wizardState.template && wizardState.step >= 3,
   });
 
-  // Fetch templates when project type is selected
-  const { data: templates, isLoading: isLoadingTemplates } = useQuery({
-    queryKey: ['templates', wizardState.projectType],
-    queryFn: () => {
-      const type = projectTypes?.find((t: ProjectType) => t.category === wizardState.projectType);
-      if (!type) return Promise.resolve([]);
-      return projectApi.getTemplatesForType(type.id).then((res) => res.data);
-    },
-    enabled: !!wizardState.projectType && !!projectTypes,
-    retry: 2,
+  const { data: templateSchemeDetails } = useQuery({
+    queryKey: ['templateSchemeDetails', wizardState.template?.id],
+    queryFn: () =>
+      projectApi.getTemplateDetails(wizardState.template!.id).then((r) => r.data),
+    enabled: !!wizardState.template && wizardState.step >= 3,
   });
 
-  // Check project key availability
   useEffect(() => {
     if (wizardState.projectKey.length >= 2) {
       projectApi.checkProjectKey(wizardState.projectKey).then((res) => {
@@ -73,60 +131,47 @@ export default function CreateProjectWizard({ onClose }: { onClose?: () => void 
     }
   }, [wizardState.projectKey]);
 
-  // Auto-generate project key from name
   useEffect(() => {
-    if (wizardState.name && !wizardState.projectKey) {
+    if (wizardState.name && wizardState.step === 2) {
       const words = wizardState.name.trim().split(/\s+/);
       let key = '';
       for (const word of words) {
         if (key.length >= 10) break;
         const cleaned = word.replace(/[^a-zA-Z0-9]/g, '');
-        if (cleaned) {
-          key += cleaned.charAt(0).toUpperCase();
-          if (key.length >= 10) break;
-        }
+        if (cleaned) key += cleaned.charAt(0).toUpperCase();
       }
       if (!key) key = 'PRJ';
       while (key.length < 3) key += 'X';
-      setWizardState((prev) => ({ ...prev, projectKey: key.substring(0, 10) }));
+      setWizardState((prev) => ({
+        ...prev,
+        projectKey: prev.projectKey || key.substring(0, 10),
+      }));
     }
-  }, [wizardState.name]);
+  }, [wizardState.name, wizardState.step]);
 
   const createMutation = useMutation({
     mutationFn: (data: CreateProjectWizardRequest) => projectApi.createViaWizard(data),
-    onSuccess: (response) => {
-      navigate(`/projects/${response.data.id}`);
-    },
+    onSuccess: (response) => navigate(`/projects/${response.data.id}`),
   });
 
-  const handleTypeSelect = (category: 'COMPANY_MANAGED' | 'TEAM_MANAGED') => {
-    setWizardState((prev) => ({
-      ...prev,
-      projectType: category,
-      template: null,
-    }));
-  };
-
-  const handleTemplateSelect = (template: ProjectTemplate) => {
+  const handleTemplateSelect = (template: CatalogTemplate) => {
     setWizardState((prev) => ({
       ...prev,
       template,
-      defaultAssigneeType: template.defaultAssigneeType,
+      defaultAssigneeType: template.defaultAssigneeType || 'PROJECT_LEAD',
     }));
   };
 
-  const handleNext = () => {
-    setWizardState((prev) => ({ ...prev, step: prev.step + 1 }));
-  };
-
-  const handleBack = () => {
-    setWizardState((prev) => ({ ...prev, step: prev.step - 1 }));
-  };
+  const handleNext = () => setWizardState((prev) => ({ ...prev, step: Math.min(prev.step + 1, 4) }));
+  const handleBack = () => setWizardState((prev) => ({ ...prev, step: Math.max(prev.step - 1, 1) }));
 
   const handleSubmit = () => {
+    if (!wizardState.template) return;
     const request: CreateProjectWizardRequest = {
-      projectType: wizardState.projectType!,
-      templateId: wizardState.template?.id,
+      projectType: (wizardState.template.projectTypeCategory || 'COMPANY_MANAGED') as
+        | 'COMPANY_MANAGED'
+        | 'TEAM_MANAGED',
+      templateId: wizardState.template.id,
       name: wizardState.name,
       projectKey: wizardState.projectKey,
       description: wizardState.description,
@@ -139,11 +184,16 @@ export default function CreateProjectWizard({ onClose }: { onClose?: () => void 
   const canProceed = () => {
     switch (wizardState.step) {
       case 1:
-        return wizardState.projectType !== null;
+        return wizardState.template !== null;
       case 2:
-        return wizardState.template !== null || wizardState.projectType === 'TEAM_MANAGED';
+        return (
+          wizardState.name.length >= 1 &&
+          wizardState.projectKey.length >= 2 &&
+          keyValidation.valid &&
+          keyValidation.available
+        );
       case 3:
-        return wizardState.name.length >= 1 && wizardState.projectKey.length >= 2 && keyValidation.valid && keyValidation.available;
+        return true;
       case 4:
         return true;
       default:
@@ -151,301 +201,633 @@ export default function CreateProjectWizard({ onClose }: { onClose?: () => void 
     }
   };
 
+  const selected = wizardState.template;
+
   return (
-    <div className="ab-wizard-overlay">
-      <div className="ab-wizard">
-        <div className="ab-wizard-header">
-          <h2 className="ab-wizard-title">Create Project</h2>
-          <button className="ab-btn-icon ab-wizard-close" onClick={() => navigate('/projects')}>
+    <div className="cpw-overlay" role="dialog" aria-modal="true" aria-labelledby="cpw-title">
+      <div className="cpw-modal">
+        <header className="cpw-header">
+          <div>
+            <h2 id="cpw-title" className="cpw-title">
+              Create project
+            </h2>
+            <p className="cpw-subtitle">
+              Choose a template to configure workflows, boards, and modules automatically.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="cpw-close"
+            onClick={handleClose}
+            aria-label="Close create project dialog"
+          >
             ✕
           </button>
-        </div>
+        </header>
 
-        {/* Progress Steps */}
-        <div className="ab-wizard-steps">
-          <div className={`ab-step ${wizardState.step >= 1 ? 'active' : ''} ${wizardState.step > 1 ? 'completed' : ''}`}>
-            <div className="ab-step-number">{wizardState.step > 1 ? '✓' : '1'}</div>
-            <div className="ab-step-label">Type</div>
-          </div>
-          <div className="ab-step-connector"></div>
-          <div className={`ab-step ${wizardState.step >= 2 ? 'active' : ''} ${wizardState.step > 2 ? 'completed' : ''}`}>
-            <div className="ab-step-number">{wizardState.step > 2 ? '✓' : '2'}</div>
-            <div className="ab-step-label">Template</div>
-          </div>
-          <div className="ab-step-connector"></div>
-          <div className={`ab-step ${wizardState.step >= 3 ? 'active' : ''} ${wizardState.step > 3 ? 'completed' : ''}`}>
-            <div className="ab-step-number">{wizardState.step > 3 ? '✓' : '3'}</div>
-            <div className="ab-step-label">Details</div>
-          </div>
-          <div className="ab-step-connector"></div>
-          <div className={`ab-step ${wizardState.step >= 4 ? 'active' : ''}`}>
-            <div className="ab-step-number">4</div>
-            <div className="ab-step-label">Review</div>
-          </div>
-        </div>
+        <nav className="cpw-steps" aria-label="Creation progress">
+          {STEPS.map((s, idx) => (
+            <div key={s.id} className="cpw-steps-row">
+              <div
+                className={[
+                  'cpw-step',
+                  wizardState.step === s.id ? 'cpw-step--active' : '',
+                  wizardState.step > s.id ? 'cpw-step--done' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                <span className="cpw-step-num">{wizardState.step > s.id ? '✓' : s.id}</span>
+                <span className="cpw-step-label">{s.label}</span>
+              </div>
+              {idx < STEPS.length - 1 && <div className="cpw-step-line" />}
+            </div>
+          ))}
+        </nav>
 
-        <div className="ab-wizard-body">
-          {/* Step 1: Project Type Selection */}
+        <div className="cpw-body">
           {wizardState.step === 1 && (
-            <div className="ab-wizard-step">
-              <h3 className="ab-step-title">Select your project type</h3>
-              <p className="ab-step-description">
-                Choose how you want to manage your project. You can change most settings later.
-              </p>
-              {isLoadingTypes ? (
-                <div className="ab-loading">
-                  <div className="ab-spinner"></div>
-                </div>
-              ) : typesError ? (
-                <div className="ab-empty-state">
-                  <div className="ab-empty-state-icon">⚠️</div>
-                  <h4 className="ab-empty-state-title">Failed to load project types</h4>
-                  <p className="ab-empty-state-description">Please check your connection and try again.</p>
-                </div>
-              ) : (
-                <div className="ab-type-grid">
-                  {projectTypes && projectTypes.length > 0 ? (
-                    projectTypes.map((type: ProjectType) => (
-                      <div
-                        key={type.id}
-                        className={`ab-type-card ${wizardState.projectType === type.category ? 'selected' : ''}`}
-                        onClick={() => handleTypeSelect(type.category as 'COMPANY_MANAGED' | 'TEAM_MANAGED')}
-                      >
-                        <div className="ab-type-icon">{type.category === 'COMPANY_MANAGED' ? '💼' : '👥'}</div>
-                        <h4 className="ab-type-name">{type.name}</h4>
-                        <p className="ab-type-description">{type.description}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="ab-empty-state">
-                      <div className="ab-empty-state-icon">📋</div>
-                      <h4 className="ab-empty-state-title">No project types available</h4>
-                      <p className="ab-empty-state-description">Project types haven't been configured yet.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <TemplateSelectionStep
+              catalog={filteredCatalog}
+              loading={catalogLoading}
+              error={catalogError}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              activeCategoryKey={activeCategoryKey}
+              activeCategory={activeCategory}
+              onCategorySelect={setSelectedCategoryKey}
+              selected={selected}
+              onSelect={handleTemplateSelect}
+              catalogRaw={catalog}
+            />
           )}
 
-          {/* Step 2: Template Selection */}
           {wizardState.step === 2 && (
-            <div className="ab-wizard-step">
-              <h3 className="ab-step-title">Select a template</h3>
-              <p className="ab-step-description">
-                Templates include preset configurations for workflows, issue types, and more.
-              </p>
-              {isLoadingTemplates ? (
-                <div className="ab-loading">
-                  <div className="ab-spinner"></div>
-                </div>
-              ) : (
-                <div className="ab-template-grid">
-                  {templates && templates.length > 0 ? (
-                    templates.map((template: ProjectTemplate) => (
-                      <div
-                        key={template.id}
-                        className={`ab-template-card ${wizardState.template?.id === template.id ? 'selected' : ''}`}
-                        onClick={() => handleTemplateSelect(template)}
-                        style={{ '--template-color': template.color } as React.CSSProperties}
-                      >
-                        <div className="ab-template-icon" style={{ backgroundColor: template.color }}>
-                          {template.icon === 'scrum' && '🏃'}
-                          {template.icon === 'kanban' && '📋'}
-                          {template.icon === 'bug' && '🐛'}
-                          {template.icon === 'task' && '✓'}
-                          {template.icon === 'portfolio' && '📊'}
-                          {template.icon === 'team' && '👥'}
-                        </div>
-                        <h4 className="ab-template-name">{template.name}</h4>
-                        <p className="ab-template-description">{template.description}</p>
-                        {template.defaultAssigneeType === 'PROJECT_LEAD' && (
-                          <span className="ab-template-badge">Project Lead</span>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="ab-empty-state">
-                      <div className="ab-empty-state-icon">📋</div>
-                      <h4 className="ab-empty-state-title">No templates available</h4>
-                      <p className="ab-empty-state-description">No templates found for this project type.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <DetailsStep
+              state={wizardState}
+              onChange={setWizardState}
+              keyValidation={keyValidation}
+              template={selected}
+            />
           )}
 
-          {/* Step 3: Project Details */}
           {wizardState.step === 3 && (
-            <div className="ab-wizard-step">
-              <h3 className="ab-step-title">Configure your project</h3>
-              <p className="ab-step-description">
-                Enter the basic information for your project.
-              </p>
-              <div className="ab-form">
-                <div className="ab-form-group">
-                  <label className="ab-label">Project Name *</label>
-                  <input
-                    type="text"
-                    className="ab-input"
-                    value={wizardState.name}
-                    onChange={(e) => setWizardState((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g., My Awesome Project"
-                    maxLength={200}
-                  />
-                </div>
-
-                <div className="ab-form-group">
-                  <label className="ab-label">Project Key *</label>
-                  <input
-                    type="text"
-                    className={`ab-input ${!keyValidation.valid || !keyValidation.available ? 'ab-input-error' : ''}`}
-                    value={wizardState.projectKey}
-                    onChange={(e) =>
-                      setWizardState((prev) => ({
-                        ...prev,
-                        projectKey: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
-                      }))
-                    }
-                    placeholder="e.g., MAP"
-                    maxLength={10}
-                  />
-                  {!keyValidation.valid && (
-                    <span className="ab-field-error">Key must be 2-10 uppercase letters/numbers</span>
-                  )}
-                  {!keyValidation.available && keyValidation.valid && (
-                    <span className="ab-field-error">This key is already in use</span>
-                  )}
-                  <span className="ab-field-hint">
-                    The key is used as a prefix for issues (e.g., MAP-123). You cannot change this later.
-                  </span>
-                </div>
-
-                <div className="ab-form-group">
-                  <label className="ab-label">Description</label>
-                  <textarea
-                    className="ab-textarea"
-                    value={wizardState.description}
-                    onChange={(e) => setWizardState((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder="Describe what this project is about..."
-                    rows={4}
-                  />
-                </div>
-
-                <div className="ab-form-group">
-                  <label className="ab-label">Default Assignee</label>
-                  <select
-                    className="ab-select"
-                    value={wizardState.defaultAssigneeType}
-                    onChange={(e) => setWizardState((prev) => ({ ...prev, defaultAssigneeType: e.target.value }))}
-                  >
-                    <option value="PROJECT_LEAD">Project Lead</option>
-                    <option value="UNASSIGNED">Unassigned</option>
-                  </select>
-                  <span className="ab-field-hint">
-                    The default assignee for issues created in this project.
-                  </span>
-                </div>
-              </div>
-            </div>
+            <ReviewStep
+              state={wizardState}
+              template={selected}
+              workflow={templateWorkflow}
+              schemeDetails={templateSchemeDetails}
+            />
           )}
 
-          {/* Step 4: Review */}
           {wizardState.step === 4 && (
-            <div className="ab-wizard-step">
-              <h3 className="ab-step-title">Review and confirm</h3>
-              <p className="ab-step-description">
-                Please review your project configuration before creating.
-              </p>
-              <div className="ab-review-section">
-                <div className="ab-review-card">
-                  <h4 className="ab-review-section-title">Project Type</h4>
-                  <div className="ab-review-item">
-                    <span className="ab-review-label">Type:</span>
-                    <span className="ab-review-value">
-                      {wizardState.projectType === 'COMPANY_MANAGED' ? 'Company-managed' : 'Team-managed'}
-                    </span>
-                  </div>
-                  {wizardState.template && (
-                    <div className="ab-review-item">
-                      <span className="ab-review-label">Template:</span>
-                      <span className="ab-review-value">{wizardState.template.name}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="ab-review-card">
-                  <h4 className="ab-review-section-title">Project Details</h4>
-                  <div className="ab-review-item">
-                    <span className="ab-review-label">Name:</span>
-                    <span className="ab-review-value">{wizardState.name}</span>
-                  </div>
-                  <div className="ab-review-item">
-                    <span className="ab-review-label">Key:</span>
-                    <span className="ab-review-value ab-badge ab-badge-primary">{wizardState.projectKey}</span>
-                  </div>
-                  <div className="ab-review-item">
-                    <span className="ab-review-label">Description:</span>
-                    <span className="ab-review-value">{wizardState.description || 'No description'}</span>
-                  </div>
-                  <div className="ab-review-item">
-                    <span className="ab-review-label">Default Assignee:</span>
-                    <span className="ab-review-value">
-                      {wizardState.defaultAssigneeType === 'PROJECT_LEAD' ? 'Project Lead' : 'Unassigned'}
-                    </span>
-                  </div>
-                </div>
-
-                {wizardState.template && (
-                  <div className="ab-review-card">
-                    <h4 className="ab-review-section-title">Configurations</h4>
-                    <div className="ab-review-item">
-                      <span className="ab-review-label">Issue Types:</span>
-                      <span className="ab-review-value">Based on {wizardState.template.name} template</span>
-                    </div>
-                    <div className="ab-review-item">
-                      <span className="ab-review-label">Workflow:</span>
-                      <span className="ab-review-value">Default {wizardState.template.name} workflow</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {createMutation.isError && (
-                <div className="ab-alert ab-alert-danger" style={{ marginTop: '1rem' }}>
-                  <span>Failed to create project. Please try again.</span>
-                </div>
-              )}
-            </div>
+            <ConfirmStep
+              state={wizardState}
+              template={selected}
+              isPending={createMutation.isPending}
+              isError={createMutation.isError}
+            />
           )}
         </div>
 
-        <div className="ab-wizard-footer">
+        <footer className="cpw-footer">
           {wizardState.step > 1 && (
-            <button className="ab-btn ab-btn-secondary" onClick={handleBack}>
+            <button type="button" className="cpw-btn cpw-btn--secondary" onClick={handleBack}>
               Back
             </button>
           )}
+          <div className="cpw-footer-spacer" />
           {wizardState.step < 4 ? (
             <button
-              className="ab-btn ab-btn-primary"
+              type="button"
+              className="cpw-btn cpw-btn--primary"
               onClick={handleNext}
               disabled={!canProceed()}
             >
-              Next
+              {wizardState.step === 1 && selected ? `Continue with ${selected.name}` : 'Next'}
             </button>
           ) : (
             <button
-              className="ab-btn ab-btn-primary"
+              type="button"
+              className="cpw-btn cpw-btn--primary cpw-btn--create"
               onClick={handleSubmit}
-              disabled={createMutation.isPending}
+              disabled={createMutation.isPending || !selected}
             >
-              {createMutation.isPending ? 'Creating...' : 'Create Project'}
+              {createMutation.isPending ? 'Creating project…' : 'Create project'}
             </button>
           )}
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function TemplateSelectionStep({
+  catalog,
+  loading,
+  error,
+  searchQuery,
+  onSearchChange,
+  activeCategoryKey,
+  activeCategory,
+  onCategorySelect,
+  selected,
+  onSelect,
+  catalogRaw,
+}: {
+  catalog: TemplateCatalog | null | undefined;
+  loading: boolean;
+  error: unknown;
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
+  activeCategoryKey: string | null;
+  activeCategory: TemplateCatalog['categories'][0] | undefined;
+  onCategorySelect: (key: string) => void;
+  selected: CatalogTemplate | null;
+  onSelect: (t: CatalogTemplate) => void;
+  catalogRaw: TemplateCatalog | undefined;
+}) {
+  if (loading) {
+    return (
+      <div className="cpw-loading">
+        <div className="cpw-spinner" />
+        <p>Loading project templates…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="cpw-empty">
+        <span className="cpw-empty-icon">⚠️</span>
+        <h3>Unable to load templates</h3>
+        <p>Check your connection and try again.</p>
+      </div>
+    );
+  }
+
+  if (!catalog?.categories.length) {
+    return (
+      <div className="cpw-empty">
+        <span className="cpw-empty-icon">📋</span>
+        <h3>No templates match your search</h3>
+        <p>Try a different keyword or clear the search.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="cpw-template-step">
+      <div className="cpw-template-toolbar">
+        <div className="cpw-search-wrap">
+          <span className="cpw-search-icon" aria-hidden>
+            🔍
+          </span>
+          <input
+            type="search"
+            className="cpw-search"
+            placeholder="Search templates, workflows, or features…"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            aria-label="Search templates"
+          />
+        </div>
+        {catalogRaw && catalogRaw.recommended.length > 0 && !searchQuery && (
+          <div className="cpw-recommended-strip">
+            <span className="cpw-recommended-label">Recommended</span>
+            {catalogRaw.recommended.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={[
+                  'cpw-recommended-chip',
+                  selected?.id === t.id ? 'cpw-recommended-chip--selected' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onClick={() => onSelect(t)}
+              >
+                <span>{t.iconEmoji || '📁'}</span> {t.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="cpw-two-panel">
+        <aside className="cpw-sidebar" aria-label="Template categories">
+          <ul className="cpw-category-list">
+            {catalog.categories.map((cat) => (
+              <li key={cat.categoryKey}>
+                <button
+                  type="button"
+                  className={[
+                    'cpw-category-btn',
+                    activeCategoryKey === cat.categoryKey ? 'cpw-category-btn--active' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={() => onCategorySelect(cat.categoryKey)}
+                >
+                  <span className="cpw-category-emoji">{cat.iconEmoji}</span>
+                  <span className="cpw-category-text">
+                    <span className="cpw-category-name">{cat.name}</span>
+                    <span className="cpw-category-count">{cat.templates.length} templates</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </aside>
+
+        <div className="cpw-main-panel">
+          {activeCategory && (
+            <p className="cpw-category-desc">{activeCategory.description}</p>
+          )}
+
+          <div className="cpw-template-layout">
+            <div className="cpw-template-list" role="listbox" aria-label="Templates">
+              {activeCategory?.templates.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="option"
+                  aria-selected={selected?.id === t.id}
+                  className={[
+                    'cpw-template-item',
+                    selected?.id === t.id ? 'cpw-template-item--selected' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={() => onSelect(t)}
+                >
+                  <span
+                    className="cpw-template-item-icon"
+                    style={{ backgroundColor: t.previewAccent || t.color }}
+                  >
+                    {t.iconEmoji || '📁'}
+                  </span>
+                  <span className="cpw-template-item-body">
+                    <span className="cpw-template-item-name">{t.name}</span>
+                    <span className="cpw-template-item-short">
+                      {t.shortDescription || t.description}
+                    </span>
+                    <span className="cpw-template-item-type">{t.workflowTypeLabel}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="cpw-template-detail">
+              {selected ? (
+                <TemplateDetailPanel template={selected} />
+              ) : (
+                <div className="cpw-detail-placeholder">
+                  <span className="cpw-detail-placeholder-icon">👈</span>
+                  <h3>Select a template</h3>
+                  <p>
+                    Choose a template from the list to preview workflows, enabled modules, and
+                    what your team gets after creation.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function TemplateDetailPanel({ template }: { template: CatalogTemplate }) {
+  return (
+    <div className="cpw-detail">
+      <div className="cpw-detail-header">
+        <span
+          className="cpw-detail-icon"
+          style={{ backgroundColor: template.previewAccent || template.color }}
+        >
+          {template.iconEmoji || '📁'}
+        </span>
+        <div>
+          <h3 className="cpw-detail-title">{template.name}</h3>
+          <span className="cpw-detail-workflow-type">{template.workflowTypeLabel}</span>
+        </div>
+      </div>
+
+      <TemplatePreviewGraphic template={template} />
+
+      <p className="cpw-detail-desc">{template.description}</p>
+
+      {template.useCases && (
+        <div className="cpw-detail-section">
+          <h4>Best for</h4>
+          <p>{template.useCases}</p>
+        </div>
+      )}
+
+      {template.capabilities?.length > 0 && (
+        <div className="cpw-detail-section">
+          <h4>Enabled after creation</h4>
+          <ul className="cpw-capability-list">
+            {template.capabilities.map((c) => (
+              <li key={c.key}>
+                <span className="cpw-capability-check">✓</span>
+                {c.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {template.instructions && (
+        <div className="cpw-detail-tip">
+          <strong>Tip:</strong> {template.instructions}
+        </div>
+      )}
+
+      <div className="cpw-detail-summary">
+        <span className="cpw-detail-summary-label">Selected</span>
+        <span className="cpw-detail-summary-value">{template.name}</span>
+      </div>
+    </div>
+  );
+}
+
+function DetailsStep({
+  state,
+  onChange,
+  keyValidation,
+  template,
+}: {
+  state: WizardState;
+  onChange: React.Dispatch<React.SetStateAction<WizardState>>;
+  keyValidation: { valid: boolean; available: boolean };
+  template: CatalogTemplate | null;
+}) {
+  return (
+    <div className="cpw-details-step">
+      <div className="cpw-details-intro">
+        <h3>Configure project details</h3>
+        <p>
+          {template ? (
+            <>
+              Creating a <strong>{template.name}</strong> project ({template.workflowTypeLabel}).
+            </>
+          ) : (
+            'Enter the basic information for your project.'
+          )}
+        </p>
+      </div>
+
+      <div className="cpw-form">
+        <div className="cpw-form-row">
+          <label className="cpw-label" htmlFor="project-name">
+            Project name <span className="cpw-required">*</span>
+          </label>
+          <input
+            id="project-name"
+            type="text"
+            className="cpw-input"
+            value={state.name}
+            onChange={(e) => onChange((p) => ({ ...p, name: e.target.value }))}
+            placeholder="e.g., Customer Portal"
+            maxLength={200}
+          />
+        </div>
+
+        <div className="cpw-form-row">
+          <label className="cpw-label" htmlFor="project-key">
+            Project key <span className="cpw-required">*</span>
+          </label>
+          <input
+            id="project-key"
+            type="text"
+            className={`cpw-input ${!keyValidation.valid || !keyValidation.available ? 'cpw-input--error' : ''}`}
+            value={state.projectKey}
+            onChange={(e) =>
+              onChange((p) => ({
+                ...p,
+                projectKey: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+              }))
+            }
+            placeholder="e.g., CP"
+            maxLength={10}
+          />
+          {!keyValidation.valid && (
+            <span className="cpw-field-error">Key must be 2–10 uppercase letters or numbers.</span>
+          )}
+          {!keyValidation.available && keyValidation.valid && (
+            <span className="cpw-field-error">This key is already in use.</span>
+          )}
+          <span className="cpw-field-hint">Used as the issue prefix (e.g., {state.projectKey || 'KEY'}-123). Cannot be changed later.</span>
+        </div>
+
+        <div className="cpw-form-row">
+          <label className="cpw-label" htmlFor="project-desc">
+            Description
+          </label>
+          <textarea
+            id="project-desc"
+            className="cpw-textarea"
+            value={state.description}
+            onChange={(e) => onChange((p) => ({ ...p, description: e.target.value }))}
+            placeholder="What is this project for?"
+            rows={3}
+          />
+        </div>
+
+        <div className="cpw-form-grid">
+          <div className="cpw-form-row">
+            <label className="cpw-label" htmlFor="visibility">
+              Visibility
+            </label>
+            <select
+              id="visibility"
+              className="cpw-select"
+              value={state.visibility}
+              onChange={(e) =>
+                onChange((p) => ({
+                  ...p,
+                  visibility: e.target.value as 'PUBLIC' | 'PRIVATE',
+                }))
+              }
+            >
+              <option value="PUBLIC">Public — visible to all licensed users</option>
+              <option value="PRIVATE">Private — visible to project members only</option>
+            </select>
+          </div>
+
+          <div className="cpw-form-row">
+            <label className="cpw-label" htmlFor="default-assignee">
+              Default assignee
+            </label>
+            <select
+              id="default-assignee"
+              className="cpw-select"
+              value={state.defaultAssigneeType}
+              onChange={(e) => onChange((p) => ({ ...p, defaultAssigneeType: e.target.value }))}
+            >
+              <option value="PROJECT_LEAD">Project lead</option>
+              <option value="UNASSIGNED">Unassigned</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReviewStep({
+  state,
+  template,
+  workflow,
+  schemeDetails,
+}: {
+  state: WizardState;
+  template: CatalogTemplate | null;
+  workflow?: TemplateWithWorkflow;
+  schemeDetails?: TemplateDetails;
+}) {
+  if (!template) return null;
+
+  return (
+    <div className="cpw-review-step">
+      <h3>Review configuration</h3>
+      <p className="cpw-review-intro">
+        Confirm the template-driven setup before creating your project.
+      </p>
+
+      <div className="cpw-review-grid">
+        <section className="cpw-review-card">
+          <h4>Template</h4>
+          <div className="cpw-review-template-row">
+            <span className="cpw-review-template-icon">{template.iconEmoji}</span>
+            <div>
+              <strong>{template.name}</strong>
+              <span>{template.workflowTypeLabel}</span>
+            </div>
+          </div>
+          <p className="cpw-review-muted">{template.shortDescription}</p>
+        </section>
+
+        <section className="cpw-review-card">
+          <h4>Project</h4>
+          <dl className="cpw-review-dl">
+            <div>
+              <dt>Name</dt>
+              <dd>{state.name}</dd>
+            </div>
+            <div>
+              <dt>Key</dt>
+              <dd>
+                <code>{state.projectKey}</code>
+              </dd>
+            </div>
+            <div>
+              <dt>Visibility</dt>
+              <dd>{state.visibility === 'PUBLIC' ? 'Public' : 'Private'}</dd>
+            </div>
+            <div>
+              <dt>Management</dt>
+              <dd>
+                {template.projectTypeCategory === 'TEAM_MANAGED'
+                  ? 'Team-managed'
+                  : 'Company-managed'}
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section className="cpw-review-card cpw-review-card--wide">
+          <h4>Schemes &amp; modules</h4>
+          <div className="cpw-scheme-grid">
+            <SchemeItem label="Issue types" value={schemeDetails?.issueTypeSchemeName || workflow?.issueTypeScheme?.name} />
+            <SchemeItem label="Workflow" value={schemeDetails?.workflowSchemeName || workflow?.workflowScheme?.name} />
+            <SchemeItem label="Permissions" value={schemeDetails?.permissionSchemeName || workflow?.permissionScheme?.name} />
+            <SchemeItem label="Notifications" value={schemeDetails?.notificationSchemeName || workflow?.notificationScheme?.name} />
+            <SchemeItem label="Screens" value={schemeDetails?.screenSchemeName || workflow?.screenScheme?.name} />
+          </div>
+
+          {workflow?.issueTypes && workflow.issueTypes.length > 0 && (
+            <div className="cpw-review-issue-types">
+              <span className="cpw-review-subhead">Issue types</span>
+              <div className="cpw-tag-list">
+                {workflow.issueTypes.map((it) => (
+                  <span key={it.id} className="cpw-tag">
+                    {it.issueTypeName}
+                    {it.isDefault ? ' (default)' : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {template.capabilities?.length > 0 && (
+            <div className="cpw-review-capabilities">
+              <span className="cpw-review-subhead">Enabled modules</span>
+              <ul>
+                {template.capabilities.map((c) => (
+                  <li key={c.key}>{c.label}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function SchemeItem({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="cpw-scheme-item">
+      <span className="cpw-scheme-label">{label}</span>
+      <span className="cpw-scheme-value">{value || 'Default'}</span>
+    </div>
+  );
+}
+
+function ConfirmStep({
+  state,
+  template,
+  isPending,
+  isError,
+}: {
+  state: WizardState;
+  template: CatalogTemplate | null;
+  isPending: boolean;
+  isError: boolean;
+}) {
+  return (
+    <div className="cpw-confirm-step">
+      <div className="cpw-confirm-hero">
+        <span className="cpw-confirm-icon">{template?.iconEmoji || '🚀'}</span>
+        <h3>Ready to create {state.name}?</h3>
+        <p>
+          Your <strong>{template?.name}</strong> project will be provisioned with pre-configured
+          workflows, issue types, boards, and reports. Click <strong>Create project</strong> to finish.
+        </p>
+      </div>
+
+      <ul className="cpw-confirm-checklist">
+        <li>Project key: <code>{state.projectKey}</code></li>
+        <li>Template: {template?.name}</li>
+        <li>{template?.capabilities?.length || 0} modules will be enabled</li>
+      </ul>
+
+      {isError && (
+        <div className="cpw-alert cpw-alert--error" role="alert">
+          Failed to create the project. Please try again.
+        </div>
+      )}
+
+      {isPending && (
+        <div className="cpw-loading cpw-loading--inline">
+          <div className="cpw-spinner" />
+          <p>Provisioning project schemes and navigation…</p>
+        </div>
+      )}
     </div>
   );
 }

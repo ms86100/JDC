@@ -76,11 +76,18 @@ export function useMigrationJob(options: UseMigrationJobOptions = {}) {
     mutationFn: async ({
       file,
       options,
+      fieldMappings,
     }: {
       file: File;
       options?: ImportOptions;
+      fieldMappings?: unknown[];
     }): Promise<MigrationJob> => {
-      const response = await migrationApi.startCsvImport(file, options?.targetProjectId);
+      const response = await migrationApi.startCsvImport(
+        file,
+        options?.targetProjectId,
+        fieldMappings,
+        { importMode: options?.importMode, blockOnValidationErrors: true }
+      );
       return response.data as unknown as MigrationJob;
     },
     onSuccess: (job) => {
@@ -94,8 +101,14 @@ export function useMigrationJob(options: UseMigrationJobOptions = {}) {
 
   // Systems and Avionics Import mutation
   const jiraDcImportMutation = useMutation({
-    mutationFn: async (file: File): Promise<MigrationJob> => {
-      const response = await migrationApi.startJiraDcImport(file);
+    mutationFn: async (params: {
+      file: File;
+      targetProjectId?: string;
+      attachmentBundle?: File | null;
+      backupZip?: boolean;
+      options?: Record<string, unknown>;
+    }): Promise<MigrationJob> => {
+      const response = await migrationApi.startJiraDcImport(params);
       return response.data as unknown as MigrationJob;
     },
     onSuccess: (job) => {
@@ -255,6 +268,10 @@ export function useMigrationJob(options: UseMigrationJobOptions = {}) {
         sourceProjectId?: string;
         targetProjectId?: string;
         format?: string;
+        fieldMappings?: unknown[];
+        attachmentBundle?: File | null;
+        backupZip?: boolean;
+        options?: Record<string, unknown>;
       }
     ): Promise<MigrationJob> => {
       let job: MigrationJob;
@@ -262,11 +279,21 @@ export function useMigrationJob(options: UseMigrationJobOptions = {}) {
       switch (importType) {
         case 'csv':
           if (!params.file) throw new Error('File is required for CSV import');
-          job = await csvImportMutation.mutateAsync({ file: params.file });
+          job = await csvImportMutation.mutateAsync({
+            file: params.file,
+            options: { targetProjectId: params.targetProjectId, importMode: 'CREATE_UPDATE' },
+            fieldMappings: params.fieldMappings,
+          });
           break;
         case 'jira-dc':
           if (!params.file) throw new Error('File is required for Systems and Avionics import');
-          job = await jiraDcImportMutation.mutateAsync(params.file);
+          job = await jiraDcImportMutation.mutateAsync({
+            file: params.file,
+            targetProjectId: params.targetProjectId,
+            attachmentBundle: params.attachmentBundle,
+            backupZip: params.backupZip,
+            options: params.options,
+          });
           break;
         case 'project':
           if (!params.sourceProjectId || !params.targetProjectId) {

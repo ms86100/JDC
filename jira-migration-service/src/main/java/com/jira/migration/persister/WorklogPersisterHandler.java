@@ -1,5 +1,6 @@
 package com.jira.migration.persister;
 
+import com.jira.migration.service.clients.IssueServiceClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -8,22 +9,28 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 /**
- * Worklog Persister Handler
- * Handles worklog entity creation with time tracking support
+ * Worklog Persister Handler — persists to issue-service worklog API.
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class WorklogPersisterHandler {
 
+    private final IssueServiceClient issueServiceClient;
+
     @Transactional(rollbackFor = Exception.class)
     public WorklogPersistResult persistWorklog(Map<String, Object> worklogData, UUID jobId) {
         WorklogPersistResult result = new WorklogPersistResult();
 
         try {
+            String issueId = (String) worklogData.get("issueId");
             String issueKey = (String) worklogData.get("issueKey");
-            if (issueKey == null) {
-                throw new IllegalArgumentException("Issue key is required");
+            if (issueId == null && issueKey != null) {
+                issueServiceClient.getIssueByKey(issueKey).ifPresent(i -> worklogData.put("issueId", i.getId()));
+                issueId = (String) worklogData.get("issueId");
+            }
+            if (issueId == null) {
+                throw new IllegalArgumentException("Issue id or key is required for worklog");
             }
 
             Integer timeSpentSeconds = parseTimeSpent(worklogData);
@@ -31,26 +38,21 @@ public class WorklogPersisterHandler {
                 throw new IllegalArgumentException("Time spent is required and must be positive");
             }
 
-            WorklogEntity worklog = WorklogEntity.builder()
-                    .issueKey(issueKey)
-                    .timeSpentSeconds(timeSpentSeconds)
-                    .timeSpentFormatted((String) worklogData.get("timeSpentFormatted"))
-                    .startedAt(worklogData.get("startedAt") != null ?
-                            java.time.LocalDateTime.parse(worklogData.get("startedAt").toString()) :
-                            java.time.LocalDateTime.now())
-                    .authorId((UUID) worklogData.get("authorId"))
-                    .comment((String) worklogData.get("comment"))
-                    .build();
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("issueId", issueId);
+            payload.put("timeSpentSeconds", timeSpentSeconds.longValue());
+            payload.put("workDescription", worklogData.get("comment"));
+            if (worklogData.get("startedAt") != null) {
+                payload.put("startedAt", worklogData.get("startedAt").toString());
+            }
 
-            UUID worklogId = persistToDatabase(worklog);
+            Map<String, Object> response = issueServiceClient.createWorklog(issueId, payload);
+            Object id = response.get("id");
+            UUID worklogId = id != null ? UUID.fromString(id.toString()) : UUID.randomUUID();
 
             result.setSuccess(true);
             result.setWorklogId(worklogId);
-
-            // Update issue time tracking
-            updateIssueTimeTracking(issueKey, timeSpentSeconds);
-
-            log.debug("Persisted worklog for issue {}: {} seconds", issueKey, timeSpentSeconds);
+            log.debug("Persisted worklog for issue {}: {} seconds", issueKey != null ? issueKey : issueId, timeSpentSeconds);
 
         } catch (Exception e) {
             result.setSuccess(false);
@@ -61,80 +63,48 @@ public class WorklogPersisterHandler {
     }
 
     private Integer parseTimeSpent(Map<String, Object> worklogData) {
-        // Support multiple formats: "3h", "1d", "30m", "3600" (seconds)
         Object timeSpent = worklogData.get("timeSpentSeconds");
         if (timeSpent instanceof Integer) {
             return (Integer) timeSpent;
+        }
+        if (timeSpent instanceof Number) {
+            return ((Number) timeSpent).intValue();
         }
 
         String formatted = (String) worklogData.get("timeSpentFormatted");
         if (formatted != null && !formatted.isBlank()) {
             return parseJiraTimeFormat(formatted);
         }
-
         return null;
     }
 
     private Integer parseJiraTimeFormat(String timeStr) {
-        if (timeStr == null || timeStr.isBlank()) return null;
-
+        if (timeStr == null || timeStr.isBlank()) {
+            return null;
+        }
         int totalSeconds = 0;
         String remaining = timeStr.trim();
 
-        // Parse weeks
         int weeksIdx = remaining.indexOf('w');
         if (weeksIdx > 0) {
-            String weeks = remaining.substring(0, weeksIdx).trim();
-            totalSeconds += Integer.parseInt(weeks) * 7 * 8 * 60 * 60;
+            totalSeconds += Integer.parseInt(remaining.substring(0, weeksIdx).trim()) * 7 * 8 * 60 * 60;
             remaining = remaining.substring(weeksIdx + 1);
         }
-
-        // Parse days
         int daysIdx = remaining.indexOf('d');
         if (daysIdx > 0) {
-            String days = remaining.substring(0, daysIdx).trim();
-            totalSeconds += Integer.parseInt(days) * 8 * 60 * 60;
+            totalSeconds += Integer.parseInt(remaining.substring(0, daysIdx).trim()) * 8 * 60 * 60;
             remaining = remaining.substring(daysIdx + 1);
         }
-
-        // Parse hours
         int hoursIdx = remaining.indexOf('h');
         if (hoursIdx > 0) {
-            String hours = remaining.substring(0, hoursIdx).trim();
-            totalSeconds += Integer.parseInt(hours) * 60 * 60;
+            totalSeconds += Integer.parseInt(remaining.substring(0, hoursIdx).trim()) * 60 * 60;
             remaining = remaining.substring(hoursIdx + 1);
         }
-
-        // Parse minutes
         int minIdx = remaining.indexOf('m');
         if (minIdx > 0) {
-            String mins = remaining.substring(0, minIdx).trim();
-            totalSeconds += Integer.parseInt(mins) * 60;
+            totalSeconds += Integer.parseInt(remaining.substring(0, minIdx).trim()) * 60;
         }
-
         return totalSeconds > 0 ? totalSeconds : null;
-    }
-
-    private void updateIssueTimeTracking(String issueKey, int timeSpentSeconds) {
-        log.debug("Updating time tracking for issue {}: +{} seconds", issueKey, timeSpentSeconds);
-        // In production: Call issue-service to update aggregate time tracking
-    }
-
-    private UUID persistToDatabase(WorklogEntity worklog) {
-        log.debug("Persisting worklog for issue {}", worklog.getIssueKey());
-        return UUID.randomUUID();
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class WorklogEntity {
-        private UUID id;
-        private String issueKey;
-        private Integer timeSpentSeconds;
-        private String timeSpentFormatted;
-        private java.time.LocalDateTime startedAt;
-        private UUID authorId;
-        private String comment;
     }
 
     public static class WorklogPersistResult {

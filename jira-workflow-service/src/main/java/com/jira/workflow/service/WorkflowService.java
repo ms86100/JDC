@@ -29,6 +29,7 @@ public class WorkflowService {
     private final WorkflowConditionRepository workflowConditionRepository;
     private final WorkflowValidatorRepository workflowValidatorRepository;
     private final WorkflowPostFunctionRepository workflowPostFunctionRepository;
+    private final WorkflowLayoutEdgeSyncService workflowLayoutEdgeSyncService;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -172,6 +173,7 @@ public class WorkflowService {
                 .build();
 
         transition = workflowTransitionRepository.save(transition);
+        workflowLayoutEdgeSyncService.syncLayoutEdges(request.getWorkflowId());
 
         log.info("Transition added successfully: {}", transition.getId());
         return mapToTransitionResponse(transition);
@@ -223,7 +225,9 @@ public class WorkflowService {
         WorkflowTransition transition = workflowTransitionRepository.findById(transitionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transition", "id", transitionId));
 
+        UUID workflowId = transition.getWorkflowId();
         workflowTransitionRepository.delete(transition);
+        workflowLayoutEdgeSyncService.syncLayoutEdges(workflowId);
         log.info("Transition deleted: {}", transitionId);
     }
 

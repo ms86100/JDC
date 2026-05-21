@@ -103,4 +103,17 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
       { label: 'Bulk operations', path: '/admin/bulk-create' },
     ],
   },
+  {
+    key: 'testing', label: 'Test Management', icon: '🧪',
+    items: [
+      { label: 'Test Cases',      path: '/admin/tests' },
+      { label: 'Test Sets',       path: '/admin/tests/sets' },
+      { label: 'Test Plans',      path: '/admin/tests/plans' },
+      { label: 'Test Environments', path: '/admin/tests/environments' },
+      { label: 'Import Tests',    path: '/admin/tests/import' },
+      { label: 'Test Reports',    path: '/admin/tests/reports' },
+      { label: 'CI/CD Webhooks',  path: '/admin/tests/webhooks' },
+      { label: 'AI Suggestions',  path: '/admin/tests/ai' },
+    ],
+  },
 ];

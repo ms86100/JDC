@@ -88,10 +88,38 @@ public class UserPersisterHandler {
             log.debug("User not found by email {}: {}", email, e.getMessage());
         }
 
-        // Create new user - simplified, actual creation would be via service
-        log.debug("User {} not found, mapping skipped (creation not implemented in migration service)", email);
-
+        try {
+            Map<String, Object> createPayload = new HashMap<>();
+            createPayload.put("email", email);
+            createPayload.put("username", email.contains("@") ? email.substring(0, email.indexOf('@')) : email);
+            createPayload.put("displayName", displayName != null ? displayName : email);
+            UserResponse created = userServiceClient.createUser(createPayload);
+            if (created != null && created.getId() != null) {
+                persistUserMapping(jobId, email, "EMAIL",
+                        UUID.fromString(created.getId()), created.getUsername(), "CREATE_NEW");
+                return created.getId();
+            }
+        } catch (Exception e) {
+            log.warn("User create failed for {}: {}", email, e.getMessage());
+        }
         return null;
+    }
+
+    public int importUsersFromProject(UUID jobId, UUID sourceProjectId) {
+        int count = 0;
+        try {
+            for (UserResponse user : userServiceClient.getUsersByProject(sourceProjectId.toString())) {
+                if (user.getEmail() != null) {
+                    String id = resolveOrCreateUser(user.getEmail(), user.getDisplayName(), jobId);
+                    if (id != null) {
+                        count++;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Project user import failed: {}", e.getMessage());
+        }
+        return count;
     }
 
     /**

@@ -94,6 +94,10 @@ public class WorkflowStatusCatalog {
                 return;
             }
             for (Map<String, Object> row : response.getBody()) {
+                String name = stringVal(row.get("name"));
+                if (name != null && name.contains("(legacy)")) {
+                    continue;
+                }
                 putRow(catalog, row, "category", null);
             }
         } catch (Exception e) {

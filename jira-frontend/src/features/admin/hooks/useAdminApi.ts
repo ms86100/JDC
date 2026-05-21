@@ -686,7 +686,7 @@ export const useRemoveUserFromGroup = () => {
 export const useJiraGroupMembers = (groupId: string) => {
   return useQuery({
     queryKey: ['jira', 'groupMembers', groupId],
-    queryFn: () => apiClient.get<User[]>(`/api/admin/users/groups/${groupId}/members`),
+    queryFn: () => apiClient.get<JiraUser[]>(`/api/admin/users/groups/${groupId}/members`),
     select: (res) => res.data,
     enabled: !!groupId,
   });

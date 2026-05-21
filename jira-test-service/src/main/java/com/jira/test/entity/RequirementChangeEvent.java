@@ -23,28 +23,48 @@ public class RequirementChangeEvent {
     @Column(name = "requirement_id", nullable = false)
     private UUID requirementId;
 
-    @Column(name = "from_version", nullable = false)
+    @Column(name = "version_id")
+    private UUID versionId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "change_type", nullable = false, length = 20)
+    private ChangeType changeType;
+
+    @Column(name = "affected_fields", columnDefinition = "JSONB")
+    private String affectedFields; // JSON array of affected field objects
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "impact_level", length = 20)
+    @Builder.Default
+    private ImpactLevel impactLevel = ImpactLevel.LOW;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "from_version")
     private Integer fromVersion;
 
-    @Column(name = "to_version", nullable = false)
+    @Column(name = "to_version")
     private Integer toVersion;
 
-    @Column(name = "change_type", nullable = false, length = 50)
-    private String changeType;
-
     @Column(name = "field_changes", columnDefinition = "JSONB")
-    private String fieldChanges; // [{field, oldValue, newValue}]
+    private String fieldChanges;
 
     @Column(name = "impact_assessment", columnDefinition = "JSONB")
     private String impactAssessment;
 
     @Column(name = "affected_tests", columnDefinition = "JSONB")
-    private String affectedTests; // [{testId, impactLevel}]
+    private String affectedTests;
 
     @Column(name = "notified_stakeholders", columnDefinition = "JSONB")
     private String notifiedStakeholders;
 
-    @CreationTimestamp
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    public enum ChangeType {
+        ADDED, MODIFIED, DELETED, DEPRECATED
+    }
+
+    public enum ImpactLevel {
+        LOW, MEDIUM, HIGH, CRITICAL
+    }
 }

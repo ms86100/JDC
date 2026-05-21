@@ -30,6 +30,35 @@ public class EnvironmentMatrixService {
     private final EnvironmentProvisioningRuleRepository provisioningRuleRepository;
     private final ObjectMapper objectMapper;
 
+    // Cloud provider stubs
+    private static final Map<String, CloudProviderConfig> CLOUD_PROVIDERS = new HashMap<>();
+    static {
+        CLOUD_PROVIDERS.put("AWS", new CloudProviderConfig("AWS", "Amazon Web Services", "https://aws.amazon.com/",
+                Map.of("instanceTypes", List.of("t2.micro", "t2.medium", "t2.large", "m5.large", "m5.xlarge"),
+                        "regions", List.of("us-east-1", "us-west-2", "eu-west-1", "ap-southeast-1"),
+                        "capabilities", List.of("EC2", "ECS", "EKS", "Lambda"))));
+
+        CLOUD_PROVIDERS.put("AZURE", new CloudProviderConfig("AZURE", "Microsoft Azure", "https://azure.microsoft.com/",
+                Map.of("instanceTypes", List.of("Standard_B1s", "Standard_B2s", "Standard_D2s_v3", "Standard_D4s_v3"),
+                        "regions", List.of("eastus", "westus2", "westeurope", "southeastasia"),
+                        "capabilities", List.of("VMs", "AKS", "Azure Functions", "App Service"))));
+
+        CLOUD_PROVIDERS.put("GCP", new CloudProviderConfig("GCP", "Google Cloud Platform", "https://cloud.google.com/",
+                Map.of("instanceTypes", List.of("e2-micro", "e2-medium", "e2-standard-2", "e2-standard-4"),
+                        "regions", List.of("us-central1", "us-east1", "europe-west1", "asia-southeast1"),
+                        "capabilities", List.of("Compute Engine", "GKE", "Cloud Functions", "App Engine"))));
+
+        CLOUD_PROVIDERS.put("BROWSERSTACK", new CloudProviderConfig("BROWSERSTACK", "BrowserStack", "https://www.browserstack.com/",
+                Map.of("browsers", List.of("Chrome", "Firefox", "Safari", "Edge"),
+                        "os", List.of("Windows", "macOS", "Android", "iOS"),
+                        "capabilities", List.of("Selenium", "Appium", "Playwright", "Cypress"))));
+
+        CLOUD_PROVIDERS.put("SAUCELABS", new CloudProviderConfig("SAUCELABS", "Sauce Labs", "https://saucelabs.com/",
+                Map.of("browsers", List.of("Chrome", "Firefox", "Safari", "Edge"),
+                        "os", List.of("Windows", "macOS", "Linux"),
+                        "capabilities", List.of("Selenium", "Appium", "Playwright", "Cypress"))));
+    }
+
     // ==================== Matrix Configuration ====================
 
     @Transactional
@@ -60,12 +89,10 @@ public class EnvironmentMatrixService {
         int index = 0;
         int validCount = 0;
         for (Map<String, String> combo : combinations) {
-            // Apply filters
             if (filters != null && !filters.isEmpty() && !passesFilters(combo, filters)) {
                 continue;
             }
 
-            // Check conflicts
             List<CombinationResponse.ValidationError> errors = checkConflicts(combo, conflicts);
 
             EnvironmentCombination combination = EnvironmentCombination.builder()
@@ -108,10 +135,332 @@ public class EnvironmentMatrixService {
 
     @Transactional
     public void deleteMatrix(UUID matrixId) {
-        // Delete combinations first
         combinationRepository.deleteByMatrixId(matrixId);
         matrixRepository.deleteById(matrixId);
         log.info("Deleted matrix: {}", matrixId);
+    }
+
+    // ==================== Matrix Visualization ====================
+
+    @Transactional(readOnly = true)
+    public MatrixVisualizationData getVisualizationData(UUID matrixId) {
+        EnvironmentMatrix matrix = matrixRepository.findById(matrixId)
+                .orElseThrow(() -> new ResourceNotFoundException("EnvironmentMatrix", "id", matrixId));
+
+        List<EnvironmentCombination> combinations = combinationRepository.findByMatrixIdOrderByCombinationIndexAsc(matrixId);
+        List<MatrixConfigurationRequest.DimensionConfig> dimensions = parseDimensions(matrix.getDimensionConfigs());
+
+        // Generate heatmap data
+        Map<String, Map<String, Double>> heatmapData = generateHeatmapData(combinations, dimensions);
+
+        // Generate distribution stats
+        Map<String, Map<String, Integer>> distributionStats = generateDistributionStats(combinations, dimensions);
+
+        // Generate validity matrix
+        List<List<Boolean>> validityMatrix = generateValidityMatrix(combinations, dimensions);
+
+        return MatrixVisualizationData.builder()
+                .matrixId(matrixId)
+                .matrixName(matrix.getName())
+                .dimensions(dimensions)
+                .heatmapData(heatmapData)
+                .distributionStats(distributionStats)
+                .validityMatrix(validityMatrix)
+                .totalCombinations(matrix.getTotalCombinations())
+                .validCombinations(matrix.getValidCombinations())
+                .invalidCombinations(matrix.getTotalCombinations() - matrix.getValidCombinations())
+                .coveragePercentage(matrix.getTotalCombinations() > 0 ?
+                        (matrix.getValidCombinations() * 100.0 / matrix.getTotalCombinations()) : 0.0)
+                .build();
+    }
+
+    private Map<String, Map<String, Double>> generateHeatmapData(List<EnvironmentCombination> combinations,
+                                                                   List<MatrixConfigurationRequest.DimensionConfig> dimensions) {
+        Map<String, Map<String, Double>> heatmap = new HashMap<>();
+
+        if (dimensions.isEmpty() || combinations.isEmpty()) return heatmap;
+
+        // Use first two dimensions for heatmap
+        String dimX = dimensions.get(0).getName();
+        String dimY = dimensions.size() > 1 ? dimensions.get(1).getName() : null;
+
+        for (EnvironmentCombination combo : combinations) {
+            Map<String, String> data = parseStringMap(combo.getCombinationData());
+            String xValue = data.get(dimX);
+
+            if (xValue != null) {
+                heatmap.computeIfAbsent(xValue, k -> new HashMap<>());
+
+                if (dimY != null) {
+                    String yValue = data.get(dimY);
+                    if (yValue != null) {
+                        // Score based on validity
+                        double score = combo.getIsValid() ? 1.0 : 0.0;
+                        // Add provisioning status influence
+                        if ("PROVISIONED".equals(combo.getProvisioningStatus())) {
+                            score += 0.5;
+                        }
+                        heatmap.get(xValue).merge(yValue, score, Double::sum);
+                    }
+                }
+            }
+        }
+
+        return heatmap;
+    }
+
+    private Map<String, Map<String, Integer>> generateDistributionStats(List<EnvironmentCombination> combinations,
+                                                                          List<MatrixConfigurationRequest.DimensionConfig> dimensions) {
+        Map<String, Map<String, Integer>> stats = new HashMap<>();
+
+        for (EnvironmentCombination combo : combinations) {
+            Map<String, String> data = parseStringMap(combo.getCombinationData());
+
+            for (MatrixConfigurationRequest.DimensionConfig dim : dimensions) {
+                String value = data.get(dim.getName());
+                if (value != null) {
+                    stats.computeIfAbsent(dim.getName(), k -> new HashMap<>())
+                            .merge(value, 1, Integer::sum);
+                }
+            }
+        }
+
+        return stats;
+    }
+
+    private List<List<Boolean>> generateValidityMatrix(List<EnvironmentCombination> combinations,
+                                                       List<MatrixConfigurationRequest.DimensionConfig> dimensions) {
+        List<List<Boolean>> matrix = new ArrayList<>();
+
+        if (dimensions.size() < 2) return matrix;
+
+        String dimX = dimensions.get(0).getName();
+        String dimY = dimensions.get(1).getName();
+        List<String> xValues = dimensions.get(0).getValues();
+        List<String> yValues = dimensions.get(1).getValues();
+
+        for (String xVal : xValues) {
+            List<Boolean> row = new ArrayList<>();
+            for (String yVal : yValues) {
+                boolean valid = combinations.stream()
+                        .anyMatch(c -> {
+                            Map<String, String> data = parseStringMap(c.getCombinationData());
+                            return xVal.equals(data.get(dimX)) && yVal.equals(data.get(dimY)) && c.getIsValid();
+                        });
+                row.add(valid);
+            }
+            matrix.add(row);
+        }
+
+        return matrix;
+    }
+
+    // ==================== Compatibility Checking ====================
+
+    @Transactional(readOnly = true)
+    public CompatibilityCheckResult checkCompatibility(UUID matrixId, Map<String, String> testRequirements) {
+        EnvironmentMatrix matrix = matrixRepository.findById(matrixId)
+                .orElseThrow(() -> new ResourceNotFoundException("EnvironmentMatrix", "id", matrixId));
+
+        List<EnvironmentCombination> validCombinations = combinationRepository.findByMatrixIdAndIsValidTrue(matrixId);
+
+        // Filter combinations that match requirements
+        List<UUID> compatibleCombinations = validCombinations.stream()
+                .filter(combo -> matchesRequirements(combo, testRequirements))
+                .map(EnvironmentCombination::getId)
+                .collect(Collectors.toList());
+
+        // Check for issues
+        List<String> warnings = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+
+        if (compatibleCombinations.isEmpty()) {
+            errors.add("No compatible environment combinations found for the given requirements");
+        }
+
+        // Check for partial matches
+        for (Map.Entry<String, String> req : testRequirements.entrySet()) {
+            boolean found = validCombinations.stream()
+                    .anyMatch(c -> {
+                        Map<String, String> data = parseStringMap(c.getCombinationData());
+                        return req.getValue().equals(data.get(req.getKey()));
+                    });
+            if (!found) {
+                warnings.add("Requirement '" + req.getKey() + "=" + req.getValue() + "' has limited coverage");
+            }
+        }
+
+        // Suggest alternatives
+        List<Map<String, String>> suggestedAlternatives = suggestAlternatives(validCombinations, testRequirements);
+
+        return CompatibilityCheckResult.builder()
+                .isCompatible(!compatibleCombinations.isEmpty())
+                .compatibleCount(compatibleCombinations.size())
+                .compatibleCombinationIds(compatibleCombinations)
+                .warnings(warnings)
+                .errors(errors)
+                .suggestedAlternatives(suggestedAlternatives)
+                .build();
+    }
+
+    private boolean matchesRequirements(EnvironmentCombination combo, Map<String, String> requirements) {
+        Map<String, String> data = parseStringMap(combo.getCombinationData());
+
+        for (Map.Entry<String, String> req : requirements.entrySet()) {
+            String value = data.get(req.getKey());
+            if (value == null || !value.equals(req.getValue())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private List<Map<String, String>> suggestAlternatives(List<EnvironmentCombination> combinations,
+                                                          Map<String, String> requirements) {
+        List<Map<String, String>> suggestions = new ArrayList<>();
+
+        // Find combinations that match most requirements
+        for (EnvironmentCombination combo : combinations) {
+            Map<String, String> data = parseStringMap(combo.getCombinationData());
+            int matchCount = 0;
+
+            for (Map.Entry<String, String> req : requirements.entrySet()) {
+                if (req.getValue().equals(data.get(req.getKey()))) {
+                    matchCount++;
+                }
+            }
+
+            if (matchCount > 0 && matchCount < requirements.size()) {
+                suggestions.add(data);
+                if (suggestions.size() >= 5) break;
+            }
+        }
+
+        return suggestions;
+    }
+
+    // ==================== Matrix-Based Test Execution ====================
+
+    @Transactional(readOnly = true)
+    public TestExecutionPlan generateExecutionPlan(UUID matrixId, UUID testId, List<UUID> testCaseIds) {
+        List<EnvironmentCombination> validCombinations = combinationRepository.findByMatrixIdAndIsValidTrue(matrixId);
+
+        // Generate execution plan
+        List<ExecutionTask> tasks = new ArrayList<>();
+        int priority = 1;
+
+        for (EnvironmentCombination combo : validCombinations) {
+            for (UUID tcId : testCaseIds) {
+                ExecutionTask task = ExecutionTask.builder()
+                        .taskId(UUID.randomUUID())
+                        .combinationId(combo.getId())
+                        .testCaseId(tcId)
+                        .priority(priority++)
+                        .environmentConfig(parseStringMap(combo.getCombinationData()))
+                        .estimatedDuration(300) // 5 minutes default
+                        .dependsOn(new ArrayList<>())
+                        .build();
+                tasks.add(task);
+            }
+        }
+
+        // Optimize execution order (parallel where possible)
+        List<List<ExecutionTask>> executionGroups = optimizeExecutionOrder(tasks);
+
+        return TestExecutionPlan.builder()
+                .planId(UUID.randomUUID())
+                .matrixId(matrixId)
+                .testId(testId)
+                .totalCombinations(validCombinations.size())
+                .totalTestCases(testCaseIds.size())
+                .totalTasks(tasks.size())
+                .estimatedDuration(calculateTotalDuration(executionGroups))
+                .executionGroups(executionGroups)
+                .canRunParallel(true)
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+
+    private List<List<ExecutionTask>> optimizeExecutionOrder(List<ExecutionTask> tasks) {
+        // Simple grouping - in production use more sophisticated scheduling
+        List<List<ExecutionTask>> groups = new ArrayList<>();
+        List<ExecutionTask> currentGroup = new ArrayList<>();
+
+        for (ExecutionTask task : tasks) {
+            currentGroup.add(task);
+            if (currentGroup.size() >= 10) { // Max 10 parallel tasks
+                groups.add(new ArrayList<>(currentGroup));
+                currentGroup.clear();
+            }
+        }
+
+        if (!currentGroup.isEmpty()) {
+            groups.add(currentGroup);
+        }
+
+        return groups;
+    }
+
+    private int calculateTotalDuration(List<List<ExecutionTask>> groups) {
+        return groups.size() * 300; // Simplified: groups * average duration
+    }
+
+    // ==================== Cloud Provider Integration ====================
+
+    @Transactional(readOnly = true)
+    public CloudProviderInfo getCloudProviders() {
+        Map<String, CloudProviderDetails> providers = new HashMap<>();
+
+        for (Map.Entry<String, CloudProviderConfig> entry : CLOUD_PROVIDERS.entrySet()) {
+            CloudProviderConfig config = entry.getValue();
+            providers.put(entry.getKey(), CloudProviderDetails.builder()
+                    .providerType(entry.getKey())
+                    .displayName(config.name)
+                    .website(config.website)
+                    .capabilities(config.capabilities.get("capabilities"))
+                    .availableRegions(config.capabilities.get("regions"))
+                    .availableInstanceTypes(config.capabilities.get("instanceTypes"))
+                    .isAvailable(true)
+                    .build());
+        }
+
+        return CloudProviderInfo.builder()
+                .providers(providers)
+                .defaultProvider("AWS")
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getProviderCapabilities(String providerType) {
+        CloudProviderConfig config = CLOUD_PROVIDERS.get(providerType.toUpperCase());
+        if (config == null) {
+            throw new IllegalArgumentException("Unknown provider: " + providerType);
+        }
+
+        Map<String, Object> capabilities = new HashMap<>();
+        capabilities.put("providerType", providerType);
+        capabilities.put("displayName", config.name);
+        capabilities.put("capabilities", config.capabilities);
+
+        // Add API endpoint stub
+        capabilities.put("apiEndpoint", getApiEndpointStub(providerType));
+
+        // Add credential requirements
+        capabilities.put("requiresCredentials", true);
+        capabilities.put("credentialFields", List.of("accessKey", "secretKey", "region"));
+
+        return capabilities;
+    }
+
+    private String getApiEndpointStub(String providerType) {
+        return switch (providerType.toUpperCase()) {
+            case "AWS" -> "https://sts.amazonaws.com/";
+            case "AZURE" -> "https://login.microsoftonline.com/";
+            case "GCP" -> "https://oauth2.googleapis.com/";
+            case "BROWSERSTACK" -> "https://api.browserstack.com/";
+            case "SAUCELABS" -> "https://api.saucelabs.com/";
+            default -> "https://api.example.com/";
+        };
     }
 
     // ==================== Combination Operations ====================
@@ -141,7 +490,7 @@ public class EnvironmentMatrixService {
         int validCount = 0;
 
         for (EnvironmentCombination combo : combinations) {
-            Map<String, String> comboData = parseMap(combo.getCombinationData());
+            Map<String, String> comboData = parseStringMap(combo.getCombinationData());
             List<CombinationResponse.ValidationError> errors = checkConflicts(comboData, conflicts);
 
             combo.setIsValid(errors.isEmpty());
@@ -172,7 +521,6 @@ public class EnvironmentMatrixService {
             rule = provisioningRuleRepository.findById(request.getProvisioningRuleId())
                     .orElseThrow(() -> new ResourceNotFoundException("ProvisioningRule", "id", request.getProvisioningRuleId()));
         } else {
-            // Auto-select based on provider type in combination
             List<EnvironmentProvisioningRule> activeRules = provisioningRuleRepository.findByIsActiveTrueOrderByPriorityDesc();
             if (!activeRules.isEmpty()) {
                 rule = activeRules.get(0);
@@ -180,7 +528,6 @@ public class EnvironmentMatrixService {
         }
 
         if (rule == null) {
-            // Return basic config without external provisioning
             Map<String, Object> basicConfig = parseMap(combination.getCombinationData());
             combination.setProvisionedConfig(serializeMap(basicConfig));
             combination.setProvisioningStatus("PROVISIONED");
@@ -198,7 +545,6 @@ public class EnvironmentMatrixService {
         }
 
         try {
-            // Build provisioned config from rule
             Map<String, Object> provisionedConfig = buildProvisionedConfig(combination, rule);
 
             combination.setProvisionedConfig(serializeMap(provisionedConfig));
@@ -252,8 +598,68 @@ public class EnvironmentMatrixService {
                 .environmentVariables(envVars)
                 .provisioningStatus(combination.getProvisioningStatus())
                 .provisionedAt(combination.getProvisionedAt())
-                .provisioningError(combination.getProvisioningError())
+                .errorMessage(combination.getProvisioningError())
                 .status(combination.getProvisioningStatus())
+                .build();
+    }
+
+    // ==================== Provisioning Workflow ====================
+
+    @Transactional
+    public ProvisioningWorkflowResponse startProvisioningWorkflow(UUID matrixId, List<UUID> combinationIds) {
+        List<EnvironmentCombination> combinations = combinationIds.isEmpty() ?
+                combinationRepository.findByMatrixIdAndIsValidTrue(matrixId) :
+                combinationRepository.findAllById(combinationIds);
+
+        List<ProvisioningTask> tasks = new ArrayList<>();
+
+        for (EnvironmentCombination combo : combinations) {
+            ProvisioningTask task = ProvisioningTask.builder()
+                    .taskId(UUID.randomUUID())
+                    .combinationId(combo.getId())
+                    .status("PENDING")
+                    .startedAt(null)
+                    .completedAt(null)
+                    .build();
+            tasks.add(task);
+        }
+
+        // Start async provisioning (simplified)
+        for (ProvisioningTask task : tasks) {
+            try {
+                EnvironmentProvisionRequest request = EnvironmentProvisionRequest.builder()
+                        .combinationId(task.getCombinationId())
+                        .build();
+                ProvisionResponse response = provisionEnvironment(request);
+                task.setStatus(response.getStatus());
+            } catch (Exception e) {
+                task.setStatus("FAILED");
+                task.setError(e.getMessage());
+            }
+        }
+
+        int successCount = (int) tasks.stream().filter(t -> "PROVISIONED".equals(t.getStatus())).count();
+        int failedCount = (int) tasks.stream().filter(t -> "FAILED".equals(t.getStatus())).count();
+
+        return ProvisioningWorkflowResponse.builder()
+                .workflowId(UUID.randomUUID())
+                .matrixId(matrixId)
+                .totalTasks(tasks.size())
+                .pendingTasks((int) tasks.stream().filter(t -> "PENDING".equals(t.getStatus())).count())
+                .inProgressTasks((int) tasks.stream().filter(t -> "IN_PROGRESS".equals(t.getStatus())).count())
+                .completedTasks(successCount)
+                .failedTasks(failedCount)
+                .tasks(tasks)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public ProvisioningWorkflowStatus getWorkflowStatus(UUID workflowId) {
+        // In production, track workflow state in database
+        return ProvisioningWorkflowStatus.builder()
+                .workflowId(workflowId)
+                .status("IN_PROGRESS")
+                .progressPercentage(50)
                 .build();
     }
 
@@ -378,7 +784,6 @@ public class EnvironmentMatrixService {
                                                         EnvironmentProvisioningRule rule) {
         Map<String, Object> baseConfig = parseMap(combination.getCombinationData());
 
-        // Add provider-specific config
         Map<String, Object> providerConfig = parseMap(rule.getProviderConfig());
         Map<String, Object> capabilities = rule.getCapabilitiesTemplate() != null ?
                 parseMap(rule.getCapabilitiesTemplate()) : new HashMap<>();
@@ -387,7 +792,6 @@ public class EnvironmentMatrixService {
         result.putAll(providerConfig);
         result.putAll(capabilities);
 
-        // Generate access URL based on provider
         String accessUrl = generateAccessUrl(rule.getProviderType(), baseConfig);
         result.put("accessUrl", accessUrl);
 
@@ -409,7 +813,7 @@ public class EnvironmentMatrixService {
         config.forEach((k, v) -> envVars.put("ENV_" + k.toUpperCase(), String.valueOf(v)));
 
         if (rule.getEnvironmentTemplate() != null) {
-            Map<String, String> template = rule.getEnvironmentTemplate();
+            Map<String, String> template = parseStringMap(rule.getEnvironmentTemplate());
             template.forEach(envVars::put);
         }
 
@@ -445,7 +849,7 @@ public class EnvironmentMatrixService {
                 .id(combo.getId())
                 .matrixId(combo.getMatrixId())
                 .combinationIndex(combo.getCombinationIndex())
-                .combinationData(parseMap(combo.getCombinationData()))
+                .combinationData(parseStringMap(combo.getCombinationData()))
                 .isValid(combo.getIsValid())
                 .validationErrors(errors)
                 .provisionedConfig(combo.getProvisionedConfig() != null ? parseMap(combo.getProvisionedConfig()) : null)
@@ -468,7 +872,7 @@ public class EnvironmentMatrixService {
                 .capabilitiesTemplate(rule.getCapabilitiesTemplate() != null ?
                         parseMap(rule.getCapabilitiesTemplate()) : null)
                 .environmentTemplate(rule.getEnvironmentTemplate() != null ?
-                        parseMap(rule.getEnvironmentTemplate()) : null)
+                        parseStringMap(rule.getEnvironmentTemplate()) : null)
                 .maxConcurrent(rule.getMaxConcurrent())
                 .timeoutSeconds(rule.getTimeoutSeconds())
                 .retryCount(rule.getRetryCount())
@@ -536,5 +940,131 @@ public class EnvironmentMatrixService {
         if (json == null || json.isEmpty()) return new ArrayList<>();
         try { return objectMapper.readValue(json, new TypeReference<List<CombinationResponse.ValidationError>>() {}); }
         catch (JsonProcessingException e) { return new ArrayList<>(); }
+    }
+
+    private Map<String, String> parseStringMap(String json) {
+        if (json == null || json.isEmpty()) return new HashMap<>();
+        try {
+            Map<String, Object> objMap = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+            Map<String, String> result = new HashMap<>();
+            objMap.forEach((k, v) -> result.put(k, v != null ? String.valueOf(v) : ""));
+            return result;
+        }
+        catch (JsonProcessingException e) { return new HashMap<>(); }
+    }
+
+    // ==================== Inner Classes ====================
+
+    @lombok.Data
+    @lombok.Builder
+    public static class MatrixVisualizationData {
+        private UUID matrixId;
+        private String matrixName;
+        private List<MatrixConfigurationRequest.DimensionConfig> dimensions;
+        private Map<String, Map<String, Double>> heatmapData;
+        private Map<String, Map<String, Integer>> distributionStats;
+        private List<List<Boolean>> validityMatrix;
+        private int totalCombinations;
+        private int validCombinations;
+        private int invalidCombinations;
+        private double coveragePercentage;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class CompatibilityCheckResult {
+        private boolean isCompatible;
+        private int compatibleCount;
+        private List<UUID> compatibleCombinationIds;
+        private List<String> warnings;
+        private List<String> errors;
+        private List<Map<String, String>> suggestedAlternatives;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class TestExecutionPlan {
+        private UUID planId;
+        private UUID matrixId;
+        private UUID testId;
+        private int totalCombinations;
+        private int totalTestCases;
+        private int totalTasks;
+        private int estimatedDuration;
+        private List<List<ExecutionTask>> executionGroups;
+        private boolean canRunParallel;
+        private LocalDateTime createdAt;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class ExecutionTask {
+        private UUID taskId;
+        private UUID combinationId;
+        private UUID testCaseId;
+        private int priority;
+        private Map<String, String> environmentConfig;
+        private int estimatedDuration;
+        private List<UUID> dependsOn;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class CloudProviderConfig {
+        private String code;
+        private String name;
+        private String website;
+        private Map<String, List<String>> capabilities;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class CloudProviderInfo {
+        private Map<String, CloudProviderDetails> providers;
+        private String defaultProvider;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class CloudProviderDetails {
+        private String providerType;
+        private String displayName;
+        private String website;
+        private List<String> capabilities;
+        private List<String> availableRegions;
+        private List<String> availableInstanceTypes;
+        private boolean isAvailable;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class ProvisioningWorkflowResponse {
+        private UUID workflowId;
+        private UUID matrixId;
+        private int totalTasks;
+        private int pendingTasks;
+        private int inProgressTasks;
+        private int completedTasks;
+        private int failedTasks;
+        private List<ProvisioningTask> tasks;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class ProvisioningTask {
+        private UUID taskId;
+        private UUID combinationId;
+        private String status;
+        private LocalDateTime startedAt;
+        private LocalDateTime completedAt;
+        private String error;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class ProvisioningWorkflowStatus {
+        private UUID workflowId;
+        private String status;
+        private int progressPercentage;
     }
 }

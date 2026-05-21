@@ -16,7 +16,7 @@ export interface CreateTestRequest {
   labels?: string[];
   precondition?: string;
   testType?: 'MANUAL' | 'AUTOMATED' | 'BDD';
-  testSteps?: TestStep[];
+  steps?: TestStep[];
   requirementKeys?: string[];
   folderId?: string;
   gherkinFeatureKey?: string;
@@ -31,7 +31,7 @@ export interface UpdateTestRequest {
   precondition?: string;
   testType?: 'MANUAL' | 'AUTOMATED' | 'BDD';
   testStatus?: 'DRAFT' | 'READY' | 'APPROVED' | 'DEPRECATED';
-  testSteps?: TestStep[];
+  steps?: TestStep[];
   requirementKeys?: string[];
   folderId?: string;
 }
@@ -137,6 +137,7 @@ export interface TestExecutionResponse {
   startedAt?: string;
   finishedAt?: string;
   duration?: number;
+  createdAt?: string;
   executedBy?: string;
   stepResults?: StepResultResponse[];
 }
@@ -268,7 +269,7 @@ const testApi = {
     requirementKey?: string;
     search?: string;
   }): Promise<TestResponse[]> =>
-    axiosClient.get('/api/tests/search', { params }).then(r => r.data),
+    axiosClient.get('/api/tests/project/' + params.projectId, { params }).then(r => r.data),
 
   // Test Sets
   createTestSet: (data: TestSetRequest): Promise<TestSetResponse> =>
@@ -354,7 +355,7 @@ const testApi = {
 
   // Traceability Matrix
   getTraceabilityMatrix: (projectId: string): Promise<TraceabilityMatrixResponse[]> =>
-    axiosClient.get(`/api/traceability/matrix/${projectId}`).then(r => r.data),
+    axiosClient.get(`/api/traceability/matrix`, { params: { projectId } }).then(r => r.data),
 
   // Test Environments
   createTestEnvironment: (projectId: string, data: TestEnvironmentRequest): Promise<TestEnvironmentResponse> =>
@@ -404,6 +405,13 @@ const testApi = {
 
   getCoverageReport: (projectId: string): Promise<{ requirement: string; coverage: number; tests: number }[]> =>
     axiosClient.get(`/api/reports/coverage?projectId=${projectId}`).then(r => r.data),
+
+  // Test Settings
+  getTestSettings: (projectId: string): Promise<Record<string, unknown>> =>
+    axiosClient.get(`/api/test-settings?projectId=${projectId}`).then(r => r.data),
+
+  saveTestSettings: (projectId: string, settings: Record<string, unknown>): Promise<void> =>
+    axiosClient.put(`/api/test-settings?projectId=${projectId}`, settings).then(r => r.data),
 };
 
 // ==================== DATASET API ====================
@@ -662,6 +670,7 @@ export interface ExecutionRecordResponse {
   environmentId?: string;
   executionDurationMs?: number;
   retryAttempt?: number;
+  lastStatus?: string;
   analyzedAt: string;
 }
 
@@ -1056,6 +1065,12 @@ const advancedApi = {
       axiosClient.post('/api/impact/test-component', data).then(r => r.data),
     getComponentsForTest: (testId: string): Promise<ComponentResponse[]> =>
       axiosClient.get(`/api/impact/test/${testId}/components`).then(r => r.data),
+    analyzeTestImpact: (testId: string, cascadeDepth?: number): Promise<unknown> =>
+      axiosClient.get(`/api/impact/test/${testId}`, { params: { cascadeDepth } }).then(r => r.data),
+    analyzeRequirementImpact: (requirementKey: string, fromVersion?: number, toVersion?: number): Promise<unknown> =>
+      axiosClient.get(`/api/impact/requirement/${requirementKey}`, { params: { fromVersion, toVersion } }).then(r => r.data),
+    getAffectedTests: (projectId: string, changeType?: string, changeKey?: string): Promise<unknown[]> =>
+      axiosClient.get(`/api/impact/affected`, { params: { projectId, changeType, changeKey } }).then(r => r.data),
   },
 
   // Flaky Test API
@@ -1191,4 +1206,12 @@ const advancedApi = {
   },
 };
 
-export default advancedApi;
+// Combined API - merges basic testApi with all advanced features
+const combinedApi = {
+  ...testApi,
+  ...advancedApi,
+};
+
+// Export all APIs
+export { testApi, advancedApi, combinedApi };
+export default combinedApi;

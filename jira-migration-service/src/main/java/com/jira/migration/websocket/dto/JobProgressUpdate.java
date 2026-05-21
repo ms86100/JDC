@@ -17,6 +17,7 @@ public class JobProgressUpdate {
     private int failedEntities;
     private String currentStage;
     private String currentEntityType;
+    private String logMessage;
     private Instant timestamp;
     private List<EntityProgress> entityProgress;
 

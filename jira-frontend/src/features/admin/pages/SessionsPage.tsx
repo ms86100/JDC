@@ -58,7 +58,7 @@ export default function SessionsPage() {
   const handleRevokeAll = async () => {
     if (!confirm('Are you sure you want to revoke ALL sessions?\n\nThis will log out all users except you.')) return;
     try {
-      await revokeAllSessions.mutateAsync();
+      await revokeAllSessions.mutateAsync(undefined);
       showMessage('All sessions revoked successfully');
     } catch (err: any) {
       showMessage(err?.message || 'Failed to revoke sessions', true);

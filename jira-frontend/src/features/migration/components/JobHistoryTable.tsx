@@ -3,10 +3,15 @@ import { useQuery } from '@tanstack/react-query';
 import type { ImportHistoryItem } from '../types/migration';
 import { migrationApi } from '../../../api/serviceApi';
 import { format } from 'date-fns';
+import { Skeleton } from '../../../components/ui/Skeleton';
+import { EmptyState } from '../../../components/ui/EmptyState';
+import { StatusLozenge } from '../../../components/ui/StatusLozenge';
+import { jobStatusLozenge } from '../utils/jobStatusLozenge';
 
 interface JobHistoryTableProps {
-  onViewDetails?: (jobId: string) => void;
+  onViewDetails?: (jobId: string, jobType?: string) => void;
   onRetryJob?: (jobId: string) => void;
+  onRollbackJob?: (jobId: string) => void;
   onDownloadReport?: (jobId: string) => void;
   limit?: number;
   showPagination?: boolean;
@@ -21,11 +26,13 @@ const STATUS_BADGES: Record<string, { bg: string; text: string; icon: string }> 
   COMPLETED: { bg: 'bg-green-100', text: 'text-green-600', icon: '✅' },
   FAILED: { bg: 'bg-red-100', text: 'text-red-600', icon: '❌' },
   CANCELLED: { bg: 'bg-gray-100', text: 'text-gray-600', icon: '🚫' },
+  ROLLED_BACK: { bg: 'bg-amber-100', text: 'text-amber-800', icon: '↩️' },
 };
 
 const JOB_TYPE_LABELS: Record<string, string> = {
   CSV: 'CSV Import',
   JIRA_DC: 'Systems and Avionics Import',
+  WORKFLOW_XML: 'Workflow XML',
   PROJECT_IMPORT: 'Project Import',
   PROJECT_EXPORT: 'Project Export',
 };
@@ -33,6 +40,7 @@ const JOB_TYPE_LABELS: Record<string, string> = {
 export default function JobHistoryTable({
   onViewDetails,
   onRetryJob,
+  onRollbackJob,
   onDownloadReport,
   limit = 10,
   showPagination = true,
@@ -45,14 +53,32 @@ export default function JobHistoryTable({
 
   // Fetch job history
   const { data, isLoading, error } = useQuery({
-    queryKey: ['migration-job-history'],
+    queryKey: ['migration-job-history', page, filterStatus, filterType],
     queryFn: async () => {
-      // For now, we'll use a placeholder since there's no dedicated history endpoint
-      // In production, you'd call: migrationApi.getJobHistory({ page, size: limit * 5 })
+      const response = await migrationApi.listJobs({
+        page,
+        size: limit * 5,
+        status: filterStatus !== 'ALL' ? filterStatus : undefined,
+        type: filterType !== 'ALL' ? filterType : undefined,
+        sortBy: 'initiatedAt',
+        sortDir: 'DESC',
+      });
+      const content = response.data.content || [];
+      const jobs: ImportHistoryItem[] = content.map((job) => ({
+        id: job.id,
+        jobType: job.importSource || job.jobType,
+        status: job.jobStatus,
+        totalEntities: job.totalEntities ?? 0,
+        successCount: (job.processedEntities ?? 0) - (job.failedEntities ?? 0),
+        failedCount: job.failedEntities ?? 0,
+        initiatedAt: job.initiatedAt || new Date().toISOString(),
+        completedAt: job.completedAt,
+        initiatedBy: job.initiatedBy || '—',
+      }));
       return {
-        jobs: [] as ImportHistoryItem[],
-        totalElements: 0,
-        totalPages: 0,
+        jobs,
+        totalElements: response.data.totalElements ?? jobs.length,
+        totalPages: response.data.totalPages ?? 1,
       };
     },
     staleTime: 30 * 1000,
@@ -128,36 +154,48 @@ export default function JobHistoryTable({
     }
   };
 
-  // Loading state
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border p-8 text-center">
-        <div className="w-12 h-12 border-4 border-jira-blue border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-500">Loading job history...</p>
+      <div className="bg-white rounded-lg border overflow-hidden" data-testid="job-history-loading">
+        <div className="px-4 py-3 border-b" style={{ background: 'var(--sa-n50)' }}>
+          <Skeleton width={120} height={16} />
+        </div>
+        <div className="p-4 space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex gap-4">
+              <Skeleton width="25%" height={14} />
+              <Skeleton width="20%" height={14} />
+              <Skeleton width="15%" height={14} />
+              <Skeleton width="30%" height={14} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <span className="text-red-500 text-2xl">⚠</span>
-        <p className="text-red-800 font-medium mt-2">Failed to load job history</p>
-        <p className="text-red-600 text-sm mt-1">Please try again later</p>
+      <div
+        className="rounded-lg border p-6"
+        role="alert"
+        style={{ borderColor: 'var(--sa-status-blocked-bg)', background: 'var(--sa-status-blocked-bg)' }}
+      >
+        <p style={{ margin: 0, fontWeight: 600, color: 'var(--sa-status-blocked-fg)' }}>Failed to load job history</p>
+        <p style={{ margin: '8px 0 0', fontSize: 'var(--sa-fs-sm)', color: 'var(--sa-n700)' }}>
+          Ensure jira-migration-service is running on port 8094.
+        </p>
       </div>
     );
   }
 
-  // Empty state
   if (jobs.length === 0) {
     return (
-      <div className="bg-white rounded-lg border p-8 text-center">
-        <span className="text-4xl">📋</span>
-        <p className="text-gray-900 font-medium mt-4">No migration jobs yet</p>
-        <p className="text-gray-500 text-sm mt-1">
-          Start an import or export to see the history here
-        </p>
+      <div className="bg-white rounded-lg border" data-testid="job-history-empty">
+        <EmptyState
+          title="No migration jobs yet"
+          description="Start an import from the Import wizard tab. Completed and failed jobs appear here with retry, rollback, and report download."
+        />
       </div>
     );
   }
@@ -202,6 +240,7 @@ export default function JobHistoryTable({
             <option value="CSV">CSV Import</option>
             <option value="JIRA_DC">Systems and Avionics Import</option>
             <option value="PROJECT_IMPORT">Project Import</option>
+            <option value="WORKFLOW_XML">Workflow XML</option>
             <option value="PROJECT_EXPORT">Project Export</option>
           </select>
         </div>
@@ -210,7 +249,7 @@ export default function JobHistoryTable({
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
@@ -252,7 +291,7 @@ export default function JobHistoryTable({
           </thead>
           <tbody className="divide-y divide-gray-200">
             {paginatedJobs.map((job) => {
-              const badge = STATUS_BADGES[job.status] || STATUS_BADGES.PENDING;
+              const lozenge = jobStatusLozenge(job.status);
 
               return (
                 <tr key={job.id} className="hover:bg-gray-50">
@@ -263,10 +302,7 @@ export default function JobHistoryTable({
                     {JOB_TYPE_LABELS[job.jobType] || job.jobType}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
-                      <span className="mr-1">{badge.icon}</span>
-                      {job.status}
-                    </span>
+                    <StatusLozenge status={lozenge.status}>{lozenge.label}</StatusLozenge>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {job.totalEntities.toLocaleString()}
@@ -284,7 +320,7 @@ export default function JobHistoryTable({
                     <div className="flex items-center justify-end gap-2">
                       {onViewDetails && (
                         <button
-                          onClick={() => onViewDetails(job.id)}
+                          onClick={() => onViewDetails(job.id, job.jobType)}
                           className="text-jira-blue hover:text-blue-700"
                           title="View Details"
                         >
@@ -298,6 +334,15 @@ export default function JobHistoryTable({
                           title="Retry Job"
                         >
                           Retry
+                        </button>
+                      )}
+                      {job.status === 'COMPLETED' && onRollbackJob && (
+                        <button
+                          onClick={() => onRollbackJob(job.id)}
+                          className="text-amber-700 hover:text-amber-900"
+                          title="Rollback import"
+                        >
+                          Rollback
                         </button>
                       )}
                       {job.status === 'COMPLETED' && onDownloadReport && (

@@ -5,6 +5,7 @@ import com.jira.migration.entity.ProjectMapping;
 import com.jira.migration.exception.*;
 import com.jira.migration.repository.EntityStatusRepository;
 import com.jira.migration.repository.ProjectMappingRepository;
+import com.jira.migration.service.MigrationWorkflowStatusApplier;
 import com.jira.migration.service.clients.*;
 import com.jira.migration.service.clients.dto.*;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,7 @@ public class IssuePersisterHandler {
     private final EntityStatusRepository entityStatusRepository;
     private IssueServiceClient issueServiceClient;
     private IssueLinkServiceClient issueLinkServiceClient;
+    private MigrationWorkflowStatusApplier migrationWorkflowStatusApplier;
 
     // Track created issues for rollback
     private final List<String> createdIssueIds = new ArrayList<>();
@@ -40,9 +42,13 @@ public class IssuePersisterHandler {
     }
 
     @org.springframework.beans.factory.annotation.Autowired
-    public void setServiceClients(IssueServiceClient issueServiceClient, IssueLinkServiceClient issueLinkServiceClient) {
+    public void setServiceClients(
+            IssueServiceClient issueServiceClient,
+            IssueLinkServiceClient issueLinkServiceClient,
+            MigrationWorkflowStatusApplier migrationWorkflowStatusApplier) {
         this.issueServiceClient = issueServiceClient;
         this.issueLinkServiceClient = issueLinkServiceClient;
+        this.migrationWorkflowStatusApplier = migrationWorkflowStatusApplier;
     }
 
     // Issue type hierarchy - use HashMap to allow null values
@@ -94,6 +100,11 @@ public class IssuePersisterHandler {
             IssueResponse response = createIssueWithRetry(request);
             String issueId = response.getId();
             String issueKey = response.getKey();
+
+            String sourceStatus = (String) issueData.getOrDefault("status", issueData.get("issue_status"));
+            if (migrationWorkflowStatusApplier != null && sourceStatus != null && !sourceStatus.isBlank()) {
+                migrationWorkflowStatusApplier.applyImportedStatus(jobId, response, sourceStatus);
+            }
 
             // Track for potential rollback
             createdIssueIds.add(issueId);
@@ -189,7 +200,25 @@ public class IssuePersisterHandler {
                 .priority((String) data.getOrDefault("priority", data.get("issue_priority")))
                 .assigneeId((String) data.getOrDefault("assigneeId", data.get("assignee")))
                 .reporterId((String) data.getOrDefault("reporterId", data.get("reporter")))
-                .originalIssueKey((String) data.getOrDefault("originalIssueKey", data.get("issue_key")));
+                .originalIssueKey((String) data.getOrDefault("originalIssueKey",
+                        data.getOrDefault("issueKey", data.get("issue_key"))));
+
+        Object createdAt = data.get("createdAt");
+        if (createdAt != null) {
+            try {
+                builder.migrationCreatedAt(java.time.LocalDateTime.parse(createdAt.toString().replace("Z", "")));
+            } catch (Exception e) {
+                log.debug("Could not parse migration createdAt: {}", createdAt);
+            }
+        }
+        Object updatedAt = data.get("updatedAt");
+        if (updatedAt != null) {
+            try {
+                builder.migrationUpdatedAt(java.time.LocalDateTime.parse(updatedAt.toString().replace("Z", "")));
+            } catch (Exception e) {
+                log.debug("Could not parse migration updatedAt: {}", updatedAt);
+            }
+        }
 
         // Handle labels
         Object labelsObj = data.get("labels");
@@ -199,7 +228,8 @@ public class IssuePersisterHandler {
 
         // Handle parent
         String parentId = (String) data.getOrDefault("parentId", data.get("parent_id"));
-        String parentIssueKey = (String) data.getOrDefault("parentIssueKey", data.get("parent_key"));
+        String parentIssueKey = (String) data.getOrDefault("parentIssueKey",
+                data.getOrDefault("parent_key", data.get("parent")));
         if (parentId != null) {
             builder.parentId(parentId);
         }

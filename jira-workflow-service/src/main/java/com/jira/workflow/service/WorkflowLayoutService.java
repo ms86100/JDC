@@ -36,6 +36,7 @@ public class WorkflowLayoutService {
     private final WorkflowRepository workflowRepository;
     private final WorkflowStatusRepository workflowStatusRepository;
     private final WorkflowTransitionRepository workflowTransitionRepository;
+    private final WorkflowLayoutEdgeSyncService workflowLayoutEdgeSyncService;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -89,12 +90,26 @@ public class WorkflowLayoutService {
         Optional<WorkflowLayout> existing = workflowLayoutRepository
                 .findTopByWorkflowIdOrderByLayoutVersionDesc(workflowId);
         if (existing.isPresent()) {
-            WorkflowLayoutResponse response = mapToResponse(existing.get());
+            WorkflowLayout layout = existing.get();
+            WorkflowLayoutResponse response = mapToResponse(layout);
             if (response.getNodes() != null && !response.getNodes().isEmpty()) {
-                return response;
+                try {
+                    workflowLayoutEdgeSyncService.syncLayoutEdges(workflowId);
+                } catch (Exception ex) {
+                    log.warn(
+                            "Layout edge sync failed for workflow {}, returning persisted layout: {}",
+                            workflowId,
+                            ex.getMessage(),
+                            ex);
+                }
+                return mapToResponse(layout);
             }
         }
         return autoLayout(workflowId, userId);
+    }
+
+    public void syncLayoutEdges(UUID workflowId) {
+        workflowLayoutEdgeSyncService.syncLayoutEdges(workflowId);
     }
 
     @Transactional(readOnly = true)
@@ -206,6 +221,16 @@ public class WorkflowLayoutService {
             }
         }
 
+        createLayoutEdgesForTransitions(layoutId, nodeByStatusId, workflowId);
+
+        layout = workflowLayoutRepository.save(layout);
+        return mapToResponse(layout);
+    }
+
+    private void createLayoutEdgesForTransitions(
+            UUID layoutId,
+            Map<UUID, WorkflowLayoutNode> nodeByStatusId,
+            UUID workflowId) {
         List<WorkflowTransition> transitions = workflowTransitionRepository.findByWorkflowId(workflowId);
         int edgeOrder = 0;
         for (WorkflowTransition transition : transitions) {
@@ -225,9 +250,6 @@ public class WorkflowLayoutService {
                     .build();
             workflowLayoutEdgeRepository.save(edge);
         }
-
-        layout = workflowLayoutRepository.save(layout);
-        return mapToResponse(layout);
     }
 
     @Transactional

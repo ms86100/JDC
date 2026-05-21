@@ -8,6 +8,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -107,6 +108,18 @@ public class MigrationJob {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "result_metadata", columnDefinition = "jsonb")
     private Map<String, Object> resultMetadata;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "option_mappings", columnDefinition = "jsonb")
+    private List<Map<String, Object>> optionMappings;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "workflow_status_mappings", columnDefinition = "jsonb")
+    private Map<String, Object> workflowStatusMappings;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "field_defaults", columnDefinition = "jsonb")
+    private Map<String, Object> fieldDefaults;
 
     public void incrementProcessed() {
         this.processedEntities++;

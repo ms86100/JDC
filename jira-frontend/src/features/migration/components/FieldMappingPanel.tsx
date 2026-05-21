@@ -16,6 +16,7 @@ interface FieldMappingPanelProps {
   onMappingsChange?: (mappings: FieldMapping[]) => void;
   onPreview?: (mappings: FieldMapping[]) => void;
   readOnly?: boolean;
+  typeWarnings?: string[];
 }
 
 const TRANSFORMERS = [
@@ -37,6 +38,7 @@ export default function FieldMappingPanel({
   onMappingsChange,
   onPreview,
   readOnly = false,
+  typeWarnings = [],
 }: FieldMappingPanelProps) {
   const [mappings, setMappings] = useState<FieldMapping[]>(() => {
     if (initialMappings.length > 0) return initialMappings;
@@ -195,6 +197,17 @@ export default function FieldMappingPanel({
           </button>
         )}
       </div>
+
+      {typeWarnings.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4" role="alert">
+          <p className="text-sm font-medium text-amber-800">Type compatibility warnings</p>
+          <ul className="mt-2 text-xs text-amber-700 list-disc list-inside max-h-32 overflow-y-auto">
+            {typeWarnings.map((w, i) => (
+              <li key={i}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Progress bar */}
       <div className="bg-gray-200 rounded-full h-2">

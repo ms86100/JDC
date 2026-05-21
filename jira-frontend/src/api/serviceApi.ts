@@ -109,6 +109,31 @@ export interface MigrationJobResponse {
   startedAt?: string;
   completedAt?: string;
   errorMessage?: string;
+  resultMetadata?: Record<string, unknown>;
+}
+
+export interface JiraDcValidateResponse {
+  valid: boolean;
+  format?: string;
+  totalEntities?: number;
+  entitiesByType?: Record<string, number>;
+  riskScore?: number;
+  blockerCount?: number;
+  warningCount?: number;
+  message?: string;
+  attachmentsRootResolved?: boolean;
+  relationshipEdges?: Array<{ from: string; to: string; type: string }>;
+  errors?: Array<{ field: string; code: string; message: string }>;
+  warnings?: Array<{ field: string; code: string; message: string }>;
+  conflicts?: Array<{
+    severity: string;
+    code: string;
+    field: string;
+    entityKey: string;
+    message: string;
+    resolution: string;
+  }>;
+  unknownCustomFields?: Array<{ fieldId: string; message: string }>;
 }
 
 export interface ImportResultResponse {
@@ -134,6 +159,7 @@ export interface ImportResultResponse {
     field?: string;
     warningMessage: string;
   }>;
+  resultMetadata?: Record<string, unknown>;
 }
 
 export interface CsvTemplateResponse {
@@ -149,25 +175,195 @@ export interface CsvTemplateResponse {
   }>;
 }
 
+const migrationUserHeaders = () => ({
+  'X-User-Id': localStorage.getItem('userId') || '00000000-0000-0000-0000-000000000001',
+  'X-Migration-Role': localStorage.getItem('migrationRole') || 'MIGRATION_OPERATOR',
+});
+
 export const migrationApi = {
   // CSV Import
-  startCsvImport: (file: File, targetProjectId?: string) => {
+  startCsvImport: (
+    file: File,
+    targetProjectId?: string,
+    fieldMappings?: unknown[],
+    options?: Record<string, unknown>
+  ) => {
     const formData = new FormData();
     formData.append('file', file);
     if (targetProjectId) formData.append('targetProjectId', targetProjectId);
+    if (fieldMappings?.length) {
+      formData.append('fieldMappings', JSON.stringify(fieldMappings));
+    }
+    if (options && Object.keys(options).length > 0) {
+      formData.append('options', JSON.stringify(options));
+    }
     return apiClient.post<MigrationJobResponse>('/api/migration/import/csv', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
     });
   },
 
-  // Systems and Avionics Import
-  startJiraDcImport: (file: File) => {
+  validateJiraDcImport: (params: {
+    file: File;
+    attachmentBundle?: File | null;
+    backupZip?: boolean;
+    options?: Record<string, unknown>;
+  }) => {
     const formData = new FormData();
-    formData.append('file', file);
-    return apiClient.post<MigrationJobResponse>('/api/migration/import/jira-dc', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    formData.append('file', params.file);
+    if (params.attachmentBundle) {
+      formData.append('attachmentBundle', params.attachmentBundle);
+    }
+    if (params.backupZip) {
+      formData.append('backupZip', 'true');
+    }
+    if (params.options && Object.keys(params.options).length > 0) {
+      formData.append('options', JSON.stringify(params.options));
+    }
+    return apiClient.post<JiraDcValidateResponse>('/api/migration/import/jira-dc/validate', formData, {
+      headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
     });
   },
+
+  startJiraDcImport: (params: {
+    file: File;
+    targetProjectId?: string;
+    attachmentBundle?: File | null;
+    backupZip?: boolean;
+    options?: Record<string, unknown>;
+  }) => {
+    const formData = new FormData();
+    formData.append('file', params.file);
+    if (params.targetProjectId) {
+      formData.append('targetProjectId', params.targetProjectId);
+    }
+    if (params.attachmentBundle) {
+      formData.append('attachmentBundle', params.attachmentBundle);
+    }
+    if (params.backupZip) {
+      formData.append('backupZip', 'true');
+    }
+    if (params.options && Object.keys(params.options).length > 0) {
+      formData.append('options', JSON.stringify(params.options));
+    }
+    return apiClient.post<MigrationJobResponse>('/api/migration/import/jira-dc', formData, {
+      headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
+    });
+  },
+
+  validateWorkflowXml: (workflowFile: File, schemeFile?: File) => {
+    const formData = new FormData();
+    formData.append('file', workflowFile);
+    if (schemeFile) formData.append('schemeFile', schemeFile);
+    return apiClient.post<Record<string, unknown>>('/api/migration/import/workflow-xml/validate', formData, {
+      headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
+    });
+  },
+
+  simulateWorkflowXml: (workflowFile: File, startStepId = '1', transitionPath?: string) => {
+    const formData = new FormData();
+    formData.append('file', workflowFile);
+    const params = new URLSearchParams({ startStepId });
+    if (transitionPath) params.set('path', transitionPath);
+    return apiClient.post<Record<string, unknown>>(
+      `/api/migration/import/workflow-xml/simulate?${params}`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() } }
+    );
+  },
+
+  importWorkflowXml: (
+    workflowFile: File,
+    schemeFile?: File,
+    stubDownstream = true,
+    makeDefault = false,
+    projectId?: string
+  ) => {
+    const formData = new FormData();
+    formData.append('file', workflowFile);
+    if (schemeFile) formData.append('schemeFile', schemeFile);
+    const params = new URLSearchParams({
+      stubDownstream: String(stubDownstream),
+      makeDefault: String(makeDefault),
+    });
+    if (projectId) params.set('projectId', projectId);
+    return apiClient.post<MigrationJobResponse>(
+      `/api/migration/import/workflow-xml?${params}`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() } }
+    );
+  },
+
+  downloadWorkflowValidationReport: (workflowFile: File, schemeFile?: File) => {
+    const formData = new FormData();
+    formData.append('file', workflowFile);
+    if (schemeFile) formData.append('schemeFile', schemeFile);
+    return apiClient.post<string>('/api/migration/import/workflow-xml/validation-report', formData, {
+      headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
+      responseType: 'text',
+    });
+  },
+
+  rollbackWorkflowXmlImport: (importId: string) =>
+    apiClient.post<Record<string, unknown>>(
+      `/api/migration/import/workflow-xml/rollback/${importId}`,
+      null,
+      { headers: migrationUserHeaders() }
+    ),
+
+  getServicesHealth: () =>
+    apiClient.get<Record<string, unknown>>('/api/migration/health/services', {
+      headers: migrationUserHeaders(),
+    }),
+
+  getClusterHealth: () =>
+    apiClient.get<Record<string, unknown>>('/api/migration/health/cluster', {
+      headers: migrationUserHeaders(),
+    }),
+
+  getJobAttachmentResults: (jobId: string) =>
+    apiClient.get<Array<Record<string, unknown>>>(`/api/migration/jobs/${jobId}/attachment-results`, {
+      headers: migrationUserHeaders(),
+    }),
+
+  getJobVerification: (jobId: string) =>
+    apiClient.get<Record<string, unknown>>(`/api/migration/jobs/${jobId}/verification`, {
+      headers: migrationUserHeaders(),
+    }),
+
+  triggerJobReindex: (jobId: string, entityTypes?: string[]) =>
+    apiClient.post<Record<string, unknown>>(
+      `/api/migration/jobs/${jobId}/reindex`,
+      null,
+      {
+        params: entityTypes?.length ? { entityTypes } : undefined,
+        headers: migrationUserHeaders(),
+      }
+    ),
+
+  getJobReindexStatus: (jobId: string) =>
+    apiClient.get<Record<string, unknown>>(`/api/migration/jobs/${jobId}/reindex`, {
+      headers: migrationUserHeaders(),
+    }),
+
+  getObservability: () =>
+    apiClient.get<Record<string, unknown>>('/api/migration/health/observability', {
+      headers: migrationUserHeaders(),
+    }),
+
+  pauseJob: (jobId: string) =>
+    apiClient.post<Record<string, unknown>>(`/api/migration/jobs/${jobId}/pause`, null, {
+      headers: migrationUserHeaders(),
+    }),
+
+  resumePausedJob: (jobId: string) =>
+    apiClient.post<Record<string, unknown>>(`/api/migration/jobs/${jobId}/resume-control`, null, {
+      headers: migrationUserHeaders(),
+    }),
+
+  scanUpload: (uploadId: string) =>
+    apiClient.post<Record<string, string>>(`/api/migration/uploads/${uploadId}/virus-scan`, null, {
+      headers: migrationUserHeaders(),
+    }),
 
   // Project Import
   startProjectImport: (sourceProjectId: string, targetProjectId: string) =>
@@ -181,8 +377,99 @@ export const migrationApi = {
       params: { projectId, format },
     }),
 
+  listJobs: (params?: {
+    status?: string;
+    type?: string;
+    page?: number;
+    size?: number;
+    sortBy?: string;
+    sortDir?: string;
+  }) =>
+    apiClient.get<{
+      content: MigrationJobResponse[];
+      totalElements: number;
+      totalPages: number;
+      number: number;
+    }>('/api/migration/jobs', { params, headers: migrationUserHeaders() }),
+
+  retryJob: (jobId: string) =>
+    apiClient.post<{ jobId: string; retried: number; succeeded: number }>(
+      `/api/migration/jobs/${jobId}/retry`,
+      null,
+      { headers: migrationUserHeaders() }
+    ),
+
+  downloadJobReport: (jobId: string) =>
+    apiClient.get(`/api/migration/jobs/${jobId}/report`, {
+      responseType: 'blob',
+      headers: migrationUserHeaders(),
+    }),
+
+  downloadJobLogs: (jobId: string) =>
+    apiClient.get(`/api/migration/jobs/${jobId}/logs/download`, {
+      responseType: 'blob',
+      headers: migrationUserHeaders(),
+    }),
+
+  getRollbackInfo: (jobId: string) =>
+    apiClient.get<{
+      jobId: string;
+      canRollback: boolean;
+      canRollbackReason: string;
+      entitiesToRollback: number;
+      backupSnapshotAvailable: boolean;
+    }>(`/api/migration/jobs/${jobId}/rollback-info`, { headers: migrationUserHeaders() }),
+
+  rollbackJob: (jobId: string) =>
+    apiClient.post<{
+      jobId: string;
+      success: boolean;
+      rolledBackCount: number;
+      failedCount: number;
+    }>(`/api/migration/jobs/${jobId}/rollback`, null, { headers: migrationUserHeaders() }),
+
+  downloadValidationReport: (jobId: string) =>
+    apiClient.get(`/api/migration/jobs/${jobId}/validation-report`, {
+      responseType: 'blob',
+      headers: migrationUserHeaders(),
+    }),
+
+  getJobAuditTrail: (jobId: string) =>
+    apiClient.get<Array<Record<string, unknown>>>(`/api/migration/jobs/${jobId}/audit-trail`, {
+      headers: migrationUserHeaders(),
+    }),
+
+  getJobIssueResults: (jobId: string) =>
+    apiClient.get<Array<Record<string, unknown>>>(`/api/migration/jobs/${jobId}/issue-results`, {
+      headers: migrationUserHeaders(),
+    }),
+
+  getJobStagingSummary: (jobId: string) =>
+    apiClient.get<Record<string, unknown>>(`/api/migration/jobs/${jobId}/staging-summary`, {
+      headers: migrationUserHeaders(),
+    }),
+
+  getJobLogs: (jobId: string) =>
+    apiClient.get<Array<{ timestamp?: string; level?: string; message?: string }>>(
+      `/api/migration/jobs/${jobId}/logs`,
+      { headers: migrationUserHeaders() }
+    ),
+
+  getJobDlq: (jobId: string) =>
+    apiClient.get<Array<Record<string, unknown>>>(`/api/migration/jobs/${jobId}/dlq`, {
+      headers: migrationUserHeaders(),
+    }),
+
+  retryJobDlqEntry: (jobId: string, dlqId: string) =>
+    apiClient.post<Record<string, unknown>>(`/api/migration/jobs/${jobId}/dlq/${dlqId}/retry`, null, {
+      headers: migrationUserHeaders(),
+    }),
+
   // Job Status
-  getJobStatus: (jobId: string) => apiClient.get<MigrationJobResponse>(`/api/migration/jobs/${jobId}`),
+  getJobStatus: (jobId: string) =>
+    apiClient.get<MigrationJobResponse>(`/api/migration/jobs/${jobId}`, {
+      headers: migrationUserHeaders(),
+    }),
 
   getJobProgress: (jobId: string) =>
     apiClient.get<{
@@ -193,11 +480,25 @@ export const migrationApi = {
       processedEntities: number;
       failedEntities: number;
       entityProgress: Array<{ entityType: string; total: number; completed: number; failed: number }>;
-    }>(`/api/migration/jobs/${jobId}/progress`),
+    }>(`/api/migration/jobs/${jobId}/progress`, { headers: migrationUserHeaders() }),
 
-  getImportResult: (jobId: string) => apiClient.get<ImportResultResponse>(`/api/migration/jobs/${jobId}/result`),
+  getImportResult: (jobId: string) =>
+    apiClient.get<ImportResultResponse>(`/api/migration/jobs/${jobId}/result`, {
+      headers: migrationUserHeaders(),
+    }),
 
-  cancelJob: (jobId: string) => apiClient.post(`/api/migration/jobs/${jobId}/cancel`),
+  getDcSlaProof: (jobId: string) =>
+    apiClient.get<Record<string, unknown>>(`/api/migration/jobs/${jobId}/dc-sla-proof`, {
+      headers: migrationUserHeaders(),
+    }),
+
+  getDcAcSignoff: (jobId: string) =>
+    apiClient.get<Record<string, unknown>>(`/api/migration/jobs/${jobId}/dc-ac-signoff`, {
+      headers: migrationUserHeaders(),
+    }),
+
+  cancelJob: (jobId: string) =>
+    apiClient.post(`/api/migration/jobs/${jobId}/cancel`, null, { headers: migrationUserHeaders() }),
 
   // Templates
   getTemplates: (entityType?: string) =>
@@ -222,6 +523,126 @@ export const migrationApi = {
 
   validateRow: (row: Record<string, string>, entityType: string) =>
     apiClient.post('/api/migration/validate/row', row, { params: { entityType } }),
+};
+
+// ============================================
+// MIGRATION WIZARD API (persisted sessions)
+// ============================================
+export interface WizardSessionResponse {
+  sessionId: string;
+  step: string;
+  importType: string;
+  status: string;
+  targetProjectId?: string;
+  migrationJobId?: string;
+  fileName?: string;
+  fileSize?: number;
+  detectedHeaders?: string[];
+  detectedEntityType?: string;
+  attachmentColumn?: string;
+  parentColumn?: string;
+  epicColumn?: string;
+  totalRows?: number;
+  validationResult?: Record<string, unknown>;
+  fieldMappings?: Record<string, unknown>[];
+  previewRows?: string[][];
+  sessionData?: Record<string, unknown>;
+}
+
+export interface WizardUploadResponse {
+  sessionId: string;
+  uploadId?: string;
+  virusScanStatus?: string;
+  fileName: string;
+  detectedHeaders?: string[];
+  detectedEntityType?: string;
+  totalRows?: number;
+  previewRows?: string[][];
+  success: boolean;
+  errorMessage?: string;
+}
+
+export const migrationWizardApi = {
+  createSession: (body: { importType: string; targetProjectId?: string; options?: Record<string, unknown> }) =>
+    apiClient.post<WizardSessionResponse>('/api/migration/wizard/sessions', body, {
+      headers: migrationUserHeaders(),
+    }),
+
+  getSession: (sessionId: string) =>
+    apiClient.get<WizardSessionResponse>(`/api/migration/wizard/sessions/${sessionId}`, {
+      headers: migrationUserHeaders(),
+    }),
+
+  updateSession: (
+    sessionId: string,
+    body: { step?: string; targetProjectId?: string; importOptions?: Record<string, unknown> }
+  ) =>
+    apiClient.patch<WizardSessionResponse>(`/api/migration/wizard/sessions/${sessionId}`, body, {
+      headers: migrationUserHeaders(),
+    }),
+
+  uploadFile: (sessionId: string, file: File, importType?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (importType) formData.append('importType', importType);
+    return apiClient.post<WizardUploadResponse>(`/api/migration/wizard/sessions/${sessionId}/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
+    });
+  },
+
+  uploadFileWithProgress: (
+    sessionId: string,
+    file: File,
+    importType?: string,
+    onProgress?: (percent: number) => void,
+    signal?: AbortSignal
+  ) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (importType) formData.append('importType', importType);
+    return apiClient.post<WizardUploadResponse>(`/api/migration/wizard/sessions/${sessionId}/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
+      signal,
+      onUploadProgress: (event) => {
+        if (event.total && onProgress) {
+          onProgress(Math.round((event.loaded * 100) / event.total));
+        }
+      },
+    });
+  },
+
+  getPreview: (sessionId: string, page = 0, size = 10) =>
+    apiClient.get<WizardSessionResponse>(`/api/migration/wizard/sessions/${sessionId}/preview`, {
+      params: { page, size },
+      headers: migrationUserHeaders(),
+    }),
+
+  downloadValidationReport: (sessionId: string) =>
+    apiClient.get(`/api/migration/wizard/sessions/${sessionId}/validation-report`, {
+      responseType: 'blob',
+      headers: migrationUserHeaders(),
+    }),
+
+  validateSession: (sessionId: string, entityType?: string) =>
+    apiClient.post(
+      `/api/migration/wizard/sessions/${sessionId}/validate`,
+      null,
+      { params: { entityType }, headers: migrationUserHeaders() }
+    ),
+
+  saveFieldMappings: (sessionId: string, mappings: Record<string, unknown>[]) =>
+    apiClient.patch<WizardSessionResponse>(
+      `/api/migration/wizard/sessions/${sessionId}/field-mappings`,
+      mappings,
+      { headers: migrationUserHeaders() }
+    ),
+
+  executeImport: (sessionId: string, body?: { targetProjectId?: string; options?: Record<string, unknown> }) =>
+    apiClient.post<MigrationJobResponse>(
+      `/api/migration/wizard/sessions/${sessionId}/execute`,
+      body ?? {},
+      { headers: migrationUserHeaders() }
+    ),
 };
 
 // ============================================

@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type ImportType = 'csv' | 'jira-dc' | 'project-import' | 'project-export';
+export type ImportType = 'csv' | 'jira-dc' | 'workflow-xml' | 'project-import' | 'project-export';
 
 interface ImportTypeSelectorProps {
   selectedType: ImportType | null;
@@ -18,6 +18,16 @@ const IMPORT_TYPES = [
     iconColor: 'text-green-600',
     borderColor: 'hover:border-green-400',
     selectedColor: 'border-green-500 bg-green-50',
+  },
+  {
+    type: 'workflow-xml' as const,
+    title: 'Workflow XML (DC)',
+    description: 'Import Jira Data Center workflow-descriptor XML with validators, conditions, post-functions, and scheme binding.',
+    icon: '⚙',
+    iconBg: 'bg-indigo-100',
+    iconColor: 'text-indigo-600',
+    borderColor: 'hover:border-indigo-400',
+    selectedColor: 'border-indigo-500 bg-indigo-50',
   },
   {
     type: 'jira-dc' as const,
@@ -70,6 +80,7 @@ export default function ImportTypeSelector({
           return (
             <div
               key={importType.type}
+              data-testid={`import-type-${importType.type}`}
               className={`
                 relative p-6 border-2 rounded-lg cursor-pointer transition-all
                 ${isSelected ? importType.selectedColor : `border-gray-200 ${importType.borderColor}`}

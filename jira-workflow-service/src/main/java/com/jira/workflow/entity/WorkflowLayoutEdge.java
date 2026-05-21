@@ -2,6 +2,9 @@ package com.jira.workflow.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.util.UUID;
 
 @Entity
@@ -32,6 +35,7 @@ public class WorkflowLayoutEdge {
     @Builder.Default
     private String edgeType = "CURVED";
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "path_points", columnDefinition = "jsonb")
     private String pathPoints;
 

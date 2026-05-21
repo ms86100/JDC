@@ -15,6 +15,9 @@ public class EvidenceUploadRequest {
     @NotNull(message = "Execution ID is required")
     private UUID executionId;
 
+    @NotNull(message = "Project ID is required")
+    private UUID projectId;
+
     private UUID stepResultId;
 
     @NotNull(message = "Evidence type is required")

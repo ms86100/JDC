@@ -36,7 +36,7 @@ export interface FieldOption {
 
 export type FieldType =
   | 'TEXT' | 'TEXTAREA' | 'RICHTEXT' | 'NUMBER' | 'DATE' | 'DATETIME' | 'TIME'
-  | 'SINGLE_SELECT' | 'MULTI_SELECT' | 'CHECKBOX' | 'RADIO'
+  | 'SINGLE_SELECT' | 'MULTI_SELECT' | 'CHECKBOX' | 'RADIO' | 'BOOLEAN'
   | 'USER' | 'GROUP' | 'PROJECT' | 'ISSUE_TYPE' | 'STATUS' | 'PRIORITY' | 'RESOLUTION'
   | 'COMPONENT' | 'VERSION' | 'LABEL' | 'SECURITY_LEVEL'
   | 'URL' | 'EMAIL' | 'CURRENCY' | 'DURATION'
@@ -45,7 +45,7 @@ export type FieldType =
   | 'CUSTOM' | 'UNKNOWN';
 
 export type RendererType =
-  | 'TEXT' | 'TEXTAREA' | 'RICHTEXT' | 'SELECT' | 'MULTI_SELECT'
+  | 'TEXT' | 'TEXTAREA' | 'RICHTEXT' | 'SELECT' | 'SINGLE_SELECT' | 'MULTI_SELECT'
   | 'USER_PICKER' | 'GROUP_PICKER' | 'PROJECT_PICKER' | 'DATETIME_PICKER'
   | 'NUMBER' | 'SLIDER' | 'RADIO' | 'CHECKBOX' | 'LABEL_EDITOR'
   | 'CURRENCY' | 'DURATION' | 'URL_LINK' | 'EMAIL_LINK' | 'SECURITY_LEVEL'
@@ -193,6 +193,7 @@ function mapFieldTypeToCustomFieldType(type: FieldType): string {
     MULTI_SELECT: 'com.atlassian.jira.plugin.system.customfieldtypes:multiselect',
     RADIO: 'com.atlassian.jira.plugin.system.customfieldtypes:radiobuttons',
     CHECKBOX: 'com.atlassian.jira.plugin.system.customfieldtypes:checkbox',
+    BOOLEAN: 'com.atlassian.jira.plugin.system.customfieldtypes:checkbox',
     USER: 'com.atlassian.jira.plugin.system.customfieldtypes:userpicker',
     PROJECT: 'com.atlassian.jira.plugin.system.customfieldtypes:projectpicker',
     VERSION: 'com.atlassian.jira.plugin.system.customfieldtypes:versionpicker',

@@ -23,8 +23,40 @@ public class RequirementVersion {
     @Column(name = "requirement_id", nullable = false)
     private UUID requirementId;
 
-    @Column(name = "version_number", nullable = false)
-    private Integer versionNumber;
+    @Column(name = "version", nullable = false, length = 50)
+    private String version; // Semantic version like "1.0.0", "1.1.0"
+
+    @Column(name = "version_number")
+    private Integer versionNumber; // Numeric version for ordering and comparison
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private RequirementVersionStatus status = RequirementVersionStatus.DRAFT;
+
+    @Column(name = "content", columnDefinition = "TEXT")
+    private String content; // Full requirement content
+
+    @Column(name = "changelog", columnDefinition = "TEXT")
+    private String changelog; // Description of changes from previous version
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
+    @Column(name = "published_by")
+    private UUID publishedBy;
+
+    @Column(name = "previous_version_id")
+    private UUID previousVersionId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "change_magnitude", length = 20)
+    @Builder.Default
+    private ChangeMagnitude changeMagnitude = ChangeMagnitude.MINOR;
 
     @Column(name = "title_snapshot", length = 500)
     private String titleSnapshot;
@@ -33,21 +65,19 @@ public class RequirementVersion {
     private String descriptionSnapshot;
 
     @Column(name = "acceptance_criteria_snapshot", columnDefinition = "JSONB")
-    private String acceptanceCriteriaSnapshot; // [{criteria, status}]
+    private String acceptanceCriteriaSnapshot;
 
     @Column(name = "linked_tests_snapshot", columnDefinition = "JSONB")
-    private String linkedTestsSnapshot; // [{testId, testKey, status}]
-
-    @Column(name = "change_type", length = 50)
-    private String changeType; // major, minor, cosmetic
-
-    @Column(name = "change_description", columnDefinition = "TEXT")
-    private String changeDescription;
+    private String linkedTestsSnapshot;
 
     @Column(name = "changed_by")
     private UUID changedBy;
 
-    @CreationTimestamp
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    public enum RequirementVersionStatus {
+        DRAFT, PUBLISHED, ARCHIVED
+    }
+
+    public enum ChangeMagnitude {
+        MINOR, MAJOR, CRITICAL
+    }
 }

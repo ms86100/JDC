@@ -28,11 +28,6 @@ export default function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [draggedIssue, setDraggedIssue] = useState<IssueResponse | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
-  const { data: statuses = [] } = useQuery({
-    queryKey: ['statuses-kanban'],
-    queryFn: () => issueApi.getStatuses().then((r) => r.data),
-  });
-
   const { data: issues = [], isLoading } = useQuery<IssueResponse[]>({
     queryKey: ['issues-kanban', projectId],
     queryFn: async () => {
@@ -50,13 +45,13 @@ export default function KanbanBoard({ projectId }: KanbanBoardProps) {
   const transitionMutation = useMutation({
     mutationFn: ({
       issueId,
-      projectId,
       statusId,
+      pid,
     }: {
       issueId: string;
-      projectId: string;
       statusId: string;
-    }) => issueApi.transitionStatus(issueId, projectId, { statusId }),
+      pid: string;
+    }) => issueApi.transitionStatus(issueId, pid, { statusId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issues-kanban', projectId] });
     },
@@ -90,16 +85,13 @@ export default function KanbanBoard({ projectId }: KanbanBoardProps) {
     e.preventDefault();
     setDragOverColumn(null);
 
-    if (draggedIssue && draggedIssue.projectId && draggedIssue.status !== column.status) {
-      const target = statuses.find(
-        (s: { id: string; name: string }) =>
-          s.name.toLowerCase() === column.status.toLowerCase()
-      );
-      if (target) {
+    if (draggedIssue && draggedIssue.status !== column.status) {
+      const pid = projectId || draggedIssue.projectId;
+      if (pid) {
         transitionMutation.mutate({
           issueId: draggedIssue.id,
-          projectId: draggedIssue.projectId,
-          statusId: target.id,
+          statusId: column.status,
+          pid,
         });
       }
     }

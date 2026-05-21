@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entity-engine-xml>
+  <Project id="10" key="ENT" name="Enterprise"/>
+  <IssueType id="1" name="Story"/>
+  <IssueType id="2" name="Sub-task"/>
+  <Status id="1" name="Open"/>
+  <Status id="2" name="In Progress"/>
+  <Priority id="1" name="High"/>
+  <Component id="50" project="ENT" name="Avionics Core"/>
+  <Version id="60" project="ENT" name="Release 1.0" released="false"/>
+  <Issue id="10001" projectKey="ENT" number="1" type="Story" summary="Enterprise flight software"
+         status="Open" priority="High" assignee="dev1" reporter="admin"
+         created="2026-01-01T08:00:00Z" updated="2026-01-02T09:00:00Z"/>
+  <Issue id="10002" projectKey="ENT" number="2" type="Sub-task" parent="10001" summary="Subtask wiring"
+         status="In Progress" priority="High"/>
+  <Action id="20001" issue="10001" author="admin" created="2026-01-01T10:00:00Z">Initial enterprise comment</Action>
+  <Worklog id="70001" issue="10001" author="dev1" timeSpent="2h" started="2026-01-01T11:00:00Z">Investigation</Worklog>
+  <FileAttachment id="30001" issue="10001" fileName="spec.pdf"/>
+  <ChangeGroup id="40001" issue="10001" author="admin" created="2026-01-01T12:00:00Z">
+    <ChangeItem id="ci1" field="status" oldvalue="Open" newvalue="In Progress"/>
+    <ChangeItem id="ci2" field="assignee" oldvalue="dev1" newvalue="dev2"/>
+  </ChangeGroup>
+  <CustomFieldValue issue="10001" customfield="10010">13</CustomFieldValue>
+  <IssueLink source="10001" destination="10002" linkType="Blocks"/>
+  <Label issue="10001" label="enterprise"/>
+  <Label issue="10001" label="avionics"/>
+  <Watcher id="80001" issue="10001" user="dev1"/>
+  <Vote id="90001" issue="10001" user="admin"/>
+  <GreenHopperSprint id="gh1" name="Sprint 42" rapidViewId="1"/>
+  <AO_12345 id="ao1" issue="10001" field="com.pyxis.greenhopper.jira:gh-epic-link" value="ENT-99"/>
+</entity-engine-xml>

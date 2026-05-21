@@ -1,5 +1,6 @@
 package com.jira.migration.persister;
 
+import com.jira.migration.service.clients.AdminServiceClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,8 @@ import java.util.*;
 @RequiredArgsConstructor
 @Slf4j
 public class PermissionSchemePersisterHandler {
+
+    private final AdminServiceClient adminServiceClient;
 
     @Transactional(rollbackFor = Exception.class)
     public PermissionSchemePersistResult persistPermissionScheme(
@@ -36,7 +39,7 @@ public class PermissionSchemePersisterHandler {
                     .isDefault((Boolean) schemeData.getOrDefault("isDefault", false))
                     .build();
 
-            UUID schemeId = persistSchemeToDatabase(scheme);
+            UUID schemeId = persistSchemeToDatabase(scheme, schemeData);
 
             // 2. Persist permission grants
             List<Map<String, Object>> grants = (List<Map<String, Object>>) schemeData.get("grants");
@@ -60,8 +63,19 @@ public class PermissionSchemePersisterHandler {
         return result;
     }
 
-    private UUID persistSchemeToDatabase(PermissionSchemeEntity scheme) {
-        log.debug("Persisting permission scheme: {}", scheme.getName());
+    private UUID persistSchemeToDatabase(PermissionSchemeEntity scheme, Map<String, Object> schemeData) {
+        if (adminServiceClient.isAvailable()) {
+            try {
+                Map<String, Object> created = adminServiceClient.createPermissionScheme(schemeData);
+                Object id = created.get("id");
+                if (id != null) {
+                    return UUID.fromString(id.toString());
+                }
+            } catch (Exception e) {
+                log.warn("admin-service permission scheme create failed, using local id: {}", e.getMessage());
+            }
+        }
+        log.debug("Persisting permission scheme locally: {}", scheme.getName());
         return UUID.randomUUID();
     }
 

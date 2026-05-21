@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import testApi, { TestSummaryReport } from '../../../api/testApi';
+import combinedApi, { TestSummaryReport } from '../../../api/testApi';
 
 interface TestReportsDashboardProps {
   projectId: string;
@@ -17,7 +17,7 @@ export const TestReportsDashboard: React.FC<TestReportsDashboardProps> = ({ proj
   const loadReport = async () => {
     setLoading(true);
     try {
-      const response = await testApi.getTestSummary(projectId);
+      const response = await combinedApi.getTestSummary(projectId);
       setReport(response);
     } catch (error) {
       console.error('Failed to load test summary:', error);

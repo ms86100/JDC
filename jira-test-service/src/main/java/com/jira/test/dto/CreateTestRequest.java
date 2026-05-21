@@ -31,6 +31,8 @@ public class CreateTestRequest {
 
     private List<String> requirementKeys;
 
+    private UUID folderId;
+
     private List<TestStepDto> steps;
 
     @Data

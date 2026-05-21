@@ -113,23 +113,17 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
     },
   });
 
-  const { data: boardStatuses = [] } = useQuery({
-    queryKey: ['statuses-board'],
-    queryFn: () => issueApi.getStatuses().then((r) => r.data),
-  });
-
   // Transition mutation
   const transitionMutation = useMutation({
     mutationFn: ({
       issueId,
       statusId,
+      pid,
     }: {
       issueId: string;
       statusId: string;
-    }) => {
-      if (!projectId) return Promise.reject(new Error('projectId required'));
-      return issueApi.transitionStatus(issueId, projectId, { statusId });
-    },
+      pid: string;
+    }) => issueApi.transitionStatus(issueId, pid, { statusId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board-issues'] });
     },
@@ -186,14 +180,13 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
       : column.statusCategory === 'IN_PROGRESS' ? (column.name === 'In Review' ? 'In Review' : 'In Progress')
       : column.statusCategory === 'DONE' ? 'Done' : column.name;
 
-    if (draggedIssue.status !== issueStatus && projectId) {
-      const target = boardStatuses.find(
-        (s: { id: string; name: string }) => s.name.toLowerCase() === issueStatus.toLowerCase()
-      );
-      if (target) {
+    if (draggedIssue.status !== issueStatus) {
+      const pid = projectId || draggedIssue.projectId;
+      if (pid) {
         transitionMutation.mutate({
           issueId: draggedIssue.id,
-          statusId: target.id,
+          statusId: issueStatus,
+          pid,
         });
       }
     }

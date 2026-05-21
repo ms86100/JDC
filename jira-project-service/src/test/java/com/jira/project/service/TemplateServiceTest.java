@@ -52,6 +52,12 @@ class TemplateServiceTest {
     @Mock
     private StatusDefinitionRepository statusDefinitionRepository;
 
+    @Mock
+    private TemplateCategoryRepository templateCategoryRepository;
+
+    @Mock
+    private TemplateCapabilityRepository templateCapabilityRepository;
+
     private TemplateService templateService;
 
     private final UUID templateId = UUID.randomUUID();
@@ -65,6 +71,8 @@ class TemplateServiceTest {
         templateService = new TemplateService(
                 projectTemplateRepository,
                 projectTypeRepository,
+                templateCategoryRepository,
+                templateCapabilityRepository,
                 templateWorkflowStatusRepository,
                 templateWorkflowTransitionRepository,
                 templateIssueTypeRepository,
@@ -82,18 +90,39 @@ class TemplateServiceTest {
         void shouldGetTemplatesGroupedByCategory() {
             // Given
             ProjectType type = createProjectType();
-            ProjectTemplate businessTemplate = createTemplate("Project management", "BUSINESS", type);
-            ProjectTemplate softwareTemplate = createTemplate("Scrum", "SOFTWARE", type);
+            TemplateCategory pmCategory = TemplateCategory.builder()
+                    .id(UUID.randomUUID())
+                    .categoryKey("PROJECT_MANAGEMENT")
+                    .name("Project Management")
+                    .sortOrder(1)
+                    .isActive(true)
+                    .build();
+            TemplateCategory swCategory = TemplateCategory.builder()
+                    .id(UUID.randomUUID())
+                    .categoryKey("SOFTWARE_DEVELOPMENT")
+                    .name("Software Development")
+                    .sortOrder(2)
+                    .isActive(true)
+                    .build();
 
-            when(projectTemplateRepository.findAll()).thenReturn(List.of(businessTemplate, softwareTemplate));
+            ProjectTemplate scrumTemplate = createTemplate("Scrum", "SOFTWARE", type);
+            scrumTemplate.setTemplateCategory(pmCategory);
+            ProjectTemplate bugTemplate = createTemplate("Bug Tracking", "SOFTWARE", type);
+            bugTemplate.setTemplateCategory(swCategory);
+
+            when(projectTemplateRepository.findAll()).thenReturn(List.of(scrumTemplate, bugTemplate));
+            when(templateCategoryRepository.findByIsActiveTrueOrderBySortOrderAsc())
+                    .thenReturn(List.of(pmCategory, swCategory));
+            when(templateCapabilityRepository.findByTemplateIdInOrderBySortOrderAsc(any()))
+                    .thenReturn(List.of());
 
             // When
             List<TemplateCategoryResponse> categories = templateService.getTemplatesByCategory();
 
             // Then
             assertThat(categories).hasSize(2);
-            assertThat(categories).anyMatch(c -> "BUSINESS".equals(c.getCategoryName()));
-            assertThat(categories).anyMatch(c -> "SOFTWARE".equals(c.getCategoryName()));
+            assertThat(categories).anyMatch(c -> "PROJECT_MANAGEMENT".equals(c.getCategoryKey()));
+            assertThat(categories).anyMatch(c -> "SOFTWARE_DEVELOPMENT".equals(c.getCategoryKey()));
         }
 
         @Test

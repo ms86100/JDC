@@ -2,6 +2,7 @@ package com.jira.test.service;
 
 import com.jira.test.dto.*;
 import com.jira.test.entity.*;
+import com.jira.test.event.*;
 import com.jira.test.exception.*;
 import com.jira.test.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -10,9 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,10 +24,14 @@ public class TestExecutionService {
     private final DefectLinkRepository defectLinkRepository;
     private final TestIssueRepository testIssueRepository;
     private final TestStepRepository testStepRepository;
+    private final EventPublisherService eventPublisher;
 
     @Transactional
     public TestExecutionResponse createExecution(CreateExecutionRequest request) {
         log.info("Creating test execution: {}", request.getName());
+
+        // Publish event before creating execution
+        UUID projectId = extractProjectId(request);
 
         TestExecution execution = TestExecution.builder()
                 .testPlanId(request.getTestPlanId())
@@ -63,6 +66,9 @@ public class TestExecutionService {
                 stepResultRepository.save(stepResult);
             }
         }
+
+        // Publish TestExecutionStartedEvent
+        publishExecutionStartedEvent(execution, projectId);
 
         log.info("Test execution created with id: {}", execution.getId());
         return mapToExecutionResponse(execution);
@@ -106,6 +112,7 @@ public class TestExecutionService {
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("StepResult", "id", stepId));
 
+        String previousStatus = stepResult.getStatus();
         stepResult.setStatus(request.getStatus());
         stepResult.setActualResult(request.getActualResult());
         if (request.getEvidenceUrls() != null) {
@@ -119,6 +126,9 @@ public class TestExecutionService {
 
         updateExecutionCounts(execution);
 
+        // Publish TestRunUpdatedEvent
+        publishTestRunUpdatedEvent(execution, stepId, previousStatus, request.getStatus());
+
         log.info("Step result updated for execution: {}, step: {}", executionId, stepId);
         return mapToStepResultResponse(stepResult);
     }
@@ -128,6 +138,7 @@ public class TestExecutionService {
         TestExecution execution = executionRepository.findById(executionId)
                 .orElseThrow(() -> new ResourceNotFoundException("TestExecution", "id", executionId));
 
+        String previousStatus = execution.getStatus();
         execution.setStatus(finalStatus != null ? finalStatus : calculateFinalStatus(execution));
         execution.setFinishedAt(LocalDateTime.now());
 
@@ -141,6 +152,9 @@ public class TestExecutionService {
                 testIssueRepository.save(test);
             });
         }
+
+        // Publish TestExecutionCompletedEvent
+        publishExecutionCompletedEvent(execution, previousStatus);
 
         log.info("Test execution completed: {} with status: {}", executionId, execution.getStatus());
         return mapToExecutionResponse(execution);
@@ -186,6 +200,9 @@ public class TestExecutionService {
         stepResult.setDefectKey(defectKey);
         stepResultRepository.save(stepResult);
 
+        // Publish DefectLinkedEvent
+        publishDefectLinkedEvent(execution, stepResultId, defectKey, severity);
+
         log.info("Defect linked: {} to execution: {}", defectKey, executionId);
         return mapToDefectLinkResponse(defectLink);
     }
@@ -226,6 +243,105 @@ public class TestExecutionService {
             case "BLOCKED" -> "BLOCKED";
             default -> executionStatus;
         };
+    }
+
+    private UUID extractProjectId(CreateExecutionRequest request) {
+        // In a real implementation, extract project ID from test plan or test set
+        // For now, return a placeholder UUID
+        return UUID.fromString("00000000-0000-0000-0000-000000000001");
+    }
+
+    private UUID extractProjectId(TestExecution execution) {
+        // In a real implementation, extract from execution's associated entities
+        return UUID.fromString("00000000-0000-0000-0000-000000000001");
+    }
+
+    private void publishExecutionStartedEvent(TestExecution execution, UUID projectId) {
+        try {
+            TestExecutionStartedEvent event = TestExecutionStartedEvent.builder()
+                    .source(this)
+                    .projectId(projectId)
+                    .executionId(execution.getId())
+                    .testId(execution.getTestId())
+                    .testPlanId(execution.getTestPlanId())
+                    .testSetId(execution.getTestSetId())
+                    .testerId(execution.getTesterId())
+                    .testEnv(execution.getTestEnv())
+                    .build();
+            eventPublisher.publish(event);
+            log.info("Published TestExecutionStartedEvent for execution: {}", execution.getId());
+        } catch (Exception e) {
+            log.error("Failed to publish TestExecutionStartedEvent: {}", e.getMessage(), e);
+        }
+    }
+
+    private void publishExecutionCompletedEvent(TestExecution execution, String previousStatus) {
+        try {
+            Map<String, String> defectKeys = new HashMap<>();
+            List<StepResult> results = stepResultRepository.findByExecutionId(execution.getId());
+            for (StepResult result : results) {
+                if (result.getDefectKey() != null) {
+                    defectKeys.put(result.getStepId().toString(), result.getDefectKey());
+                }
+            }
+
+            TestExecutionCompletedEvent event = TestExecutionCompletedEvent.builder()
+                    .source(this)
+                    .projectId(extractProjectId(execution))
+                    .executionId(execution.getId())
+                    .testId(execution.getTestId())
+                    .finalStatus(execution.getStatus())
+                    .passedTests(execution.getPassedTests())
+                    .failedTests(execution.getFailedTests())
+                    .blockedTests(execution.getBlockedTests())
+                    .notRunTests(execution.getNotRunTests())
+                    .defectKeys(defectKeys)
+                    .build();
+            eventPublisher.publish(event);
+            log.info("Published TestExecutionCompletedEvent for execution: {}", execution.getId());
+        } catch (Exception e) {
+            log.error("Failed to publish TestExecutionCompletedEvent: {}", e.getMessage(), e);
+        }
+    }
+
+    private void publishTestRunUpdatedEvent(TestExecution execution, UUID stepId,
+                                            String previousStatus, String newStatus) {
+        try {
+            TestRunUpdatedEvent event = TestRunUpdatedEvent.builder()
+                    .source(this)
+                    .projectId(extractProjectId(execution))
+                    .executionId(execution.getId())
+                    .testId(execution.getTestId())
+                    .stepId(stepId)
+                    .previousStatus(previousStatus)
+                    .newStatus(newStatus)
+                    .updatedBy(execution.getTesterId() != null ? execution.getTesterId().toString() : "SYSTEM")
+                    .build();
+            eventPublisher.publish(event);
+            log.info("Published TestRunUpdatedEvent for execution: {}, step: {}", execution.getId(), stepId);
+        } catch (Exception e) {
+            log.error("Failed to publish TestRunUpdatedEvent: {}", e.getMessage(), e);
+        }
+    }
+
+    private void publishDefectLinkedEvent(TestExecution execution, UUID stepResultId,
+                                          String defectKey, String severity) {
+        try {
+            DefectLinkedEvent event = DefectLinkedEvent.builder()
+                    .source(this)
+                    .projectId(extractProjectId(execution))
+                    .executionId(execution.getId())
+                    .stepResultId(stepResultId)
+                    .defectKey(defectKey)
+                    .severity(severity)
+                    .linkedBy(execution.getTesterId() != null ? execution.getTesterId().toString() : "SYSTEM")
+                    .affectedTestIds(List.of(execution.getTestId() != null ? execution.getTestId().toString() : ""))
+                    .build();
+            eventPublisher.publish(event);
+            log.info("Published DefectLinkedEvent for execution: {}, defect: {}", execution.getId(), defectKey);
+        } catch (Exception e) {
+            log.error("Failed to publish DefectLinkedEvent: {}", e.getMessage(), e);
+        }
     }
 
     private TestExecutionResponse mapToExecutionResponse(TestExecution execution) {

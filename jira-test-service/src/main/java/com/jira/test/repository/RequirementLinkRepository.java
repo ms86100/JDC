@@ -16,5 +16,7 @@ public interface RequirementLinkRepository extends JpaRepository<RequirementLink
 
     List<RequirementLink> findByRequirementKeyAndTestId(String requirementKey, UUID testId);
 
+    List<RequirementLink> findByProjectId(UUID projectId);
+
     boolean existsByRequirementKeyAndTestId(String requirementKey, UUID testId);
 }

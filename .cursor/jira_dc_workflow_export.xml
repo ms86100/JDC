@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Canonical enterprise Jira DC / OSWorkflow export fixture for migration engine CI -->
+<workflow-descriptor name="Enterprise Change Management Workflow">
+  <meta name="jira.description">CAB-gated change workflow with global close/reopen and conditional approval paths</meta>
+  <meta name="jira.i18n.title">workflow.enterprise.change.title</meta>
+  <meta name="jira.updated.date">2026-05-21</meta>
+
+  <initial-actions>
+    <action id="1" name="Create">
+      <validators>
+        <validator name="" type="class">
+          <arg name="class.name">com.atlassian.jira.workflow.validator.FieldRequiredValidator</arg>
+          <arg name="fieldKey">summary</arg>
+        </validator>
+      </validators>
+      <results>
+        <unconditional-result old-status="null" status="10000" step="1"/>
+      </results>
+      <post-functions>
+        <function type="class">
+          <arg name="class.name">com.atlassian.jira.workflow.function.issue.GenerateChangeHistoryFunction</arg>
+        </function>
+        <function type="class">
+          <arg name="class.name">com.atlassian.jira.workflow.function.issue.FireIssueEventFunction</arg>
+          <arg name="eventTypeId">1</arg>
+        </function>
+      </post-functions>
+    </action>
+  </initial-actions>
+
+  <common-actions>
+    <action id="900" name="Close Issue">
+      <restrict-to>
+        <conditions type="AND">
+          <condition type="class">
+            <arg name="class.name">com.atlassian.jira.workflow.condition.PermissionCondition</arg>
+            <arg name="permissionKey">CLOSE_ISSUES</arg>
+          </condition>
+        </conditions>
+      </restrict-to>
+      <validators>
+        <validator name="" type="class">
+          <arg name="class.name">com.atlassian.jira.workflow.validator.PermissionValidator</arg>
+          <arg name="permissionKey">CLOSE_ISSUES</arg>
+        </validator>
+      </validators>
+      <results>
+        <unconditional-result old-status="*" status="10005" step="6"/>
+      </results>
+      <post-functions>
+        <function type="class">
+          <arg name="class.name">com.atlassian.jira.workflow.function.issue.UpdateIssueFieldFunction</arg>
+          <arg name="field.name">resolution</arg>
+          <arg name="field.value">Done</arg>
+        </function>
+      </post-functions>
+    </action>
+    <action id="901" name="Reopen Issue">
+      <results>
+        <unconditional-result old-status="*" status="10001" step="2"/>
+      </results>
+      <post-functions>
+        <function type="class">
+          <arg name="class.name">com.atlassian.jira.workflow.function.issue.UpdateIssueFieldFunction</arg>
+          <arg name="field.name">resolution</arg>
+          <arg name="field.value"></arg>
+        </function>
+      </post-functions>
+    </action>
+  </common-actions>
+
+  <steps>
+    <step id="1" name="Draft">
+      <meta name="jira.status.id">10000</meta>
+      <meta name="jira.status.name">Draft</meta>
+      <actions>
+        <action id="11" name="Submit for Review">
+          <meta name="jira.description">Submit change request to CAB queue</meta>
+          <view name="resolveissue">transitionscreen.submit</view>
+          <validators>
+            <validator name="" type="class">
+              <arg name="class.name">com.atlassian.jira.workflow.validator.FieldRequiredValidator</arg>
+              <arg name="fieldKey">description</arg>
+            </validator>
+          </validators>
+          <results>
+            <unconditional-result old-status="10000" status="10001" step="2"/>
+          </results>
+          <post-functions>
+            <function type="class">
+              <arg name="class.name">com.atlassian.jira.workflow.function.issue.FireIssueEventFunction</arg>
+              <arg name="eventTypeId">13</arg>
+            </function>
+          </post-functions>
+        </action>
+      </actions>
+    </step>
+
+    <step id="2" name="Open">
+      <meta name="jira.status.id">10001</meta>
+      <meta name="jira.status.name">Open</meta>
+      <actions>
+        <action id="21" name="Start Progress">
+          <results>
+            <unconditional-result old-status="10001" status="10002" step="3"/>
+          </results>
+        </action>
+        <action id="22" name="Reject">
+          <restrict-to>
+            <conditions type="AND">
+              <condition type="class">
+                <arg name="class.name">com.atlassian.jira.workflow.condition.UserInGroupCondition</arg>
+                <arg name="group">jira-administrators</arg>
+              </condition>
+            </conditions>
+          </restrict-to>
+          <results>
+            <unconditional-result old-status="10001" status="10006" step="7"/>
+          </results>
+        </action>
+      </actions>
+    </step>
+
+    <step id="3" name="CAB Review">
+      <meta name="jira.status.id">10002</meta>
+      <meta name="jira.status.name">CAB Review</meta>
+      <actions>
+        <action id="31" name="Approve">
+          <validators>
+            <validator name="" type="class">
+              <arg name="class.name">com.atlassian.jira.workflow.validator.CommentRequiredValidator</arg>
+            </validator>
+          </validators>
+          <restrict-to>
+            <conditions type="AND">
+              <condition type="class">
+                <arg name="class.name">com.atlassian.jira.workflow.condition.UserInGroupCondition</arg>
+                <arg name="group">change-advisory-board</arg>
+              </condition>
+            </conditions>
+          </restrict-to>
+          <results>
+            <result old-status="10002" status="10003" step="4">
+              <conditions type="AND">
+                <condition type="class">
+                  <arg name="class.name">com.atlassian.jira.workflow.condition.FieldValueCondition</arg>
+                  <arg name="fieldName">customfield_10001</arg>
+                  <arg name="fieldValue">standard</arg>
+                </condition>
+              </conditions>
+            </result>
+            <result old-status="10002" status="10004" step="5">
+              <conditions type="AND">
+                <condition type="class">
+                  <arg name="class.name">com.atlassian.jira.workflow.condition.FieldValueCondition</arg>
+                  <arg name="fieldName">customfield_10001</arg>
+                  <arg name="fieldValue">emergency</arg>
+                </condition>
+              </conditions>
+            </result>
+            <unconditional-result old-status="10002" status="10003" step="4"/>
+          </results>
+          <post-functions>
+            <function type="class">
+              <arg name="class.name">com.atlassian.jira.workflow.function.issue.AssignToCurrentUserFunction</arg>
+            </function>
+            <function type="class">
+              <arg name="class.name">com.atlassian.jira.workflow.function.issue.FireIssueEventFunction</arg>
+              <arg name="eventTypeId">14</arg>
+            </function>
+          </post-functions>
+        </action>
+        <action id="32" name="Request Changes">
+          <validators>
+            <validator name="" type="class">
+              <arg name="class.name">com.atlassian.jira.workflow.validator.CommentRequiredValidator</arg>
+            </validator>
+          </validators>
+          <results>
+            <unconditional-result old-status="10002" status="10001" step="2"/>
+          </results>
+        </action>
+      </actions>
+    </step>
+
+    <step id="4" name="In Progress">
+      <meta name="jira.status.id">10003</meta>
+      <meta name="jira.status.name">In Progress</meta>
+      <actions>
+        <action id="41" name="Deploy">
+          <view name="resolveissue">transitionscreen.deploy</view>
+          <results>
+            <unconditional-result old-status="10003" status="10004" step="5"/>
+          </results>
+          <post-functions>
+            <function type="class">
+              <arg name="class.name">com.atlassian.jira.workflow.function.issue.UpdateIssueFieldFunction</arg>
+              <arg name="field.name">assignee</arg>
+              <arg name="field.value">release-bot</arg>
+            </function>
+          </post-functions>
+        </action>
+      </actions>
+    </step>
+
+    <step id="5" name="Deploying">
+      <meta name="jira.status.id">10004</meta>
+      <meta name="jira.status.name">Deploying</meta>
+      <actions>
+        <action id="51" name="Complete">
+          <validators>
+            <validator name="" type="class">
+              <arg name="class.name">com.atlassian.jira.workflow.validator.PermissionValidator</arg>
+              <arg name="permissionKey">RESOLVE_ISSUES</arg>
+            </validator>
+          </validators>
+          <results>
+            <unconditional-result old-status="10004" status="10005" step="6"/>
+          </results>
+          <post-functions>
+            <function type="class">
+              <arg name="class.name">com.atlassian.jira.workflow.function.issue.UpdateIssueFieldFunction</arg>
+              <arg name="field.name">resolution</arg>
+              <arg name="field.value">Done</arg>
+            </function>
+          </post-functions>
+        </action>
+        <action id="52" name="Rollback Deploy">
+          <results>
+            <unconditional-result old-status="10004" status="10003" step="4"/>
+          </results>
+        </action>
+      </actions>
+    </step>
+
+    <step id="6" name="Done">
+      <meta name="jira.status.id">10005</meta>
+      <meta name="jira.status.name">Done</meta>
+    </step>
+
+    <step id="7" name="Rejected">
+      <meta name="jira.status.id">10006</meta>
+      <meta name="jira.status.name">Rejected</meta>
+      <actions>
+        <action id="71" name="Reopen to Open">
+          <results>
+            <unconditional-result old-status="10006" status="10001" step="2"/>
+          </results>
+        </action>
+      </actions>
+    </step>
+  </steps>
+</workflow-descriptor>

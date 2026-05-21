@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import testApi, { TestResponse, CreateTestRequest, UpdateTestRequest } from '../../../api/testApi';
+import combinedApi, { TestResponse, CreateTestRequest, UpdateTestRequest } from '../../../api/testApi';
 import { useParams, useNavigate } from 'react-router-dom';
 
 interface TestStepsEditorProps {

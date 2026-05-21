@@ -5,12 +5,24 @@ import com.jira.migration.dto.*;
 import com.jira.migration.entity.CsvTemplate;
 import com.jira.migration.entity.FieldMapping;
 import com.jira.migration.parser.CsvParser;
+import com.jira.migration.parser.JiraDcXmlParser;
 import com.jira.migration.parser.ValidationEngine;
 import com.jira.migration.repository.CsvTemplateRepository;
 import com.jira.migration.repository.FieldMappingRepository;
+import com.jira.migration.service.MigrationAuditPersistenceService;
+import com.jira.migration.service.MigrationReportService;
+import com.jira.migration.service.MigrationRollbackService;
+import com.jira.migration.service.MigrationJobControlService;
 import com.jira.migration.service.MigrationService;
+import com.jira.migration.service.VirusScanService;
+import com.jira.migration.service.TransactionManager;
+import com.jira.migration.service.ValidationReportService;
+import com.jira.migration.batch.DeadLetterQueueService;
 import com.jira.migration.async.ImportJobProcessor;
 import com.jira.migration.async.ExportJobProcessor;
+import com.jira.migration.dc.JiraDcImportApiService;
+import com.jira.migration.dc.JiraDcEnterpriseReadinessService;
+import com.jira.migration.dc.JiraDcImportOrchestrator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +41,13 @@ import java.util.*;
 public class MigrationController {
 
     private final MigrationService migrationService;
+    private final MigrationJobControlService jobControlService;
+    private final VirusScanService virusScanService;
+    private final MigrationReportService migrationReportService;
+    private final ValidationReportService validationReportService;
+    private final MigrationAuditPersistenceService migrationAuditPersistenceService;
+    private final MigrationRollbackService migrationRollbackService;
+    private final DeadLetterQueueService deadLetterQueueService;
     private final ImportJobProcessor importJobProcessor;
     private final ExportJobProcessor exportJobProcessor;
     private final CsvTemplateRepository csvTemplateRepository;
@@ -36,6 +55,10 @@ public class MigrationController {
     private final ValidationEngine validationEngine;
     private final CsvParser csvParser;
     private final ObjectMapper objectMapper;
+    private final JiraDcXmlParser jiraDcXmlParser;
+    private final JiraDcImportApiService jiraDcImportApiService;
+    private final JiraDcImportOrchestrator jiraDcImportOrchestrator;
+    private final JiraDcEnterpriseReadinessService jiraDcEnterpriseReadinessService;
 
     // ============================================
     // MIGRATION JOB MANAGEMENT
@@ -47,6 +70,7 @@ public class MigrationController {
             @RequestParam(value = "templateId", required = false) UUID templateId,
             @RequestParam(value = "targetProjectId", required = false) UUID targetProjectId,
             @RequestParam(value = "options", required = false) String optionsJson,
+            @RequestParam(value = "fieldMappings", required = false) String fieldMappingsJson,
             @RequestHeader("X-User-Id") UUID userId) throws Exception {
 
         log.info("Starting CSV import: file={}, template={}, project={}",
@@ -56,48 +80,119 @@ public class MigrationController {
         byte[] fileContent = file.getBytes();
         String fileName = file.getOriginalFilename();
 
+        Map<String, Object> options = optionsJson != null ? parseJson(optionsJson) : new HashMap<>();
+        if (fieldMappingsJson != null && !fieldMappingsJson.isBlank()) {
+            options.put("fieldMappings", objectMapper.readValue(fieldMappingsJson, List.class));
+        }
+        options.put("blockOnValidationErrors", true);
+        if (targetProjectId != null) {
+            options.put("targetProjectId", targetProjectId.toString());
+        }
+
         StartMigrationRequest request = StartMigrationRequest.builder()
                 .jobType("IMPORT")
                 .importSource("CSV")
                 .targetProjectId(targetProjectId)
                 .templateId(templateId)
+                .options(options)
                 .build();
 
         MigrationJobResponse job = migrationService.startImport(request, userId);
 
         // Start async processing with file content instead of MultipartFile
-        importJobProcessor.processCsvImport(job.getId(), fileContent, fileName, templateId,
-                optionsJson != null ? parseJson(optionsJson) : Map.of(), userId);
+        importJobProcessor.processCsvImport(job.getId(), fileContent, fileName, templateId, options, userId);
 
         return ResponseEntity.accepted().body(job);
+    }
+
+    @PostMapping("/import/jira-dc/validate")
+    public ResponseEntity<Map<String, Object>> validateJiraDcXml(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "attachmentBundle", required = false) MultipartFile attachmentBundle,
+            @RequestParam(value = "backupZip", required = false, defaultValue = "false") boolean backupZip,
+            @RequestParam(value = "options", required = false) String optionsJson) throws Exception {
+
+        java.nio.file.Path xmlOrZip = java.nio.file.Files.createTempFile("dc-validate-", suffix(file));
+        java.nio.file.Files.write(xmlOrZip, file.getBytes());
+        java.nio.file.Path bundlePath = null;
+        if (attachmentBundle != null && !attachmentBundle.isEmpty()) {
+            bundlePath = java.nio.file.Files.createTempFile("dc-att-bundle-", ".zip");
+            java.nio.file.Files.write(bundlePath, attachmentBundle.getBytes());
+        }
+        try {
+            Map<String, Object> options = optionsJson != null ? parseJson(optionsJson) : new HashMap<>();
+            boolean isBackup = backupZip || file.getOriginalFilename() != null
+                    && file.getOriginalFilename().toLowerCase().endsWith(".zip");
+            return ResponseEntity.ok(jiraDcImportApiService.validateUpload(
+                    xmlOrZip, isBackup, bundlePath, options));
+        } finally {
+            java.nio.file.Files.deleteIfExists(xmlOrZip);
+            if (bundlePath != null) {
+                java.nio.file.Files.deleteIfExists(bundlePath);
+            }
+        }
     }
 
     @PostMapping("/import/jira-dc")
     public ResponseEntity<MigrationJobResponse> startJiraDcImport(
             @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "attachmentBundle", required = false) MultipartFile attachmentBundle,
+            @RequestParam(value = "backupZip", required = false, defaultValue = "false") boolean backupZip,
             @RequestParam(value = "targetProjectId", required = false) UUID targetProjectId,
             @RequestParam(value = "options", required = false) String optionsJson,
             @RequestHeader("X-User-Id") UUID userId) throws Exception {
 
         log.info("Starting Jira DC import: file={}", file.getOriginalFilename());
 
-        // Read file content BEFORE async processing
-        byte[] fileContent = file.getBytes();
-        String fileName = file.getOriginalFilename();
+        Map<String, Object> dcOptions = optionsJson != null ? parseJson(optionsJson) : new HashMap<>();
+        dcOptions.putIfAbsent("rollbackOnFailure", true);
+
+        java.nio.file.Path uploadPath = java.nio.file.Files.createTempFile("dc-import-", suffix(file));
+        java.nio.file.Files.write(uploadPath, file.getBytes());
+
+        boolean isBackup = backupZip || file.getOriginalFilename() != null
+                && file.getOriginalFilename().toLowerCase().endsWith(".zip");
+
+        java.nio.file.Path bundleZipPath = null;
+        if (attachmentBundle != null && !attachmentBundle.isEmpty()) {
+            bundleZipPath = java.nio.file.Files.createTempFile("dc-att-", ".zip");
+            java.nio.file.Files.write(bundleZipPath, attachmentBundle.getBytes());
+        }
+
+        JiraDcImportOrchestrator.ResolvedInputs resolved = jiraDcImportOrchestrator.resolveInputs(
+                uploadPath, bundleZipPath, isBackup);
+        dcOptions.put("xmlPath", resolved.xmlPath().toString());
+        if (resolved.attachmentBundlePath() != null) {
+            dcOptions.put("attachmentBundlePath", resolved.attachmentBundlePath().toString());
+        }
+        if (resolved.extractedBackup() != null) {
+            dcOptions.put("extractedBackupRoot", resolved.extractedBackup().extractRoot().toString());
+        }
+        dcOptions.put("backupZip", isBackup);
 
         StartMigrationRequest request = StartMigrationRequest.builder()
                 .jobType("IMPORT")
                 .importSource("JIRA_DC")
                 .targetProjectId(targetProjectId)
+                .options(dcOptions)
                 .build();
 
         MigrationJobResponse job = migrationService.startImport(request, userId);
 
-        // Start async processing with file content
-        importJobProcessor.processJiraDcImport(job.getId(), fileContent, fileName,
-                optionsJson != null ? parseJson(optionsJson) : Map.of(), userId);
+        byte[] fileContent = java.nio.file.Files.readAllBytes(resolved.xmlPath());
+        String fileName = resolved.xmlPath().getFileName().toString();
+
+        importJobProcessor.processJiraDcImport(job.getId(), fileContent, fileName, dcOptions, userId);
 
         return ResponseEntity.accepted().body(job);
+    }
+
+    private static String suffix(MultipartFile file) {
+        String name = file.getOriginalFilename();
+        if (name != null && name.contains(".")) {
+            return name.substring(name.lastIndexOf('.'));
+        }
+        return ".xml";
     }
 
     @PostMapping("/import/project")
@@ -163,12 +258,107 @@ public class MigrationController {
         return ResponseEntity.ok(migrationService.getImportResult(jobId));
     }
 
+    @GetMapping("/jobs/{jobId}/dc-sla-proof")
+    public ResponseEntity<Map<String, Object>> getDcSlaProof(@PathVariable UUID jobId) {
+        return ResponseEntity.ok(jiraDcEnterpriseReadinessService.getSlaProof(jobId));
+    }
+
+    @GetMapping("/jobs/{jobId}/dc-ac-signoff")
+    public ResponseEntity<Map<String, Object>> getDcAcSignoff(@PathVariable UUID jobId) {
+        return ResponseEntity.ok(jiraDcEnterpriseReadinessService.getAcSignoff(jobId));
+    }
+
     @PostMapping("/jobs/{jobId}/cancel")
     public ResponseEntity<Void> cancelJob(
             @PathVariable UUID jobId,
             @RequestHeader("X-User-Id") UUID userId) {
         migrationService.cancelJob(jobId, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/jobs/{jobId}/pause")
+    public ResponseEntity<Map<String, Object>> pauseJob(@PathVariable UUID jobId) {
+        return ResponseEntity.ok(jobControlService.pauseJob(jobId));
+    }
+
+    @PostMapping("/jobs/{jobId}/resume-control")
+    public ResponseEntity<Map<String, Object>> resumePausedJob(@PathVariable UUID jobId) {
+        return ResponseEntity.ok(jobControlService.resumeJob(jobId));
+    }
+
+    @PostMapping("/uploads/{uploadId}/virus-scan")
+    public ResponseEntity<Map<String, String>> scanUpload(@PathVariable UUID uploadId) {
+        String status = virusScanService.scanAndUpdate(uploadId);
+        return ResponseEntity.ok(Map.of("uploadId", uploadId.toString(), "virusScanStatus", status));
+    }
+
+    @PostMapping("/jobs/{jobId}/retry")
+    public ResponseEntity<Map<String, Object>> retryFailedJob(@PathVariable UUID jobId) {
+        List<DeadLetterQueueService.FailedOperation> pending =
+                deadLetterQueueService.getByJobId(jobId.toString());
+        int retried = 0;
+        int succeeded = 0;
+        for (DeadLetterQueueService.FailedOperation op : pending) {
+            if (op.getId() != null) {
+                DeadLetterQueueService.RetryResult result = deadLetterQueueService.retry(op.getId());
+                retried++;
+                if (result.isSuccess()) {
+                    succeeded++;
+                }
+            }
+        }
+        return ResponseEntity.ok(Map.of(
+                "jobId", jobId,
+                "retried", retried,
+                "succeeded", succeeded,
+                "pending", pending.size() - succeeded
+        ));
+    }
+
+    @GetMapping("/jobs/{jobId}/report")
+    public ResponseEntity<String> downloadJobReport(@PathVariable UUID jobId) {
+        String csv = migrationReportService.buildImportReportCsv(jobId);
+        return ResponseEntity.ok()
+                .header("Content-Type", "text/csv")
+                .header("Content-Disposition", "attachment; filename=\"migration-report-" + jobId + ".csv\"")
+                .body(csv);
+    }
+
+    @GetMapping("/jobs/{jobId}/logs/download")
+    public ResponseEntity<String> downloadJobLogs(@PathVariable UUID jobId) {
+        return ResponseEntity.ok()
+                .header("Content-Type", "text/plain")
+                .body(migrationReportService.buildJobLogsText(jobId));
+    }
+
+    @GetMapping("/jobs/{jobId}/validation-report")
+    public ResponseEntity<String> downloadValidationReport(@PathVariable UUID jobId) {
+        String csv = validationReportService.buildValidationReportCsv(jobId, null);
+        return ResponseEntity.ok()
+                .header("Content-Type", "text/csv")
+                .header("Content-Disposition", "attachment; filename=\"validation-report-" + jobId + ".csv\"")
+                .body(csv);
+    }
+
+    @GetMapping("/jobs/{jobId}/audit")
+    public ResponseEntity<List<?>> getJobAuditTrail(@PathVariable UUID jobId) {
+        return ResponseEntity.ok(migrationAuditPersistenceService.getJobTrail(jobId));
+    }
+
+    @GetMapping("/jobs/{jobId}/rollback-info")
+    public ResponseEntity<TransactionManager.RollbackInfo> getRollbackInfo(@PathVariable UUID jobId) {
+        return ResponseEntity.ok(migrationRollbackService.getRollbackInfo(jobId));
+    }
+
+    @PostMapping("/jobs/{jobId}/rollback")
+    public ResponseEntity<TransactionManager.RollbackResult> rollbackJob(
+            @PathVariable UUID jobId,
+            @RequestHeader("X-User-Id") UUID userId) {
+        log.info("Rollback job {} requested by {}", jobId, userId);
+        TransactionManager.RollbackResult result = migrationRollbackService.rollbackJob(jobId);
+        migrationAuditPersistenceService.log(jobId, "ROLLBACK_REQUESTED", "JOB", jobId.toString(), userId,
+                Map.of("rolledBack", result.getRolledBackCount(), "failed", result.getFailedCount()));
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/jobs")

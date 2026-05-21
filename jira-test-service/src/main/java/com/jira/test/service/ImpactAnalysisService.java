@@ -28,6 +28,520 @@ public class ImpactAnalysisService {
     private final TestIssueRepository testIssueRepository;
     private final TestDatasetRepository datasetRepository;
     private final ObjectMapper objectMapper;
+    private final ImpactGraphRepository impactGraphRepository;
+    private final RequirementLinkRepository requirementLinkRepository;
+
+    // ==================== Dependency Graph Building ====================
+
+    @Transactional
+    public ImpactGraphDto buildDependencyGraph(UUID projectId, String sourceType, UUID sourceId) {
+        log.info("Building dependency graph for {} {} in project {}", sourceType, sourceId, projectId);
+
+        List<ImpactGraph> graphEdges = new ArrayList<>();
+
+        if ("TEST".equals(sourceType)) {
+            // Get components mapped to this test
+            List<UUID> componentIds = testComponentMappingRepository.findComponentIdsByTestId(sourceId);
+            for (UUID componentId : componentIds) {
+                ImpactGraph edge = ImpactGraph.builder()
+                        .projectId(projectId)
+                        .sourceType("TEST")
+                        .sourceId(sourceId)
+                        .targetType("COMPONENT")
+                        .targetId(componentId)
+                        .impactType(ImpactGraph.ImpactType.DIRECT)
+                        .weight(1.0)
+                        .cascadeDepth(0)
+                        .build();
+                graphEdges.add(impactGraphRepository.save(edge));
+
+                // Find other tests mapped to same component
+                List<UUID> relatedTestIds = testComponentMappingRepository.findTestIdsByComponentId(componentId);
+                for (UUID relatedTestId : relatedTestIds) {
+                    if (!relatedTestId.equals(sourceId)) {
+                        ImpactGraph transitiveEdge = ImpactGraph.builder()
+                                .projectId(projectId)
+                                .sourceType("TEST")
+                                .sourceId(sourceId)
+                                .targetType("TEST")
+                                .targetId(relatedTestId)
+                                .impactType(ImpactGraph.ImpactType.TRANSITIVE)
+                                .weight(0.8)
+                                .cascadeDepth(1)
+                                .build();
+                        graphEdges.add(impactGraphRepository.save(transitiveEdge));
+                    }
+                }
+            }
+
+            // Get requirements linked to this test
+            List<RequirementLink> reqLinks = requirementLinkRepository.findByTestId(sourceId);
+            for (RequirementLink reqLink : reqLinks) {
+                // Find other tests covering same requirement
+                List<RequirementLink> otherReqLinks = requirementLinkRepository.findByRequirementKey(reqLink.getRequirementKey());
+                for (RequirementLink otherLink : otherReqLinks) {
+                    if (!otherLink.getTestId().equals(sourceId)) {
+                        ImpactGraph reqEdge = ImpactGraph.builder()
+                                .projectId(projectId)
+                                .sourceType("TEST")
+                                .sourceId(sourceId)
+                                .targetType("TEST")
+                                .targetId(otherLink.getTestId())
+                                .impactType(ImpactGraph.ImpactType.CASCADING)
+                                .weight(0.6)
+                                .cascadeDepth(2)
+                                .description("Shared requirement: " + reqLink.getRequirementKey())
+                                .build();
+                        graphEdges.add(impactGraphRepository.save(reqEdge));
+                    }
+                }
+            }
+        }
+
+        return mapToGraphDto(graphEdges.isEmpty() ? null : graphEdges.get(0));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ImpactGraphDto> getDependencyGraph(UUID projectId, UUID sourceId, Integer maxDepth) {
+        List<ImpactGraph> edges = impactGraphRepository.findBySourceWithMaxDepth("TEST", sourceId, maxDepth != null ? maxDepth : 3);
+        return edges.stream().map(this::mapToGraphDto).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<TestImpactDetailDto> getAffectedTests(UUID projectId, String changeType, String changeKey) {
+        List<TestImpactDetailDto> affectedTests = new ArrayList<>();
+
+        if ("COMPONENT".equals(changeType)) {
+            UUID componentId = UUID.fromString(changeKey);
+            List<UUID> testIds = testComponentMappingRepository.findTestIdsByComponentId(componentId);
+            for (UUID testId : testIds) {
+                TestIssue test = testIssueRepository.findById(testId).orElse(null);
+                if (test != null) {
+                    TestImpactDetailDto detail = buildTestImpactDetail(test, 0, "Direct component mapping");
+                    affectedTests.add(detail);
+                }
+            }
+        } else if ("REQUIREMENT".equals(changeType)) {
+            List<RequirementLink> reqLinks = requirementLinkRepository.findByRequirementKey(changeKey);
+            for (RequirementLink reqLink : reqLinks) {
+                TestIssue test = testIssueRepository.findById(reqLink.getTestId()).orElse(null);
+                if (test != null) {
+                    TestImpactDetailDto detail = buildTestImpactDetail(test, 0, "Requirement coverage: " + changeKey);
+                    detail.setRequirementKey(changeKey);
+                    affectedTests.add(detail);
+                }
+            }
+        }
+
+        return affectedTests;
+    }
+
+    // ==================== Cascading Impact Calculation ====================
+
+    @Transactional(readOnly = true)
+    public TestImpactDetailDto analyzeTestImpact(UUID testId, Integer cascadeDepth) {
+        log.info("Analyzing impact for test {} with cascade depth {}", testId, cascadeDepth);
+
+        TestIssue test = testIssueRepository.findById(testId)
+                .orElseThrow(() -> new ResourceNotFoundException("Test", "id", testId));
+
+        TestImpactDetailDto detail = buildTestImpactDetail(test, 0, "Source test");
+        detail.setMitigationSuggestions(generateMitigationSuggestions(test));
+
+        // Calculate cascade impact
+        int maxDepth = cascadeDepth != null ? cascadeDepth : 3;
+        Set<UUID> visited = new HashSet<>();
+        visited.add(testId);
+        List<TestImpactDetailDto> allAffected = new ArrayList<>();
+        allAffected.add(detail);
+
+        calculateCascadeImpact(testId, 1, maxDepth, visited, allAffected);
+
+        // Store dependent tests
+        List<String> dependentTestKeys = allAffected.stream()
+                .skip(1)
+                .map(TestImpactDetailDto::getTestIssueKey)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        detail.setDependentTests(dependentTestKeys);
+
+        return detail;
+    }
+
+    private void calculateCascadeImpact(UUID sourceTestId, int currentDepth, int maxDepth,
+                                         Set<UUID> visited, List<TestImpactDetailDto> allAffected) {
+        if (currentDepth > maxDepth) return;
+
+        // Get components for this test
+        List<UUID> componentIds = testComponentMappingRepository.findComponentIdsByTestId(sourceTestId);
+
+        for (UUID componentId : componentIds) {
+            List<UUID> relatedTestIds = testComponentMappingRepository.findTestIdsByComponentId(componentId);
+
+            for (UUID relatedTestId : relatedTestIds) {
+                if (!visited.contains(relatedTestId)) {
+                    visited.add(relatedTestId);
+                    TestIssue relatedTest = testIssueRepository.findById(relatedTestId).orElse(null);
+                    if (relatedTest != null) {
+                        TestImpactDetailDto cascadeDetail = buildTestImpactDetail(
+                                relatedTest, currentDepth,
+                                "Cascade level " + currentDepth + " via component"
+                        );
+                        cascadeDetail.setRiskScore(cascadeDetail.getRiskScore() * (1.0 / currentDepth));
+                        allAffected.add(cascadeDetail);
+
+                        // Recurse for next level
+                        calculateCascadeImpact(relatedTestId, currentDepth + 1, maxDepth, visited, allAffected);
+                    }
+                }
+            }
+        }
+
+        // Check requirement-based cascade
+        List<RequirementLink> reqLinks = requirementLinkRepository.findByTestId(sourceTestId);
+        for (RequirementLink reqLink : reqLinks) {
+            List<RequirementLink> otherReqLinks = requirementLinkRepository.findByRequirementKey(reqLink.getRequirementKey());
+            for (RequirementLink otherLink : otherReqLinks) {
+                if (!visited.contains(otherLink.getTestId())) {
+                    visited.add(otherLink.getTestId());
+                    TestIssue relatedTest = testIssueRepository.findById(otherLink.getTestId()).orElse(null);
+                    if (relatedTest != null) {
+                        TestImpactDetailDto cascadeDetail = buildTestImpactDetail(
+                                relatedTest, currentDepth,
+                                "Requirement cascade: " + reqLink.getRequirementKey()
+                        );
+                        cascadeDetail.setRiskScore(cascadeDetail.getRiskScore() * 0.5);
+                        cascadeDetail.setRequirementKey(reqLink.getRequirementKey());
+                        allAffected.add(cascadeDetail);
+                    }
+                }
+            }
+        }
+    }
+
+    // ==================== Risk Scoring Algorithm ====================
+
+    public String calculateRiskLevel(double riskScore) {
+        if (riskScore >= 80) return "CRITICAL";
+        if (riskScore >= 60) return "HIGH";
+        if (riskScore >= 30) return "MEDIUM";
+        return "LOW";
+    }
+
+    @Transactional(readOnly = true)
+    public Double calculateComprehensiveRiskScore(UUID projectId, List<UUID> testIds) {
+        double totalRisk = 0.0;
+        int count = 0;
+
+        for (UUID testId : testIds) {
+            // Base risk from test characteristics
+            TestIssue test = testIssueRepository.findById(testId).orElse(null);
+            if (test != null) {
+                double testRisk = 1.0;
+
+                // Higher risk for automated tests
+                if ("AUTOMATED".equals(test.getTestType())) testRisk *= 1.2;
+
+                // Higher risk for tests with recent failures
+                // (would need execution history - simplified for now)
+
+                // Risk from cascade depth
+                int componentCount = testComponentMappingRepository.findComponentIdsByTestId(testId).size();
+                testRisk *= (1 + componentCount * 0.1);
+
+                totalRisk += testRisk;
+                count++;
+            }
+        }
+
+        return count > 0 ? (totalRisk / count) * 100 : 0.0;
+    }
+
+    // ==================== Mitigation Suggestions ====================
+
+    public List<String> generateMitigationSuggestions(TestIssue test) {
+        List<String> suggestions = new ArrayList<>();
+
+        // Analyze test characteristics and suggest appropriate mitigation
+        if ("AUTOMATED".equals(test.getTestType())) {
+            suggestions.add("Run automated regression suite before deployment");
+            suggestions.add("Enable CI/CD pipeline gates for this test");
+        } else {
+            suggestions.add("Schedule manual test execution in next test cycle");
+            suggestions.add("Consider automating this test for faster feedback");
+        }
+
+        // Check test priority
+        if ("HIGH".equals(test.getPriority()) || "CRITICAL".equals(test.getPriority())) {
+            suggestions.add("Prioritize this test in the execution order");
+            suggestions.add("Execute in parallel with related tests if possible");
+        }
+
+        // Check component dependencies
+        int componentCount = testComponentMappingRepository.findComponentIdsByTestId(test.getId()).size();
+        if (componentCount > 3) {
+            suggestions.add("Consider breaking down test into smaller focused tests");
+            suggestions.add("Review component boundaries for better test isolation");
+        }
+
+        // Check for shared steps usage
+        suggestions.add("Review shared steps that this test depends on");
+        suggestions.add("Verify test data and datasets are up to date");
+
+        // General suggestions
+        suggestions.add("Document any environment-specific requirements");
+        suggestions.add("Check for flaky test patterns in recent executions");
+
+        return suggestions;
+    }
+
+    // ==================== Requirement Impact Analysis ====================
+
+    @Transactional(readOnly = true)
+    public RequirementImpactDto analyzeRequirementImpact(String requirementKey, Integer fromVersion, Integer toVersion) {
+        log.info("Analyzing requirement impact for {} from v{} to v{}", requirementKey, fromVersion, toVersion);
+
+        List<TestImpactDetailDto> affectedTests = new ArrayList<>();
+        List<RequirementLink> reqLinks = requirementLinkRepository.findByRequirementKey(requirementKey);
+
+        for (RequirementLink reqLink : reqLinks) {
+            TestIssue test = testIssueRepository.findById(reqLink.getTestId()).orElse(null);
+            if (test != null) {
+                TestImpactDetailDto detail = buildTestImpactDetail(test, 0, "Requirement coverage");
+                detail.setRequirementKey(requirementKey);
+                detail.setMitigationSuggestions(generateMitigationSuggestions(test));
+                affectedTests.add(detail);
+            }
+        }
+
+        double avgRisk = affectedTests.stream()
+                .mapToDouble(t -> t.getRiskScore() != null ? t.getRiskScore() : 0.0)
+                .average()
+                .orElse(0.0);
+
+        String riskLevel = calculateRiskLevel(avgRisk);
+        List<String> suggestedActions = buildSuggestedActions(affectedTests.size(), riskLevel);
+
+        return RequirementImpactDto.builder()
+                .requirementKey(requirementKey)
+                .fromVersion(fromVersion)
+                .toVersion(toVersion)
+                .changeType("MODIFIED")
+                .affectedTestsCount(affectedTests.size())
+                .affectedTests(affectedTests)
+                .riskLevel(riskLevel)
+                .suggestedActions(suggestedActions)
+                .build();
+    }
+
+    // ==================== Batch Impact Analysis ====================
+
+    @Transactional
+    public BatchImpactAnalysisResponse analyzeBatchImpact(BatchImpactAnalysisRequest request) {
+        log.info("Batch impact analysis for {} tests in project {}", request.getTestIds().size(), request.getProjectId());
+
+        List<TestImpactDetailDto> allAffected = new ArrayList<>();
+        List<ImpactGraphDto> graphData = new ArrayList<>();
+        Set<UUID> allTestIds = new HashSet<>(request.getTestIds());
+
+        for (UUID testId : request.getTestIds()) {
+            TestImpactDetailDto detail = analyzeTestImpact(testId, request.getCascadeDepth());
+            allAffected.add(detail);
+
+            // Collect graph data
+            List<ImpactGraph> edges = impactGraphRepository.findBySourceWithMaxDepth(
+                    "TEST", testId, request.getCascadeDepth() != null ? request.getCascadeDepth() : 3);
+            for (ImpactGraph edge : edges) {
+                graphData.add(mapToGraphDto(edge));
+            }
+        }
+
+        // Calculate overall risk
+        List<UUID> testIdList = allAffected.stream()
+                .map(t -> UUID.fromString(t.getTestId()))
+                .collect(Collectors.toList());
+        Double overallRisk = calculateComprehensiveRiskScore(request.getProjectId(), testIdList);
+        String riskLevel = calculateRiskLevel(overallRisk);
+
+        // Generate summary
+        List<String> suggestedSuites = generateSuggestedSuitesForBatch(allAffected);
+        List<String> mitigationSummary = buildBatchMitigationSummary(allAffected);
+
+        return BatchImpactAnalysisResponse.builder()
+                .totalAnalyzed(request.getTestIds().size())
+                .totalAffected(allAffected.size())
+                .overallRiskScore(overallRisk)
+                .riskLevel(riskLevel)
+                .allAffectedTests(allAffected)
+                .graphData(graphData)
+                .suggestedSuites(suggestedSuites)
+                .mitigationSummary(mitigationSummary)
+                .build();
+    }
+
+    // ==================== Helper Methods ====================
+
+    private TestImpactDetailDto buildTestImpactDetail(TestIssue test, int cascadeLevel, String reason) {
+        // Get component info
+        List<UUID> componentIds = testComponentMappingRepository.findComponentIdsByTestId(test.getId());
+        String componentName = componentIds.isEmpty() ? null :
+                componentRepository.findById(componentIds.get(0))
+                        .map(Component::getComponentName)
+                        .orElse(null);
+
+        // Get requirement keys
+        List<String> reqKeys = requirementLinkRepository.findByTestId(test.getId())
+                .stream()
+                .map(RequirementLink::getRequirementKey)
+                .collect(Collectors.toList());
+
+        // Calculate risk score
+        double riskScore = calculateTestRiskScore(test, cascadeLevel);
+
+        return TestImpactDetailDto.builder()
+                .testId(test.getId().toString())
+                .testIssueKey(test.getName())
+                .testName(test.getName())
+                .testType(test.getTestType())
+                .status(test.getStatus())
+                .impactLevel(determineImpactLevel(riskScore))
+                .riskScore(riskScore)
+                .reason(reason)
+                .cascadeLevel(cascadeLevel)
+                .componentName(componentName)
+                .requirementKey(reqKeys.isEmpty() ? null : reqKeys.get(0))
+                .build();
+    }
+
+    private double calculateTestRiskScore(TestIssue test, int cascadeLevel) {
+        double baseScore = 50.0;
+
+        // Test type factor
+        if ("AUTOMATED".equals(test.getTestType())) baseScore += 20;
+        else if ("BDD".equals(test.getTestType())) baseScore += 15;
+
+        // Status factor
+        if ("APPROVED".equals(test.getStatus())) baseScore -= 10;
+        else if ("DRAFT".equals(test.getStatus())) baseScore += 15;
+
+        // Cascade depth factor (decreasing impact)
+        baseScore *= (1.0 / (cascadeLevel + 1));
+
+        return Math.min(Math.max(baseScore, 0), 100);
+    }
+
+    private String determineImpactLevel(double riskScore) {
+        if (riskScore >= 75) return "CRITICAL";
+        if (riskScore >= 50) return "HIGH";
+        if (riskScore >= 25) return "MEDIUM";
+        return "LOW";
+    }
+
+    private ImpactGraphDto mapToGraphDto(ImpactGraph graph) {
+        if (graph == null) return null;
+
+        String sourceLabel = getEntityLabel(graph.getSourceType(), graph.getSourceId());
+        String targetLabel = getEntityLabel(graph.getTargetType(), graph.getTargetId());
+
+        return ImpactGraphDto.builder()
+                .id(graph.getId())
+                .sourceType(graph.getSourceType())
+                .sourceId(graph.getSourceId())
+                .sourceLabel(sourceLabel)
+                .targetType(graph.getTargetType())
+                .targetId(graph.getTargetId())
+                .targetLabel(targetLabel)
+                .impactType(graph.getImpactType().name())
+                .weight(graph.getWeight())
+                .cascadeDepth(graph.getCascadeDepth())
+                .build();
+    }
+
+    private String getEntityLabel(String type, UUID id) {
+        if (id == null) return "Unknown";
+        switch (type) {
+            case "TEST":
+                return testIssueRepository.findById(id)
+                        .map(t -> t.getName())
+                        .orElse("Test-" + id.toString().substring(0, 8));
+            case "COMPONENT":
+                return componentRepository.findById(id)
+                        .map(c -> c.getComponentName())
+                        .orElse("Component-" + id.toString().substring(0, 8));
+            default:
+                return type + "-" + id.toString().substring(0, 8);
+        }
+    }
+
+    private List<String> buildSuggestedActions(int affectedCount, String riskLevel) {
+        List<String> actions = new ArrayList<>();
+
+        if ("CRITICAL".equals(riskLevel) || "HIGH".equals(riskLevel)) {
+            actions.add("Run full regression suite immediately");
+            actions.add("Block deployment until tests pass");
+        }
+
+        if (affectedCount > 10) {
+            actions.add("Prioritize critical path tests");
+            actions.add("Consider parallel test execution");
+        }
+
+        actions.add("Review change impact with development team");
+        actions.add("Update test documentation if needed");
+
+        return actions;
+    }
+
+    private List<String> generateSuggestedSuitesForBatch(List<TestImpactDetailDto> affectedTests) {
+        List<String> suites = new ArrayList<>();
+
+        long criticalCount = affectedTests.stream()
+                .filter(t -> "CRITICAL".equals(t.getImpactLevel()))
+                .count();
+
+        long highCount = affectedTests.stream()
+                .filter(t -> "HIGH".equals(t.getImpactLevel()))
+                .count();
+
+        if (criticalCount > 0) {
+            suites.add("Critical Regression Suite");
+        }
+        if (highCount > 0 || criticalCount > 0) {
+            suites.add("High Priority Test Suite");
+        }
+        suites.add("Smoke Test Suite");
+        suites.add("Integration Test Suite");
+
+        return suites;
+    }
+
+    private List<String> buildBatchMitigationSummary(List<TestImpactDetailDto> affectedTests) {
+        List<String> summary = new ArrayList<>();
+
+        Map<String, Long> byType = affectedTests.stream()
+                .collect(Collectors.groupingBy(t -> t.getTestType() != null ? t.getTestType() : "UNKNOWN", Collectors.counting()));
+
+        summary.add("Total affected tests: " + affectedTests.size());
+        summary.add("By test type: " + byType.entrySet().stream()
+                .map(e -> e.getKey() + "=" + e.getValue())
+                .collect(Collectors.joining(", ")));
+
+        long automated = affectedTests.stream()
+                .filter(t -> "AUTOMATED".equals(t.getTestType()))
+                .count();
+        if (automated > 0) {
+            summary.add("Automated tests can be run in CI/CD pipeline");
+        }
+
+        long manual = affectedTests.stream()
+                .filter(t -> "MANUAL".equals(t.getTestType()))
+                .count();
+        if (manual > 0) {
+            summary.add("Manual tests require scheduling in test cycle");
+        }
+
+        return summary;
+    }
 
     // ==================== Component Management ====================
 
@@ -142,11 +656,11 @@ public class ImpactAnalysisService {
         List<TestIssue> tests = testIssueRepository.findAllById(testIds);
 
         return tests.stream().map(test -> TestImpactDto.builder()
-                .testId(test.getId())
+                .testId(test.getId().toString())
                 .testIssueKey(test.getName())
                 .testName(test.getName())
                 .impactLevel("HIGH")
-                .riskScore(BigDecimal.ONE)
+                .riskScore(1.0)
                 .reason("Direct component mapping")
                 .build()
         ).collect(Collectors.toList());
@@ -271,11 +785,11 @@ public class ImpactAnalysisService {
                 String reason = mapping.map(m -> "Mapped to component with " + m.getConfidenceScore() + " confidence").orElse("");
 
                 affectedTests.add(TestImpactDto.builder()
-                        .testId(test.getId())
+                        .testId(test.getId().toString())
                         .testIssueKey(test.getName())
                         .testName(test.getName())
                         .impactLevel(impactLevel)
-                        .riskScore(confidence)
+                        .riskScore(confidence.doubleValue())
                         .reason(reason)
                         .build());
             }

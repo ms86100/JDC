@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jira.workflow.dto.ExecuteTransitionRequest;
 import com.jira.workflow.engine.plugin.WorkflowPluginRegistry;
 import com.jira.workflow.entity.WorkflowPostFunction;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -16,16 +16,26 @@ import java.util.*;
  * Jira DC post-function implementations invoked by {@link PostFunctionPipeline}.
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class PostFunctionExecutor {
 
     private final WorkflowIntegrationClient integrationClient;
     private final WorkflowEventPublisher eventPublisher;
     private final WorkflowPluginRegistry pluginRegistry;
-    @Lazy
     private final WorkflowExecutionEngine executionEngine;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Autowired
+    public PostFunctionExecutor(
+            WorkflowIntegrationClient integrationClient,
+            WorkflowEventPublisher eventPublisher,
+            WorkflowPluginRegistry pluginRegistry,
+            @Lazy WorkflowExecutionEngine executionEngine) {
+        this.integrationClient = integrationClient;
+        this.eventPublisher = eventPublisher;
+        this.pluginRegistry = pluginRegistry;
+        this.executionEngine = executionEngine;
+    }
 
     public void executeEssentialChain(WorkflowContext ctx) {
         String oldStatusId = ctx.getCurrentStatusId() != null ? ctx.getCurrentStatusId().toString() : null;
@@ -73,6 +83,8 @@ public class PostFunctionExecutor {
             case WorkflowPostFunction.TYPE_AUTO_TRANSITION -> autoTransition(ctx, config);
             case WorkflowPostFunction.TYPE_SEND_EMAIL -> log.debug("Send email post-function skipped (notification outbox handles alerts)");
             case WorkflowPostFunction.TYPE_SCRIPT_POST_FUNCTION -> executeScript(ctx, config);
+            case WorkflowPostFunction.TYPE_TRIGGER_WEBHOOK -> triggerWebhook(ctx, config);
+            case WorkflowPostFunction.TYPE_TRIGGER_AUTOMATION -> triggerAutomation(ctx, config);
             default -> log.warn("Unknown post-function type: {}", type);
         }
     }
@@ -211,6 +223,30 @@ public class PostFunctionExecutor {
         req.setUserId(ctx.getUserId());
         req.setTransitionId(UUID.fromString(transitionId.toString()));
         executionEngine.execute(req);
+    }
+
+    private void triggerWebhook(WorkflowContext ctx, Map<String, Object> config) {
+        String url = stringVal(config.get("webhookUrl"), stringVal(config.get("url"), null));
+        if (url == null) {
+            log.warn("TRIGGER_WEBHOOK missing webhookUrl");
+            return;
+        }
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("event", "ISSUE_TRANSITIONED");
+        payload.put("issueId", ctx.getIssueId().toString());
+        payload.put("projectId", ctx.getProjectId() != null ? ctx.getProjectId().toString() : null);
+        payload.put("transitionId", ctx.getTransition().getId().toString());
+        payload.put("transitionName", ctx.getTransition().getName());
+        payload.put("fromStatusId", ctx.getCurrentStatusId() != null ? ctx.getCurrentStatusId().toString() : null);
+        payload.put("toStatusId", ctx.getTransition().getToStatusId().toString());
+        payload.put("userId", ctx.getUserId() != null ? ctx.getUserId().toString() : null);
+        integrationClient.fireWebhook(url, payload);
+    }
+
+    private void triggerAutomation(WorkflowContext ctx, Map<String, Object> config) {
+        String queue = stringVal(config.get("automationQueue"), stringVal(config.get("queue"), "issue-transitioned"));
+        log.info("Automation hook queued: {} for issue {}", queue, ctx.getIssueId());
+        eventPublisher.publishIssueTransitioned(ctx);
     }
 
     private void executeScript(WorkflowContext ctx, Map<String, Object> config) {

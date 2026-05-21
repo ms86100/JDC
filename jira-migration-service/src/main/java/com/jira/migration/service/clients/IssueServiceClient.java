@@ -1,5 +1,6 @@
 package com.jira.migration.service.clients;
 
+import com.jira.migration.service.IssueServicePayloadMapper;
 import com.jira.migration.service.clients.dto.*;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -30,13 +31,17 @@ public class IssueServiceClient extends BaseServiceClient {
     private static final String SERVICE_NAME = "issueService";
     private static final String SERVICE_PATH = "/api/issues";
 
+    private final IssueServicePayloadMapper payloadMapper;
+
     @Autowired
     public IssueServiceClient(
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
             CircuitBreakerRegistry circuitBreakerRegistry,
-            @Value("${services.issueServiceUrl:http://localhost:8081}") String baseUrl) {
+            IssueServicePayloadMapper payloadMapper,
+            @Value("${services.issueServiceUrl:http://localhost:8084}") String baseUrl) {
         super(restTemplate, objectMapper, circuitBreakerRegistry, SERVICE_NAME, baseUrl);
+        this.payloadMapper = payloadMapper;
     }
 
     @Override
@@ -57,7 +62,8 @@ public class IssueServiceClient extends BaseServiceClient {
      */
     public IssueResponse createIssue(CreateIssueRequest request) {
         log.info("Creating issue in project {} with type {}", request.getProjectId(), request.getIssueType());
-        return executePost(SERVICE_PATH, request, IssueResponse.class);
+        Map<String, Object> payload = payloadMapper.toIssueServicePayload(request);
+        return executePost(SERVICE_PATH, payload, IssueResponse.class);
     }
 
     /**
@@ -68,40 +74,29 @@ public class IssueServiceClient extends BaseServiceClient {
      */
     public List<IssueResponse> createIssuesBatch(List<CreateIssueRequest> requests) {
         log.info("Batch creating {} issues", requests.size());
-
-        // Use parameterized type reference for List response
+        List<Map<String, Object>> payloads = new ArrayList<>();
+        for (CreateIssueRequest request : requests) {
+            payloads.add(payloadMapper.toIssueServicePayload(request));
+        }
         ParameterizedTypeReference<List<IssueResponse>> typeRef =
-            new ParameterizedTypeReference<List<IssueResponse>>() {};
-
-        String endpoint = SERVICE_PATH + "/batch";
-        String url = buildUrl(endpoint);
-        log.debug("POST batch request to: {}", url);
-
+                new ParameterizedTypeReference<List<IssueResponse>>() {};
+        String url = buildUrl(SERVICE_PATH + "/batch");
         HttpHeaders headers = createHeaders();
-        HttpEntity<List<CreateIssueRequest>> requestEntity = new HttpEntity<>(requests, headers);
-
-        long startTime = System.currentTimeMillis();
+        HttpEntity<List<Map<String, Object>>> entity = new HttpEntity<>(payloads, headers);
         try {
             ResponseEntity<List<IssueResponse>> response = restTemplate.exchange(
-                    url, HttpMethod.POST, requestEntity, typeRef);
-            long elapsed = System.currentTimeMillis() - startTime;
-            log.info("POST batch {} -> {} ({}ms)", url, response.getStatusCode(), elapsed);
-            return response.getBody() != null ? response.getBody() : Collections.emptyList();
-        } catch (HttpClientErrorException e) {
-            long elapsed = System.currentTimeMillis() - startTime;
-            log.warn("POST batch {} -> {} ({}ms): {}", url, e.getStatusCode(), elapsed, e.getMessage());
-            throw ServiceClientException.clientError(serviceName, e.getStatusCode().value(),
-                    e.getMessage(), endpoint, "POST");
-        } catch (HttpServerErrorException e) {
-            long elapsed = System.currentTimeMillis() - startTime;
-            log.error("POST batch {} -> {} ({}ms): {}", url, e.getStatusCode(), elapsed, e.getMessage());
-            throw ServiceClientException.serverError(serviceName, e.getStatusCode().value(),
-                    e.getMessage(), endpoint, "POST");
+                    url, HttpMethod.POST, entity, typeRef);
+            if (response.getBody() != null) {
+                return response.getBody();
+            }
         } catch (RestClientException e) {
-            long elapsed = System.currentTimeMillis() - startTime;
-            log.error("POST batch {} failed ({}ms): {}", url, elapsed, e.getMessage());
-            throw ServiceClientException.connectionError(serviceName, endpoint, e);
+            log.warn("Batch endpoint failed, falling back to sequential create: {}", e.getMessage());
         }
+        List<IssueResponse> created = new ArrayList<>();
+        for (CreateIssueRequest request : requests) {
+            created.add(createIssue(request));
+        }
+        return created;
     }
 
     /**
@@ -226,6 +221,92 @@ public class IssueServiceClient extends BaseServiceClient {
         log.info("Deleting issue: {}", issueId);
         String endpoint = SERVICE_PATH + "/" + issueId;
         executeDelete(endpoint);
+    }
+
+    /**
+     * Records change history for migration replay (no workflow transition).
+     */
+    public void recordChangeHistory(String issueId, Map<String, Object> request) {
+        String endpoint = SERVICE_PATH + "/" + issueId + "/history/internal";
+        HttpHeaders headers = createHeaders();
+        headers.set("X-Workflow-Internal", "migration");
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+        String url = buildUrl(endpoint);
+        try {
+            restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
+        } catch (RestClientException e) {
+            log.warn("Change history record failed for issue {}: {}", issueId, e.getMessage());
+        }
+    }
+
+    /**
+     * Creates a worklog on an issue (DC migration path).
+     */
+    public Map<String, Object> createWorklog(String issueId, Map<String, Object> request) {
+        String endpoint = SERVICE_PATH + "/" + issueId + "/worklogs";
+        HttpHeaders headers = createHeaders();
+        headers.set("X-Migration-Import", "true");
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+        String url = buildUrl(endpoint);
+        ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
+        return response.getBody() != null ? response.getBody() : Map.of();
+    }
+
+    /**
+     * Creates a project component.
+     */
+    public Map<String, Object> createComponent(Map<String, Object> request) {
+        HttpHeaders headers = createHeaders();
+        headers.set("X-Migration-Import", "true");
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+        String url = buildUrl("/api/components");
+        ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
+        return response.getBody() != null ? response.getBody() : Map.of();
+    }
+
+    /**
+     * Creates a project version.
+     */
+    public Map<String, Object> createVersion(Map<String, Object> request) {
+        HttpHeaders headers = createHeaders();
+        headers.set("X-Migration-Import", "true");
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+        String url = buildUrl("/api/versions");
+        ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
+        return response.getBody() != null ? response.getBody() : Map.of();
+    }
+
+    /**
+     * Adds a label to an issue.
+     */
+    public void addIssueLabel(String issueId, String labelName) {
+        String endpoint = SERVICE_PATH + "/" + issueId + "/labels";
+        Map<String, Object> body = Map.of("name", labelName);
+        HttpHeaders headers = createHeaders();
+        headers.set("X-Migration-Import", "true");
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+        String url = buildUrl(endpoint);
+        try {
+            restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
+        } catch (RestClientException e) {
+            log.warn("Add label failed for issue {}: {}", issueId, e.getMessage());
+        }
+    }
+
+    /**
+     * Adds a watcher (migration uses internal header; user id may be username placeholder).
+     */
+    public void watchIssue(String issueId) {
+        String endpoint = SERVICE_PATH + "/" + issueId + "/watch";
+        HttpHeaders headers = createHeaders();
+        headers.set("X-Migration-Import", "true");
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        String url = buildUrl(endpoint);
+        try {
+            restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
+        } catch (RestClientException e) {
+            log.debug("Watch issue skipped for {}: {}", issueId, e.getMessage());
+        }
     }
 
     /**

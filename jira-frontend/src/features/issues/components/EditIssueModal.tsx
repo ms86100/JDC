@@ -6,7 +6,7 @@ import ConfigureFieldsPopover from './ConfigureFieldsPopover';
 import './EditIssueModal.css';
 
 interface EditIssueModalProps {
-  issue: IssueResponse;
+  issue: IssueResponse | Record<string, unknown>;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -50,33 +50,34 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
   const [visibleFields, setVisibleFields] = useState<Set<string>>(
     new Set(DEFAULT_VISIBLE_FIELDS)
   );
+  const issueId = (issue as { id: string }).id;
   const [form, setForm] = useState({
-    title: issue.title,
-    description: issue.description || '',
-    status: issue.status || 'To Do',
-    priority: issue.priority || 'Medium',
-    issueType: issue.issueType || 'Task',
+    title: (issue as { title?: string }).title || '',
+    description: (issue as { description?: string }).description || '',
+    status: (issue as { status?: string }).status || 'To Do',
+    priority: (issue as { priority?: string }).priority || 'Medium',
+    issueType: (issue as { issueType?: string }).issueType || 'Task',
   });
   const [newLabel, setNewLabel] = useState('');
   const [labels, setLabels] = useState<LabelResponse[]>([]);
 
   useEffect(() => {
-    labelApi.getAll(issue.id).then(res => setLabels(res.data || []));
-  }, [issue.id]);
+    labelApi.getAll(issueId).then(res => setLabels(res.data || []));
+  }, [issueId]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: Partial<any>) => issueApi.update(issue.id, data),
+    mutationFn: (data: Partial<any>) => issueApi.update(issueId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['issue', issue.id] });
+      queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
       queryClient.invalidateQueries({ queryKey: ['issues'] });
       onSuccess();
     },
   });
 
   const addLabelMutation = useMutation({
-    mutationFn: (name: string) => labelApi.add(issue.id, name),
+    mutationFn: (name: string) => labelApi.add(issueId, name),
     onSuccess: () => {
-      labelApi.getAll(issue.id).then(res => setLabels(res.data || []));
+      labelApi.getAll(issueId).then(res => setLabels(res.data || []));
     },
   });
 
@@ -112,7 +113,7 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
         {/* Header */}
         <div className="ab-modal-header">
           <div className="ab-modal-title-row">
-            <span className="ab-issue-key">{issue.issueKey}</span>
+            <span className="ab-issue-key">{(issue as { issueKey?: string }).issueKey}</span>
             <h2>Edit Issue</h2>
           </div>
           <div className="ab-modal-header-right">

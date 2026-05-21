@@ -15,6 +15,9 @@ public class QuarantineRequest {
     @NotNull(message = "Test ID is required")
     private UUID testId;
 
+    @NotNull(message = "Project ID is required")
+    private UUID projectId;
+
     private String status; // candidate, quarantined, investigation
 
     private String quarantineReason;

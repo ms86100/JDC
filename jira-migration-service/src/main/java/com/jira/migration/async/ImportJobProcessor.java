@@ -9,12 +9,43 @@ import com.jira.migration.dto.StartMigrationRequest;
 import com.jira.migration.dto.ValidationResult;
 import com.jira.migration.entity.*;
 import com.jira.migration.parser.CsvParser;
+import com.jira.migration.parser.ImportSpreadsheetParser;
+import com.jira.migration.parser.JiraDcEntityMapper;
 import com.jira.migration.parser.JiraDcXmlParser;
 import com.jira.migration.parser.ValidationEngine;
 import com.jira.migration.persister.*;
 import com.jira.migration.repository.*;
+import com.jira.migration.service.CsvFieldMappingService;
+import com.jira.migration.service.FieldDefaultValueService;
+import com.jira.migration.service.ChunkedAttachmentUploadService;
+import com.jira.migration.service.MigrationAttachmentResultService;
+import com.jira.migration.service.MigrationAuditPersistenceService;
+import com.jira.migration.service.IncrementalMigrationService;
+import com.jira.migration.service.MigrationIssueResultService;
+import com.jira.migration.service.MigrationJobLogService;
+import com.jira.migration.service.MigrationEventPublisher;
+import com.jira.migration.service.MigrationJobControlService;
+import com.jira.migration.service.MigrationJobReindexService;
+import com.jira.migration.service.ProjectImportOrchestrator;
+import com.jira.migration.service.VirusScanService;
+import com.jira.migration.dc.JiraDcAttachmentBundleResolver;
+import com.jira.migration.dc.JiraDcChangeHistoryReplayer;
+import com.jira.migration.dc.JiraDcImportOrchestrator;
+import com.jira.migration.dc.JiraDcAcSignoffEvaluator;
+import com.jira.migration.dc.JiraDcImportSlaProofBuilder;
+import com.jira.migration.dc.JiraDcParitySummaryBuilder;
+import com.jira.migration.dc.JiraDcIssueIdRegistry;
+import com.jira.migration.dc.JiraDcReferenceCatalog;
+import com.jira.migration.persister.LabelPersisterHandler;
+import com.jira.migration.service.MigrationRollbackService;
 import com.jira.migration.service.MigrationService;
+import com.jira.migration.service.MigrationWorkflowStatusApplier;
+import com.jira.migration.service.clients.IssueServiceClient;
+import com.jira.migration.service.OptionMappingService;
+import com.jira.migration.service.ProjectMappingSetupService;
 import com.jira.migration.service.PollingFallbackService;
+import com.jira.migration.service.UserDirectoryMappingService;
+import com.jira.migration.service.WorkflowStatusMappingService;
 import com.jira.migration.websocket.MigrationWebSocketHandler;
 import com.jira.migration.websocket.dto.ImportCompleteNotification;
 import com.jira.migration.websocket.dto.JobProgressUpdate;
@@ -33,6 +64,9 @@ import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Component
 @RequiredArgsConstructor
@@ -41,6 +75,7 @@ public class ImportJobProcessor {
 
     private final MigrationService migrationService;
     private final CsvParser csvParser;
+    private final ImportSpreadsheetParser importSpreadsheetParser;
     private final JiraDcXmlParser xmlParser;
     private final ValidationEngine validationEngine;
     private final EntityStatusRepository entityStatusRepository;
@@ -52,12 +87,55 @@ public class ImportJobProcessor {
 
     // Persister handlers for real data persistence
     private final IssuePersisterHandler issuePersisterHandler;
+    private final IssueLinkPersisterHandler issueLinkPersisterHandler;
+    private final MigrationIssueResultService migrationIssueResultService;
+    private final MigrationAuditPersistenceService migrationAuditPersistenceService;
     private final ProjectPersisterHandler projectPersisterHandler;
     private final UserPersisterHandler userPersisterHandler;
     private final SprintPersisterHandler sprintPersisterHandler;
+    private final CsvFieldMappingService csvFieldMappingService;
+    private final FieldDefaultValueService fieldDefaultValueService;
+    private final OptionMappingService optionMappingService;
+    private final WorkflowStatusMappingService workflowStatusMappingService;
+    private final UserDirectoryMappingService userDirectoryMappingService;
+    private final ProjectMappingSetupService projectMappingSetupService;
+    private final MigrationJobRepository migrationJobRepository;
+    private final CommentPersisterHandler commentPersisterHandler;
+    private final AttachmentPersisterHandler attachmentPersisterHandler;
+    private final WorklogPersisterHandler worklogPersisterHandler;
+    private final MigrationAttachmentResultService migrationAttachmentResultService;
+    private final MigrationRollbackService migrationRollbackService;
+    private final JiraDcImportOrchestrator jiraDcImportOrchestrator;
+    private final JiraDcAttachmentBundleResolver attachmentBundleResolver;
+    private final JiraDcChangeHistoryReplayer changeHistoryReplayer;
+    private final MigrationWorkflowStatusApplier migrationWorkflowStatusApplier;
+    private final IssueServiceClient issueServiceClient;
+    private final ProjectImportOrchestrator projectImportOrchestrator;
+    private final MigrationJobLogService migrationJobLogService;
+    private final LabelPersisterHandler labelPersisterHandler;
+    private final ComponentPersisterHandler componentPersisterHandler;
+    private final VersionPersisterHandler versionPersisterHandler;
+    private final CustomFieldPersisterHandler customFieldPersisterHandler;
+    private final JiraDcReferenceCatalog referenceCatalog;
+    private final IncrementalMigrationService incrementalMigrationService;
+    private final MigrationJobReindexService migrationJobReindexService;
+    private final MigrationJobControlService migrationJobControlService;
+    private final MigrationEventPublisher migrationEventPublisher;
+    private final VirusScanService virusScanService;
 
     // Batch size for progress updates
     private static final int PROGRESS_UPDATE_BATCH_SIZE = 50;
+
+    @Async("migrationTaskExecutor")
+    public CompletableFuture<ImportResultResponse> processSpreadsheetImport(
+            UUID jobId,
+            byte[] fileContent,
+            String fileName,
+            UUID templateId,
+            Map<String, Object> options,
+            UUID userId) {
+        return processCsvImport(jobId, fileContent, fileName, templateId, options, userId);
+    }
 
     @Async("migrationTaskExecutor")
     public CompletableFuture<ImportResultResponse> processCsvImport(
@@ -68,115 +146,237 @@ public class ImportJobProcessor {
             Map<String, Object> options,
             UUID userId) {
 
-        log.info("Starting CSV import job: {}", jobId);
+        log.info("Starting spreadsheet import job: {} file={}", jobId, fileName);
         String userIdStr = userId != null ? userId.toString() : "system";
 
         try {
             migrationService.markJobStarted(jobId);
+            migrationAuditPersistenceService.log(jobId, "IMPORT_STARTED", "JOB", jobId.toString(), userId, Map.of());
+            migrationEventPublisher.enqueue(jobId, "IMPORT_STARTED", Map.of("source", "CSV"));
+            updateStageProgress(jobId, "PARSING", 0, 0);
 
             // Send initial progress via WebSocket
             sendProgressUpdate(jobId, userIdStr, 0, 0, 0, "PARSING", null);
 
-            // Create temp file from byte array content
-            Path tempFile = Files.createTempFile("import-", ".csv");
-            Files.write(tempFile, fileContent);
-
-            // Parse CSV
-            CsvParser.CsvParseResult parseResult = csvParser.parseFile(
-                    tempFile.toString(),
-                    null,
-                    2
+            CsvParser.CsvParseResult parseResult = importSpreadsheetParser.parse(
+                    fileContent,
+                    fileName != null ? fileName : "import.csv"
             );
 
-            log.info("Parsed CSV with {} rows", parseResult.getTotalRows());
+            log.info("Parsed {} rows from {}", parseResult.getTotalRows(), fileName);
             migrationService.setTotalEntities(jobId, parseResult.getTotalRows());
 
-            // Send parsing complete notification
-            sendProgressUpdate(jobId, userIdStr, 0, parseResult.getTotalRows(), 0, "PROCESSING", null);
+            MigrationJob job = migrationJobRepository.findById(jobId).orElse(null);
+            Map<String, Object> jobOptions = job != null && job.getOptions() != null ? job.getOptions() : options;
+            Object fieldMappingsOpt = jobOptions.get("fieldMappings");
 
-            // Process rows
-            Map<String, Integer> columnIndex = csvParser.buildColumnIndexMap(parseResult.getHeaders());
-            int processedCount = 0;
-            int failedCount = 0;
-            int batchCount = 0;
-
+            // Build row maps and apply field mappings
+            List<Map<String, String>> csvRows = new ArrayList<>();
             for (int i = 0; i < parseResult.getDataRows().size(); i++) {
-                String[] row = parseResult.getDataRows().get(i);
-                int rowNum = i + 2; // Account for header row
+                csvRows.add(convertRowToMap(parseResult.getDataRows().get(i), parseResult.getHeaders()));
+            }
+            List<Map<String, String>> mappedRows = csvFieldMappingService.applyMappings(csvRows, fieldMappingsOpt);
 
-                try {
-                    // Convert row to map
-                    Map<String, String> rowData = convertRowToMap(row, parseResult.getHeaders());
+            Map<String, Object> fieldDefaults = fieldDefaultValueService.parseDefaults(
+                    jobOptions.get("fieldDefaults"));
+            mappedRows = fieldDefaultValueService.applyDefaults(mappedRows, fieldDefaults);
 
-                    // Validate row
-                    var validationResult = validationEngine.validateRow(rowData, "ISSUE", rowNum);
-                    if (!validationResult.isValid()) {
-                        recordFailure(jobId, "ISSUE", null, rowNum,
-                                "VALIDATION_ERROR", validationResult.getErrors().get(0).getMessage(), null);
-                        failedCount++;
+            Map<String, Object> workflowMappings = job != null && job.getWorkflowStatusMappings() != null
+                    ? job.getWorkflowStatusMappings()
+                    : parseWorkflowMappings(jobOptions.get("workflowStatusMappings"));
+            List<com.jira.migration.entity.OptionMapping> optionMappingsList =
+                    optionMappingService.getForJob(jobId);
+            mappedRows = applyOptionAndStatusMappings(jobId, mappedRows, workflowMappings, optionMappingsList);
 
-                        // Send validation error via WebSocket
-                        sendValidationError(jobId, userIdStr, rowNum, validationResult.getErrors());
-                        continue;
-                    }
+            resolveAssigneeReporterUsers(mappedRows, jobId);
 
-                    // Create entity status
-                    EntityStatus status = EntityStatus.builder()
-                            .jobId(jobId)
-                            .entityType("ISSUE")
-                            .entityKey(rowData.get("project_key") + "-" + rowNum)
-                            .status("PROCESSING")
-                            .processingOrder(i)
-                            .build();
-                    entityStatusRepository.save(status);
+            // Ensure project mappings for target project
+            UUID targetProjectId = job != null ? job.getTargetProjectId() : null;
+            if (targetProjectId == null && options.get("targetProjectId") != null) {
+                targetProjectId = UUID.fromString(options.get("targetProjectId").toString());
+            }
+            projectMappingSetupService.ensureProjectMappings(jobId, targetProjectId, mappedRows);
 
-                    // Actually persist the issue using the persister handler
-                    Map<String, Object> issueData = new HashMap<>(rowData);
-                    var persistResult = issuePersisterHandler.persistIssue(issueData, jobId);
+            sendProgressUpdate(jobId, userIdStr, 0, parseResult.getTotalRows(), 0, "VALIDATING", null);
 
-                    if (persistResult.isSuccess()) {
-                        status.setTargetId(persistResult.getIssueId().toString());
-                        status.markCompleted(persistResult.getIssueId());
-                        entityStatusRepository.save(status);
-                        processedCount++;
-                    } else {
-                        status.markFailed(persistResult.getErrorCode(), persistResult.getErrorMessage(), null);
-                        entityStatusRepository.save(status);
-                        failedCount++;
-                    }
+            boolean hasEntityTypeColumn = parseResult.getHeaders() != null
+                    && Arrays.stream(parseResult.getHeaders())
+                    .anyMatch(h -> "entity_type".equalsIgnoreCase(h.trim()));
 
-                    // Update progress periodically
-                    if ((processedCount + failedCount) % PROGRESS_UPDATE_BATCH_SIZE == 0) {
-                        migrationService.updateJobProgress(jobId, processedCount, failedCount);
-                        sendProgressUpdate(jobId, userIdStr, processedCount,
-                                parseResult.getTotalRows(), failedCount, "PROCESSING", "ISSUE");
-                    }
+            List<Map<String, Object>> issueRows = new ArrayList<>();
+            List<Map<String, Object>> commentRows = new ArrayList<>();
+            List<Map<String, Object>> attachmentRows = new ArrayList<>();
+            int validationFailures = 0;
+            for (int i = 0; i < mappedRows.size(); i++) {
+                Map<String, String> rowData = mappedRows.get(i);
+                int rowNum = i + 2;
+                String entityType = hasEntityTypeColumn
+                        ? rowData.getOrDefault("entity_type", "ISSUE").toUpperCase(Locale.ROOT)
+                        : (rowData.containsKey("comment_body") || rowData.containsKey("comment")
+                        ? "COMMENT"
+                        : (rowData.containsKey("attachment_path") || rowData.containsKey("attachment_url")
+                        || rowData.containsKey("file_name") && rowData.containsKey("issue_key")
+                        ? "ATTACHMENT" : "ISSUE"));
 
-                } catch (Exception e) {
-                    log.error("Error processing row {}: {}", rowNum, e.getMessage());
-                    recordFailure(jobId, "ISSUE", null, rowNum, "PROCESSING_ERROR", e.getMessage(), null);
-                    failedCount++;
-                    migrationService.updateJobProgress(jobId, processedCount, failedCount);
-
-                    // Send error notification
-                    sendErrorNotification(jobId, userIdStr, "PROCESSING_ERROR", e.getMessage(), "ISSUE", null, rowNum);
+                if ("ATTACHMENT".equals(entityType)) {
+                    Map<String, Object> att = new HashMap<>(rowData);
+                    att.put("issueKey", rowData.getOrDefault("issue_key", rowData.get("issuekey")));
+                    att.put("fileName", rowData.getOrDefault("file_name", rowData.get("filename")));
+                    att.put("attachmentPath", rowData.getOrDefault("attachment_path", rowData.get("attachment_url")));
+                    attachmentRows.add(att);
+                    continue;
                 }
+
+                if ("COMMENT".equals(entityType)) {
+                    Map<String, Object> commentData = new HashMap<>(rowData);
+                    commentData.put("issueKey", rowData.getOrDefault("issue_key", rowData.get("issuekey")));
+                    commentData.put("body", rowData.getOrDefault("comment_body", rowData.get("comment")));
+                    commentData.put("author", rowData.getOrDefault("author", rowData.get("comment_author")));
+                    commentRows.add(commentData);
+                    continue;
+                }
+
+                var validationResult = validationEngine.validateRow(rowData, "ISSUE", rowNum);
+                if (!validationResult.isValid()) {
+                    recordFailure(jobId, "ISSUE", rowData.get("issue_key"), rowNum,
+                            "VALIDATION_ERROR", validationResult.getErrors().get(0).getMessage(), null);
+                    validationFailures++;
+                    sendValidationError(jobId, userIdStr, rowNum, validationResult.getErrors());
+                    continue;
+                }
+                Map<String, Object> issueData = new HashMap<>(rowData);
+                issueData.put("issueKey", rowData.getOrDefault("issue_key", "ROW-" + rowNum));
+                issueData.put("rowNumber", rowNum);
+                if (rowData.containsKey("parent_key")) {
+                    issueData.put("parentIssueKey", rowData.get("parent_key"));
+                }
+                if (rowData.containsKey("epic_link")) {
+                    issueData.put("epicLink", rowData.get("epic_link"));
+                }
+                if (targetProjectId != null) {
+                    issueData.put("projectId", targetProjectId.toString());
+                }
+                issueRows.add(issueData);
             }
 
-            // Cleanup temp file
-            Files.deleteIfExists(tempFile);
+            if (validationFailures > 0 && Boolean.TRUE.equals(jobOptions.get("blockOnValidationErrors"))) {
+                migrationService.markJobFailed(jobId,
+                        "Import blocked: " + validationFailures + " validation error(s). Fix data and retry.",
+                        Map.of("validationFailures", validationFailures));
+                sendJobFailed(jobId, userIdStr, "Validation blocked import");
+                return CompletableFuture.failedFuture(
+                        new IllegalStateException("Validation blocked import"));
+            }
+
+            sendProgressUpdate(jobId, userIdStr, 0, parseResult.getTotalRows(), validationFailures, "PROCESSING", null);
+
+            // Phase 2: batch persist with hierarchy ordering (Epic -> Story -> Task -> Subtask)
+            int processedCount = 0;
+            int failedCount = validationFailures;
+
+            if (!issueRows.isEmpty()) {
+                updateStageProgress(jobId, "ISSUES", 0, issueRows.size());
+                var batchResult = issuePersisterHandler.batchPersistIssues(issueRows, jobId);
+                processedCount = batchResult.getSuccessCount();
+                failedCount += batchResult.getFailureCount();
+
+                recordIssueResults(jobId, batchResult);
+                persistIssueLinksPass(issueRows, jobId);
+                updateStageProgress(jobId, "LINKS", issueRows.size(), issueRows.size());
+
+                migrationService.updateJobProgress(jobId, processedCount, failedCount);
+                sendProgressUpdate(jobId, userIdStr, processedCount + failedCount,
+                        parseResult.getTotalRows(), failedCount, "PROCESSING", "ISSUE");
+            }
+
+            if (!commentRows.isEmpty()) {
+                updateStageProgress(jobId, "COMMENTS", 0, commentRows.size());
+                int commentOk = 0;
+                int commentFail = 0;
+                for (Map<String, Object> commentData : commentRows) {
+                    try {
+                        var result = commentPersisterHandler.persistComment(commentData, jobId);
+                        if (result != null && result.isSuccess()) {
+                            commentOk++;
+                        } else {
+                            commentFail++;
+                        }
+                    } catch (Exception e) {
+                        commentFail++;
+                    }
+                }
+                processedCount += commentOk;
+                failedCount += commentFail;
+                updateStageProgress(jobId, "COMMENTS", commentRows.size(), commentRows.size());
+                migrationJobLogService.appendLog(jobId, "INFO",
+                        "CSV comments: " + commentOk + " ok, " + commentFail + " failed");
+                migrationService.updateJobProgress(jobId, processedCount, failedCount);
+                sendProgressUpdate(jobId, userIdStr, processedCount + failedCount,
+                        parseResult.getTotalRows(), failedCount, "PROCESSING", "COMMENT");
+            }
+
+            if (!attachmentRows.isEmpty()) {
+                updateStageProgress(jobId, "ATTACHMENTS", 0, attachmentRows.size());
+                int attOk = 0;
+                int attFail = 0;
+                for (Map<String, Object> attData : attachmentRows) {
+                    try {
+                        byte[] content = resolveCsvAttachmentContent(attData);
+                        if (content.length == 0) {
+                            attFail++;
+                            continue;
+                        }
+                        String scan = virusScanService.scanBytes(content,
+                                (String) attData.get("fileName"));
+                        if ("INFECTED".equals(scan)) {
+                            attFail++;
+                            continue;
+                        }
+                        var result = attachmentPersisterHandler.persistAttachment(
+                                attData, content, jobId);
+                        if (result != null && result.isSuccess()) {
+                            attOk++;
+                        } else {
+                            attFail++;
+                        }
+                    } catch (Exception e) {
+                        attFail++;
+                    }
+                }
+                processedCount += attOk;
+                failedCount += attFail;
+                updateStageProgress(jobId, "ATTACHMENTS", attachmentRows.size(), attachmentRows.size());
+                migrationJobLogService.appendLog(jobId, "INFO",
+                        "CSV attachments: " + attOk + " ok, " + attFail + " failed");
+                migrationService.updateJobProgress(jobId, processedCount, failedCount);
+            }
 
             // Final progress update
             sendProgressUpdate(jobId, userIdStr, processedCount + failedCount,
                     parseResult.getTotalRows(), failedCount, "COMPLETING", null);
 
             // Mark job completed and send notification
-            Map<String, Object> resultMetadata = Map.of(
+            MigrationJob completedJob = migrationJobRepository.findById(jobId).orElse(null);
+            long durationMs = 0;
+            if (completedJob != null && completedJob.getStartedAt() != null) {
+                durationMs = java.time.Duration.between(
+                        completedJob.getStartedAt(), java.time.LocalDateTime.now()).toMillis();
+            }
+            Map<String, Object> resultMetadata = new HashMap<>(Map.of(
                     "processed", processedCount,
                     "failed", failedCount,
-                    "successRate", (processedCount * 100.0 / (processedCount + failedCount))
-            );
+                    "successRate", (processedCount + failedCount) > 0
+                            ? (processedCount * 100.0 / (processedCount + failedCount)) : 0.0,
+                    "durationMs", durationMs
+            ));
+            migrationJobRepository.findById(jobId).ifPresent(j -> {
+                if (j.getResultMetadata() != null && j.getResultMetadata().get("stages") != null) {
+                    resultMetadata.put("stages", j.getResultMetadata().get("stages"));
+                }
+            });
             migrationService.markJobCompleted(jobId, resultMetadata);
+            migrationAuditPersistenceService.log(jobId, "IMPORT_COMPLETED", "JOB", jobId.toString(), userId,
+                    Map.of("processed", processedCount, "failed", failedCount));
 
             // Send job completion notification
             sendJobCompleted(jobId, userIdStr, processedCount, failedCount);
@@ -205,144 +405,895 @@ public class ImportJobProcessor {
         log.info("Starting Jira DC XML import job: {}", jobId);
         String userIdStr = userId != null ? userId.toString() : "system";
 
+        Path tempFile = null;
+        JiraDcImportOrchestrator.ResolvedInputs extractedForCleanup = null;
         try {
             migrationService.markJobStarted(jobId);
-
-            // Send initial progress
+            migrationAuditPersistenceService.log(jobId, "IMPORT_STARTED", "JOB", jobId.toString(), userId,
+                    Map.of("source", "JIRA_DC"));
+            migrationEventPublisher.enqueue(jobId, "IMPORT_STARTED", Map.of("source", "JIRA_DC"));
             sendProgressUpdate(jobId, userIdStr, 0, 0, 0, "PARSING", null);
 
-            // Create temp file from byte array content
-            Path tempFile = Files.createTempFile("import-", ".xml");
-            Files.write(tempFile, fileContent);
+            if (options != null && options.get("xmlPath") != null) {
+                tempFile = Path.of(options.get("xmlPath").toString());
+            } else {
+                tempFile = Files.createTempFile("import-", fileName != null ? "-" + fileName : ".xml");
+                Files.write(tempFile, fileContent);
+            }
 
-            // Read and parse XML
-            String xmlContent = Files.readString(tempFile);
-            JiraDcXmlParser.ParseResult parseResult = xmlParser.parseXmlBackup(xmlContent, jobId);
+            Path bundlePath = resolveAttachmentBundlePath(options);
+            JiraDcImportOrchestrator.PrepareResult prepared = jiraDcImportOrchestrator.prepare(
+                    jobId, tempFile, bundlePath, options, null);
 
-            log.info("Parsed XML with {} entities", parseResult.getTotalEntities());
-            migrationService.setTotalEntities(jobId, parseResult.getTotalEntities());
+            JiraDcXmlParser.ParseResult parseResult = prepared.parseResult();
+            log.info("Parsed XML format {} with {} entities (importable={})",
+                    parseResult.getXmlFormat(), parseResult.getTotalEntities(),
+                    prepared.importableEntities().size());
 
-            sendProgressUpdate(jobId, userIdStr, 0, parseResult.getTotalEntities(), 0, "PROCESSING", null);
+            if (prepared.blocked()) {
+                migrationService.markJobFailed(jobId,
+                        "Import blocked: " + prepared.validationReport().blockerCount() + " validation error(s)",
+                        Map.of("riskScore", prepared.validationReport().riskScore()));
+                sendJobFailed(jobId, userIdStr, "Validation blocked import");
+                return CompletableFuture.failedFuture(new IllegalStateException("Validation blocked import"));
+            }
 
-            // Process entities by type in dependency order
+            if (prepared.dryRun()) {
+                Map<String, Object> dryMeta = Map.of(
+                        "dryRun", true,
+                        "riskScore", prepared.validationReport().riskScore(),
+                        "blockers", prepared.validationReport().blockerCount(),
+                        "warnings", prepared.validationReport().warningCount(),
+                        "format", parseResult.getXmlFormat().name(),
+                        "totalEntities", parseResult.getTotalEntities()
+                );
+                migrationService.markJobCompleted(jobId, dryMeta);
+                sendJobCompleted(jobId, userIdStr, 0, 0);
+                return CompletableFuture.completedFuture(migrationService.getImportResult(jobId));
+            }
+
+            List<JiraDcXmlParser.ParsedEntity> importableEntities =
+                    mergeAuxiliaryIntoIssues(prepared.importableEntities());
+            JiraDcIssueIdRegistry issueIdRegistry =
+                    JiraDcIssueIdRegistry.fromEntities(parseResult.getEntities());
+
+            migrationService.setTotalEntities(jobId, importableEntities.size());
+            sendProgressUpdate(jobId, userIdStr, 0, importableEntities.size(), 0, "PROCESSING", null);
+
             Map<String, Integer> processedByType = new HashMap<>();
-            int totalProcessed = 0;
-            int totalFailed = 0;
+            Map<String, String> issueKeyToTargetId = new ConcurrentHashMap<>();
+            java.util.concurrent.atomic.AtomicLong attachmentBytesWritten = new java.util.concurrent.atomic.AtomicLong(0);
+            java.util.concurrent.atomic.AtomicInteger incrementalSkipped = new java.util.concurrent.atomic.AtomicInteger(0);
+            List<String[]> pendingIssueLinks = Collections.synchronizedList(new ArrayList<>());
+            java.util.concurrent.atomic.AtomicInteger totalProcessed = new java.util.concurrent.atomic.AtomicInteger(0);
+            java.util.concurrent.atomic.AtomicInteger totalFailed = new java.util.concurrent.atomic.AtomicInteger(0);
+            java.util.concurrent.atomic.AtomicInteger commentCount = new java.util.concurrent.atomic.AtomicInteger(0);
+            java.util.concurrent.atomic.AtomicInteger attachmentCount = new java.util.concurrent.atomic.AtomicInteger(0);
+            java.util.concurrent.atomic.AtomicInteger attachmentChecksumChecked =
+                    new java.util.concurrent.atomic.AtomicInteger(0);
+            java.util.concurrent.atomic.AtomicInteger attachmentChecksumMatched =
+                    new java.util.concurrent.atomic.AtomicInteger(0);
 
-            // Define processing order based on dependencies
+            boolean resume = options != null && Boolean.TRUE.equals(options.get("resume"));
+            int parallelWorkers = options != null && options.get("parallelWorkers") instanceof Number n
+                    ? Math.max(1, Math.min(8, n.intValue())) : 1;
+
             List<String> processingOrder = List.of(
                     "Project", "IssueType", "Status", "Priority", "Resolution",
-                    "Component", "Version",
+                    "Component", "Version", "Label",
                     "User", "Group",
                     "Issue", "SubTask",
                     "Comment", "Attachment", "Worklog",
-                    "CustomField", "Workflow"
+                    "IssueLink", "History",
+                    "Watcher", "Vote",
+                    "CustomField", "PluginEntity", "Workflow"
             );
 
+            ExecutorService workers = parallelWorkers > 1
+                    ? Executors.newFixedThreadPool(parallelWorkers)
+                    : null;
+
+            boolean historyOnlyImport = options != null && Boolean.TRUE.equals(options.get("historyOnlyImport"));
+            boolean historyReplayOnly = options != null && Boolean.TRUE.equals(options.get("historyReplayOnly"));
+
             for (String entityType : processingOrder) {
-                List<JiraDcXmlParser.ParsedEntity> typeEntities = parseResult.getEntities().stream()
+                List<JiraDcXmlParser.ParsedEntity> typeEntities = importableEntities.stream()
                         .filter(e -> entityType.equals(e.getEntityType()))
                         .toList();
 
-                // Send stage change notification
-                sendProgressUpdate(jobId, userIdStr, totalProcessed,
-                        parseResult.getTotalEntities(), totalFailed, "PROCESSING", entityType);
+                updateStageProgress(jobId, entityType.toUpperCase(), 0, typeEntities.size());
+                int processedSoFar = totalProcessed.get() + totalFailed.get();
+                sendProgressUpdate(jobId, userIdStr, processedSoFar,
+                        parseResult.getTotalEntities(), totalFailed.get(), "PROCESSING", entityType);
 
-                for (JiraDcXmlParser.ParsedEntity entity : typeEntities) {
-                    try {
+                boolean parallelSafe = workers != null
+                        && List.of("Comment", "Attachment", "Worklog").contains(entityType);
+
+                if (parallelSafe && !typeEntities.isEmpty()) {
+                    List<JiraDcXmlParser.ParsedEntity> toProcess = resume
+                            ? typeEntities.stream()
+                            .filter(e -> !isEntityAlreadyCompleted(jobId, e.getEntityKey()))
+                            .toList()
+                            : typeEntities;
+                    if (!toProcess.isEmpty()) {
+                        processEntitiesParallel(toProcess, workers, jobId, issueKeyToTargetId,
+                                pendingIssueLinks, userId, options, bundlePath, issueIdRegistry,
+                                attachmentBytesWritten, incrementalSkipped,
+                                totalProcessed, totalFailed, commentCount, attachmentCount,
+                                attachmentChecksumChecked, attachmentChecksumMatched);
+                    }
+                    if (resume) {
+                        long skipped = typeEntities.size() - toProcess.size();
+                        totalProcessed.addAndGet((int) skipped);
+                    }
+                } else {
+                    for (JiraDcXmlParser.ParsedEntity entity : typeEntities) {
+                        if (isJobPaused(jobId)) {
+                            Thread.sleep(500);
+                            continue;
+                        }
+                        if (resume && isEntityAlreadyCompleted(jobId, entity.getEntityKey())) {
+                            totalProcessed.incrementAndGet();
+                            continue;
+                        }
                         EntityStatus status = EntityStatus.builder()
                                 .jobId(jobId)
                                 .entityType(entity.getEntityType())
                                 .entityKey(entity.getEntityKey())
                                 .status("PROCESSING")
-                                .processingOrder(totalProcessed + totalFailed)
+                                .processingOrder(totalProcessed.get() + totalFailed.get())
                                 .build();
                         entityStatusRepository.save(status);
 
-                        // Map entity to platform format and persist
-                        @SuppressWarnings("unchecked")
-                        Map<String, Object> entityData = (Map<String, Object>)(Map<?, ?>)entity.getFields();
-                        boolean persistSuccess = false;
-
-                        switch (entity.getEntityType()) {
-                            case "Issue":
-                            case "SubTask":
-                                var issueResult = issuePersisterHandler.persistIssue(entityData, jobId);
-                                persistSuccess = issueResult.isSuccess();
-                                if (persistSuccess) {
-                                    status.setTargetId(issueResult.getIssueId().toString());
+                        try {
+                            boolean ok = persistDcEntity(entity, jobId, issueKeyToTargetId, pendingIssueLinks,
+                                    status, userId, options, bundlePath, issueIdRegistry,
+                                    attachmentBytesWritten, attachmentCount, incrementalSkipped, historyOnlyImport,
+                                    historyReplayOnly,
+                                    attachmentChecksumChecked, attachmentChecksumMatched);
+                            if (ok) {
+                                status.markCompleted(status.getEntityId());
+                                if ("Comment".equals(entity.getEntityType())) {
+                                    commentCount.incrementAndGet();
                                 }
-                                break;
-                            case "Project":
-                                // Project persister would be called here
-                                persistSuccess = true;
-                                break;
-                            case "User":
-                                // User persister would be called here
-                                persistSuccess = true;
-                                break;
-                            default:
-                                persistSuccess = true; // Mark other types as success for now
+                                totalProcessed.incrementAndGet();
+                            } else {
+                                status.markFailed("PERSIST_ERROR", "Failed to persist entity", null);
+                                entityStatusRepository.save(status);
+                                totalFailed.incrementAndGet();
+                            }
+                        } catch (Exception e) {
+                            log.error("Error processing entity {}: {}", entity.getEntityKey(), e.getMessage());
+                            status.markFailed("PROCESSING_ERROR", e.getMessage(), null);
+                            entityStatusRepository.save(status);
+                            recordFailure(jobId, entity.getEntityType(), entity.getEntityKey(),
+                                    null, "PROCESSING_ERROR", e.getMessage(), null);
+                            totalFailed.incrementAndGet();
+                            sendErrorNotification(jobId, userIdStr, "PROCESSING_ERROR",
+                                    e.getMessage(), entity.getEntityType(), entity.getEntityKey(), null);
                         }
 
-                        if (persistSuccess) {
-                            status.markCompleted(null);
-                        } else {
-                            status.markFailed("PERSIST_ERROR", "Failed to persist entity", null);
+                        int done = totalProcessed.get() + totalFailed.get();
+                        if (done % PROGRESS_UPDATE_BATCH_SIZE == 0) {
+                            migrationService.updateJobProgress(jobId, totalProcessed.get(), totalFailed.get());
+                            sendProgressUpdate(jobId, userIdStr, done,
+                                    parseResult.getTotalEntities(), totalFailed.get(), "PROCESSING", entityType);
                         }
-                        entityStatusRepository.save(status);
-
-                        totalProcessed++;
-
-                        // Periodic progress update
-                        if (totalProcessed % PROGRESS_UPDATE_BATCH_SIZE == 0) {
-                            migrationService.updateJobProgress(jobId, totalProcessed, totalFailed);
-                            sendProgressUpdate(jobId, userIdStr, totalProcessed,
-                                    parseResult.getTotalEntities(), totalFailed, "PROCESSING", entityType);
-                        }
-
-                    } catch (Exception e) {
-                        log.error("Error processing entity {}: {}", entity.getEntityKey(), e.getMessage());
-                        recordFailure(jobId, entity.getEntityType(), entity.getEntityKey(),
-                                null, "PROCESSING_ERROR", e.getMessage(), null);
-                        totalFailed++;
-                        migrationService.updateJobProgress(jobId, totalProcessed, totalFailed);
-
-                        sendErrorNotification(jobId, userIdStr, "PROCESSING_ERROR",
-                                e.getMessage(), entity.getEntityType(), entity.getEntityKey(), null);
                     }
                 }
-
                 processedByType.put(entityType, typeEntities.size());
+                updateStageProgress(jobId, entityType.toUpperCase(), typeEntities.size(), typeEntities.size());
             }
 
-            // Cleanup
-            Files.deleteIfExists(tempFile);
+            if (workers != null) {
+                workers.shutdown();
+            }
 
-            // Send completion notification
-            sendProgressUpdate(jobId, userIdStr, totalProcessed + totalFailed,
-                    parseResult.getTotalEntities(), totalFailed, "COMPLETING", null);
+            List<JiraDcXmlParser.ParsedEntity> histories = importableEntities.stream()
+                    .filter(e -> "History".equals(e.getEntityType()))
+                    .toList();
+            int historyReplayed = changeHistoryReplayer.replay(
+                    jobId, histories, issueKeyToTargetId, issueIdRegistry,
+                    options != null && Boolean.TRUE.equals(options.get("stubDownstream")));
 
-            // Mark completed
-            Map<String, Object> resultMetadata = Map.of(
-                    "processedByType", processedByType,
-                    "totalProcessed", totalProcessed,
-                    "totalFailed", totalFailed
-            );
+            // Issue link pass (parent / epic) after all issues exist
+            for (String[] link : pendingIssueLinks) {
+                try {
+                    if (link[2] != null) {
+                        issueLinkPersisterHandler.persistParentChild(link[0], link[2], jobId);
+                    }
+                    if (link[1] != null) {
+                        issueLinkPersisterHandler.persistEpicLink(link[0], link[1], jobId);
+                    }
+                } catch (Exception e) {
+                    log.warn("DC link pass failed {}: {}", link[0], e.getMessage());
+                }
+            }
+
+            sendProgressUpdate(jobId, userIdStr, totalProcessed.get() + totalFailed.get(),
+                    parseResult.getTotalEntities(), totalFailed.get(), "COMPLETING", null);
+
+            if (Boolean.TRUE.equals(options != null ? options.get("stubDownstream") : null)) {
+                log.info("DC import job {} completed in stubDownstream mode (no external service calls)", jobId);
+            }
+
+            Map<String, Object> resultMetadata = new HashMap<>();
+            resultMetadata.put("processedByType", processedByType);
+            resultMetadata.put("totalProcessed", totalProcessed.get());
+            resultMetadata.put("totalFailed", totalFailed.get());
+            resultMetadata.put("commentCount", commentCount.get());
+            resultMetadata.put("attachmentCount", attachmentCount.get());
+            resultMetadata.put("attachmentBytesWritten", attachmentBytesWritten.get());
+            resultMetadata.put("historyReplayed", historyReplayed);
+            resultMetadata.put("historyOnlyImport", historyOnlyImport);
+            resultMetadata.put("historyReplayOnly", historyReplayOnly);
+            resultMetadata.put("incrementalSkipped", incrementalSkipped.get());
+            resultMetadata.put("format", parseResult.getXmlFormat() != null ? parseResult.getXmlFormat().name() : null);
+            resultMetadata.put("riskScore", prepared.validationReport().riskScore());
+            resultMetadata.put("relationshipEdges", prepared.relationshipEdges());
+            if (options != null && Boolean.TRUE.equals(options.get("stubDownstream"))) {
+                resultMetadata.put("stubDownstream", true);
+            }
+            resultMetadata.put("referenceCatalogSize", referenceCatalog.size(jobId));
+            int entitiesExpected = parseResult.getTotalEntities();
+            int processed = totalProcessed.get() + totalFailed.get();
+            boolean stubDownstream = options != null && Boolean.TRUE.equals(options.get("stubDownstream"));
+            Map<String, Object> paritySummary = JiraDcParitySummaryBuilder.build(
+                    entitiesExpected,
+                    processed,
+                    totalFailed.get(),
+                    historyReplayed,
+                    incrementalSkipped.get(),
+                    attachmentBytesWritten.get(),
+                    attachmentCount.get(),
+                    referenceCatalog.size(jobId),
+                    parseResult.getXmlFormat() != null ? parseResult.getXmlFormat().name() : null,
+                    prepared.validationReport().riskScore(),
+                    processedByType,
+                    historyOnlyImport,
+                    stubDownstream);
+            resultMetadata.put("paritySummary", paritySummary);
+            resultMetadata.put("entitiesExpected", entitiesExpected);
+            int checksumChecked = attachmentChecksumChecked.get();
+            int checksumMatched = attachmentChecksumMatched.get();
+            if (checksumChecked > 0) {
+                double rate = (checksumMatched * 100.0) / checksumChecked;
+                resultMetadata.put("attachmentChecksumMatchRate", Math.round(rate * 10) / 10.0);
+                resultMetadata.put("attachmentChecksumChecked", checksumChecked);
+                resultMetadata.put("attachmentChecksumMatched", checksumMatched);
+            }
+            MigrationJob completedJobForSla = migrationJobRepository.findById(jobId).orElse(null);
+            long jobDurationMs = 0L;
+            if (completedJobForSla != null && completedJobForSla.getStartedAt() != null
+                    && completedJobForSla.getCompletedAt() != null) {
+                jobDurationMs = java.time.Duration.between(
+                        completedJobForSla.getStartedAt(), completedJobForSla.getCompletedAt()).toMillis();
+            }
+            int issueCountForSla = processedByType.getOrDefault("Issue", 0)
+                    + processedByType.getOrDefault("SubTask", 0);
+            Map<String, Object> slaProof = JiraDcImportSlaProofBuilder.build(
+                    issueCountForSla, jobDurationMs, totalFailed.get(), stubDownstream, "LIVE_IMPORT_JOB");
+            resultMetadata.put("slaProof", slaProof);
+            Map<String, Object> acSignoff = JiraDcAcSignoffEvaluator.evaluate(
+                    resultMetadata,
+                    options != null ? options : Map.of(),
+                    completedJobForSla != null && completedJobForSla.getJobStatus() != null
+                            ? completedJobForSla.getJobStatus() : "COMPLETED",
+                    entitiesExpected,
+                    totalFailed.get());
+            resultMetadata.put("acSignoff", acSignoff);
+            migrationJobRepository.findById(jobId).ifPresent(j -> {
+                if (j.getResultMetadata() != null && j.getResultMetadata().get("stages") != null) {
+                    resultMetadata.put("stages", j.getResultMetadata().get("stages"));
+                }
+            });
             migrationService.markJobCompleted(jobId, resultMetadata);
-
-            sendJobCompleted(jobId, userIdStr, totalProcessed, totalFailed);
+            referenceCatalog.clear(jobId);
+            schedulePostImportReindex(jobId);
+            migrationAuditPersistenceService.log(jobId, "IMPORT_COMPLETED", "JOB", jobId.toString(), userId,
+                    Map.of("processed", totalProcessed.get(), "failed", totalFailed.get(),
+                            "comments", commentCount.get(), "attachments", attachmentCount.get()));
+            sendJobCompleted(jobId, userIdStr, totalProcessed.get(), totalFailed.get());
 
             return CompletableFuture.completedFuture(migrationService.getImportResult(jobId));
 
         } catch (Exception e) {
             log.error("Jira DC import job failed: {}", e.getMessage(), e);
             migrationService.markJobFailed(jobId, e.getMessage(), null);
-
+            if (options != null && Boolean.TRUE.equals(options.get("rollbackOnFailure"))) {
+                try {
+                    migrationRollbackService.rollbackJob(jobId);
+                } catch (Exception rb) {
+                    log.warn("Auto-rollback after DC failure failed: {}", rb.getMessage());
+                }
+            }
             sendJobFailed(jobId, userIdStr, e.getMessage());
-
             return CompletableFuture.failedFuture(e);
+        } finally {
+            if (options != null && options.get("extractedBackupRoot") != null) {
+                try {
+                    jiraDcImportOrchestrator.cleanupExtractedRoot(
+                            Path.of(options.get("extractedBackupRoot").toString()));
+                } catch (Exception ignored) {
+                    // ignore cleanup failures
+                }
+            }
+            if (tempFile != null && (options == null || options.get("xmlPath") == null)) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (IOException ignored) {
+                    // ignore
+                }
+            }
         }
+    }
+
+    private void processEntitiesParallel(
+            List<JiraDcXmlParser.ParsedEntity> typeEntities,
+            ExecutorService workers,
+            UUID jobId,
+            Map<String, String> issueKeyToTargetId,
+            List<String[]> pendingIssueLinks,
+            UUID userId,
+            Map<String, Object> options,
+            Path bundlePath,
+            JiraDcIssueIdRegistry issueIdRegistry,
+            java.util.concurrent.atomic.AtomicLong attachmentBytesWritten,
+            java.util.concurrent.atomic.AtomicInteger incrementalSkipped,
+            java.util.concurrent.atomic.AtomicInteger totalProcessed,
+            java.util.concurrent.atomic.AtomicInteger totalFailed,
+            java.util.concurrent.atomic.AtomicInteger commentCount,
+            java.util.concurrent.atomic.AtomicInteger attachmentCount,
+            java.util.concurrent.atomic.AtomicInteger attachmentChecksumChecked,
+            java.util.concurrent.atomic.AtomicInteger attachmentChecksumMatched) throws Exception {
+
+        List<java.util.concurrent.Future<Boolean>> futures = new ArrayList<>();
+        boolean historyOnlyImport = options != null && Boolean.TRUE.equals(options.get("historyOnlyImport"));
+        boolean historyReplayOnly = options != null && Boolean.TRUE.equals(options.get("historyReplayOnly"));
+        for (JiraDcXmlParser.ParsedEntity entity : typeEntities) {
+            futures.add(workers.submit(() -> {
+                EntityStatus status = EntityStatus.builder()
+                        .jobId(jobId)
+                        .entityType(entity.getEntityType())
+                        .entityKey(entity.getEntityKey())
+                        .status("PROCESSING")
+                        .build();
+                entityStatusRepository.save(status);
+                boolean ok = persistDcEntity(entity, jobId, issueKeyToTargetId, pendingIssueLinks,
+                        status, userId, options, bundlePath, issueIdRegistry,
+                        attachmentBytesWritten, attachmentCount, incrementalSkipped, historyOnlyImport,
+                        historyReplayOnly,
+                        attachmentChecksumChecked, attachmentChecksumMatched);
+                if (ok) {
+                    status.markCompleted(status.getEntityId());
+                    if ("Comment".equals(entity.getEntityType())) {
+                        commentCount.incrementAndGet();
+                    }
+                    totalProcessed.incrementAndGet();
+                } else {
+                    status.markFailed("PERSIST_ERROR", "Failed to persist entity", null);
+                    entityStatusRepository.save(status);
+                    totalFailed.incrementAndGet();
+                }
+                return ok;
+            }));
+        }
+        for (java.util.concurrent.Future<Boolean> f : futures) {
+            f.get();
+        }
+    }
+
+    private Path resolveAttachmentBundlePath(Map<String, Object> options) {
+        if (options == null || options.get("attachmentBundlePath") == null) {
+            return null;
+        }
+        return Path.of(options.get("attachmentBundlePath").toString());
+    }
+
+    private boolean isEntityAlreadyCompleted(UUID jobId, String entityKey) {
+        return entityStatusRepository.findFirstByJobIdAndEntityKey(jobId, entityKey)
+                .map(s -> "COMPLETED".equals(s.getStatus()) || "SUCCESS".equals(s.getStatus()))
+                .orElse(false);
+    }
+
+    private void updateAttachmentProgress(UUID jobId, long bytesWritten, int attachmentCount) {
+        migrationJobRepository.findById(jobId).ifPresent(job -> {
+            Map<String, Object> meta = job.getResultMetadata() != null
+                    ? new HashMap<>(job.getResultMetadata())
+                    : new HashMap<>();
+            meta.put("attachmentBytesWritten", bytesWritten);
+            meta.put("attachmentsCompleted", attachmentCount);
+            job.setResultMetadata(meta);
+            migrationJobRepository.save(job);
+        });
+    }
+
+    private static String firstField(Map<String, String> fields, String... keys) {
+        for (String key : keys) {
+            if (fields.containsKey(key) && fields.get(key) != null && !fields.get(key).isBlank()) {
+                return fields.get(key);
+            }
+        }
+        return null;
+    }
+
+    private static List<JiraDcXmlParser.ParsedEntity> mergeAuxiliaryIntoIssues(
+            List<JiraDcXmlParser.ParsedEntity> entities) {
+        Map<String, JiraDcXmlParser.ParsedEntity> issuesByKey = new HashMap<>();
+        List<JiraDcXmlParser.ParsedEntity> result = new ArrayList<>();
+        for (JiraDcXmlParser.ParsedEntity e : entities) {
+            if ("Issue".equals(e.getEntityType()) || "SubTask".equals(e.getEntityType())) {
+                issuesByKey.put(e.getEntityKey(), e);
+            }
+        }
+        for (JiraDcXmlParser.ParsedEntity e : entities) {
+            if ("CustomField".equals(e.getEntityType())) {
+                applyCustomField(issuesByKey, entities, e);
+            } else if ("PluginEntity".equals(e.getEntityType())) {
+                applyPluginAsCustomField(issuesByKey, entities, e);
+            } else if ("Label".equals(e.getEntityType())) {
+                applyLabel(issuesByKey, e);
+            } else if (!"CustomField".equals(e.getEntityType())
+                    && !"PluginEntity".equals(e.getEntityType())
+                    && !"Label".equals(e.getEntityType())) {
+                result.add(e);
+            }
+        }
+        return result;
+    }
+
+    private static void applyCustomField(Map<String, JiraDcXmlParser.ParsedEntity> issuesByKey,
+                                         List<JiraDcXmlParser.ParsedEntity> entities,
+                                         JiraDcXmlParser.ParsedEntity cfEntity) {
+        Map<String, String> f = cfEntity.getFields();
+        if (f == null) {
+            return;
+        }
+        String issueKey = f.get("issueKey");
+        if (issueKey == null) {
+            return;
+        }
+        JiraDcXmlParser.ParsedEntity issue = issuesByKey.get(issueKey);
+        if (issue == null) {
+            for (JiraDcXmlParser.ParsedEntity candidate : entities) {
+                if ("Issue".equals(candidate.getEntityType()) && issueKey.equals(candidate.getEntityKey())) {
+                    issue = candidate;
+                    issuesByKey.put(issueKey, issue);
+                    break;
+                }
+            }
+        }
+        if (issue != null && issue.getFields() != null) {
+            String cfId = f.get("customFieldId");
+            String value = f.get("value");
+            if (cfId != null && value != null) {
+                issue.getFields().put(cfId, value);
+            }
+        }
+    }
+
+    private static void applyPluginAsCustomField(Map<String, JiraDcXmlParser.ParsedEntity> issuesByKey,
+                                                List<JiraDcXmlParser.ParsedEntity> entities,
+                                                JiraDcXmlParser.ParsedEntity pluginEntity) {
+        Map<String, String> f = pluginEntity.getFields();
+        if (f == null) {
+            return;
+        }
+        String issueKey = f.get("issueKey");
+        if (issueKey == null) {
+            return;
+        }
+        JiraDcXmlParser.ParsedEntity cf = new JiraDcXmlParser.ParsedEntity();
+        cf.setEntityType("CustomField");
+        Map<String, String> cfFields = new HashMap<>(f);
+        String fieldId = f.get("field");
+        if (fieldId != null && !fieldId.isBlank()) {
+            cfFields.put("customFieldId", fieldId.startsWith("customfield_") ? fieldId : "customfield_plugin");
+        } else {
+            cfFields.put("customFieldId", "customfield_" + f.getOrDefault("pluginType", "plugin"));
+        }
+        cfFields.put("value", f.getOrDefault("value", ""));
+        cf.setFields(cfFields);
+        cf.setEntityKey(issueKey + ":plugin:" + pluginEntity.getEntityKey());
+        applyCustomField(issuesByKey, entities, cf);
+    }
+
+    private static void applyLabel(Map<String, JiraDcXmlParser.ParsedEntity> issuesByKey,
+                                   JiraDcXmlParser.ParsedEntity labelEntity) {
+        Map<String, String> f = labelEntity.getFields();
+        if (f == null) {
+            return;
+        }
+        String issueKey = f.get("issueKey");
+        String label = f.get("label");
+        if (issueKey == null || label == null) {
+            return;
+        }
+        JiraDcXmlParser.ParsedEntity issue = issuesByKey.get(issueKey);
+        if (issue != null && issue.getFields() != null) {
+            String existing = issue.getFields().get("labels");
+            issue.getFields().put("labels",
+                    existing == null || existing.isBlank() ? label : existing + "," + label);
+        }
+    }
+
+    private static void recordAttachmentChecksum(
+            Map<String, Object> metadata,
+            String actualChecksum,
+            java.util.concurrent.atomic.AtomicInteger checked,
+            java.util.concurrent.atomic.AtomicInteger matched) {
+        if (checked == null || actualChecksum == null || actualChecksum.isBlank()) {
+            return;
+        }
+        Object expected = metadata != null ? metadata.get("expectedChecksum") : null;
+        if (expected == null || String.valueOf(expected).isBlank()) {
+            return;
+        }
+        checked.incrementAndGet();
+        if (actualChecksum.equalsIgnoreCase(String.valueOf(expected))) {
+            matched.incrementAndGet();
+        }
+    }
+
+    private boolean persistDcEntity(
+            JiraDcXmlParser.ParsedEntity entity,
+            UUID jobId,
+            Map<String, String> issueKeyToTargetId,
+            List<String[]> pendingIssueLinks,
+            EntityStatus status,
+            UUID userId,
+            Map<String, Object> options,
+            Path attachmentBundlePath,
+            JiraDcIssueIdRegistry issueIdRegistry,
+            java.util.concurrent.atomic.AtomicLong attachmentBytesWritten,
+            java.util.concurrent.atomic.AtomicInteger attachmentCount,
+            java.util.concurrent.atomic.AtomicInteger incrementalSkipped,
+            boolean historyOnlyImport,
+            boolean historyReplayOnly,
+            java.util.concurrent.atomic.AtomicInteger attachmentChecksumChecked,
+            java.util.concurrent.atomic.AtomicInteger attachmentChecksumMatched) {
+
+        Map<String, String> fields = entity.getFields() != null ? entity.getFields() : Map.of();
+        String type = entity.getEntityType();
+        boolean stub = options != null && Boolean.TRUE.equals(options.get("stubDownstream"));
+
+        if (stub) {
+            return persistDcEntityStub(entity, jobId, issueKeyToTargetId, status, fields, type);
+        }
+
+        return switch (type) {
+            case "Issue", "SubTask" -> {
+                if (historyReplayOnly) {
+                    var prior = incrementalMigrationService.priorSuccess(jobId, entity.getEntityKey());
+                    if (prior.isPresent() && prior.get().getTargetIssueId() != null) {
+                        issueKeyToTargetId.put(
+                                entity.getEntityKey(), prior.get().getTargetIssueId().toString());
+                        status.markSkipped("History replay only — issue not created");
+                        entityStatusRepository.save(status);
+                        yield true;
+                    }
+                    status.markSkipped("History replay only — no prior issue mapping for " + entity.getEntityKey());
+                    entityStatusRepository.save(status);
+                    yield false;
+                }
+                boolean incremental = options != null && Boolean.TRUE.equals(options.get("incrementalDelta"));
+                if (incremental && incrementalMigrationService.shouldSkipIssue(jobId, entity.getEntityKey())) {
+                    incrementalMigrationService.priorSuccess(jobId, entity.getEntityKey()).ifPresent(prior -> {
+                        if (prior.getTargetIssueId() != null) {
+                            issueKeyToTargetId.put(entity.getEntityKey(), prior.getTargetIssueId().toString());
+                        }
+                    });
+                    status.markSkipped("Already imported (incremental delta)");
+                    entityStatusRepository.save(status);
+                    if (incrementalSkipped != null) {
+                        incrementalSkipped.incrementAndGet();
+                    }
+                    yield true;
+                }
+                Map<String, Object> issueData = JiraDcEntityMapper.toIssueData(fields, entity.getEntityKey());
+                var issueResult = issuePersisterHandler.persistIssue(issueData, jobId);
+                if (issueResult.isSuccess() && issueResult.getIssueId() != null) {
+                    status.setTargetId(issueResult.getIssueId().toString());
+                    status.setEntityId(issueResult.getIssueId());
+                    issueKeyToTargetId.put(entity.getEntityKey(), issueResult.getIssueId().toString());
+                    migrationIssueResultService.recordSuccess(
+                            jobId, entity.getEntityKey(), issueResult, null);
+                    String sourceStatus = (String) issueData.get("status");
+                    if (!historyOnlyImport && sourceStatus != null && !sourceStatus.isBlank()) {
+                        try {
+                            var issue = issueServiceClient.getIssue(issueResult.getIssueId().toString());
+                            if (issue != null) {
+                                migrationWorkflowStatusApplier.applyImportedStatus(jobId, issue, sourceStatus);
+                            }
+                        } catch (Exception ex) {
+                            log.debug("Workflow status apply skipped for {}: {}", entity.getEntityKey(), ex.getMessage());
+                        }
+                    }
+                    String parent = (String) issueData.get("parentIssueKey");
+                    String epic = (String) issueData.get("epicLink");
+                    if (parent != null || epic != null) {
+                        pendingIssueLinks.add(new String[]{entity.getEntityKey(), epic, parent});
+                    }
+                } else {
+                    migrationIssueResultService.recordFailure(
+                            jobId, entity.getEntityKey(), issueResult.getErrorMessage(), null);
+                }
+                entityStatusRepository.save(status);
+                yield issueResult.isSuccess();
+            }
+            case "Comment" -> {
+                Map<String, Object> commentData = JiraDcEntityMapper.toCommentData(
+                        fields, entity.getEntityKey(), issueKeyToTargetId, issueIdRegistry);
+                var result = commentPersisterHandler.persistComment(commentData, jobId);
+                if (result.isSuccess() && result.getCommentId() != null) {
+                    status.setTargetId(result.getCommentId().toString());
+                    status.setEntityId(result.getCommentId());
+                }
+                entityStatusRepository.save(status);
+                yield result.isSuccess();
+            }
+            case "Attachment" -> {
+                JiraDcEntityMapper.AttachmentPayload payload = JiraDcEntityMapper.toAttachmentPayload(
+                        fields, entity.getEntityKey(), issueKeyToTargetId, issueIdRegistry);
+                byte[] content = payload.content();
+                if (content.length == 0 && attachmentBundlePath != null) {
+                    JiraDcAttachmentBundleResolver.ResolvedAttachment resolved = attachmentBundleResolver.resolve(
+                            attachmentBundlePath,
+                            fields.get("sourceAttachmentId"),
+                            firstField(fields, "filename", "name"));
+                    if (resolved.hasContent()) {
+                        payload = new JiraDcEntityMapper.AttachmentPayload(payload.metadata(), resolved.content());
+                        if (resolved.mimeType() != null) {
+                            payload.metadata().put("mimeType", resolved.mimeType());
+                        }
+                        if (resolved.checksum() != null) {
+                            payload.metadata().put("expectedChecksum", resolved.checksum());
+                        }
+                        content = resolved.content();
+                    }
+                }
+                if (content.length == 0) {
+                    status.markSkipped("No attachment content in DC export (metadata recorded)");
+                    entityStatusRepository.save(status);
+                    yield true;
+                }
+                var result = attachmentPersisterHandler.persistAttachment(
+                        payload.metadata(), payload.content(), jobId);
+                if (result.isSuccess()) {
+                    if (result.getAttachmentId() != null) {
+                        status.setTargetId(result.getAttachmentId().toString());
+                        status.setEntityId(result.getAttachmentId());
+                    }
+                    recordAttachmentChecksum(
+                            payload.metadata(), result.getChecksum(),
+                            attachmentChecksumChecked, attachmentChecksumMatched);
+                    if (attachmentBytesWritten != null && content.length > 0) {
+                        attachmentBytesWritten.addAndGet(content.length);
+                        if (attachmentCount != null) {
+                            int attNum = attachmentCount.incrementAndGet();
+                            updateAttachmentProgress(jobId, attachmentBytesWritten.get(), attNum);
+                        }
+                    }
+                    migrationAttachmentResultService.recordSuccess(
+                            jobId,
+                            (String) payload.metadata().get("issueKey"),
+                            result.getAttachmentId(),
+                            result.getFileName(),
+                            result.getChecksum());
+                } else {
+                    migrationAttachmentResultService.recordFailure(
+                            jobId,
+                            (String) payload.metadata().get("issueKey"),
+                            result.getFileName(),
+                            result.getErrorMessage());
+                }
+                entityStatusRepository.save(status);
+                yield result.isSuccess();
+            }
+            case "Worklog" -> {
+                Map<String, Object> worklogData = JiraDcEntityMapper.toWorklogData(
+                        fields, entity.getEntityKey(), issueKeyToTargetId, issueIdRegistry);
+                var result = worklogPersisterHandler.persistWorklog(worklogData, jobId);
+                if (result.isSuccess() && result.getWorklogId() != null) {
+                    status.setTargetId(result.getWorklogId().toString());
+                    status.setEntityId(result.getWorklogId());
+                }
+                entityStatusRepository.save(status);
+                yield result.isSuccess();
+            }
+            case "Project" -> {
+                Map<String, Object> projectData = new HashMap<>(fields);
+                String projectKey = fields.getOrDefault("key", entity.getEntityKey());
+                projectData.put("key", projectKey);
+                projectData.put("projectKey", projectKey);
+                projectData.put("name", fields.getOrDefault("name", projectKey));
+                var result = projectPersisterHandler.persistProject(projectData, jobId);
+                if (result.isSuccess() && result.getProjectId() != null) {
+                    status.setTargetId(result.getProjectId().toString());
+                }
+                entityStatusRepository.save(status);
+                yield result.isSuccess();
+            }
+            case "IssueLink" -> {
+                Map<String, Object> linkData = JiraDcEntityMapper.toIssueLinkData(fields, entity.getEntityKey());
+                var linkResult = issueLinkPersisterHandler.persistIssueLink(linkData, jobId);
+                entityStatusRepository.save(status);
+                yield linkResult.isSuccess();
+            }
+            case "History" -> {
+                status.markSkipped("History replayed in post-pass");
+                entityStatusRepository.save(status);
+                yield true;
+            }
+            case "Label" -> {
+                String issueKey = fields.get("issueKey");
+                if (issueKey == null && issueIdRegistry != null) {
+                    issueKey = issueIdRegistry.resolveIssueKey(fields.get("issueId"));
+                }
+                String label = fields.get("label");
+                if (issueKey != null && label != null) {
+                    labelPersisterHandler.persistLabelsForIssue(issueKey, List.of(label), jobId);
+                }
+                status.markCompleted(null);
+                entityStatusRepository.save(status);
+                yield true;
+            }
+            case "Component" -> {
+                var result = componentPersisterHandler.persistComponent(
+                        JiraDcEntityMapper.toComponentData(fields, entity.getEntityKey()), jobId);
+                if (result.isSuccess() && result.getComponentId() != null) {
+                    status.setTargetId(result.getComponentId().toString());
+                }
+                entityStatusRepository.save(status);
+                yield result.isSuccess();
+            }
+            case "Version" -> {
+                var result = versionPersisterHandler.persistVersion(
+                        JiraDcEntityMapper.toVersionData(fields, entity.getEntityKey()), jobId);
+                if (result.isSuccess() && result.getVersionId() != null) {
+                    status.setTargetId(result.getVersionId().toString());
+                }
+                entityStatusRepository.save(status);
+                yield result.isSuccess();
+            }
+            case "Watcher" -> {
+                String issueKey = fields.get("issueKey");
+                if (issueKey == null && issueIdRegistry != null) {
+                    issueKey = issueIdRegistry.resolveIssueKey(fields.get("issueId"));
+                }
+                String targetId = issueKey != null ? issueKeyToTargetId.get(issueKey) : null;
+                if (targetId != null) {
+                    issueServiceClient.watchIssue(targetId);
+                }
+                status.markCompleted(null);
+                entityStatusRepository.save(status);
+                yield true;
+            }
+            case "Vote" -> {
+                status.markCompleted(null);
+                entityStatusRepository.save(status);
+                yield true;
+            }
+            case "PluginEntity" -> {
+                referenceCatalog.record(jobId, type, entity.getEntityKey(), fields);
+                status.markCompleted(null);
+                entityStatusRepository.save(status);
+                yield true;
+            }
+            case "IssueType", "Status", "Priority", "Resolution", "CustomField", "Group", "Workflow" -> {
+                referenceCatalog.record(jobId, type, entity.getEntityKey(), fields);
+                status.markCompleted(null);
+                entityStatusRepository.save(status);
+                yield true;
+            }
+            case "User" -> {
+                String username = fields.getOrDefault("lowerUserName", fields.get("userKey"));
+                if (username != null) {
+                    userPersisterHandler.persistUserMapping(
+                            jobId, username, "DC_USER", null, username, "IMPORT");
+                }
+                status.markCompleted(null);
+                entityStatusRepository.save(status);
+                yield true;
+            }
+            default -> {
+                referenceCatalog.record(jobId, type, entity.getEntityKey(), fields);
+                status.markCompleted(null);
+                entityStatusRepository.save(status);
+                yield true;
+            }
+        };
+    }
+
+    /**
+     * Local verification path: parses Comment/Attachment (incl. base64 + checksum) without calling issue/attachment services.
+     */
+    private boolean persistDcEntityStub(
+            JiraDcXmlParser.ParsedEntity entity,
+            UUID jobId,
+            Map<String, String> issueKeyToTargetId,
+            EntityStatus status,
+            Map<String, String> fields,
+            String type) {
+
+        return switch (type) {
+            case "Project" -> {
+                String projectKey = fields.getOrDefault("key", "DEMO");
+                UUID targetId = UUID.randomUUID();
+                projectMappingRepository.save(ProjectMapping.builder()
+                        .jobId(jobId)
+                        .sourceKey(projectKey)
+                        .targetKey(projectKey)
+                        .targetId(targetId)
+                        .issueKeySequence(0)
+                        .build());
+                status.setTargetId(targetId.toString());
+                status.markCompleted(null);
+                entityStatusRepository.save(status);
+                yield true;
+            }
+            case "Issue", "SubTask" -> {
+                UUID fakeId = UUID.randomUUID();
+                issueKeyToTargetId.put(entity.getEntityKey(), fakeId.toString());
+                status.setTargetId(fakeId.toString());
+                status.setEntityId(fakeId);
+                migrationIssueResultService.recordSuccess(jobId, entity.getEntityKey(),
+                        stubIssueResult(fakeId, entity.getEntityKey()), null);
+                status.markCompleted(fakeId);
+                entityStatusRepository.save(status);
+                yield true;
+            }
+            case "Comment" -> {
+                String body = fields.getOrDefault("body", fields.get("comment"));
+                if (body == null || body.isBlank()) {
+                    status.markFailed("VALIDATION_ERROR", "Comment body is required", null);
+                    entityStatusRepository.save(status);
+                    yield false;
+                }
+                UUID commentId = UUID.randomUUID();
+                status.setTargetId(commentId.toString());
+                status.setEntityId(commentId);
+                status.markCompleted(commentId);
+                entityStatusRepository.save(status);
+                yield true;
+            }
+            case "Attachment" -> {
+                JiraDcEntityMapper.AttachmentPayload payload = JiraDcEntityMapper.toAttachmentPayload(
+                        fields, entity.getEntityKey(), issueKeyToTargetId);
+                if (payload.content().length == 0) {
+                    status.markSkipped("No attachment content");
+                    entityStatusRepository.save(status);
+                    yield true;
+                }
+                String checksum = ChunkedAttachmentUploadService.sha256Hex(payload.content());
+                String fileName = (String) payload.metadata().getOrDefault("fileName", "attachment.bin");
+                UUID attId = UUID.randomUUID();
+                migrationAttachmentResultService.recordSuccess(
+                        jobId,
+                        (String) payload.metadata().get("issueKey"),
+                        attId,
+                        fileName,
+                        checksum);
+                status.setTargetId(attId.toString());
+                status.setEntityId(attId);
+                status.markCompleted(attId);
+                entityStatusRepository.save(status);
+                yield true;
+            }
+            default -> {
+                status.markSkipped("Stub skip: " + type);
+                entityStatusRepository.save(status);
+                yield true;
+            }
+        };
+    }
+
+    private IssuePersisterHandler.IssuePersisterResult stubIssueResult(UUID id, String key) {
+        IssuePersisterHandler.IssuePersisterResult r = new IssuePersisterHandler.IssuePersisterResult();
+        r.setSuccess(true);
+        r.setIssueId(id);
+        r.setIssueKey(key);
+        return r;
     }
 
     @Async("migrationTaskExecutor")
@@ -388,7 +1339,7 @@ public class ImportJobProcessor {
                     entityStatusRepository.save(status);
 
                     // Import entity type from source
-                    boolean success = importEntityType(sourceProjectId, targetProjectId, entityType);
+                    boolean success = importEntityType(jobId, sourceProjectId, targetProjectId, entityType);
 
                     if (success) {
                         status.markCompleted(null);
@@ -421,6 +1372,7 @@ public class ImportJobProcessor {
                     "targetProject", targetProjectId.toString()
             );
             migrationService.markJobCompleted(jobId, resultMetadata);
+            schedulePostImportReindex(jobId);
 
             sendJobCompleted(jobId, userIdStr, processed, failed);
 
@@ -436,28 +1388,38 @@ public class ImportJobProcessor {
         }
     }
 
-    private boolean importEntityType(UUID sourceProjectId, UUID targetProjectId, String entityType) {
-        log.info("Importing {} from {} to {}", entityType, sourceProjectId, targetProjectId);
-
+    private void schedulePostImportReindex(UUID jobId) {
         try {
-            switch (entityType) {
-                case "ISSUE":
-                    // Would fetch issues from source and persist via issuePersisterHandler
-                    return true;
-                case "PROJECT":
-                    return projectPersisterHandler != null;
-                case "USER":
-                    return userPersisterHandler != null;
-                case "SPRINT":
-                    return sprintPersisterHandler != null;
-                default:
-                    // For other types, log and return success
-                    return true;
-            }
+            migrationEventPublisher.enqueue(jobId, "IMPORT_COMPLETED", Map.of("reindex", true));
+            migrationJobReindexService.triggerReindex(jobId, List.of("ISSUE", "COMMENT", "PROJECT"));
         } catch (Exception e) {
-            log.error("Failed to import {}: {}", entityType, e.getMessage());
-            return false;
+            log.warn("Post-import reindex scheduling failed for {}: {}", jobId, e.getMessage());
         }
+    }
+
+    private byte[] resolveCsvAttachmentContent(Map<String, Object> attData) throws java.io.IOException {
+        Object path = attData.get("attachmentPath");
+        if (path != null && !path.toString().isBlank()) {
+            java.nio.file.Path p = java.nio.file.Path.of(path.toString());
+            if (java.nio.file.Files.exists(p)) {
+                return java.nio.file.Files.readAllBytes(p);
+            }
+        }
+        return new byte[0];
+    }
+
+    private boolean isJobPaused(UUID jobId) {
+        return migrationJobControlService.isPaused(jobId);
+    }
+
+    private boolean importEntityType(UUID jobId, UUID sourceProjectId, UUID targetProjectId, String entityType) {
+        ProjectImportOrchestrator.ImportEntityResult result =
+                projectImportOrchestrator.importEntityType(jobId, sourceProjectId, targetProjectId, entityType);
+        if (result.skipped()) {
+            migrationJobLogService.appendLog(jobId, "INFO", result.message());
+            return true;
+        }
+        return result.success();
     }
 
     private Map<String, String> convertRowToMap(String[] row, String[] headers) {
@@ -573,5 +1535,117 @@ public class ImportJobProcessor {
                 .build();
 
         webSocketHandler.sendErrorNotification(jobId.toString(), userId, error);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseWorkflowMappings(Object raw) {
+        if (raw instanceof Map<?, ?> map) {
+            Map<String, Object> out = new HashMap<>();
+            map.forEach((k, v) -> out.put(String.valueOf(k), v));
+            return out;
+        }
+        return Map.of();
+    }
+
+    private List<Map<String, String>> applyOptionAndStatusMappings(
+            UUID jobId,
+            List<Map<String, String>> rows,
+            Map<String, Object> workflowMappings,
+            List<com.jira.migration.entity.OptionMapping> optionMappings) {
+
+        List<Map<String, String>> result = new ArrayList<>(rows.size());
+        for (Map<String, String> row : rows) {
+            Map<String, String> copy = new LinkedHashMap<>(row);
+            if (copy.containsKey("status")) {
+                copy.put("status", workflowStatusMappingService.resolveStatus(
+                        workflowMappings, copy.get("status")));
+            }
+            for (com.jira.migration.entity.OptionMapping om : optionMappings) {
+                String fieldKey = om.getSourceFieldKey().toLowerCase(Locale.ROOT);
+                if (copy.containsKey(fieldKey)) {
+                    copy.put(fieldKey, optionMappingService.resolveOptionValue(
+                            jobId, om.getSourceFieldKey(), copy.get(fieldKey), List.of(om)));
+                }
+            }
+            result.add(copy);
+        }
+        return result;
+    }
+
+    private void resolveAssigneeReporterUsers(List<Map<String, String>> rows, UUID jobId) {
+        Set<String> identifiers = new LinkedHashSet<>();
+        for (Map<String, String> row : rows) {
+            addIfPresent(identifiers, row.get("assignee"));
+            addIfPresent(identifiers, row.get("reporter"));
+        }
+        if (!identifiers.isEmpty()) {
+            userDirectoryMappingService.resolveSourceUsers(identifiers, jobId);
+        }
+    }
+
+    private void addIfPresent(Set<String> set, String value) {
+        if (value != null && !value.isBlank()) {
+            set.add(value.trim());
+        }
+    }
+
+    private void persistIssueLinksPass(List<Map<String, Object>> issueRows, UUID jobId) {
+        for (Map<String, Object> row : issueRows) {
+            String childKey = stringVal(row.get("issueKey"));
+            if (childKey == null) {
+                continue;
+            }
+            String parentKey = stringVal(row.get("parentIssueKey"));
+            if (parentKey != null && !parentKey.isBlank()) {
+                try {
+                    issueLinkPersisterHandler.persistParentChild(childKey, parentKey, jobId);
+                } catch (Exception e) {
+                    log.warn("Parent link failed {} -> {}: {}", childKey, parentKey, e.getMessage());
+                }
+            }
+            String epicKey = stringVal(row.get("epicLink"));
+            if (epicKey != null && !epicKey.isBlank()) {
+                try {
+                    issueLinkPersisterHandler.persistEpicLink(childKey, epicKey, jobId);
+                } catch (Exception e) {
+                    log.warn("Epic link failed {} -> {}: {}", childKey, epicKey, e.getMessage());
+                }
+            }
+        }
+    }
+
+    private void recordIssueResults(UUID jobId, IssuePersisterHandler.BatchPersistResult batchResult) {
+        for (IssuePersisterHandler.IssuePersisterResult success : batchResult.getSuccesses()) {
+            migrationIssueResultService.recordSuccess(
+                    jobId,
+                    success.getIssueKey(),
+                    success,
+                    null);
+        }
+        for (IssuePersisterHandler.IssuePersisterResult failure : batchResult.getFailures()) {
+            migrationIssueResultService.recordFailure(
+                    jobId,
+                    failure.getIssueKey(),
+                    failure.getErrorMessage(),
+                    null);
+        }
+    }
+
+    private void updateStageProgress(UUID jobId, String stage, int completed, int total) {
+        migrationJobRepository.findById(jobId).ifPresent(job -> {
+            Map<String, Object> meta = job.getResultMetadata() != null
+                    ? new HashMap<>(job.getResultMetadata()) : new HashMap<>();
+            Map<String, Object> stages = meta.get("stages") instanceof Map<?, ?> m
+                    ? new HashMap<>((Map<String, Object>) m)
+                    : new HashMap<>();
+            stages.put(stage, Map.of("completed", completed, "total", total));
+            meta.put("stages", stages);
+            job.setResultMetadata(meta);
+            migrationJobRepository.save(job);
+        });
+    }
+
+    private String stringVal(Object o) {
+        return o == null ? null : o.toString().trim();
     }
 }

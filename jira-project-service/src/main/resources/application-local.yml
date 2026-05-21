@@ -5,10 +5,14 @@ spring:
     password: UNIpay@123
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: false
   flyway:
-    enabled: false
+    enabled: true
+    schemas: jira_project
+    default-schema: jira_project
+    locations: classpath:db/migration
+    baseline-on-migrate: true
 
 server:
   port: 8083

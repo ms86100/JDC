@@ -1,5 +1,6 @@
 package com.jira.migration.persister;
 
+import com.jira.migration.service.clients.AdminServiceClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,8 @@ import java.util.*;
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationSchemePersisterHandler {
+
+    private final AdminServiceClient adminServiceClient;
 
     @Transactional(rollbackFor = Exception.class)
     public NotificationSchemePersistResult persistNotificationScheme(
@@ -36,7 +39,7 @@ public class NotificationSchemePersisterHandler {
                     .isDefault((Boolean) schemeData.getOrDefault("isDefault", false))
                     .build();
 
-            UUID schemeId = persistSchemeToDatabase(scheme);
+            UUID schemeId = persistSchemeToDatabase(scheme, schemeData);
 
             // 2. Persist notification events and recipients
             List<Map<String, Object>> notifications = (List<Map<String, Object>>) schemeData.get("notifications");
@@ -60,8 +63,19 @@ public class NotificationSchemePersisterHandler {
         return result;
     }
 
-    private UUID persistSchemeToDatabase(NotificationSchemeEntity scheme) {
-        log.debug("Persisting notification scheme: {}", scheme.getName());
+    private UUID persistSchemeToDatabase(NotificationSchemeEntity scheme, Map<String, Object> schemeData) {
+        if (adminServiceClient.isAvailable()) {
+            try {
+                Map<String, Object> created = adminServiceClient.createNotificationScheme(schemeData);
+                Object id = created.get("id");
+                if (id != null) {
+                    return UUID.fromString(id.toString());
+                }
+            } catch (Exception e) {
+                log.warn("admin-service notification scheme create failed: {}", e.getMessage());
+            }
+        }
+        log.debug("Persisting notification scheme locally: {}", scheme.getName());
         return UUID.randomUUID();
     }
 

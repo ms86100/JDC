@@ -1,12 +1,34 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { projectApi, ProjectResponse } from '../../../api/projectApi';
 import CreateProjectWizard from '../components/CreateProjectWizard';
-import './ProjectsPage.css';
+import {
+  WorkspaceHeader,
+  KpiCard,
+  PortfolioSummary,
+  ProgressBar,
+  HealthBadge,
+  RecentlyViewed,
+  EntityAvatar,
+} from '../../../components/workspace/WorkspaceComponents';
+import { getRecentViews, recordRecentView } from '../../../components/workspace/recentViews';
+import { useProjectsPortfolioData } from '../../../components/workspace/useWorkspaceData';
+import { formatShortDate } from '../../../components/workspace/metrics';
+import type { HealthLevel } from '../../../components/workspace/metrics';
+import '../../../components/workspace/workspace-dashboard.css';
 
 type ViewMode = 'grid' | 'list';
 type FilterType = 'all' | 'software' | 'business' | 'archived';
+
+const TEMPLATE_LABELS: Record<string, string> = {
+  SCRUM: 'Scrum',
+  KANBAN: 'Kanban',
+  BASIC: 'Basic',
+  PROJECT_MANAGEMENT: 'Project Mgmt',
+  TASK_MANAGEMENT: 'Task Mgmt',
+  PROCESS_MANAGEMENT: 'Process',
+};
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
@@ -24,135 +46,135 @@ export default function ProjectsPage() {
     },
   });
 
-  const filteredProjects = projects.filter(project => {
-    if (filter === 'software' && project.projectType !== 'SOFTWARE') return false;
-    if (filter === 'business' && project.projectType !== 'BUSINESS') return false;
-    if (filter === 'archived' && !project.archived) return false;
-    if (filter === 'all' && project.archived) return false;
+  const { metricsByProject, isLoading: metricsLoading } = useProjectsPortfolioData(
+    projects.map((p) => p.id)
+  );
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        project.name.toLowerCase().includes(query) ||
-        project.projectKey.toLowerCase().includes(query) ||
-        project.description?.toLowerCase().includes(query)
-      );
-    }
+  const filteredProjects = useMemo(() => {
+    return projects.filter((project) => {
+      if (filter === 'software' && project.projectType !== 'SOFTWARE') return false;
+      if (filter === 'business' && project.projectType !== 'BUSINESS') return false;
+      if (filter === 'archived' && !project.archived) return false;
+      if (filter === 'all' && project.archived) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return (
+          project.name.toLowerCase().includes(q) ||
+          project.projectKey.toLowerCase().includes(q) ||
+          (project.description?.toLowerCase().includes(q) ?? false) ||
+          (project.leadName?.toLowerCase().includes(q) ?? false)
+        );
+      }
+      return true;
+    });
+  }, [projects, filter, searchQuery]);
 
-    return true;
-  });
+  const portfolio = useMemo(() => {
+    let totalIssues = 0;
+    let avgCompletion = 0;
+    let atRisk = 0;
+    filteredProjects.forEach((p) => {
+      const m = metricsByProject.get(p.id);
+      if (m) {
+        totalIssues += m.total;
+        avgCompletion += m.completionPct;
+        if (m.health === 'at-risk' || m.health === 'critical') atRisk += 1;
+      }
+    });
+    const n = filteredProjects.length || 1;
+    return {
+      count: filteredProjects.length,
+      totalIssues,
+      avgCompletion: Math.round(avgCompletion / n),
+      atRisk,
+    };
+  }, [filteredProjects, metricsByProject]);
 
-  const getTemplateIcon = (template: string) => {
-    switch (template) {
-      case 'SCRUM': return '🏃';
-      case 'KANBAN': return '📋';
-      case 'BASIC': return '📝';
-      case 'PROJECT_MANAGEMENT': return '🎯';
-      case 'TASK_MANAGEMENT': return '✓';
-      case 'PROCESS_MANAGEMENT': return '🔄';
-      default: return '📁';
-    }
-  };
+  const recentProjects = getRecentViews('project');
 
-  const getTemplateLabel = (template: string) => {
-    switch (template) {
-      case 'SCRUM': return 'Scrum';
-      case 'KANBAN': return 'Kanban';
-      case 'BASIC': return 'Basic';
-      case 'PROJECT_MANAGEMENT': return 'Project Management';
-      case 'TASK_MANAGEMENT': return 'Task Management';
-      case 'PROCESS_MANAGEMENT': return 'Process Management';
-      default: return template;
-    }
-  };
-
-  const getTypeBadge = (type: string) => {
-    switch (type) {
-      case 'SOFTWARE': return { bg: '#e5ecf7', color: '#00205b', label: 'Software' };
-      case 'BUSINESS': return { bg: '#f0f4ff', color: '#004080', label: 'Business' };
-      default: return { bg: '#f3f4f6', color: '#4b5563', label: type };
-    }
-  };
-
-  const getClassificationBadge = (classification: string | undefined) => {
-    switch (classification) {
-      case 'PUBLIC': return { bg: '#dcfce7', color: '#166534', label: 'Public' };
-      case 'RESTRICTED': return { bg: '#fff3cd', color: '#856404', label: 'Restricted' };
-      case 'CONFIDENTIAL': return { bg: '#fee2e2', color: '#991b1b', label: 'Confidential' };
-      case 'EXPORT_CONTROLLED': return { bg: '#e5f0ff', color: '#004080', label: 'Export Controlled' };
-      default: return null;
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
+  const handleOpen = (project: ProjectResponse) => {
+    recordRecentView({
+      id: project.id,
+      type: 'project',
+      name: project.name,
+      path: `/projects/${project.id}`,
     });
   };
 
   return (
-    <div className="projects-page">
-      <div className="projects-header">
-        <div className="projects-header-left">
-          <h1>Projects</h1>
-          <p>Manage your projects and access their boards, issues, and settings</p>
-        </div>
-        <div className="projects-header-right">
-          <button className="ab-btn ab-btn-primary" onClick={() => setShowCreateWizard(true)}>
+    <div className="ws-page">
+      <WorkspaceHeader
+        breadcrumbs={
+          <>
+            <Link to="/dashboard">Dashboard</Link>
+            <span>/</span>
+            <span>Projects</span>
+          </>
+        }
+        title="Projects"
+        subtitle="Operational workspace for delivery health, sprints, and team workload"
+        actions={
+          <button type="button" className="ab-btn ab-btn-primary" onClick={() => setShowCreateWizard(true)}>
             + Create Project
           </button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="projects-toolbar">
-        <div className="projects-toolbar-left">
-          <div className="projects-search">
-            <span className="search-icon">🔍</span>
+      <PortfolioSummary>
+        <KpiCard label="Projects" value={portfolio.count} accent="brand" />
+        <KpiCard label="Total issues" value={portfolio.totalIssues} />
+        <KpiCard label="Avg completion" value={`${portfolio.avgCompletion}%`} accent="success" />
+        <KpiCard label="Needs attention" value={portfolio.atRisk} accent={portfolio.atRisk > 0 ? 'warning' : 'default'} hint="At risk or critical" />
+      </PortfolioSummary>
+
+      <RecentlyViewed items={recentProjects} />
+
+      <div className="ws-toolbar">
+        <div className="ws-toolbar-left">
+          <div className="ws-search">
+            <span className="ws-search-icon" aria-hidden>⌕</span>
             <input
-              type="text"
-              placeholder="Search projects..."
+              type="search"
+              placeholder="Search projects, keys, leads..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search projects"
             />
           </div>
-          <div className="projects-filter-group">
-            <button
-              className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-              onClick={() => setFilter('all')}
-            >
-              All Projects
-            </button>
-            <button
-              className={`filter-btn ${filter === 'software' ? 'active' : ''}`}
-              onClick={() => setFilter('software')}
-            >
-              Software
-            </button>
-            <button
-              className={`filter-btn ${filter === 'business' ? 'active' : ''}`}
-              onClick={() => setFilter('business')}
-            >
-              Business
-            </button>
-            <button
-              className={`filter-btn ${filter === 'archived' ? 'active' : ''}`}
-              onClick={() => setFilter('archived')}
-            >
-              Archived
-            </button>
+          <div className="ws-filter-pills" role="tablist">
+            {(
+              [
+                ['all', 'All Projects'],
+                ['software', 'Software'],
+                ['business', 'Business'],
+                ['archived', 'Archived'],
+              ] as const
+            ).map(([f, label]) => (
+              <button
+                key={f}
+                type="button"
+                role="tab"
+                className={`ws-filter-pill ${filter === f ? 'ws-filter-pill--active' : ''}`}
+                onClick={() => setFilter(f)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
-        <div className="projects-toolbar-right">
-          <div className="view-toggle">
+        <div className="ws-toolbar-right">
+          <div className="ws-view-toggle">
             <button
-              className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+              type="button"
+              className={`ws-view-btn ${viewMode === 'grid' ? 'ws-view-btn--active' : ''}`}
               onClick={() => setViewMode('grid')}
               title="Grid view"
             >
               ▦
             </button>
             <button
-              className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
+              type="button"
+              className={`ws-view-btn ${viewMode === 'list' ? 'ws-view-btn--active' : ''}`}
               onClick={() => setViewMode('list')}
               title="List view"
             >
@@ -162,164 +184,89 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="ab-loading">
-          <div className="ab-spinner"></div>
-        </div>
+      {isLoading || metricsLoading ? (
+        <div className="ab-loading"><div className="ab-spinner" /></div>
       ) : filteredProjects.length === 0 ? (
-        <div className="projects-empty">
-          <div className="empty-icon">📁</div>
+        <div className="ws-page-empty">
           <h3>No projects found</h3>
           <p>
             {searchQuery
-              ? 'No projects match your search criteria'
+              ? 'No projects match your search.'
               : filter === 'archived'
-              ? 'No archived projects'
-              : 'Get started by creating your first project'}
+                ? 'No archived projects.'
+                : 'Create a project to start tracking work, sprints, and delivery.'}
           </p>
           {!searchQuery && filter !== 'archived' && (
-            <button className="ab-btn ab-btn-primary" onClick={() => setShowCreateWizard(true)}>
+            <button type="button" className="ab-btn ab-btn-primary" onClick={() => setShowCreateWizard(true)}>
               Create Project
             </button>
           )}
         </div>
       ) : viewMode === 'grid' ? (
-        <div className="projects-grid">
-          {filteredProjects.map((project) => {
-            const typeBadge = getTypeBadge(project.projectType);
-            const classBadge = getClassificationBadge(project.classification);
-
-            return (
-              <Link key={project.id} to={`/projects/${project.id}`} className="project-card">
-                <div className="project-card-header">
-                  <div className="project-avatar">
-                    {project.avatarUrl ? (
-                      <img src={project.avatarUrl} alt={project.name} />
-                    ) : (
-                      <span>{project.name.charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                  <div className="project-badges">
-                    {typeBadge && (
-                      <span className="type-badge" style={{ background: typeBadge.bg, color: typeBadge.color }}>
-                        {typeBadge.label}
-                      </span>
-                    )}
-                    {classBadge && (
-                      <span className="classification-badge" style={{ background: classBadge.bg, color: classBadge.color }}>
-                        {classBadge.label}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="project-card-body">
-                  <h3 className="project-name">{project.name}</h3>
-                  <div className="project-key">{project.projectKey}</div>
-                  {project.description && (
-                    <p className="project-description">{project.description}</p>
-                  )}
-                </div>
-                <div className="project-card-footer">
-                  <div className="project-meta">
-                    <span className="meta-item">
-                      <span className="meta-icon">📋</span>
-                      {project.issueCounter} issues
-                    </span>
-                    <span className="meta-item">
-                      <span className="meta-icon">{getTemplateIcon(project.template)}</span>
-                      {getTemplateLabel(project.template)}
-                    </span>
-                  </div>
-                  <div className="project-lead">
-                    {project.leadName && (
-                      <span className="lead-badge">
-                        <span className="lead-avatar">
-                          {project.leadName.charAt(0).toUpperCase()}
-                        </span>
-                        {project.leadName}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+        <div className="ws-entity-grid">
+          {filteredProjects.map((project) => (
+            <ProjectGridCard
+              key={project.id}
+              project={project}
+              health={metricsByProject.get(project.id)?.health ?? 'unknown'}
+              completion={metricsByProject.get(project.id)?.completionPct ?? 0}
+              blocked={metricsByProject.get(project.id)?.blocked ?? 0}
+              onOpen={() => handleOpen(project)}
+            />
+          ))}
         </div>
       ) : (
-        <div className="projects-list">
-          <table className="ab-table">
+        <div className="ws-table-wrap">
+          <table className="ws-table">
             <thead>
               <tr>
                 <th>Project</th>
                 <th>Key</th>
+                <th>Health</th>
+                <th>Progress</th>
                 <th>Type</th>
                 <th>Template</th>
-                <th>Lead</th>
                 <th>Issues</th>
+                <th>Lead</th>
                 <th>Created</th>
-                <th>Actions</th>
+                <th />
               </tr>
             </thead>
             <tbody>
               {filteredProjects.map((project) => {
-                const typeBadge = getTypeBadge(project.projectType);
-                const classBadge = getClassificationBadge(project.classification);
-
+                const m = metricsByProject.get(project.id);
                 return (
                   <tr key={project.id} className={project.archived ? 'archived-row' : ''}>
                     <td>
-                      <Link to={`/projects/${project.id}`} className="project-link">
-                        <div className="project-link-avatar">
-                          {project.avatarUrl ? (
-                            <img src={project.avatarUrl} alt={project.name} />
-                          ) : (
-                            <span>{project.name.charAt(0).toUpperCase()}</span>
-                          )}
-                        </div>
+                      <Link to={`/projects/${project.id}`} className="project-link" onClick={() => handleOpen(project)}>
+                        <EntityAvatar name={project.name} size="sm" />
                         <span className="project-link-name">{project.name}</span>
                       </Link>
                     </td>
+                    <td><span className="ws-entity-card-key">{project.projectKey}</span></td>
+                    <td><HealthBadge health={m?.health ?? 'unknown'} /></td>
                     <td>
-                      <span className="project-key-badge">{project.projectKey}</span>
+                      <div style={{ minWidth: 100 }}>
+                        <ProgressBar value={m?.completionPct ?? 0} />
+                      </div>
                     </td>
                     <td>
-                      {typeBadge && (
-                        <span className="type-badge" style={{ background: typeBadge.bg, color: typeBadge.color }}>
-                          {typeBadge.label}
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <span className="template-badge">
-                        {getTemplateIcon(project.template)}
-                        {getTemplateLabel(project.template)}
+                      <span className={`ws-badge ws-badge--${project.projectType === 'SOFTWARE' ? 'software' : 'business'}`}>
+                        {project.projectType}
                       </span>
                     </td>
+                    <td>{TEMPLATE_LABELS[project.template ?? ''] ?? project.template ?? '—'}</td>
+                    <td><strong>{project.issueCounter ?? m?.total ?? 0}</strong></td>
+                    <td>{project.leadName || '—'}</td>
+                    <td>{formatShortDate(project.createdAt)}</td>
                     <td>
-                      {project.leadName ? (
-                        <span className="lead-name">{project.leadName}</span>
-                      ) : (
-                        <span className="no-lead">-</span>
-                      )}
-                    </td>
-                    <td>
-                      <span className="issue-count">{project.issueCounter}</span>
-                    </td>
-                    <td>
-                      <span className="created-date">{formatDate(project.createdAt)}</span>
-                    </td>
-                    <td>
-                      <div className="action-buttons">
-                        <Link to={`/projects/${project.id}`} className="ab-btn ab-btn-ghost ab-btn-sm">
-                          View
-                        </Link>
-                        <button
-                          className="ab-btn ab-btn-ghost ab-btn-sm"
-                          onClick={() => navigate(`/projects/${project.id}/settings`)}
-                        >
-                          Settings
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        className="ab-btn ab-btn-ghost ab-btn-sm"
+                        onClick={() => navigate(`/projects/${project.id}/settings`)}
+                      >
+                        Settings
+                      </button>
                     </td>
                   </tr>
                 );
@@ -329,9 +276,66 @@ export default function ProjectsPage() {
         </div>
       )}
 
-      {showCreateWizard && (
-        <CreateProjectWizard onClose={() => setShowCreateWizard(false)} />
-      )}
+      {showCreateWizard && <CreateProjectWizard onClose={() => setShowCreateWizard(false)} />}
     </div>
+  );
+}
+
+function ProjectGridCard({
+  project,
+  health,
+  completion,
+  blocked,
+  onOpen,
+}: {
+  project: ProjectResponse;
+  health: HealthLevel;
+  completion: number;
+  blocked: number;
+  onOpen: () => void;
+}) {
+  const template = TEMPLATE_LABELS[project.template ?? ''] ?? 'Standard';
+
+  return (
+    <Link to={`/projects/${project.id}`} className="ws-entity-card" onClick={onOpen}>
+      <div className="ws-entity-card-top">
+        <EntityAvatar name={project.name} />
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <HealthBadge health={health} />
+          <span className={`ws-badge ws-badge--${project.projectType === 'SOFTWARE' ? 'software' : 'business'}`}>
+            {project.projectType}
+          </span>
+          {project.archived && <span className="ws-badge ws-badge--archived">Archived</span>}
+        </div>
+      </div>
+      <div className="ws-entity-card-body">
+        <h3 className="ws-entity-card-title">{project.name}</h3>
+        <span className="ws-entity-card-key">{project.projectKey}</span>
+        {project.description && <p className="ws-entity-card-desc">{project.description}</p>}
+        <ProgressBar value={completion} label="Completion" />
+        <div className="ws-entity-card-metrics">
+          <div className="ws-mini-metric">
+            <span>Issues</span>
+            <strong>{project.issueCounter ?? 0}</strong>
+          </div>
+          <div className="ws-mini-metric">
+            <span>Blockers</span>
+            <strong>{blocked}</strong>
+          </div>
+          <div className="ws-mini-metric">
+            <span>Method</span>
+            <strong style={{ fontSize: 12 }}>{template}</strong>
+          </div>
+        </div>
+      </div>
+      <div className="ws-entity-card-footer">
+        <span>{project.leadName || 'No lead assigned'}</span>
+        <div className="ws-entity-card-links">
+          <span>Board</span>
+          <span>·</span>
+          <span>Issues</span>
+        </div>
+      </div>
+    </Link>
   );
 }

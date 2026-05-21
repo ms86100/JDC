@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './AuthStyles.css';
 
+const PLATFORM_NAME = 'System & Avionics Platform';
+
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -15,21 +17,20 @@ export default function RegisterPage() {
     setError('');
     setIsLoading(true);
     try {
-      await fetch('http://localhost:8080/api/auth/register', {
+      const res = await fetch('http://localhost:8080/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
-      }).then(async (res) => {
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.message || 'Registration failed');
-        }
-        // Auto login after registration
-        await login(form.username, form.password);
-        navigate('/projects');
       });
-    } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || 'Registration failed');
+      }
+      await login(form.username, form.password);
+      navigate('/projects');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Registration failed. Please try again.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -37,29 +38,42 @@ export default function RegisterPage() {
 
   return (
     <div className="ab-auth-page">
-      <div className="ab-auth-container">
-        <div className="ab-auth-header">
-          <div className="ab-auth-logo">
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <rect width="48" height="48" rx="8" fill="#0066FF"/>
-              <path d="M12 36V12L24 24L36 12V36" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+      <div className="ab-auth-shell">
+        <aside className="ab-auth-hero">
+          <div className="ab-auth-hero-inner">
+            <div className="ab-auth-mark" aria-hidden="true">
+              SA
+            </div>
+            <h1 className="ab-auth-hero-title">{PLATFORM_NAME}</h1>
+            <p className="ab-auth-hero-tagline">
+              Create an account to collaborate on programs, manage work items, and stay
+              aligned with your team.
+            </p>
+            <ul className="ab-auth-hero-features">
+              <li>One account for projects and administration</li>
+              <li>Role-based access when your org enables it</li>
+              <li>Same sign-in for all platform modules</li>
+            </ul>
           </div>
-          <h1 className="ab-auth-title">Create Account</h1>
-          <p className="ab-auth-subtitle">Join Jira Platform to manage your projects</p>
-        </div>
+        </aside>
 
-        <div className="ab-card ab-auth-card">
-          <form onSubmit={handleSubmit} className="ab-auth-form">
-            {error && (
-              <div className="ab-alert ab-alert-error">
-                {error}
-              </div>
-            )}
+        <main className="ab-auth-panel">
+          <header className="ab-auth-panel-header">
+            <h2 className="ab-auth-panel-title">Create account</h2>
+            <p className="ab-auth-panel-subtitle">
+              Join {PLATFORM_NAME} to manage your programs and work.
+            </p>
+          </header>
+
+          <form onSubmit={handleSubmit} className="ab-auth-form" noValidate>
+            {error && <div className="ab-alert-error" role="alert">{error}</div>}
 
             <div className="ab-form-group">
-              <label className="ab-label">Username</label>
+              <label className="ab-label" htmlFor="register-username">
+                Username
+              </label>
               <input
+                id="register-username"
                 type="text"
                 className="ab-input"
                 value={form.username}
@@ -67,54 +81,56 @@ export default function RegisterPage() {
                 placeholder="Choose a username"
                 required
                 minLength={3}
+                autoComplete="username"
               />
             </div>
 
             <div className="ab-form-group">
-              <label className="ab-label">Email</label>
+              <label className="ab-label" htmlFor="register-email">
+                Email
+              </label>
               <input
+                id="register-email"
                 type="email"
                 className="ab-input"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="Enter your email"
+                placeholder="you@company.com"
                 required
+                autoComplete="email"
               />
             </div>
 
             <div className="ab-form-group">
-              <label className="ab-label">Password</label>
+              <label className="ab-label" htmlFor="register-password">
+                Password
+              </label>
               <input
+                id="register-password"
                 type="password"
                 className="ab-input"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="Create a password (min 8 characters)"
+                placeholder="At least 8 characters"
                 required
                 minLength={8}
+                autoComplete="new-password"
               />
             </div>
 
-            <button
-              type="submit"
-              className="ab-btn ab-btn-primary ab-btn-full"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Creating account...' : 'Create Account'}
+            <button type="submit" className="ab-auth-submit" disabled={isLoading}>
+              {isLoading ? 'Creating account…' : 'Create account'}
             </button>
           </form>
-        </div>
 
-        <div className="ab-auth-footer">
-          <p>
-            Already have an account?{' '}
-            <Link to="/login" className="ab-link">Sign in</Link>
+          <p className="ab-auth-switch">
+            Already have an account? <Link to="/login">Sign in</Link>
           </p>
-        </div>
 
-        <div className="ab-auth-brand">
-          <span>Powered by Airbus Digital</span>
-        </div>
+          <footer className="ab-auth-powered">
+            Powered by <strong>Airbus Digital</strong>
+          </footer>
+        </main>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ package com.jira.test.service;
 
 import com.jira.test.dto.*;
 import com.jira.test.entity.*;
+import com.jira.test.event.*;
 import com.jira.test.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,7 @@ public class CucumberImportService {
     private final TestIssueRepository testIssueRepository;
     private final TestStepRepository testStepRepository;
     private final TestService testService;
+    private final EventPublisherService eventPublisher;
 
     private static final Pattern FEATURE_PATTERN = Pattern.compile("Feature:\\s*(.+)", Pattern.MULTILINE);
     private static final Pattern SCENARIO_PATTERN = Pattern.compile("(?:(@\\w+)\\s*)*Scenario(?: Outline)?:\\s*(.+)", Pattern.MULTILINE);
@@ -36,6 +38,9 @@ public class CucumberImportService {
         List<String> errors = new ArrayList<>();
         List<TestResponse> createdTests = new ArrayList<>();
         int skipped = 0;
+        int successCount = 0;
+        int failureCount = 0;
+        UUID batchId = UUID.randomUUID();
 
         String featureName = extractFeatureName(featureContent);
         String featureKey = fileName + "::" + featureName;
@@ -64,6 +69,7 @@ public class CucumberImportService {
 
                 TestResponse test = testService.createTest(request);
                 createdTests.add(test);
+                successCount++;
 
                 CucumberScenario cucumberScenario = CucumberScenario.builder()
                         .featureKey(featureKey)
@@ -82,12 +88,18 @@ public class CucumberImportService {
             } catch (Exception e) {
                 log.warn("Failed to import scenario '{}': {}", scenario.name, e.getMessage());
                 errors.add("Scenario '" + scenario.name + "': " + e.getMessage());
+                failureCount++;
             }
         }
 
         log.info("Imported {} scenarios, skipped {}, errors: {}", createdTests.size(), skipped, errors.size());
+
+        // Publish TestImportedEvent
+        publishTestImportedEvent(projectId, batchId, "CUCUMBER", "FEATURE_FILE",
+                createdTests.size() + failureCount, successCount, failureCount, errors, testSetId);
+
         return CucumberImportResponse.builder()
-                .batchId(UUID.randomUUID())
+                .batchId(batchId)
                 .status(errors.isEmpty() ? "COMPLETED" : "COMPLETED_WITH_ERRORS")
                 .totalScenarios(scenarios.size())
                 .importedTests(createdTests.size())
@@ -95,6 +107,29 @@ public class CucumberImportService {
                 .errors(errors)
                 .createdTests(createdTests)
                 .build();
+    }
+
+    private void publishTestImportedEvent(UUID projectId, UUID batchId, String importSource,
+                                          String importType, int totalImported, int successCount,
+                                          int failureCount, List<String> errors, UUID testPlanId) {
+        try {
+            TestImportedEvent event = TestImportedEvent.builder()
+                    .source(this)
+                    .projectId(projectId)
+                    .batchId(batchId)
+                    .importSource(importSource)
+                    .importType(importType)
+                    .totalImported(totalImported)
+                    .successCount(successCount)
+                    .failureCount(failureCount)
+                    .errors(errors)
+                    .testPlanId(testPlanId)
+                    .build();
+            eventPublisher.publish(event);
+            log.info("Published TestImportedEvent for batch: {}", batchId);
+        } catch (Exception e) {
+            log.error("Failed to publish TestImportedEvent: {}", e.getMessage(), e);
+        }
     }
 
     private String extractFeatureName(String content) {

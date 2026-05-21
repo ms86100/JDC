@@ -28,10 +28,17 @@ public class MigrationService {
     private final ProjectMappingRepository projectMappingRepository;
     private final BackupEntityRepository backupEntityRepository;
     private final ObjectMapper objectMapper;
+    private final TargetProjectValidator targetProjectValidator;
+    private final MigrationAuditPersistenceService migrationAuditPersistenceService;
+    private final MigrationJobLogService migrationJobLogService;
 
     @Transactional
     public MigrationJobResponse startImport(StartMigrationRequest request, UUID userId) {
         log.info("Starting import job: type={}, source={}", request.getJobType(), request.getImportSource());
+
+        if (request.getTargetProjectId() != null) {
+            targetProjectValidator.assertProjectExists(request.getTargetProjectId());
+        }
 
         MigrationJob job = MigrationJob.builder()
                 .jobType(request.getJobType())
@@ -47,6 +54,8 @@ public class MigrationService {
 
         job = migrationJobRepository.save(job);
         log.info("Created migration job: id={}", job.getId());
+        migrationAuditPersistenceService.log(job.getId(), "JOB_CREATED", "JOB", job.getId().toString(),
+                userId, Map.of("importSource", request.getImportSource()));
 
         return MigrationJobResponse.fromEntity(job);
     }
@@ -92,6 +101,8 @@ public class MigrationService {
             estimatedRemaining = (long) (totalEstimated - elapsedTimeMs);
         }
 
+        Map<String, JobProgressResponse.StageProgress> stages = extractStages(job.getResultMetadata());
+
         return JobProgressResponse.builder()
                 .jobId(job.getId())
                 .jobStatus(job.getJobStatus())
@@ -106,7 +117,60 @@ public class MigrationService {
                 .elapsedTimeMs(elapsedTimeMs)
                 .estimatedTimeRemainingMs(estimatedRemaining)
                 .entityProgress(entityProgress)
+                .stages(stages)
+                .currentPhase(metadataPhase(job.getResultMetadata()))
+                .recentLogs(migrationJobLogService.getRecentLogs(jobId))
+                .attachmentBytesWritten(metadataLong(job.getResultMetadata(), "attachmentBytesWritten"))
+                .attachmentsCompleted(metadataInt(job.getResultMetadata(), "attachmentsCompleted"))
+                .incrementalSkipped(metadataInt(job.getResultMetadata(), "incrementalSkipped"))
+                .attachmentChunkIndex(metadataInt(job.getResultMetadata(), "attachmentChunkIndex"))
+                .attachmentChunkTotal(metadataInt(job.getResultMetadata(), "attachmentChunkTotal"))
+                .attachmentCurrentFile(metadataString(job.getResultMetadata(), "attachmentCurrentFile"))
+                .attachmentChunked(metadataBoolean(job.getResultMetadata(), "attachmentChunked"))
                 .build();
+    }
+
+    private static String metadataPhase(Map<String, Object> metadata) {
+        if (metadata == null) {
+            return null;
+        }
+        Object phase = metadata.get("currentPhase");
+        return phase != null ? phase.toString() : null;
+    }
+
+    private static Long metadataLong(Map<String, Object> metadata, String key) {
+        if (metadata == null || !metadata.containsKey(key)) {
+            return null;
+        }
+        Object v = metadata.get(key);
+        if (v instanceof Number n) {
+            return n.longValue();
+        }
+        return null;
+    }
+
+    private static Integer metadataInt(Map<String, Object> metadata, String key) {
+        Long l = metadataLong(metadata, key);
+        return l != null ? l.intValue() : null;
+    }
+
+    private static String metadataString(Map<String, Object> metadata, String key) {
+        if (metadata == null || !metadata.containsKey(key)) {
+            return null;
+        }
+        Object v = metadata.get(key);
+        return v != null ? v.toString() : null;
+    }
+
+    private static Boolean metadataBoolean(Map<String, Object> metadata, String key) {
+        if (metadata == null || !metadata.containsKey(key)) {
+            return null;
+        }
+        Object v = metadata.get(key);
+        if (v instanceof Boolean b) {
+            return b;
+        }
+        return Boolean.parseBoolean(v.toString());
     }
 
     @Transactional(readOnly = true)
@@ -152,6 +216,11 @@ public class MigrationService {
                 .flatMap(List::stream)
                 .toList();
 
+        Long durationMs = null;
+        if (job.getStartedAt() != null && job.getCompletedAt() != null) {
+            durationMs = java.time.Duration.between(job.getStartedAt(), job.getCompletedAt()).toMillis();
+        }
+
         return ImportResultResponse.builder()
                 .jobId(job.getId())
                 .jobStatus(job.getJobStatus())
@@ -163,7 +232,27 @@ public class MigrationService {
                 .errors(errors)
                 .warnings(warnings)
                 .resultMetadata(job.getResultMetadata())
+                .durationMs(durationMs)
                 .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, JobProgressResponse.StageProgress> extractStages(Map<String, Object> metadata) {
+        if (metadata == null || !(metadata.get("stages") instanceof Map<?, ?> raw)) {
+            return Map.of();
+        }
+        Map<String, JobProgressResponse.StageProgress> out = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> e : raw.entrySet()) {
+            if (e.getValue() instanceof Map<?, ?> stageMap) {
+                Object completed = stageMap.get("completed");
+                Object total = stageMap.get("total");
+                out.put(String.valueOf(e.getKey()), JobProgressResponse.StageProgress.builder()
+                        .completed(completed instanceof Number n ? n.intValue() : 0)
+                        .total(total instanceof Number n ? n.intValue() : 0)
+                        .build());
+            }
+        }
+        return out;
     }
 
     @Transactional

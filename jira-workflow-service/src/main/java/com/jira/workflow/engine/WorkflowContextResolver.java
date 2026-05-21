@@ -7,6 +7,7 @@ import com.jira.workflow.service.WorkflowSchemeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -20,6 +21,11 @@ public class WorkflowContextResolver {
     private final WorkflowSchemeService workflowSchemeService;
     private final WorkflowRepository workflowRepository;
     private final WorkflowTransitionRepository workflowTransitionRepository;
+    private final ProjectPermissionClient projectPermissionClient;
+
+    private static final List<String> PROJECT_PERMISSIONS = List.of(
+            "BROWSE_PROJECTS", "CREATE_ISSUES", "EDIT_ISSUES", "RESOLVE_ISSUES",
+            "DELETE_ISSUES", "ASSIGN_ISSUES", "ASSIGNABLE_USER", "LINK_ISSUES");
 
     public WorkflowContext resolveForIssue(UUID issueId, UUID projectId, UUID userId) {
         Map<String, Object> issueData = integrationClient.fetchIssue(issueId);
@@ -38,7 +44,7 @@ public class WorkflowContextResolver {
                 .userId(userId)
                 .workflow(workflow)
                 .issueData(issueData)
-                .userData(integrationClient.fetchUser(userId))
+                .userData(enrichUserWithProjectPermissions(userId, resolvedProjectId, integrationClient.fetchUser(userId)))
                 .build();
     }
 
@@ -64,8 +70,23 @@ public class WorkflowContextResolver {
                 .workflow(workflow)
                 .transition(transition)
                 .issueData(issueData)
-                .userData(integrationClient.fetchUser(userId))
+                .userData(enrichUserWithProjectPermissions(userId, resolvedProjectId, integrationClient.fetchUser(userId)))
                 .build();
+    }
+
+    private Map<String, Object> enrichUserWithProjectPermissions(
+            UUID userId, UUID projectId, Map<String, Object> userData) {
+        if (userId == null || projectId == null) {
+            return userData;
+        }
+        List<String> granted = new ArrayList<>();
+        for (String perm : PROJECT_PERMISSIONS) {
+            if (projectPermissionClient.hasPermission(userId, projectId, perm)) {
+                granted.add(perm);
+            }
+        }
+        userData.put("permissions", granted);
+        return userData;
     }
 
     public Workflow resolveWorkflow(UUID projectId, UUID issueTypeId) {
@@ -98,12 +119,17 @@ public class WorkflowContextResolver {
             UUID targetStatusId) {
 
         if (transitionId != null) {
-            WorkflowTransition t = workflowTransitionRepository.findById(transitionId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Transition", "id", transitionId));
-            if (!t.getWorkflowId().equals(workflow.getId())) {
-                throw new IllegalArgumentException("Transition does not belong to resolved workflow");
+            var found = workflowTransitionRepository.findById(transitionId);
+            if (found.isPresent()) {
+                WorkflowTransition t = found.get();
+                if (!t.getWorkflowId().equals(workflow.getId())) {
+                    throw new IllegalArgumentException("Transition does not belong to resolved workflow");
+                }
+                return t;
             }
-            return t;
+            if (targetStatusId == null) {
+                throw new ResourceNotFoundException("Transition", "id", transitionId);
+            }
         }
 
         if (targetStatusId != null) {

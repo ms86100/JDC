@@ -39,6 +39,7 @@ public class DeadLetterQueueService {
     private final DlqEntryRepository dlqEntryRepository;
     private final EntityStatusRepository entityStatusRepository;
     private final ObjectMapper objectMapper;
+    private final DlqRetryExecutor dlqRetryExecutor;
 
     // Legacy in-memory cache for fast lookups (populated from DB on startup)
     private final Map<String, FailedOperation> memoryCache = new ConcurrentHashMap<>();
@@ -328,46 +329,31 @@ public class DeadLetterQueueService {
      * Retry create issue operation.
      */
     private boolean retryCreateIssue(FailedOperation operation) {
-        try {
-            Map<String, Object> payload = parsePayload(operation.getPayload());
-            // In production, this would call IssueService.createIssue()
-            // For now, simulate success
-            log.info("Retrying create issue: {}", payload.get("key"));
-            return true;
-        } catch (Exception e) {
-            operation.setLastError(e.getMessage());
-            return false;
-        }
+        return dlqRetryExecutor.retry(operation);
     }
 
     private boolean retryUpdateIssue(FailedOperation operation) {
-        log.info("Retrying update issue");
-        return true;
+        return dlqRetryExecutor.retry(operation);
     }
 
     private boolean retryCreateProject(FailedOperation operation) {
-        log.info("Retrying create project");
-        return true;
+        return dlqRetryExecutor.retry(operation);
     }
 
     private boolean retryCreateUser(FailedOperation operation) {
-        log.info("Retrying create user");
-        return true;
+        return dlqRetryExecutor.retry(operation);
     }
 
     private boolean retryCreateAttachment(FailedOperation operation) {
-        log.info("Retrying create attachment");
-        return true;
+        return dlqRetryExecutor.retry(operation);
     }
 
     private boolean retryCreateComment(FailedOperation operation) {
-        log.info("Retrying create comment");
-        return true;
+        return dlqRetryExecutor.retry(operation);
     }
 
     private boolean retryMigrateField(FailedOperation operation) {
-        log.info("Retrying migrate field");
-        return true;
+        return dlqRetryExecutor.retry(operation);
     }
 
     // ========================================================================

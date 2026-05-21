@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import testApi, {
+import combinedApi, {
   TestExecutionResponse,
   StepResultRequest,
 } from '../../../api/testApi';
@@ -32,7 +32,7 @@ export const TestExecutionPanel: React.FC<TestExecutionPanelProps> = ({
   const loadExecutions = async () => {
     setLoading(true);
     try {
-      const response = await testApi.getExecutionsByTest(testId);
+      const response = await combinedApi.getExecutionsByTest(testId);
       setExecutions(response);
       if (response.length > 0) {
         const latest = response.find(e => e.status === 'RUNNING') || response[0];
@@ -61,7 +61,7 @@ export const TestExecutionPanel: React.FC<TestExecutionPanelProps> = ({
   const startExecution = async () => {
     setStarting(true);
     try {
-      const response = await testApi.createExecution({
+      const response = await combinedApi.createExecution({
         testIds: [testId],
         name: `Run ${issueKey} - ${new Date().toLocaleString()}`,
         testEnv: 'DEFAULT',
@@ -96,7 +96,7 @@ export const TestExecutionPanel: React.FC<TestExecutionPanelProps> = ({
     if (!result || !currentExecution) return;
 
     try {
-      await testApi.addStepResult(currentExecution.id, result);
+      await combinedApi.addStepResult(currentExecution.id, result);
     } catch (error) {
       console.error('Failed to save step result:', error);
     }
@@ -111,7 +111,7 @@ export const TestExecutionPanel: React.FC<TestExecutionPanelProps> = ({
 
     setCompleting(true);
     try {
-      await testApi.completeExecution(currentExecution.id, status);
+      await combinedApi.completeExecution(currentExecution.id, status);
       loadExecutions();
       setCurrentExecution(null);
     } catch (error) {

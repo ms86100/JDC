@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import testApi, { TestResponse } from '../../../api/testApi';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import combinedApi, { TestResponse } from '../../../api/testApi';
 import { TestStatusBadge, TestTypeBadge } from './TestComponents';
+import { Trash2, X, AlertTriangle, Loader2 } from 'lucide-react';
 
 interface TestListProps {
   projectId: string;
@@ -14,9 +16,11 @@ interface TestListProps {
 }
 
 export const TestList: React.FC<TestListProps> = ({ projectId, folderId, filter }) => {
+  const queryClient = useQueryClient();
   const [tests, setTests] = useState<TestResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTests, setSelectedTests] = useState<Set<string>>(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; testId: string | null; testName?: string }>({ open: false, testId: null });
 
   useEffect(() => {
     loadTests();
@@ -25,7 +29,7 @@ export const TestList: React.FC<TestListProps> = ({ projectId, folderId, filter 
   const loadTests = async () => {
     setLoading(true);
     try {
-      const response = await testApi.searchTests({
+      const response = await combinedApi.searchTests({
         projectId,
         folderId,
         testType: filter?.testType,
@@ -58,6 +62,42 @@ export const TestList: React.FC<TestListProps> = ({ projectId, folderId, filter 
     }
   };
 
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (testId: string) => combinedApi.deleteTest(testId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tests'] });
+      loadTests();
+      setDeleteConfirm({ open: false, testId: null });
+    },
+  });
+
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (testIds: string[]) => Promise.all(testIds.map(id => combinedApi.deleteTest(id))),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tests'] });
+      loadTests();
+      setSelectedTests(new Set());
+    },
+  });
+
+  const handleDeleteClick = (testId: string, testName?: string) => {
+    setDeleteConfirm({ open: true, testId, testName });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteConfirm.testId) {
+      deleteMutation.mutate(deleteConfirm.testId);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedTests.size > 0 && confirm(`Delete ${selectedTests.size} selected tests?`)) {
+      bulkDeleteMutation.mutate(Array.from(selectedTests));
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -83,7 +123,10 @@ export const TestList: React.FC<TestListProps> = ({ projectId, folderId, filter 
           <div className="flex gap-2">
             <button className="btn btn-sm btn-secondary">Add to Test Set</button>
             <button className="btn btn-sm btn-secondary">Add to Test Plan</button>
-            <button className="btn btn-sm btn-danger">Delete Selected</button>
+            <button onClick={handleBulkDelete} disabled={bulkDeleteMutation.isPending} className="btn btn-sm btn-danger flex items-center gap-1">
+              {bulkDeleteMutation.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
+              Delete Selected
+            </button>
           </div>
         </div>
       )}
@@ -98,6 +141,7 @@ export const TestList: React.FC<TestListProps> = ({ projectId, folderId, filter 
                   checked={selectedTests.size === tests.length && tests.length > 0}
                   onChange={toggleSelectAll}
                   className="rounded"
+                  aria-label="Select all tests"
                 />
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Key</th>
@@ -118,6 +162,7 @@ export const TestList: React.FC<TestListProps> = ({ projectId, folderId, filter 
                     checked={selectedTests.has(test.id)}
                     onChange={() => toggleSelectTest(test.id)}
                     className="rounded"
+                    aria-label={`Select test ${test.issueKey}`}
                   />
                 </td>
                 <td className="px-4 py-3">
@@ -168,11 +213,18 @@ export const TestList: React.FC<TestListProps> = ({ projectId, folderId, filter 
                       View
                     </Link>
                     <Link
-                      to={`/tests/${test.id}/execute`}
+                      to={`/tests/${test.id}/history`}
                       className="text-green-600 hover:text-green-800 text-sm"
                     >
                       Execute
                     </Link>
+                    <button
+                      onClick={() => handleDeleteClick(test.id, test.name)}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                      aria-label="Delete test"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -180,6 +232,46 @@ export const TestList: React.FC<TestListProps> = ({ projectId, folderId, filter 
           </tbody>
         </table>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm.open && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setDeleteConfirm({ open: false, testId: null })}></div>
+            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">Delete Test</h3>
+                  <p className="text-sm text-gray-500">This action cannot be undone</p>
+                </div>
+              </div>
+              <p className="mb-6">
+                Are you sure you want to delete test <strong>{deleteConfirm.testName || deleteConfirm.testId}</strong>?
+                This will also remove it from any test sets or plans.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setDeleteConfirm({ open: false, testId: null })}
+                  className="btn btn-secondary flex items-center gap-1"
+                >
+                  <X className="w-4 h-4" /> Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  disabled={deleteMutation.isPending}
+                  className="btn bg-red-600 hover:bg-red-700 text-white flex items-center gap-1"
+                >
+                  {deleteMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

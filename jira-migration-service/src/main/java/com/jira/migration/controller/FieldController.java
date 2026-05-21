@@ -38,6 +38,7 @@ public class FieldController {
     private final FieldDefinitionRepository fieldDefinitionRepository;
     private final CustomFieldDefinitionRepository customFieldDefinitionRepository;
     private final CustomFieldOptionRepository customFieldOptionRepository;
+    private final FieldTypeCompatibilityValidator fieldTypeCompatibilityValidator;
 
     // ========================================================================
     // FIELD DEFINITION APIs
@@ -305,6 +306,21 @@ public class FieldController {
                         .build())
                 .toList();
 
+        List<String> typeWarnings = new ArrayList<>();
+        for (FieldMappingResponse.FieldMappingInfo m : mappings) {
+            if (m.getTargetKey() == null || m.getTargetKey().isBlank()) {
+                continue;
+            }
+            fieldDefinitionRepository.findByFieldKey(m.getTargetKey()).ifPresent(def -> {
+                String reason = fieldTypeCompatibilityValidator.incompatibilityReason(
+                        "STRING",
+                        def.getFieldType() != null ? def.getFieldType().name() : "TEXT");
+                if (reason != null) {
+                    typeWarnings.add(m.getSourceKey() + " → " + m.getTargetKey() + ": " + reason);
+                }
+            });
+        }
+
         FieldMappingResponse response = FieldMappingResponse.builder()
                 .mappings(mappings)
                 .unmappedFields(mappings.stream()
@@ -321,6 +337,7 @@ public class FieldController {
                 .totalFields(result.mappings().size())
                 .mappedFields(result.mappings().size() - result.unmappedFields().size())
                 .unmappedFieldsCount(result.unmappedFields().size())
+                .typeWarnings(typeWarnings.isEmpty() ? null : typeWarnings)
                 .build();
 
         return ResponseEntity.ok(response);

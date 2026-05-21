@@ -71,6 +71,28 @@ public class WorkflowOutboxIntegrationClient {
         }
     }
 
+    public void broadcastIssueEvent(UUID issueId, UUID projectId, String eventType) {
+        if (issueId == null) {
+            return;
+        }
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, Object> body = new HashMap<>();
+            body.put("type", eventType);
+            body.put("issueId", issueId.toString());
+            if (projectId != null) {
+                body.put("projectId", projectId.toString());
+            }
+            restTemplate.postForObject(
+                    issueServiceUrl + "/api/internal/issue-events",
+                    new HttpEntity<>(body, headers),
+                    Map.class);
+        } catch (Exception e) {
+            log.warn("Issue realtime broadcast skipped for {}: {}", issueId, e.getMessage());
+        }
+    }
+
     @SuppressWarnings("unchecked")
     public Map<String, Object> fetchIssue(UUID issueId) {
         try {

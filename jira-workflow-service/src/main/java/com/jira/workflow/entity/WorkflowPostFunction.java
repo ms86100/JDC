@@ -73,4 +73,6 @@ public class WorkflowPostFunction {
     public static final String TYPE_UNLINK_ISSUE = "UNLINK_ISSUE";
     public static final String TYPE_ASSIGN_TO_COMPONENT_LEAD = "ASSIGN_TO_COMPONENT_LEAD";
     public static final String TYPE_SCRIPT_POST_FUNCTION = "SCRIPT_POST_FUNCTION";
+    public static final String TYPE_TRIGGER_WEBHOOK = "TRIGGER_WEBHOOK";
+    public static final String TYPE_TRIGGER_AUTOMATION = "TRIGGER_AUTOMATION";
 }

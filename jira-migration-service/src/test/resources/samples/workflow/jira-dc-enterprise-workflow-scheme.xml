@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Jira DC workflow scheme export fixture (project ↔ issue type ↔ workflow binding) -->
+<workflow-scheme name="Enterprise Change Scheme">
+  <meta name="jira.description">Maps change issue types to Enterprise Change Management Workflow</meta>
+  <default-workflow>Enterprise Change Management Workflow</default-workflow>
+  <mappings>
+    <mapping issue-type="Change Request" workflow="Enterprise Change Management Workflow"/>
+    <mapping issue-type="Emergency Change" workflow="Enterprise Change Management Workflow"/>
+    <mapping issue-type="Standard Change" workflow="Enterprise Change Management Workflow"/>
+    <mapping issue-type="Sub-task" workflow="Enterprise Change Management Workflow"/>
+  </mappings>
+  <project-associations>
+    <association project-key="CHG" scheme="Enterprise Change Scheme" active="true"/>
+    <association project-key="OPS" scheme="Enterprise Change Scheme" active="true"/>
+  </project-associations>
+</workflow-scheme>

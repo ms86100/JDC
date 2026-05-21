@@ -17,5 +17,5 @@ public interface CucumberScenarioRepository extends JpaRepository<CucumberScenar
 
     List<CucumberScenario> findByTestId(UUID testId);
 
-    Optional<CucumberScenario> findByFeatureKeyAndScenarioIdIsNotNull(String featureKey);
+    Optional<CucumberScenario> findByFeatureKeyAndScenarioKeyIsNotNull(String featureKey);
 }

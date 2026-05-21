@@ -8,6 +8,7 @@ import com.jira.migration.exception.*;
 import com.jira.migration.repository.ProjectMappingRepository;
 import com.jira.migration.repository.UserMappingRepository;
 import com.jira.migration.service.AuditService;
+import com.jira.migration.service.UserDirectoryMappingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -30,6 +31,7 @@ public class FieldMappingEngine {
 
     private final ProjectMappingRepository projectMappingRepository;
     private final UserMappingRepository userMappingRepository;
+    private final UserDirectoryMappingService userDirectoryMappingService;
     private final AuditService auditService;
 
     // Supported transformers
@@ -161,8 +163,11 @@ public class FieldMappingEngine {
             return existing.get().getTargetUserId();
         }
 
-        // TODO: Query user-service to find existing user by username/email
-        log.debug("Resolving user reference: {}", usernameOrEmail);
+        UUID resolved = userDirectoryMappingService.resolveToTargetUserId(usernameOrEmail, jobId);
+        if (resolved != null) {
+            return resolved;
+        }
+        log.debug("User reference unresolved: {}", usernameOrEmail);
         return null;
     }
 

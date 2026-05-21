@@ -38,4 +38,14 @@ public class QuarantineTransition {
     @CreationTimestamp
     @Column(name = "transitioned_at")
     private LocalDateTime transitionedAt;
+
+    // Add field to match builder usage in QuarantineService
+    @Column(name = "triggered_by")
+    private UUID triggeredByField;
+
+    @Column(name = "trigger_type")
+    private String triggerType;
+
+    @Column(columnDefinition = "TEXT")
+    private String notes;
 }

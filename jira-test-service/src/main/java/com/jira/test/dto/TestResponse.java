@@ -24,6 +24,7 @@ public class TestResponse {
     private String gherkinFeatureKey;
     private String gherkinScenarioId;
     private UUID testSetId;
+    private UUID folderId;
     private Boolean archived;
     private List<StepResponse> steps;
     private LocalDateTime createdAt;

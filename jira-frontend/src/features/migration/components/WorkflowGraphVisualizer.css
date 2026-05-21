@@ -1,0 +1,51 @@
+.workflow-graph-viz {
+  border: 1px solid var(--sa-n200);
+  border-radius: var(--sa-radius-md);
+  overflow: hidden;
+  background: var(--sa-n50);
+}
+
+.workflow-graph-viz .react-flow {
+  width: 100%;
+  height: 100%;
+}
+
+.workflow-graph-viz__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sa-space-3) var(--sa-space-4);
+  border-bottom: 1px solid var(--sa-n100);
+  background: var(--sa-n0);
+}
+
+.workflow-graph-viz__canvas {
+  height: 360px;
+}
+
+.wf-migration-node {
+  padding: var(--sa-space-2) var(--sa-space-3);
+  border-radius: var(--sa-radius-sm);
+  border: 2px solid var(--sa-brand-600);
+  background: var(--sa-n0);
+  font-size: var(--sa-fs-xs);
+  font-family: var(--sa-font-sans);
+  min-width: 100px;
+  text-align: center;
+}
+
+.wf-migration-node--terminal {
+  border-color: var(--sa-n400);
+  background: var(--sa-n100);
+}
+
+.wf-migration-node__id {
+  font-family: monospace;
+  color: var(--sa-n500);
+  font-size: 10px;
+}
+
+.wf-migration-node__label {
+  font-weight: 600;
+  color: var(--sa-n900);
+}

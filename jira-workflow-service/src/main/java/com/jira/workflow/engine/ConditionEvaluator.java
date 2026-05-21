@@ -18,6 +18,7 @@ public class ConditionEvaluator {
     private final WorkflowConditionRepository workflowConditionRepository;
     private final WorkflowIntegrationClient integrationClient;
     private final WorkflowPluginRegistry pluginRegistry;
+    private final ProjectPermissionClient projectPermissionClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<String> evaluateAll(UUID transitionId, WorkflowContext ctx) {
@@ -125,11 +126,17 @@ public class ConditionEvaluator {
         if (permission == null || permission.isBlank()) {
             return true;
         }
+        if (ctx.getUserId() == null || ctx.getProjectId() == null) {
+            return false;
+        }
         Object perms = ctx.getUserData().get("permissions");
         if (perms instanceof List<?> list) {
-            return list.stream().anyMatch(p -> permission.equalsIgnoreCase(String.valueOf(p)));
+            boolean cached = list.stream().anyMatch(p -> permission.equalsIgnoreCase(String.valueOf(p)));
+            if (cached) {
+                return true;
+            }
         }
-        return true; // permissive when user service has no permission list
+        return projectPermissionClient.hasPermission(ctx.getUserId(), ctx.getProjectId(), permission);
     }
 
     private boolean allSubtasksMatch(String requiredStatus, WorkflowContext ctx) {

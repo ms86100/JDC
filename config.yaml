@@ -178,6 +178,13 @@ services:
     health_timeout: 300
     deps: ["auth"]
 
+  test:
+    port: 8095
+    dir: "jira-test-service"
+    jar: "jira-test-service-1.0.0.jar"
+    health: "/actuator/health"
+    deps: ["auth"]
+
 # ---------------------------------------------------------------------------
 # FRONTEND
 # ---------------------------------------------------------------------------
@@ -193,8 +200,10 @@ startup:
   # Build JARs automatically if they don't exist
   build_if_missing: true
 
-  # Maven command for building
-  maven_flags: "-DskipTests"
+  # Maven command for building (-q quiet; launcher adds -T 1C when maven_parallel is true)
+  maven_flags: "-Dmaven.test.skip=true -q"
+  maven_parallel: true
+  max_parallel_builds: 4
 
   # Health check settings
   health_check_path: "/actuator/health"
@@ -205,6 +214,8 @@ startup:
 
   # Process management
   shutdown_timeout: 15       # seconds to wait before force-kill
+  max_restart_attempts: 3    # per service; stops infinite restart loops
+  restart_cooldown_seconds: 30
 
   # Logging
   log_dir: "logs"
@@ -234,4 +245,5 @@ startup:
 # Plan       : 8092
 # Admin      : 8093
 # Migration  : 8094
+# Test       : 8095
 # Frontend   : 3000

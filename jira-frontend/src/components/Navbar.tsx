@@ -14,7 +14,9 @@ export default function Navbar() {
         <div className="flex gap-4 text-sm">
           <Link to="/dashboard" className="hover:text-gray-300">Dashboard</Link>
           <Link to="/projects" className="hover:text-gray-300">Projects</Link>
-          <Link to="/issues" className="hover:text-gray-300">Issues</Link>
+          <Link to="/tests" className="hover:text-gray-300">Tests</Link>
+          <Link to="/tests/shared-steps" className="hover:text-gray-300">Shared Steps</Link>
+          <Link to="/tests/flaky" className="hover:text-gray-300">Flaky Tests</Link>
           <Link to="/boards" className="hover:text-gray-300">Boards</Link>
           <Link to="/sprints" className="hover:text-gray-300">Sprints</Link>
           <Link to="/workflows" className="hover:text-gray-300">Workflows</Link>

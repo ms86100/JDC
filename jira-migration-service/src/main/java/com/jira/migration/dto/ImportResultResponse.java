@@ -21,6 +21,7 @@ public class ImportResultResponse {
     private List<EntityWarning> warnings;
     private String errorSummary;
     private Map<String, Object> resultMetadata;
+    private Long durationMs;
 
     @Data
     @Builder

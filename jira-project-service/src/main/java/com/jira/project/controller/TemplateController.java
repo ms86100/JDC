@@ -29,6 +29,16 @@ public class TemplateController {
     private final TemplateService templateService;
 
     /**
+     * Full template catalog for Create Project wizard (categories, capabilities, recommended).
+     */
+    @GetMapping("/catalog")
+    @Operation(summary = "Get template catalog",
+            description = "Returns Jira DC-style template catalog with categories, capabilities, and recommended templates")
+    public ResponseEntity<TemplateCatalogResponse> getTemplateCatalog() {
+        return ResponseEntity.ok(templateService.getTemplateCatalog());
+    }
+
+    /**
      * Get all templates grouped by category
      * This is used by the Create Project modal to show template selection
      */

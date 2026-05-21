@@ -79,6 +79,21 @@ public class ProjectController {
         return ResponseEntity.ok(scheme);
     }
 
+    @GetMapping("/{id}/schemes")
+    @Operation(summary = "Get project scheme IDs bundle", description = "Returns compact IDs for all schemes assigned to the project")
+    public ResponseEntity<ProjectSchemesBundleResponse> getProjectSchemesBundle(
+            @Parameter(description = "Project ID") @PathVariable UUID id) {
+        return ResponseEntity.ok(projectSchemeService.getSchemesBundle(id));
+    }
+
+    @GetMapping("/{id}/scheme/screens")
+    @Operation(summary = "Resolve screen IDs for issue type", description = "Returns create/edit/view screen IDs from the project screen scheme")
+    public ResponseEntity<ProjectScreenResolutionResponse> resolveProjectScreens(
+            @PathVariable UUID id,
+            @RequestParam(required = false) UUID issueTypeId) {
+        return ResponseEntity.ok(projectSchemeService.resolveScreens(id, issueTypeId));
+    }
+
     @GetMapping("/key/check/{key}")
     @Operation(summary = "Check project key availability", description = "Validates if a project key is available and follows format rules")
     public ResponseEntity<ProjectKeyCheckResponse> checkProjectKey(

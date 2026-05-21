@@ -5,6 +5,7 @@ export interface RegisterRequest { username: string; email: string; password: st
 export interface AuthResponse {
   accessToken: string; refreshToken: string; tokenType: string;
   expiresIn: number; userId: string; username: string; email: string; roles: string[];
+  projectId?: string;
 }
 export interface UserDto { id: string; username: string; email: string; active: boolean; roles: string[] }
 

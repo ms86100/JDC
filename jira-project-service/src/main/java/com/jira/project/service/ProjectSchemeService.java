@@ -3,6 +3,8 @@ package com.jira.project.service;
 import com.jira.project.dto.AssignIssueTypeSchemeRequest;
 import com.jira.project.dto.AssignWorkflowSchemeRequest;
 import com.jira.project.dto.ProjectSchemeResponse;
+import com.jira.project.dto.ProjectSchemesBundleResponse;
+import com.jira.project.dto.ProjectScreenResolutionResponse;
 import com.jira.project.entity.*;
 import com.jira.project.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +30,10 @@ public class ProjectSchemeService {
     private final NotificationSchemeRepository notificationSchemeRepository;
     private final ScreenSchemeRepository screenSchemeRepository;
     private final ScreenSchemeScreenRepository screenSchemeScreenRepository;
+    private final ScreenSchemeIssueTypeScreenRepository screenSchemeIssueTypeScreenRepository;
+    private final FieldConfigurationSchemeRepository fieldConfigurationSchemeRepository;
     private final TemplateSchemeMappingRepository templateSchemeMappingRepository;
+    private final TemplateSchemeDefaultRepository templateSchemeDefaultRepository;
     private final ProjectTemplateRepository projectTemplateRepository;
 
     public ProjectSchemeResponse getSchemeByProjectId(UUID projectId) {
@@ -40,6 +45,26 @@ public class ProjectSchemeService {
         }
 
         return buildSchemeResponse(scheme);
+    }
+
+    public ProjectSchemesBundleResponse getSchemesBundle(UUID projectId) {
+        ProjectScheme scheme = projectSchemeRepository.findByProjectId(projectId).orElse(null);
+        if (scheme == null) {
+            return ProjectSchemesBundleResponse.builder()
+                    .projectId(projectId)
+                    .build();
+        }
+        return ProjectSchemesBundleResponse.builder()
+                .projectId(projectId)
+                .projectSchemeId(scheme.getId())
+                .issueTypeSchemeId(scheme.getIssueTypeScheme() != null ? scheme.getIssueTypeScheme().getId() : null)
+                .workflowSchemeId(scheme.getWorkflowScheme() != null ? scheme.getWorkflowScheme().getId() : null)
+                .permissionSchemeId(scheme.getPermissionScheme() != null ? scheme.getPermissionScheme().getId() : null)
+                .notificationSchemeId(scheme.getNotificationScheme() != null ? scheme.getNotificationScheme().getId() : null)
+                .screenSchemeId(scheme.getScreenScheme() != null ? scheme.getScreenScheme().getId() : null)
+                .fieldConfigurationSchemeId(scheme.getFieldConfigurationScheme() != null
+                        ? scheme.getFieldConfigurationScheme().getId() : null)
+                .build();
     }
 
     @Transactional
@@ -56,71 +81,42 @@ public class ProjectSchemeService {
         ProjectScheme.ProjectSchemeBuilder builder = ProjectScheme.builder()
                 .project(project);
 
-        // First, try to assign template-specific schemes if templateId is provided
+        // Assign template-specific schemes from mappings, then template_scheme_defaults
         if (templateId != null) {
-            List<TemplateSchemeMapping> templateSchemes = templateSchemeMappingRepository.findByTemplateId(templateId);
-            log.debug("Found {} template scheme mappings for template: {}", templateSchemes.size(), templateId);
-
-            if (!templateSchemes.isEmpty()) {
-                log.debug("Assigning template-specific schemes for template: {}", templateId);
-
-                for (TemplateSchemeMapping mapping : templateSchemes) {
-                    UUID schemeId = mapping.getSchemeId();
-                    String schemeName = mapping.getSchemeName();
-
-                    log.debug("Processing scheme mapping - type: {}, name: {}, id: {}", mapping.getSchemeType(), schemeName, schemeId);
-
-                    switch (mapping.getSchemeType()) {
-                        case TemplateSchemeMapping.SCHEME_TYPE_ISSUE_TYPE:
-                            issueTypeSchemeRepository.findById(schemeId)
-                                    .or(() -> issueTypeSchemeRepository.findByName(schemeName))
-                                    .ifPresent(builder::issueTypeScheme);
-                            break;
-                        case TemplateSchemeMapping.SCHEME_TYPE_WORKFLOW:
-                            workflowSchemeRepository.findById(schemeId)
-                                    .or(() -> workflowSchemeRepository.findByName(schemeName))
-                                    .ifPresent(builder::workflowScheme);
-                            break;
-                        case TemplateSchemeMapping.SCHEME_TYPE_PERMISSION:
-                            permissionSchemeRepository.findById(schemeId)
-                                    .or(() -> permissionSchemeRepository.findByName(schemeName))
-                                    .ifPresent(builder::permissionScheme);
-                            break;
-                        case TemplateSchemeMapping.SCHEME_TYPE_NOTIFICATION:
-                            notificationSchemeRepository.findById(schemeId)
-                                    .or(() -> notificationSchemeRepository.findByName(schemeName))
-                                    .ifPresent(builder::notificationScheme);
-                            break;
-                        case TemplateSchemeMapping.SCHEME_TYPE_SCREEN:
-                            screenSchemeRepository.findById(schemeId)
-                                    .or(() -> screenSchemeRepository.findByName(schemeName))
-                                    .ifPresent(builder::screenScheme);
-                            break;
-                    }
-                }
-            }
+            applyTemplateSchemeMappings(templateId, builder);
+            applyTemplateSchemeDefaults(templateId, builder);
         }
 
         // Fall back to default schemes for any not yet assigned
-        if (builder.build().getIssueTypeScheme() == null) {
+        ProjectScheme partial = builder.build();
+        if (partial.getIssueTypeScheme() == null) {
             issueTypeSchemeRepository.findByIsDefaultTrue()
                     .ifPresent(builder::issueTypeScheme);
         }
-        if (builder.build().getWorkflowScheme() == null) {
+        partial = builder.build();
+        if (partial.getWorkflowScheme() == null) {
             workflowSchemeRepository.findByIsDefaultTrue()
                     .ifPresent(builder::workflowScheme);
         }
-        if (builder.build().getPermissionScheme() == null) {
+        partial = builder.build();
+        if (partial.getPermissionScheme() == null) {
             permissionSchemeRepository.findByIsDefaultTrue()
                     .ifPresent(builder::permissionScheme);
         }
-        if (builder.build().getNotificationScheme() == null) {
+        partial = builder.build();
+        if (partial.getNotificationScheme() == null) {
             notificationSchemeRepository.findByIsDefaultTrue()
                     .ifPresent(builder::notificationScheme);
         }
-        if (builder.build().getScreenScheme() == null) {
+        partial = builder.build();
+        if (partial.getScreenScheme() == null) {
             screenSchemeRepository.findByIsDefaultTrue()
                     .ifPresent(builder::screenScheme);
+        }
+        partial = builder.build();
+        if (partial.getFieldConfigurationScheme() == null) {
+            fieldConfigurationSchemeRepository.findByIsDefaultTrue()
+                    .ifPresent(builder::fieldConfigurationScheme);
         }
 
         ProjectScheme projectScheme = builder.build();
@@ -257,6 +253,80 @@ public class ProjectSchemeService {
         return updated;
     }
 
+    private void applyTemplateSchemeMappings(UUID templateId, ProjectScheme.ProjectSchemeBuilder builder) {
+        List<TemplateSchemeMapping> templateSchemes = templateSchemeMappingRepository.findByTemplateId(templateId);
+        log.debug("Found {} template scheme mappings for template: {}", templateSchemes.size(), templateId);
+
+        for (TemplateSchemeMapping mapping : templateSchemes) {
+            applySchemeMapping(mapping, builder);
+        }
+    }
+
+    private void applyTemplateSchemeDefaults(UUID templateId, ProjectScheme.ProjectSchemeBuilder builder) {
+        templateSchemeDefaultRepository.findByTemplateId(templateId).ifPresent(defaults -> {
+            if (builder.build().getIssueTypeScheme() == null && defaults.getIssueTypeScheme() != null) {
+                builder.issueTypeScheme(defaults.getIssueTypeScheme());
+            }
+            if (builder.build().getWorkflowScheme() == null && defaults.getWorkflowScheme() != null) {
+                builder.workflowScheme(defaults.getWorkflowScheme());
+            }
+            if (builder.build().getPermissionScheme() == null && defaults.getPermissionScheme() != null) {
+                builder.permissionScheme(defaults.getPermissionScheme());
+            }
+            if (builder.build().getNotificationScheme() == null && defaults.getNotificationScheme() != null) {
+                builder.notificationScheme(defaults.getNotificationScheme());
+            }
+            if (builder.build().getScreenScheme() == null && defaults.getScreenScheme() != null) {
+                builder.screenScheme(defaults.getScreenScheme());
+            }
+        });
+    }
+
+    private void applySchemeMapping(TemplateSchemeMapping mapping, ProjectScheme.ProjectSchemeBuilder builder) {
+        UUID schemeId = mapping.getSchemeId();
+        String schemeName = mapping.getSchemeName();
+
+        switch (mapping.getSchemeType()) {
+            case TemplateSchemeMapping.SCHEME_TYPE_ISSUE_TYPE:
+                if (builder.build().getIssueTypeScheme() == null) {
+                    issueTypeSchemeRepository.findById(schemeId)
+                            .or(() -> issueTypeSchemeRepository.findByName(schemeName))
+                            .ifPresent(builder::issueTypeScheme);
+                }
+                break;
+            case TemplateSchemeMapping.SCHEME_TYPE_WORKFLOW:
+                if (builder.build().getWorkflowScheme() == null) {
+                    workflowSchemeRepository.findById(schemeId)
+                            .or(() -> workflowSchemeRepository.findByName(schemeName))
+                            .ifPresent(builder::workflowScheme);
+                }
+                break;
+            case TemplateSchemeMapping.SCHEME_TYPE_PERMISSION:
+                if (builder.build().getPermissionScheme() == null) {
+                    permissionSchemeRepository.findById(schemeId)
+                            .or(() -> permissionSchemeRepository.findByName(schemeName))
+                            .ifPresent(builder::permissionScheme);
+                }
+                break;
+            case TemplateSchemeMapping.SCHEME_TYPE_NOTIFICATION:
+                if (builder.build().getNotificationScheme() == null) {
+                    notificationSchemeRepository.findById(schemeId)
+                            .or(() -> notificationSchemeRepository.findByName(schemeName))
+                            .ifPresent(builder::notificationScheme);
+                }
+                break;
+            case TemplateSchemeMapping.SCHEME_TYPE_SCREEN:
+                if (builder.build().getScreenScheme() == null) {
+                    screenSchemeRepository.findById(schemeId)
+                            .or(() -> screenSchemeRepository.findByName(schemeName))
+                            .ifPresent(builder::screenScheme);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
     private ProjectSchemeResponse buildSchemeResponse(ProjectScheme scheme) {
         ProjectSchemeResponse.ProjectSchemeResponseBuilder builder = ProjectSchemeResponse.builder()
                 .id(scheme.getId())
@@ -286,13 +356,24 @@ public class ProjectSchemeService {
 
         if (scheme.getWorkflowScheme() != null) {
             WorkflowScheme workflowScheme = scheme.getWorkflowScheme();
-            var mappings = workflowSchemeWorkflowRepository.findBySchemeIdAndIssueTypeNameIsNull(workflowScheme.getId());
-            String defaultWorkflowName = mappings.isEmpty() ? null : mappings.get(0).getWorkflowName();
+            var defaultMappings = workflowSchemeWorkflowRepository
+                    .findBySchemeIdAndIssueTypeNameIsNull(workflowScheme.getId());
+            String defaultWorkflowName = defaultMappings.isEmpty() ? null : defaultMappings.get(0).getWorkflowName();
+
+            var typeMappings = workflowSchemeWorkflowRepository
+                    .findBySchemeIdAndIssueTypeNameIsNotNull(workflowScheme.getId());
+            ProjectSchemeResponse.WorkflowMappingInfo[] mappingInfos = typeMappings.stream()
+                    .map(m -> ProjectSchemeResponse.WorkflowMappingInfo.builder()
+                            .issueTypeName(m.getIssueTypeName())
+                            .workflowName(m.getWorkflowName())
+                            .build())
+                    .toArray(ProjectSchemeResponse.WorkflowMappingInfo[]::new);
 
             builder.workflowScheme(ProjectSchemeResponse.WorkflowSchemeInfo.builder()
                     .id(workflowScheme.getId())
                     .name(workflowScheme.getName())
                     .defaultWorkflowName(defaultWorkflowName)
+                    .mappings(mappingInfos)
                     .build());
         }
 
@@ -325,13 +406,107 @@ public class ProjectSchemeService {
                             .build())
                     .toArray(ProjectSchemeResponse.ScreenMappingInfo[]::new);
 
+            var overrides = screenSchemeIssueTypeScreenRepository.findBySchemeId(screenScheme.getId());
+            ProjectSchemeResponse.IssueTypeScreenOverrideInfo[] overrideInfos = overrides.stream()
+                    .map(o -> ProjectSchemeResponse.IssueTypeScreenOverrideInfo.builder()
+                            .issueTypeId(o.getIssueTypeId())
+                            .screenType(o.getScreenType())
+                            .screenId(o.getScreenId())
+                            .build())
+                    .toArray(ProjectSchemeResponse.IssueTypeScreenOverrideInfo[]::new);
+
             builder.screenScheme(ProjectSchemeResponse.ScreenSchemeInfo.builder()
                     .id(screenScheme.getId())
                     .name(screenScheme.getName())
                     .screens(screenMappings)
+                    .issueTypeOverrides(overrideInfos)
+                    .build());
+        }
+
+        if (scheme.getFieldConfigurationScheme() != null) {
+            FieldConfigurationScheme fieldScheme = scheme.getFieldConfigurationScheme();
+            builder.fieldConfigurationScheme(ProjectSchemeResponse.FieldConfigurationSchemeInfo.builder()
+                    .id(fieldScheme.getId())
+                    .name(fieldScheme.getName())
                     .build());
         }
 
         return builder.build();
+    }
+
+    /**
+     * Resolves CREATE/EDIT/VIEW screen IDs for a project. Issue-type-specific overrides
+     * can be added when issue-type screen scheme mappings are stored on the project.
+     */
+    public ProjectScreenResolutionResponse resolveScreens(UUID projectId, UUID issueTypeId) {
+        ProjectSchemeResponse scheme = getSchemeByProjectId(projectId);
+        UUID createId = null;
+        UUID editId = null;
+        UUID viewId = null;
+        UUID defaultId = null;
+
+        if (scheme != null && scheme.getScreenScheme() != null) {
+            UUID screenSchemeId = scheme.getScreenScheme().getId();
+
+            if (issueTypeId != null && screenSchemeId != null) {
+                for (ScreenSchemeIssueTypeScreen override :
+                        screenSchemeIssueTypeScreenRepository.findBySchemeIdAndIssueTypeId(screenSchemeId, issueTypeId)) {
+                    if (override.getScreenType() == null || override.getScreenId() == null) {
+                        continue;
+                    }
+                    String type = override.getScreenType().toUpperCase(Locale.ROOT);
+                    switch (type) {
+                        case "CREATE" -> createId = override.getScreenId();
+                        case "EDIT" -> editId = override.getScreenId();
+                        case "VIEW" -> viewId = override.getScreenId();
+                        case "DEFAULT" -> defaultId = override.getScreenId();
+                        default -> { }
+                    }
+                }
+            }
+
+            if (scheme.getScreenScheme().getScreens() != null) {
+                for (ProjectSchemeResponse.ScreenMappingInfo mapping : scheme.getScreenScheme().getScreens()) {
+                    if (mapping.getScreenType() == null || mapping.getScreenId() == null) {
+                        continue;
+                    }
+                    String type = mapping.getScreenType().toUpperCase(Locale.ROOT);
+                    switch (type) {
+                        case "CREATE" -> {
+                            if (createId == null) createId = mapping.getScreenId();
+                        }
+                        case "EDIT" -> {
+                            if (editId == null) editId = mapping.getScreenId();
+                        }
+                        case "VIEW" -> {
+                            if (viewId == null) viewId = mapping.getScreenId();
+                        }
+                        case "DEFAULT" -> {
+                            if (defaultId == null) defaultId = mapping.getScreenId();
+                        }
+                        default -> { }
+                    }
+                }
+            }
+        }
+
+        if (createId == null) {
+            createId = defaultId;
+        }
+        if (editId == null) {
+            editId = defaultId;
+        }
+        if (viewId == null) {
+            viewId = defaultId;
+        }
+
+        return ProjectScreenResolutionResponse.builder()
+                .projectId(projectId)
+                .issueTypeId(issueTypeId)
+                .createScreenId(createId)
+                .editScreenId(editId)
+                .viewScreenId(viewId)
+                .defaultScreenId(defaultId)
+                .build();
     }
 }

@@ -46,6 +46,10 @@ public class EnvironmentMatrix {
     @Builder.Default
     private Integer validCombinations = 0;
 
+    @Column(name = "invalid_combinations")
+    @Builder.Default
+    private Integer invalidCombinations = 0;
+
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;

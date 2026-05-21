@@ -65,6 +65,9 @@ public class TestIssue {
     @Builder.Default
     private Boolean archived = false;
 
+    @Column(name = "folder_id")
+    private UUID folderId;
+
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;

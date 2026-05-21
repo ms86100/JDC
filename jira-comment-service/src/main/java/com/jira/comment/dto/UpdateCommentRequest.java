@@ -22,4 +22,6 @@ public class UpdateCommentRequest {
      */
     @Min(0)
     private Long version;
+
+    private Boolean internal;
 }

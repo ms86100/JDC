@@ -17,7 +17,7 @@ import java.util.function.Consumer;
  * Event publisher for migration events.
  * Supports both Spring ApplicationEventPublisher and custom listeners.
  */
-@Component
+@Component("batchMigrationEventPublisher")
 @RequiredArgsConstructor
 @Slf4j
 public class MigrationEventPublisher {

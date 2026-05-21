@@ -3,6 +3,7 @@ package com.jira.migration.persister;
 import com.jira.migration.entity.EntityStatus;
 import com.jira.migration.exception.*;
 import com.jira.migration.repository.EntityStatusRepository;
+import com.jira.migration.service.ChunkedAttachmentUploadService;
 import com.jira.migration.service.clients.*;
 import com.jira.migration.service.clients.dto.*;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class AttachmentPersisterHandler {
     private final EntityStatusRepository entityStatusRepository;
     private final AttachmentServiceClient attachmentServiceClient;
     private final IssueServiceClient issueServiceClient;
+    private final ChunkedAttachmentUploadService chunkedAttachmentUploadService;
 
     // Track created attachments for rollback
     private final List<String> createdAttachmentIds = new ArrayList<>();
@@ -82,20 +84,18 @@ public class AttachmentPersisterHandler {
             String mimeType = (String) attachmentData.getOrDefault("mimeType", detectMimeType(fileName));
             String uploadedBy = (String) attachmentData.get("authorId");
 
-            // Build upload request
-            AttachmentServiceClient.AttachmentUploadRequest uploadRequest =
-                    AttachmentServiceClient.AttachmentUploadRequest.builder()
-                            .issueId(issueId)
-                            .fileName(fileName)
-                            .content(fileContent)
-                            .size(fileSize)
-                            .mimeType(mimeType)
-                            .uploadedBy(uploadedBy)
-                            .build();
-
-            // Call real attachment service
-            AttachmentResponse response = uploadAttachmentWithRetry(uploadRequest);
-            String attachmentId = response.getId();
+            String expectedChecksum = (String) attachmentData.get("expectedChecksum");
+            ChunkedAttachmentUploadService.UploadResult uploadResult =
+                    chunkedAttachmentUploadService.upload(
+                            jobId,
+                            issueId,
+                            fileName,
+                            fileContent,
+                            mimeType,
+                            uploadedBy,
+                            expectedChecksum);
+            String attachmentId = uploadResult.attachmentId();
+            String verifiedChecksum = uploadResult.checksum();
 
             // Track for potential rollback
             createdAttachmentIds.add(attachmentId);
@@ -104,11 +104,14 @@ public class AttachmentPersisterHandler {
             updateEntityStatus(jobId, issueKey + ":" + fileName, attachmentId, "ATTACHMENT", true);
 
             result.setSuccess(true);
-            result.setAttachmentId(UUID.fromString(attachmentId));
+            result.setAttachmentId(parseUuid(attachmentId));
             result.setFileName(fileName);
             result.setFileSize(fileSize);
+            result.setChecksum(verifiedChecksum);
+            result.setChunked(uploadResult.chunked());
 
-            log.info("Persisted attachment {} for issue {} ({} bytes)", fileName, issueKey, fileSize);
+            log.info("Persisted attachment {} for issue {} ({} bytes, chunked={}, checksum={})",
+                    fileName, issueKey, fileSize, uploadResult.chunked(), verifiedChecksum);
 
         } catch (IllegalArgumentException e) {
             result.setSuccess(false);
@@ -174,6 +177,14 @@ public class AttachmentPersisterHandler {
     private String getFileExtension(String fileName) {
         int lastDot = fileName.lastIndexOf('.');
         return lastDot > 0 ? fileName.substring(lastDot + 1) : "";
+    }
+
+    private UUID parseUuid(String id) {
+        try {
+            return UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     private String detectMimeType(String fileName) {
@@ -290,6 +301,8 @@ public class AttachmentPersisterHandler {
         private UUID attachmentId;
         private String fileName;
         private long fileSize;
+        private String checksum;
+        private boolean chunked;
         private String errorMessage;
 
         public boolean isSuccess() { return success; }
@@ -300,6 +313,10 @@ public class AttachmentPersisterHandler {
         public void setFileName(String fileName) { this.fileName = fileName; }
         public long getFileSize() { return fileSize; }
         public void setFileSize(long fileSize) { this.fileSize = fileSize; }
+        public String getChecksum() { return checksum; }
+        public void setChecksum(String checksum) { this.checksum = checksum; }
+        public boolean isChunked() { return chunked; }
+        public void setChunked(boolean chunked) { this.chunked = chunked; }
         public String getErrorMessage() { return errorMessage; }
         public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
     }

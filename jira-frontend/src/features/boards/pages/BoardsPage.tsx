@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sprintApi, SprintResponse } from '../../../api/sprintApi';
 import EnhancedKanbanBoard from '../components/EnhancedKanbanBoard';
 
 const BoardsPage: React.FC = () => {
-  const [view, setView] = useState<'board' | 'sprint'>('sprint');
+  const [searchParams] = useSearchParams();
+  const boardIdFromUrl = searchParams.get('boardId');
+  const projectIdFromUrl = searchParams.get('project');
+  const [view, setView] = useState<'board' | 'sprint'>(boardIdFromUrl ? 'board' : 'sprint');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [form, setForm] = useState({ name: '', goal: '', startDate: '', endDate: '' });
   const queryClient = useQueryClient();
@@ -153,7 +157,10 @@ const BoardsPage: React.FC = () => {
 
       {view === 'board' ? (
         <div className="bg-white rounded-lg shadow" style={{ height: 'calc(100vh - 300px)' }}>
-          <EnhancedKanbanBoard />
+          <EnhancedKanbanBoard
+            projectId={projectIdFromUrl ?? undefined}
+            initialBoardId={boardIdFromUrl ?? undefined}
+          />
         </div>
       ) : (
         <div className="space-y-6">

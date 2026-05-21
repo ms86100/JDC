@@ -1,5 +1,8 @@
 package com.jira.migration.persister;
 
+import com.jira.migration.entity.ProjectMapping;
+import com.jira.migration.repository.ProjectMappingRepository;
+import com.jira.migration.service.clients.IssueServiceClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -8,13 +11,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 /**
- * Version Persister Handler
- * Handles project version creation with release management
+ * Version Persister Handler — creates versions via issue-service API.
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class VersionPersisterHandler {
+
+    private final IssueServiceClient issueServiceClient;
+    private final ProjectMappingRepository projectMappingRepository;
 
     @Transactional(rollbackFor = Exception.class)
     public VersionPersistResult persistVersion(Map<String, Object> versionData, UUID jobId) {
@@ -22,8 +27,15 @@ public class VersionPersisterHandler {
 
         try {
             String projectKey = (String) versionData.get("projectKey");
-            if (projectKey == null) {
-                throw new IllegalArgumentException("Project key is required");
+            String projectId = (String) versionData.get("projectId");
+            if (projectId == null && projectKey != null) {
+                projectId = projectMappingRepository.findByJobIdAndSourceKey(jobId, projectKey)
+                        .map(ProjectMapping::getTargetId)
+                        .map(UUID::toString)
+                        .orElse(null);
+            }
+            if (projectId == null) {
+                throw new IllegalArgumentException("Project key or ID is required");
             }
 
             String name = (String) versionData.get("name");
@@ -31,23 +43,29 @@ public class VersionPersisterHandler {
                 throw new IllegalArgumentException("Version name is required");
             }
 
-            VersionEntity version = VersionEntity.builder()
-                    .projectKey(projectKey)
-                    .name(name)
-                    .description((String) versionData.get("description"))
-                    .released((Boolean) versionData.getOrDefault("released", false))
-                    .archived((Boolean) versionData.getOrDefault("archived", false))
-                    .releaseDate(versionData.get("releaseDate") != null ?
-                            java.time.LocalDate.parse(versionData.get("releaseDate").toString()) : null)
-                    .sequence((Integer) versionData.getOrDefault("sequence", 0))
-                    .build();
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("projectId", projectId);
+            payload.put("name", name);
+            if (versionData.get("description") != null) {
+                payload.put("description", versionData.get("description"));
+            }
+            if (versionData.get("released") != null) {
+                payload.put("isReleased", versionData.get("released"));
+            }
+            if (versionData.get("archived") != null) {
+                payload.put("isArchived", versionData.get("archived"));
+            }
+            if (versionData.get("releaseDate") != null) {
+                payload.put("releaseDate", versionData.get("releaseDate").toString());
+            }
 
-            UUID versionId = persistToDatabase(version);
+            Map<String, Object> response = issueServiceClient.createVersion(payload);
+            Object id = response.get("id");
+            UUID versionId = id != null ? UUID.fromString(id.toString()) : UUID.randomUUID();
 
             result.setSuccess(true);
             result.setVersionId(versionId);
             result.setVersionName(name);
-
             log.info("Persisted version {} for project {}", name, projectKey);
 
         } catch (Exception e) {
@@ -56,24 +74,6 @@ public class VersionPersisterHandler {
         }
 
         return result;
-    }
-
-    private UUID persistToDatabase(VersionEntity version) {
-        log.debug("Persisting version: {} for project {}", version.getName(), version.getProjectKey());
-        return UUID.randomUUID();
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class VersionEntity {
-        private UUID id;
-        private String projectKey;
-        private String name;
-        private String description;
-        private Boolean released;
-        private Boolean archived;
-        private java.time.LocalDate releaseDate;
-        private Integer sequence;
     }
 
     public static class VersionPersistResult {

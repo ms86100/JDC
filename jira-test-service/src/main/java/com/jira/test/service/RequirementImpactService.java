@@ -62,9 +62,9 @@ public class RequirementImpactService {
     @Transactional
     public Map<String, Object> analyzeChangeImpact(UUID requirementId, Integer fromVersion, Integer toVersion) {
         RequirementVersion from = versionRepository.findByRequirementIdAndVersionNumber(requirementId, fromVersion)
-                .orElseThrow(() -> new ResourceNotFoundException("Version not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("RequirementVersion", "id", requirementId.toString()));
         RequirementVersion to = versionRepository.findByRequirementIdAndVersionNumber(requirementId, toVersion)
-                .orElseThrow(() -> new ResourceNotFoundException("Version not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("RequirementVersion", "id", requirementId.toString()));
 
         // Detect field changes
         List<Map<String, String>> fieldChanges = detectFieldChanges(from, to);
@@ -73,7 +73,7 @@ public class RequirementImpactService {
         List<RequirementLink> links = requirementLinkRepository.findByRequirementKey(requirementId.toString());
         List<Map<String, Object>> affectedTests = links.stream().map(link -> {
             Map<String, Object> test = new HashMap<>();
-            test.put("testId", link.getTestIssueId());
+            test.put("testId", link.getTestId());
             test.put("impactLevel", determineImpactLevel(fieldChanges));
             return test;
         }).toList();

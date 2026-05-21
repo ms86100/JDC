@@ -565,6 +565,46 @@ public class IssueAdministrationService {
         return screenRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
+    public Map<String, Object> getScreenFields(String screenId) {
+        ScreenEntity screen = screenRepository.findById(screenId)
+                .orElseThrow(() -> new IllegalArgumentException("Screen not found: " + screenId));
+        List<Map<String, Object>> tabs = new ArrayList<>();
+        List<String> allFieldIds = new ArrayList<>();
+        if (screen.getTabs() != null) {
+            for (ScreenTab tab : screen.getTabs()) {
+                List<String> fieldIds = parseFieldIds(tab.getFieldIds());
+                allFieldIds.addAll(fieldIds);
+                tabs.add(Map.of(
+                        "tabName", tab.getTabName() != null ? tab.getTabName() : "Tab",
+                        "fieldIds", fieldIds));
+            }
+        }
+        return Map.of(
+                "screenId", screen.getId(),
+                "screenName", screen.getName(),
+                "tabs", tabs,
+                "fieldIds", allFieldIds.stream().distinct().toList());
+    }
+
+    private List<String> parseFieldIds(String raw) {
+        if (raw == null || raw.isBlank()) return List.of();
+        String trimmed = raw.trim();
+        try {
+            if (trimmed.startsWith("[")) {
+                return Arrays.stream(trimmed.replace("[", "").replace("]", "").split(","))
+                        .map(s -> s.trim().replace("\"", ""))
+                        .filter(s -> !s.isEmpty())
+                        .toList();
+            }
+        } catch (Exception ignored) {
+        }
+        return Arrays.stream(trimmed.split("[,;\\s]+"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+    }
+
     @Transactional
     public ScreenEntity createScreen(Map<String, Object> data) {
         ScreenEntity screen = ScreenEntity.builder()

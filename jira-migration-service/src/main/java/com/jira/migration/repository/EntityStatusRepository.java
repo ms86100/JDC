@@ -20,6 +20,8 @@ public interface EntityStatusRepository extends JpaRepository<EntityStatus, UUID
 
     List<EntityStatus> findByJobIdAndEntityType(UUID jobId, String entityType);
 
+    Optional<EntityStatus> findFirstByJobIdAndEntityKey(UUID jobId, String entityKey);
+
     @Query("SELECT e FROM EntityStatus e WHERE e.jobId = :jobId AND e.status = 'FAILED' ORDER BY e.processingOrder ASC")
     List<EntityStatus> findFailedEntities(@Param("jobId") UUID jobId);
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import testApi, { TestResponse } from '../../../api/testApi';
+import combinedApi, { TestResponse } from '../../../api/testApi';
 import { TestStepsEditor, TestStatusBadge, TestTypeBadge, RequirementTag, ExecutionStatusBadge } from '../components/TestComponents';
 import TestExecutionPanel from '../components/TestExecutionPanel';
 
@@ -21,7 +21,7 @@ export const TestDetailPage: React.FC = () => {
   const loadTest = async (id: string) => {
     setLoading(true);
     try {
-      const response = await testApi.getTest(id);
+      const response = await combinedApi.getTest(id);
       setTest(response);
       setStepData(response.testSteps || []);
     } catch (error) {
@@ -34,7 +34,7 @@ export const TestDetailPage: React.FC = () => {
   const handleSaveSteps = async () => {
     if (!testId) return;
     try {
-      await testApi.updateTest(testId, { testSteps: stepData } as any);
+      await combinedApi.updateTest(testId, { testSteps: stepData } as any);
       setEditingSteps(false);
       loadTest(testId);
     } catch (error) {

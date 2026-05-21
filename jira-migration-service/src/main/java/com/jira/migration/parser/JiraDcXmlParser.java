@@ -1,16 +1,10 @@
 package com.jira.migration.parser;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.jira.migration.dto.ValidationResult;
-import com.jira.migration.entity.EntityStatus;
 import com.jira.migration.entity.ProjectMapping;
 import com.jira.migration.entity.UserMapping;
 import com.jira.migration.exception.EntityNotFoundException;
 import com.jira.migration.exception.MigrationException;
-import com.jira.migration.exception.ValidationException;
 import com.jira.migration.repository.EntityStatusRepository;
 import com.jira.migration.repository.ProjectMappingRepository;
 import com.jira.migration.repository.UserMappingRepository;
@@ -53,178 +47,99 @@ public class JiraDcXmlParser {
             Map.entry("Watcher", "watchers")
     );
 
-    public static class JiraXmlBackup {
-        public JiraXmlBackup.BackupInfo backupInfo;
-        public List<JiraXmlBackup.EntityGroup> entityGroups;
-
-        @lombok.Data
-        public static class BackupInfo {
-            public String jiraVersion;
-            public String exportDate;
-            public String exportUser;
-        }
-
-        @lombok.Data
-        public static class EntityGroup {
-            public String groupName;
-            public List<EntityRecord> entities;
-        }
-
-        @lombok.Data
-        public static class EntityRecord {
-            public String entityName;
-            public Map<String, String> fields;
-        }
+    public ParseResult parseXmlBackup(String xmlContent, UUID jobId) {
+        return parseXmlBackup(xmlContent, jobId, null);
     }
 
-    public ParseResult parseXmlBackup(String xmlContent, UUID jobId) {
+    public ParseResult parseXmlBackup(String xmlContent, UUID jobId, java.nio.file.Path xmlPath) {
         log.info("Parsing Jira DC XML backup for job: {}", jobId);
 
-        try {
-            XmlMapper xmlMapper = new XmlMapper();
-            xmlMapper.registerModule(new JavaTimeModule());
-            xmlMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        JiraDcXmlFormat format = JiraDcXmlFormatDetector.detect(xmlContent);
+        if (xmlPath != null) {
+            if (format == JiraDcXmlFormat.ENTITIES_XML) {
+                List<ParsedEntity> entities = JiraDcEntitiesXmlParser.parse(xmlPath);
+                ParseResult result = new ParseResult();
+                result.setXmlFormat(format);
+                result.setEntities(entities);
+                result.setTotalEntities(entities.size());
+                log.info("Parsed {} entities from {} XML (streamed path)", result.getTotalEntities(), format);
+                return result;
+            }
+            if (format == JiraDcXmlFormat.RSS_092) {
+                List<ParsedEntity> entities = JiraDcRss092Parser.parsePath(xmlPath);
+                ParseResult result = new ParseResult();
+                result.setXmlFormat(format);
+                result.setEntities(entities);
+                result.setTotalEntities(entities.size());
+                log.info("Parsed {} entities from RSS (streamed path)", result.getTotalEntities());
+                return result;
+            }
+            if (format == JiraDcXmlFormat.ENTITY_BACKUP) {
+                List<ParsedEntity> entities = JiraDcEntityBackupSaxParser.parse(xmlPath);
+                ParseResult result = new ParseResult();
+                result.setXmlFormat(format);
+                result.setEntities(entities);
+                result.setTotalEntities(entities.size());
+                log.info("Parsed {} entities from Entity backup (streamed path)", result.getTotalEntities());
+                return result;
+            }
+        }
+        log.info("Detected Jira DC XML format: {}", format);
 
-            // Parse XML structure
-            // Note: In production, use proper XML parsing with namespace handling
-            Map<String, Object> parsed = xmlMapper.readValue(xmlContent, Map.class);
-
+        if (format == JiraDcXmlFormat.ENTITY_BACKUP && xmlPath != null) {
+            List<ParsedEntity> entities = JiraDcEntityBackupSaxParser.parse(xmlPath);
             ParseResult result = new ParseResult();
-            result.setTotalEntities(countEntities(parsed));
-
-            // Map entities
-            result.setEntities(mapEntities(parsed));
-
-            log.info("Parsed {} entities from XML backup", result.getTotalEntities());
+            result.setXmlFormat(format);
+            result.setEntities(entities);
+            result.setTotalEntities(entities.size());
+            log.info("Parsed {} entities from Entity backup (streamed in-memory path)", result.getTotalEntities());
             return result;
-
-        } catch (Exception e) {
-            log.error("Failed to parse XML backup", e);
-            throw new MigrationException("Failed to parse XML backup: " + e.getMessage(), e);
-        }
-    }
-
-    private int countEntities(Map<String, Object> parsed) {
-        int count = 0;
-        if (parsed.containsKey("Entity")) {
-            Object entity = parsed.get("Entity");
-            if (entity instanceof List) {
-                count = ((List<?>) entity).size();
-            } else if (entity instanceof Map) {
-                count = 1;
-            }
-        }
-        return count;
-    }
-
-    private List<ParsedEntity> mapEntities(Map<String, Object> parsed) {
-        List<ParsedEntity> entities = new ArrayList<>();
-
-        if (parsed.containsKey("Entity")) {
-            Object entity = parsed.get("Entity");
-            if (entity instanceof List) {
-                for (Object e : (List<?>) entity) {
-                    if (e instanceof Map) {
-                        @SuppressWarnings("unchecked")
-                        Map<String, Object> entityMap = (Map<String, Object>) e;
-                        entities.add(convertToParsedEntity(entityMap));
-                    }
-                }
-            } else if (entity instanceof Map) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> entityMap = (Map<String, Object>) entity;
-                entities.add(convertToParsedEntity(entityMap));
-            }
         }
 
-        return entities;
-    }
+        List<ParsedEntity> entities = switch (format) {
+            case RSS_092 -> JiraDcRss092Parser.parse(xmlContent);
+            case ENTITY_BACKUP -> JiraDcEntityBackupParser.parse(xmlContent);
+            case ENTITIES_XML -> JiraDcEntitiesXmlParser.parse(xmlContent);
+            case UNKNOWN -> throw new MigrationException(
+                    "Unsupported Jira DC XML format. Expected RSS 0.92 (<rss>), "
+                            + "Entity backup (<JiraDcBackup><Entity>), or native entities.xml.");
+        };
 
-    private ParsedEntity convertToParsedEntity(Map<String, Object> entityMap) {
-        ParsedEntity entity = new ParsedEntity();
-        entity.setEntityType((String) entityMap.get("entityName"));
-        entity.setEntityKey(generateEntityKey(entity));
+        ParseResult result = new ParseResult();
+        result.setXmlFormat(format);
+        result.setEntities(entities);
+        result.setTotalEntities(entities.size());
 
-        Map<String, String> fields = new HashMap<>();
-        if (entityMap.containsKey("field")) {
-            Object fieldObj = entityMap.get("field");
-            if (fieldObj instanceof List) {
-                for (Object f : (List<?>) fieldObj) {
-                    if (f instanceof Map) {
-                        @SuppressWarnings("unchecked")
-                        Map<String, Object> fieldMap = (Map<String, Object>) f;
-                        String name = (String) fieldMap.get("name");
-                        String value = (String) fieldMap.get("value");
-                        if (name != null && value != null) {
-                            fields.put(name, value);
-                        }
-                    }
-                }
-            } else if (fieldObj instanceof Map) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> fieldMap = (Map<String, Object>) fieldObj;
-                String name = (String) fieldMap.get("name");
-                Object value = fieldMap.get("value");
-                if (name != null && value != null) {
-                    fields.put(name, value.toString());
-                }
-            }
-        }
-
-        entity.setFields(fields);
-        return entity;
-    }
-
-    private String generateEntityKey(ParsedEntity entity) {
-        Map<String, String> fields = entity.getFields();
-        switch (entity.getEntityType()) {
-            case "Project":
-                return fields.getOrDefault("key", UUID.randomUUID().toString());
-            case "Issue":
-                String pkey = fields.getOrDefault("project", "");
-                String issueNum = fields.getOrDefault("id", UUID.randomUUID().toString().substring(0, 8));
-                return pkey + "-" + issueNum;
-            case "User":
-                return fields.getOrDefault("userKey", fields.getOrDefault("lowerUserName", UUID.randomUUID().toString()));
-            default:
-                return entity.getEntityType() + "-" + UUID.randomUUID().toString().substring(0, 8);
-        }
+        log.info("Parsed {} entities from {} XML", result.getTotalEntities(), format);
+        return result;
     }
 
     public String mapToPlatformEntity(ParsedEntity entity, UUID jobId) {
         String entityType = entity.getEntityType();
 
-        // Map based on entity type
-        switch (entityType) {
-            case "Project":
-                return mapProject(entity, jobId);
-            case "Issue":
-                return mapIssue(entity, jobId);
-            case "User":
-                return mapUser(entity, jobId);
-            case "IssueType":
-                return mapIssueType(entity);
-            case "Status":
-                return mapStatus(entity);
-            case "Priority":
-                return mapPriority(entity);
-            default:
+        return switch (entityType) {
+            case "Project" -> mapProject(entity, jobId);
+            case "Issue" -> mapIssue(entity, jobId);
+            case "User" -> mapUser(entity, jobId);
+            case "IssueType" -> mapIssueType(entity);
+            case "Status" -> mapStatus(entity);
+            case "Priority" -> mapPriority(entity);
+            default -> {
                 log.warn("Unknown entity type for mapping: {}", entityType);
-                return null;
-        }
+                yield null;
+            }
+        };
     }
 
     private String mapProject(ParsedEntity entity, UUID jobId) {
         Map<String, String> fields = entity.getFields();
         String sourceKey = fields.get("key");
 
-        // Check if project already mapped
         Optional<ProjectMapping> existing = projectMappingRepository.findByJobIdAndSourceKey(jobId, sourceKey);
         if (existing.isPresent()) {
             return existing.get().getTargetKey();
         }
 
-        // Generate new key for target
         String targetKey = generateProjectKey(sourceKey, jobId);
 
         ProjectMapping mapping = ProjectMapping.builder()
@@ -241,7 +156,6 @@ public class JiraDcXmlParser {
     private String generateProjectKey(String sourceKey, UUID jobId) {
         String baseKey = sourceKey.toUpperCase().replaceAll("[^A-Z0-9]", "");
 
-        // Ensure unique key
         int suffix = 0;
         String candidateKey = baseKey;
         while (projectMappingRepository.existsByJobIdAndTargetKey(jobId, candidateKey)) {
@@ -258,12 +172,10 @@ public class JiraDcXmlParser {
     private String mapIssue(ParsedEntity entity, UUID jobId) {
         Map<String, String> fields = entity.getFields();
 
-        // Map project key
         String sourceProjectKey = fields.get("project");
         ProjectMapping projectMapping = projectMappingRepository.findByJobIdAndSourceKey(jobId, sourceProjectKey)
                 .orElseThrow(() -> new EntityNotFoundException("Project", sourceProjectKey));
 
-        // Generate issue number
         projectMapping.setIssueKeySequence(projectMapping.getIssueKeySequence() + 1);
         projectMappingRepository.save(projectMapping);
 
@@ -273,8 +185,6 @@ public class JiraDcXmlParser {
     private String mapUser(ParsedEntity entity, UUID jobId) {
         Map<String, String> fields = entity.getFields();
 
-        // Try to match by email or username
-        String email = fields.get("email");
         String username = fields.get("lowerUserName");
 
         Optional<UserMapping> existing = userMappingRepository.findByJobIdAndSourceIdentifier(jobId, username);
@@ -282,7 +192,7 @@ public class JiraDcXmlParser {
             return existing.get().getTargetUsername();
         }
 
-        return username; // Return source username, let service handle mapping
+        return username;
     }
 
     private String mapIssueType(ParsedEntity entity) {
@@ -303,11 +213,14 @@ public class JiraDcXmlParser {
     public static class ParseResult {
         private int totalEntities;
         private List<ParsedEntity> entities;
+        private JiraDcXmlFormat xmlFormat;
 
         public int getTotalEntities() { return totalEntities; }
         public void setTotalEntities(int totalEntities) { this.totalEntities = totalEntities; }
         public List<ParsedEntity> getEntities() { return entities; }
         public void setEntities(List<ParsedEntity> entities) { this.entities = entities; }
+        public JiraDcXmlFormat getXmlFormat() { return xmlFormat; }
+        public void setXmlFormat(JiraDcXmlFormat xmlFormat) { this.xmlFormat = xmlFormat; }
     }
 
     public static class ParsedEntity {

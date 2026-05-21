@@ -3,7 +3,9 @@ package com.jira.workflow.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -23,6 +25,7 @@ public class WorkflowLayout {
     @Column(name = "workflow_id", nullable = false)
     private UUID workflowId;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "layout_data", columnDefinition = "jsonb", nullable = false)
     private String layoutData;
 

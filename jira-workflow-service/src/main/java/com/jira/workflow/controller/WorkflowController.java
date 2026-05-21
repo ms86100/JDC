@@ -23,6 +23,7 @@ public class WorkflowController {
 
     private final WorkflowService workflowService;
     private final WorkflowDetailService workflowDetailService;
+    private final com.jira.workflow.service.WorkflowDescriptorImportService workflowDescriptorImportService;
 
     @PostMapping
     @Operation(summary = "Create a new workflow", description = "Creates a new workflow with optional statuses")
@@ -30,6 +31,14 @@ public class WorkflowController {
             @Valid @RequestBody CreateWorkflowRequest request) {
 
         WorkflowResponse response = workflowService.createWorkflow(request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/import/descriptor")
+    @Operation(summary = "Import workflow from DC descriptor model", description = "Creates workflow, statuses, transitions, validators, conditions, and post-functions in one transaction")
+    public ResponseEntity<WorkflowResponse> importWorkflowDescriptor(
+            @Valid @RequestBody ImportWorkflowDescriptorRequest request) {
+        WorkflowResponse response = workflowDescriptorImportService.importDescriptor(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -149,8 +158,11 @@ public class WorkflowController {
         return ResponseEntity.ok(transitions);
     }
 
+    @Deprecated
     @PostMapping("/issues/{issueId}/execute")
-    @Operation(summary = "Execute workflow transition", description = "Executes a workflow transition on an issue with condition validation")
+    @Operation(
+            summary = "Execute workflow transition (deprecated)",
+            description = "Deprecated — use POST /api/workflows/transitions/execute. Delegates to WorkflowExecutionEngine.")
     public ResponseEntity<TransitionExecutionResponse> executeTransition(
             @Parameter(description = "Issue ID") @PathVariable UUID issueId,
             @Parameter(description = "Transition ID") @RequestParam UUID transitionId,

@@ -28,7 +28,14 @@ spring:
         default_schema: jira_comment
 
   flyway:
-    enabled: false
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: '0'
+    validate-on-migrate: true
+    schemas: jira_comment
+    default-schema: jira_comment
+    table: flyway_schema_history
 
 management:
   endpoints:

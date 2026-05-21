@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import testApi from '../../../api/testApi';
+import combinedApi from '../../../api/testApi';
 import TestList from '../components/TestList';
 import TestCreateModal from '../components/TestCreateModal';
 import TestReportsDashboard from '../components/TestReportsDashboard';
 import TraceabilityMatrix from '../components/TraceabilityMatrix';
 import ImportPanel from '../components/ImportPanel';
+import TestSetsList from '../components/TestSetsList';
+import TestPlansList from '../components/TestPlansList';
 
 export const TestManagementPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -22,7 +24,7 @@ export const TestManagementPage: React.FC = () => {
 
   const loadStats = async () => {
     try {
-      const response = await testApi.getTestSummary(projectId!);
+      const response = await combinedApi.getTestSummary(projectId!);
       setStats({
         tests: response.totalTests,
         sets: response.totalTestSets,
@@ -170,24 +172,12 @@ export const TestManagementPage: React.FC = () => {
           </>
         )}
 
-        {activeView === 'sets' && (
-          <div className="test-sets-view">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Test Sets</h2>
-              <button className="btn btn-secondary">+ Create Test Set</button>
-            </div>
-            <p className="text-gray-500">Create and manage test sets to group related tests.</p>
-          </div>
+        {activeView === 'sets' && projectId && (
+          <TestSetsList projectId={projectId} />
         )}
 
-        {activeView === 'plans' && (
-          <div className="test-plans-view">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Test Plans</h2>
-              <button className="btn btn-secondary">+ Create Test Plan</button>
-            </div>
-            <p className="text-gray-500">Create test plans to organize test execution cycles.</p>
-          </div>
+        {activeView === 'plans' && projectId && (
+          <TestPlansList projectId={projectId} />
         )}
 
         {activeView === 'reports' && projectId && (

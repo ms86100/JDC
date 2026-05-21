@@ -1,6 +1,21 @@
 server:
   port: 8094
 
+migration:
+  security:
+    enabled: true
+  attachment:
+    chunk-size-bytes: 2097152
+    chunked-threshold-bytes: 2097152
+  clamav:
+    enabled: ${CLAMAV_ENABLED:false}
+    host: ${CLAMAV_HOST:localhost}
+    port: ${CLAMAV_PORT:3310}
+  events:
+    publish-interval-ms: 15000
+  retry:
+    process-interval-ms: 20000
+
 spring:
   application:
     name: jira-migration-service
@@ -20,7 +35,7 @@ spring:
       connection-timeout: 20000
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
@@ -28,7 +43,15 @@ spring:
         format_sql: true
         default_schema: jira_migration
   flyway:
-    enabled: false
+    enabled: true
+    schemas: jira_migration
+    default-schema: jira_migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: true
+    out-of-order: false
+    locations: classpath:db/migration
+    table: flyway_schema_history
   data:
     redis:
       repositories:
@@ -67,6 +90,18 @@ job:
   recovery:
     enabled: false
     checkInterruptedOnStartup: false
+
+services:
+  userServiceUrl: ${USER_SERVICE_URL:http://localhost:8082}
+  projectServiceUrl: ${PROJECT_SERVICE_URL:http://localhost:8083}
+  issueServiceUrl: ${ISSUE_SERVICE_URL:http://localhost:8084}
+  adminServiceUrl: ${ADMIN_SERVICE_URL:http://localhost:8093}
+  searchServiceUrl: ${SEARCH_SERVICE_URL:http://localhost:8085}
+
+jira:
+  services:
+    workflow-url: ${WORKFLOW_SERVICE_URL:http://localhost:8085}
+    issue-url: ${ISSUE_SERVICE_URL:http://localhost:8084}
 
 cluster:
   enabled: false

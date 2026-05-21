@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -155,6 +156,11 @@ public class UserServiceClient extends BaseServiceClient {
      * @param email the user email
      * @return optional user response
      */
+    public UserResponse createUser(Map<String, Object> userData) {
+        log.info("Creating user via user-service");
+        return executePost(SERVICE_PATH, userData, UserResponse.class);
+    }
+
     public Optional<UserResponse> findUserByEmail(String email) {
         try {
             return Optional.ofNullable(getUserByEmail(email));

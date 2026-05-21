@@ -45,4 +45,6 @@ public class CreateIssueRequest {
     private String environment;
     private String originalIssueKey;
     private Map<String, String> fieldMappings;
+    private java.time.LocalDateTime migrationCreatedAt;
+    private java.time.LocalDateTime migrationUpdatedAt;
 }

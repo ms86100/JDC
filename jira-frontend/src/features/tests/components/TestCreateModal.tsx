@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import testApi, { CreateTestRequest } from '../../../api/testApi';
+import combinedApi, { CreateTestRequest } from '../../../api/testApi';
 
 interface TestCreateModalProps {
   projectId: string;
@@ -22,7 +22,7 @@ export const TestCreateModal: React.FC<TestCreateModalProps> = ({
     description: '',
     testType: 'MANUAL',
     labels: [],
-    testSteps: [],
+    steps: [],
   });
   const [newLabel, setNewLabel] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -39,13 +39,13 @@ export const TestCreateModal: React.FC<TestCreateModalProps> = ({
 
     setSubmitting(true);
     try {
-      const response = await testApi.createTest({
+      const response = await combinedApi.createTest({
         ...formData,
         folderId,
       });
       onSuccess(response);
       onClose();
-      setFormData({ projectId, name: '', description: '', testType: 'MANUAL', labels: [], testSteps: [] });
+      setFormData({ projectId, name: '', description: '', testType: 'MANUAL', labels: [], steps: [] });
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create test');
     } finally {

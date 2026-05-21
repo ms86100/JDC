@@ -17,6 +17,8 @@ public class FieldMappingResponse {
     private int totalFields;
     private int mappedFields;
     private int unmappedFieldsCount;
+    /** P3-03: type incompatibility warnings for proposed mappings */
+    private List<String> typeWarnings;
 
     @Data
     @Builder

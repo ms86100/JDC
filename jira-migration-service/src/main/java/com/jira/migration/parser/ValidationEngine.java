@@ -5,6 +5,7 @@ import com.jira.migration.dto.ValidationResult;
 import com.jira.migration.entity.CsvTemplate;
 import com.jira.migration.exception.ValidationException;
 import com.jira.migration.repository.CsvTemplateRepository;
+import com.jira.migration.service.DbValidationRuleEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,7 @@ import java.util.regex.Pattern;
 public class ValidationEngine {
 
     private final CsvTemplateRepository csvTemplateRepository;
+    private final DbValidationRuleEngine dbValidationRuleEngine;
     private final ObjectMapper objectMapper;
 
     public ValidationResult validateRow(Map<String, String> rowData, String entityType, int rowNumber) {
@@ -35,6 +37,8 @@ public class ValidationEngine {
             case "USER" -> validateUserRow(rowData, rowNumber, errors, warnings);
             default -> log.warn("No validation rules for entity type: {}", entityType);
         }
+
+        dbValidationRuleEngine.applyRules(entityType, rowData, rowNumber, errors, warnings);
 
         return ValidationResult.builder()
                 .valid(errors.isEmpty())

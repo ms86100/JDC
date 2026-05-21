@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import testApi, { TraceabilityMatrixResponse } from '../../../api/testApi';
+import combinedApi, { TraceabilityMatrixResponse } from '../../../api/testApi';
 
 interface TraceabilityMatrixProps {
   projectId: string;
@@ -18,7 +18,7 @@ export const TraceabilityMatrix: React.FC<TraceabilityMatrixProps> = ({ projectI
   const loadMatrix = async () => {
     setLoading(true);
     try {
-      const response = await testApi.getTraceabilityMatrix(projectId);
+      const response = await combinedApi.getTraceabilityMatrix(projectId);
       setMatrix(response);
     } catch (error) {
       console.error('Failed to load traceability matrix:', error);

@@ -31,5 +31,7 @@ public class AvailableTransitionResponse {
         private UUID screenId;
         private boolean hasScreen;
         private List<TransitionScreenFieldDto> screenFields;
+        /** Project permission required (from transition metadata), e.g. RESOLVE_ISSUES */
+        private String requiredPermission;
     }
 }

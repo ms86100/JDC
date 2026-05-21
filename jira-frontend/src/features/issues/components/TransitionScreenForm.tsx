@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { resolutionApi, type Resolution } from '../../../api/issueApi';
 import { useQuery } from '@tanstack/react-query';
 import './TransitionScreenForm.css';
@@ -108,9 +108,7 @@ export default function TransitionScreenForm({
         if (isCommentField(field)) {
           return (
             <label key={field.fieldId} className="transition-screen-field">
-              <span>
-                Comment{field.required ? ' *' : ''}
-              </span>
+              <span>Comment{field.required ? ' *' : ''}</span>
               <textarea
                 rows={3}
                 value={(localScreen[field.fieldName] as string) ?? comment}
@@ -124,9 +122,7 @@ export default function TransitionScreenForm({
         if (isResolutionField(field)) {
           return (
             <label key={field.fieldId} className="transition-screen-field">
-              <span>
-                Resolution{field.required ? ' *' : ''}
-              </span>
+              <span>Resolution{field.required ? ' *' : ''}</span>
               <select
                 value={String(localScreen.resolutionId ?? localScreen[field.fieldName] ?? '')}
                 onChange={(e) => updateField(field, e.target.value)}
@@ -145,9 +141,7 @@ export default function TransitionScreenForm({
         if (isAssigneeField(field)) {
           return (
             <label key={field.fieldId} className="transition-screen-field">
-              <span>
-                Assignee{field.required ? ' *' : ''}
-              </span>
+              <span>Assignee{field.required ? ' *' : ''}</span>
               <input
                 type="text"
                 placeholder="User ID (UUID)"

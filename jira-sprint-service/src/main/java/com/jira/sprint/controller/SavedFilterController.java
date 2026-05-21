@@ -47,15 +47,19 @@ public class SavedFilterController {
 
     @DeleteMapping("/{filterId}")
     @Operation(summary = "Delete filter", description = "Delete a saved filter")
-    public ResponseEntity<Void> deleteFilter(@PathVariable UUID filterId) {
-        savedFilterService.deleteFilter(filterId);
+    public ResponseEntity<Void> deleteFilter(
+            @PathVariable UUID filterId,
+            @RequestHeader("X-User-Id") UUID userId) {
+        savedFilterService.deleteFilter(filterId, userId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{filterId}/favorite")
     @Operation(summary = "Toggle favorite", description = "Toggle filter favorite status")
-    public ResponseEntity<SavedFilterResponse> toggleFavorite(@PathVariable UUID filterId) {
-        return ResponseEntity.ok(savedFilterService.toggleFavorite(filterId));
+    public ResponseEntity<SavedFilterResponse> toggleFavorite(
+            @PathVariable UUID filterId,
+            @RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(savedFilterService.toggleFavorite(filterId, userId));
     }
 
     @GetMapping("/subscriptions")

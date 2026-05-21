@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -30,9 +31,16 @@ public class TransitionScreenService {
     }
 
     public List<String> validateScreenInput(WorkflowTransition transition, Map<String, Object> screenInput, Map<String, Object> issueData) {
-        List<String> errors = new ArrayList<>();
+        return new ArrayList<>(validateScreenInputFields(transition, screenInput, issueData).values());
+    }
+
+    public Map<String, String> validateScreenInputFields(
+            WorkflowTransition transition,
+            Map<String, Object> screenInput,
+            Map<String, Object> issueData) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
         if (transition == null || transition.getScreenId() == null) {
-            return errors;
+            return fieldErrors;
         }
         Map<String, Object> input = screenInput != null ? screenInput : Map.of();
         for (TransitionScreenFieldDto field : getScreenFields(transition.getScreenId())) {
@@ -42,14 +50,17 @@ public class TransitionScreenService {
                     val = input.get(field.getFieldName());
                 }
                 if (val == null || val.toString().isBlank()) {
-                    errors.add("Screen field required: " + field.getFieldName());
+                    String key = field.getFieldName() != null ? field.getFieldName() : field.getFieldId();
+                    fieldErrors.put(key, key + " is required");
                 }
             }
         }
-        return errors;
+        return fieldErrors;
     }
 
-    public AvailableTransitionResponse.AvailableTransitionItem enrichTransitionItem(WorkflowTransition t) {
+    public AvailableTransitionResponse.AvailableTransitionItem enrichTransitionItem(
+            WorkflowTransition t,
+            String requiredPermission) {
         List<TransitionScreenFieldDto> fields = getScreenFields(t.getScreenId());
         return AvailableTransitionResponse.AvailableTransitionItem.builder()
                 .id(t.getId())
@@ -59,7 +70,12 @@ public class TransitionScreenService {
                 .screenId(t.getScreenId())
                 .hasScreen(t.getScreenId() != null)
                 .screenFields(fields)
+                .requiredPermission(requiredPermission)
                 .build();
+    }
+
+    public AvailableTransitionResponse.AvailableTransitionItem enrichTransitionItem(WorkflowTransition t) {
+        return enrichTransitionItem(t, t.getPermissionCheck());
     }
 
     private List<TransitionScreenFieldDto> mapFields(WorkflowScreen screen) {

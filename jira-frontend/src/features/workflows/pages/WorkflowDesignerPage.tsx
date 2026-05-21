@@ -3,19 +3,26 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   MiniMap,
+  Handle,
+  Position,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Node,
   type Edge,
   type NodeDragHandler,
+  type Connection,
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { workflowApi } from '../../../api/workflowApi';
+import { workflowApi, WorkflowTransitionDetail } from '../../../api/workflowApi';
+import { TransitionConfigPanel } from '../components/TransitionConfigPanel';
 import './WorkflowDesignerPage.css';
+import './workflow-management.css';
 
 interface LayoutNodeDto {
   id: string;
@@ -37,8 +44,8 @@ interface LayoutEdgeDto {
 }
 
 interface WorkflowLayoutResponse {
-  nodes: LayoutNodeDto[];
-  edges: LayoutEdgeDto[];
+  nodes?: LayoutNodeDto[];
+  edges?: LayoutEdgeDto[];
 }
 
 interface StatusNodeData {
@@ -47,11 +54,66 @@ interface StatusNodeData {
   statusId?: string;
 }
 
-function layoutToFlow(
+interface TransitionEdgeData {
+  transitionId: string;
+  layoutEdgeId?: string;
+  synthetic?: boolean;
+}
+
+const edgeMarker = { type: MarkerType.ArrowClosed, color: '#0052cc' };
+const edgeStyle = { stroke: '#0052cc', strokeWidth: 2 };
+const edgeLabelStyle = { fontSize: 11, fill: '#42526e' };
+
+function toFlowEdge(
+  id: string,
+  source: string,
+  target: string,
+  label: string | undefined,
+  data: TransitionEdgeData
+): Edge {
+  return {
+    id,
+    source,
+    target,
+    label,
+    markerEnd: edgeMarker,
+    style: edgeStyle,
+    labelStyle: edgeLabelStyle,
+    data,
+  };
+}
+
+function unwrapLayout(payload: unknown): WorkflowLayoutResponse {
+  const body = payload as WorkflowLayoutResponse & { data?: WorkflowLayoutResponse };
+  if (Array.isArray(body?.nodes)) {
+    return { nodes: body.nodes ?? [], edges: body.edges ?? [] };
+  }
+  if (body?.data && Array.isArray(body.data.nodes)) {
+    return { nodes: body.data.nodes ?? [], edges: body.data.edges ?? [] };
+  }
+  return { nodes: [], edges: [] };
+}
+
+function extractApiErrorMessage(err: unknown, fallback: string): string {
+  const axiosErr = err as {
+    response?: { data?: { message?: string }; status?: number };
+    message?: string;
+  };
+  const apiMessage = axiosErr?.response?.data?.message;
+  if (apiMessage) return apiMessage;
+  if (axiosErr?.response?.status) {
+    return `${fallback} (HTTP ${axiosErr.response.status})`;
+  }
+  return (err as Error)?.message || fallback;
+}
+
+/** Builds diagram nodes/edges from layout + transitions (arrows stay in sync with the table). */
+function buildDiagramFromLayout(
   layout: WorkflowLayoutResponse,
-  transitionNames: Map<string, string>
+  transitions: WorkflowTransitionDetail[]
 ): { nodes: Node<StatusNodeData>[]; edges: Edge[] } {
-  const nodes: Node<StatusNodeData>[] = (layout.nodes ?? []).map((n) => ({
+  const layoutNodes = layout.nodes ?? [];
+  const nodes: Node<StatusNodeData>[] = layoutNodes.map((n) => ({
     id: n.id,
     type: 'statusNode',
     position: { x: n.positionX ?? 0, y: n.positionY ?? 0 },
@@ -60,72 +122,116 @@ function layoutToFlow(
       nodeType: n.nodeType,
       statusId: n.statusId,
     },
-    style: {
-      width: n.width ?? 140,
-      minHeight: n.height ?? 56,
-    },
+    style: { width: n.width ?? 140, minHeight: n.height ?? 56 },
   }));
 
-  const edges: Edge[] = (layout.edges ?? []).map((e) => ({
-    id: e.id,
-    source: e.fromNodeId,
-    target: e.toNodeId,
-    label: e.transitionId ? transitionNames.get(e.transitionId) : undefined,
-    markerEnd: { type: MarkerType.ArrowClosed, color: '#0052cc' },
-    style: { stroke: '#0052cc', strokeWidth: 2 },
-    labelStyle: { fontSize: 11, fill: '#42526e' },
-  }));
+  const nodeIdByStatusId = new Map<string, string>();
+  for (const n of layoutNodes) {
+    if (n.statusId) nodeIdByStatusId.set(n.statusId, n.id);
+  }
+
+  const edges: Edge[] = [];
+  const linkedTransitionIds = new Set<string>();
+
+  for (const e of layout.edges ?? []) {
+    if (!e.fromNodeId || !e.toNodeId || !e.transitionId) continue;
+    const transitionId = e.transitionId;
+    const label = transitions.find((t) => t.id === transitionId)?.name;
+    linkedTransitionIds.add(transitionId);
+    edges.push(
+      toFlowEdge(e.id, e.fromNodeId, e.toNodeId, label, {
+        transitionId,
+        layoutEdgeId: e.id,
+      })
+    );
+  }
+
+  for (const t of transitions) {
+    if (linkedTransitionIds.has(t.id)) continue;
+    const fromNodeId = nodeIdByStatusId.get(t.fromStatusId);
+    const toNodeId = nodeIdByStatusId.get(t.toStatusId);
+    if (!fromNodeId || !toNodeId) continue;
+    edges.push(
+      toFlowEdge(`transition-${t.id}`, fromNodeId, toNodeId, t.name, {
+        transitionId: t.id,
+        synthetic: true,
+      })
+    );
+  }
 
   return { nodes, edges };
 }
 
 function StatusNode({ data }: { data: StatusNodeData }) {
+  const catClass = data.nodeType?.toLowerCase().includes('done')
+    ? 'wf-cat-done'
+    : data.nodeType?.toLowerCase().includes('progress')
+      ? 'wf-cat-ip'
+      : 'wf-cat-todo';
   return (
-    <div className="wf-rf-node">
+    <div className={`wf-rf-node ${catClass}`}>
+      <Handle type="target" position={Position.Top} className="wf-rf-handle" />
       <span className="wf-node-label">{data.label}</span>
       <span className="wf-node-type">{data.nodeType}</span>
+      <Handle type="source" position={Position.Bottom} className="wf-rf-handle" />
     </div>
   );
 }
 
 const nodeTypes = { statusNode: StatusNode };
 
-export default function WorkflowDesignerPage() {
-  const { workflowId } = useParams<{ workflowId: string }>();
+function FitViewOnLoad({ ready }: { ready: boolean }) {
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    if (ready) {
+      const t = window.setTimeout(() => fitView({ padding: 0.25, duration: 200 }), 50);
+      return () => window.clearTimeout(t);
+    }
+  }, [ready, fitView]);
+  return null;
+}
+
+function WorkflowDesignerCanvas({
+  workflowId,
+  onSelectTransition,
+  onClearSelection,
+}: {
+  workflowId: string;
+  onSelectTransition: (t: WorkflowTransitionDetail) => void;
+  onClearSelection: () => void;
+}) {
   const queryClient = useQueryClient();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<StatusNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [layoutError, setLayoutError] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
-  const { data: workflow } = useQuery({
-    queryKey: ['workflow', workflowId],
-    queryFn: () => workflowApi.getById(workflowId!).then((r) => r.data),
-    enabled: !!workflowId,
-  });
-
-  const { data: transitions } = useQuery({
+  const { data: transitions = [] } = useQuery({
     queryKey: ['workflow-transitions', workflowId],
-    queryFn: () => workflowApi.getTransitionsWithDetails(workflowId!).then((r) => r.data),
+    queryFn: () => workflowApi.getTransitionsWithDetails(workflowId).then((r) => r.data),
     enabled: !!workflowId,
+    refetchInterval: 4000,
+    refetchOnWindowFocus: true,
   });
-
-  const transitionNameMap = useMemo(() => {
-    const m = new Map<string, string>();
-    (transitions ?? []).forEach((t) => m.set(t.id, t.name));
-    return m;
-  }, [transitions]);
 
   const loadLayout = useCallback(async (): Promise<WorkflowLayoutResponse> => {
-    if (!workflowId) {
-      throw new Error('Workflow id is required');
+    try {
+      const res = await workflowApi.getLayout(workflowId);
+      const data = unwrapLayout(res.data);
+      if ((data.nodes?.length ?? 0) === 0) {
+        const autoRes = await workflowApi.autoLayout(workflowId);
+        return unwrapLayout(autoRes.data);
+      }
+      return data;
+    } catch (getErr: unknown) {
+      // If layout load fails (e.g. stale data), try generating from workflow statuses
+      try {
+        const autoRes = await workflowApi.autoLayout(workflowId);
+        return unwrapLayout(autoRes.data);
+      } catch {
+        throw getErr;
+      }
     }
-    const res = await workflowApi.getLayout(workflowId);
-    const data = res.data as WorkflowLayoutResponse;
-    if ((data.nodes?.length ?? 0) === 0) {
-      const autoRes = await workflowApi.autoLayout(workflowId);
-      return autoRes.data as WorkflowLayoutResponse;
-    }
-    return data;
   }, [workflowId]);
 
   const {
@@ -141,31 +247,29 @@ export default function WorkflowDesignerPage() {
     retry: 1,
   });
 
+  const applyDiagram = useCallback(
+    (layoutData: WorkflowLayoutResponse, transitionList: WorkflowTransitionDetail[]) => {
+      const { nodes: flowNodes, edges: flowEdges } = buildDiagramFromLayout(layoutData, transitionList);
+      setNodes(flowNodes);
+      setEdges(flowEdges);
+    },
+    [setNodes, setEdges]
+  );
+
   useEffect(() => {
     if (layoutIsError) {
-      const message =
-        (layoutQueryError as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        (layoutQueryError as Error)?.message ||
-        'Failed to load workflow diagram';
-      setLayoutError(message);
+      setLayoutError(extractApiErrorMessage(layoutQueryError, 'Failed to load workflow diagram'));
       return;
     }
     setLayoutError(null);
     if (!layout) return;
-    const { nodes: flowNodes, edges: flowEdges } = layoutToFlow(layout, transitionNameMap);
-    setNodes(flowNodes);
-    setEdges(flowEdges);
-  }, [layout, layoutIsError, layoutQueryError, transitionNameMap, setNodes, setEdges]);
+    applyDiagram(layout, transitions);
+  }, [layout, layoutIsError, layoutQueryError, transitions, applyDiagram]);
 
   const syncPositionsMutation = useMutation({
     mutationFn: (positions: { nodeId: string; positionX: number; positionY: number }[]) =>
-      workflowApi.syncDesignerLayout(workflowId!, positions),
+      workflowApi.syncDesignerLayout(workflowId, positions),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflow-layout', workflowId] }),
-  });
-
-  const publishMutation = useMutation({
-    mutationFn: () => workflowApi.publishWorkflow(workflowId!),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflow', workflowId] }),
   });
 
   const onNodeDragStop: NodeDragHandler = useCallback(
@@ -181,39 +285,243 @@ export default function WorkflowDesignerPage() {
   );
 
   const autoLayout = useCallback(async () => {
-    if (!workflowId) return;
     setLayoutError(null);
     try {
       await workflowApi.autoLayout(workflowId);
       await refetchLayout();
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        (err as Error)?.message ||
-        'Auto layout failed';
-      setLayoutError(message);
+      setLayoutError(extractApiErrorMessage(err, 'Auto layout failed'));
     }
   }, [workflowId, refetchLayout]);
 
+  const invalidateWorkflowCaches = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['workflow-transitions', workflowId] }),
+      queryClient.invalidateQueries({ queryKey: ['workflow-detail', workflowId] }),
+      queryClient.invalidateQueries({ queryKey: ['workflow-layout', workflowId] }),
+    ]);
+  }, [queryClient, workflowId]);
+
+  const createTransitionMutation = useMutation({
+    mutationFn: (data: { name: string; fromStatusId: string; toStatusId: string }) =>
+      workflowApi.createTransition({ workflowId, ...data }),
+    onSuccess: async (res) => {
+      const created = res.data as WorkflowTransitionDetail & { id: string };
+      if (layout && created?.id) {
+        applyDiagram(layout, [...transitions, { ...created, workflowId }]);
+      }
+      await invalidateWorkflowCaches();
+      void refetchLayout();
+    },
+  });
+
+  const deleteTransitionMutation = useMutation({
+    mutationFn: (transitionId: string) => workflowApi.deleteTransition(transitionId),
+    onSuccess: async (_res, transitionId) => {
+      setSelectedEdgeId(null);
+      onClearSelection();
+      if (layout) {
+        applyDiagram(
+          layout,
+          transitions.filter((t) => t.id !== transitionId)
+        );
+      }
+      await invalidateWorkflowCaches();
+      void refetchLayout();
+    },
+    onError: (err: unknown) => {
+      setLayoutError(extractApiErrorMessage(err, 'Failed to delete transition'));
+    },
+  });
+
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const targetNode = nodes.find((n) => n.id === connection.target);
+      const fromStatusId = sourceNode?.data.statusId;
+      const toStatusId = targetNode?.data.statusId;
+      if (!fromStatusId || !toStatusId) {
+        setLayoutError('Connect two status nodes to create a transition.');
+        return;
+      }
+      const defaultName = `${sourceNode?.data.label ?? 'Status'} → ${targetNode?.data.label ?? 'Status'}`;
+      const name = window.prompt('Transition name', defaultName);
+      if (!name?.trim()) return;
+      createTransitionMutation.mutate({ name: name.trim(), fromStatusId, toStatusId });
+    },
+    [nodes, createTransitionMutation]
+  );
+
+  const getTransitionIdFromEdge = useCallback((edge: Edge): string | undefined => {
+    const data = edge.data as TransitionEdgeData | undefined;
+    if (data?.transitionId) return data.transitionId;
+    if (edge.id.startsWith('transition-')) return edge.id.slice('transition-'.length);
+    return undefined;
+  }, []);
+
+  const onEdgeClick = useCallback(
+    (_event: React.MouseEvent, edge: Edge) => {
+      setSelectedEdgeId(edge.id);
+      const transitionId = getTransitionIdFromEdge(edge);
+      if (!transitionId) return;
+      const t = transitions.find((tr) => tr.id === transitionId);
+      if (t) onSelectTransition(t);
+    },
+    [transitions, onSelectTransition, getTransitionIdFromEdge]
+  );
+
+  const onPaneClick = useCallback(() => {
+    setSelectedEdgeId(null);
+    onClearSelection();
+  }, [onClearSelection]);
+
+  const onEdgesDelete = useCallback(
+    (deleted: Edge[]) => {
+      for (const edge of deleted) {
+        const transitionId = getTransitionIdFromEdge(edge);
+        if (transitionId) {
+          deleteTransitionMutation.mutate(transitionId);
+          return;
+        }
+      }
+    },
+    [getTransitionIdFromEdge, deleteTransitionMutation]
+  );
+
+  const selectedEdge = edges.find((e) => e.id === selectedEdgeId);
+  const selectedEdgeTransitionId = selectedEdge ? getTransitionIdFromEdge(selectedEdge) : undefined;
+
   const hasDiagram = nodes.length > 0;
+
+  return (
+    <>
+      {layoutError && (
+        <div className="wf-designer-error" role="alert">
+          {layoutError}
+          <button type="button" className="ab-btn ab-btn-sm ab-btn-secondary" onClick={autoLayout}>
+            Retry auto layout
+          </button>
+        </div>
+      )}
+      <div className="wf-designer-canvas wf-designer-reactflow">
+        {layoutLoading && !hasDiagram && !layoutError ? (
+          <div className="wf-designer-placeholder">Loading workflow diagram…</div>
+        ) : !hasDiagram && !layoutLoading && !layoutError ? (
+          <div className="wf-designer-placeholder">
+            <p>No diagram nodes yet. Add statuses to this workflow, then generate the layout.</p>
+            <button type="button" className="ab-btn ab-btn-primary" onClick={autoLayout}>
+              Generate diagram
+            </button>
+          </div>
+        ) : hasDiagram ? (
+          <>
+          {selectedEdge && selectedEdgeTransitionId && (
+            <div className="wf-edge-toolbar">
+              <span className="wf-edge-toolbar-label">
+                Transition: <strong>{String(selectedEdge.label ?? 'Unnamed')}</strong>
+              </span>
+              <button
+                type="button"
+                className="ab-btn ab-btn-sm ab-btn-secondary"
+                disabled={deleteTransitionMutation.isPending}
+                onClick={() => deleteTransitionMutation.mutate(selectedEdgeTransitionId)}
+              >
+                Delete arrow
+              </button>
+              <span className="wf-muted wf-edge-toolbar-hint">or press Delete</span>
+            </div>
+          )}
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeDragStop={onNodeDragStop}
+            onConnect={onConnect}
+            onEdgeClick={onEdgeClick}
+            onPaneClick={onPaneClick}
+            onEdgesDelete={onEdgesDelete}
+            nodesConnectable
+            elementsSelectable
+            edgesFocusable
+            deleteKeyCode={['Backspace', 'Delete']}
+            nodeTypes={nodeTypes}
+            fitView
+            minZoom={0.15}
+            maxZoom={2}
+            proOptions={{ hideAttribution: true }}
+          >
+            <FitViewOnLoad ready={hasDiagram} />
+            <Background gap={16} size={1} color="#dfe1e6" />
+            <Controls />
+            <MiniMap />
+          </ReactFlow>
+          </>
+        ) : null}
+      </div>
+    </>
+  );
+}
+
+export default function WorkflowDesignerPage() {
+  const { workflowId } = useParams<{ workflowId: string }>();
+  const queryClient = useQueryClient();
+  const [selectedTransition, setSelectedTransition] = useState<WorkflowTransitionDetail | null>(null);
+
+  const { data: workflow } = useQuery({
+    queryKey: ['workflow', workflowId],
+    queryFn: () => workflowApi.getById(workflowId!).then((r) => r.data),
+    enabled: !!workflowId,
+  });
+
+  const autoLayoutMutation = useMutation({
+    mutationFn: () => workflowApi.autoLayout(workflowId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow-layout', workflowId] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-transitions', workflowId] });
+    },
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: () => workflowApi.publishWorkflow(workflowId!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflow', workflowId] }),
+  });
+
+  const draftMutation = useMutation({
+    mutationFn: () => workflowApi.createWorkflowDraft(workflowId!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflow', workflowId] }),
+  });
+
+  if (!workflowId) {
+    return <div className="wf-designer-page">Missing workflow id.</div>;
+  }
 
   return (
     <div className="wf-designer-page">
       <header className="wf-designer-header">
         <div>
-          <Link to="/admin/workflows" className="wf-designer-back">
-            ← Workflows
+          <Link to={`/workflows/${workflowId}`} className="wf-designer-back">
+            ← Workflow settings
           </Link>
           <h1>{workflow?.name ?? 'Workflow designer'}</h1>
           {workflow?.isDraft && <span className="wf-draft-badge">Draft</span>}
+          {!workflow?.isActive && <span className="wf-draft-badge wf-inactive-badge">Inactive</span>}
         </div>
         <div className="wf-designer-actions">
-          <button type="button" className="dc-btn dc-btn-secondary" onClick={autoLayout}>
+          <button type="button" className="ab-btn ab-btn-secondary" onClick={() => draftMutation.mutate()}>
+            Save draft
+          </button>
+          <button
+            type="button"
+            className="ab-btn ab-btn-secondary"
+            disabled={autoLayoutMutation.isPending}
+            onClick={() => autoLayoutMutation.mutate()}
+          >
             Auto layout
           </button>
           <button
             type="button"
-            className="dc-btn dc-btn-secondary"
+            className="ab-btn ab-btn-primary"
             disabled={publishMutation.isPending}
             onClick={() => publishMutation.mutate()}
           >
@@ -221,43 +529,22 @@ export default function WorkflowDesignerPage() {
           </button>
         </div>
       </header>
-
-      {layoutError && (
-        <div className="wf-designer-error" role="alert">
-          {layoutError}
-          <button type="button" className="dc-btn dc-btn-sm dc-btn-secondary" onClick={autoLayout}>
-            Retry auto layout
-          </button>
-        </div>
-      )}
-
-      <div className="wf-designer-canvas wf-designer-reactflow">
-        {layoutLoading && !hasDiagram ? (
-          <div className="wf-designer-placeholder">Loading workflow diagram…</div>
-        ) : !hasDiagram && !layoutLoading ? (
-          <div className="wf-designer-placeholder">
-            <p>No diagram nodes yet for this workflow.</p>
-            <button type="button" className="dc-btn dc-btn-primary" onClick={autoLayout}>
-              Generate diagram
-            </button>
-          </div>
-        ) : (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onNodeDragStop={onNodeDragStop}
-            nodeTypes={nodeTypes}
-            fitView
-            minZoom={0.2}
-            maxZoom={2}
-            proOptions={{ hideAttribution: true }}
-          >
-            <Background gap={16} size={1} color="#dfe1e6" />
-            <Controls />
-            <MiniMap />
-          </ReactFlow>
+      <p className="wf-muted wf-designer-hint">
+        Drag statuses to reposition. Drag between handles to create a transition. Click an arrow to configure or delete it (Delete key). Changes sync with the Transitions table.
+      </p>
+      <div className={`wf-designer-layout ${selectedTransition ? 'wf-designer-layout--split' : ''}`}>
+        <ReactFlowProvider>
+          <WorkflowDesignerCanvas
+            workflowId={workflowId}
+            onSelectTransition={setSelectedTransition}
+            onClearSelection={() => setSelectedTransition(null)}
+          />
+        </ReactFlowProvider>
+        {selectedTransition && (
+          <TransitionConfigPanel
+            transition={selectedTransition}
+            onClose={() => setSelectedTransition(null)}
+          />
         )}
       </div>
     </div>

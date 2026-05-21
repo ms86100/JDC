@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -26,6 +27,7 @@ public class ImportController {
     private final CiCdImportService ciCdImportService;
 
     @PostMapping(value = "/cucumber", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("@projectSecurity.canImportTests(authentication, #request.projectId)")
     @Operation(summary = "Import tests from Cucumber/Gherkin feature file")
     public ResponseEntity<CucumberImportResponse> importCucumberFeature(
             @Valid @RequestBody CucumberImportRequest request) {
@@ -42,12 +44,14 @@ public class ImportController {
     }
 
     @GetMapping("/cucumber/status/{jobId}")
+    @PreAuthorize("@projectSecurity.hasProjectAccess(authentication, #projectId)")
     @Operation(summary = "Get status of a Cucumber import job")
-    public ResponseEntity<String> getCucumberImportStatus(@PathVariable UUID jobId) {
+    public ResponseEntity<String> getCucumberImportStatus(@PathVariable UUID jobId, @RequestParam UUID projectId) {
         return ResponseEntity.ok("Import job status: COMPLETED");
     }
 
     @PostMapping(value = "/junit", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("@projectSecurity.canImportTests(authentication, #request.projectId)")
     @Operation(summary = "Import tests from JUnit XML results")
     public ResponseEntity<JunitImportResponse> importJUnitResults(
             @Valid @RequestBody JunitImportRequest request) {
@@ -59,14 +63,16 @@ public class ImportController {
     }
 
     @GetMapping("/junit/history")
+    @PreAuthorize("@projectSecurity.hasProjectAccess(authentication, #projectId)")
     @Operation(summary = "Get JUnit import history")
-    public ResponseEntity<String> getJUnitImportHistory() {
+    public ResponseEntity<String> getJUnitImportHistory(@RequestParam UUID projectId) {
         return ResponseEntity.ok("JUnit import history endpoint");
     }
 
     @GetMapping("/ci-source")
+    @PreAuthorize("@projectSecurity.hasProjectAccess(authentication, #projectId)")
     @Operation(summary = "Detect CI source from build URL")
-    public ResponseEntity<String> detectCiSource(@RequestParam String buildUrl) {
+    public ResponseEntity<String> detectCiSource(@RequestParam String buildUrl, @RequestParam UUID projectId) {
         String source = ciCdImportService.detectCiSource(buildUrl);
         return ResponseEntity.ok(source);
     }

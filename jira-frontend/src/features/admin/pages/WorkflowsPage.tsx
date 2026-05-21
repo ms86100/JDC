@@ -89,7 +89,25 @@ export default function WorkflowsPage() {
     try {
       setLoading(true);
       const res = await workflowApi.getAll();
-      setWorkflows(Array.isArray(res.data) ? res.data : []);
+      // Ensure all required fields exist and description is a string
+      const workflows: Workflow[] = Array.isArray(res.data)
+        ? res.data.map(w => ({
+            id: w.id,
+            name: w.name,
+            description: w.description || '',
+            isDraft: w.isDraft,
+            isActive: w.isActive,
+            isSystem: w.isSystem,
+            isDefault: w.isDefault,
+            projectId: w.projectId,
+            draftOfWorkflowId: w.draftOfWorkflowId,
+            statusCount: w.statusCount,
+            transitionCount: w.transitionCount,
+            createdAt: w.createdAt,
+            updatedAt: w.updatedAt,
+          }))
+        : [];
+      setWorkflows(workflows);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch workflows');

@@ -36,6 +36,14 @@ export interface ValidationResult {
   previewRows: string[][];
 }
 
+export interface MigrationTargetField {
+  field: string;
+  displayName: string;
+  dataType: string;
+  required: boolean;
+  description?: string;
+}
+
 export interface FieldMapping {
   sourceColumn: string;
   targetField: string;
@@ -64,6 +72,11 @@ export interface EntityProgress {
   failed: number;
 }
 
+export interface StageProgress {
+  completed: number;
+  total: number;
+}
+
 export interface JobProgress {
   jobId: string;
   jobStatus: MigrationJob['jobStatus'];
@@ -72,9 +85,20 @@ export interface JobProgress {
   processedEntities: number;
   failedEntities: number;
   entityProgress: EntityProgress[];
+  stages?: Record<string, StageProgress>;
+  currentPhase?: string;
+  recentLogs?: Array<{ timestamp?: string; level?: string; message?: string }>;
+  attachmentBytesWritten?: number;
+  attachmentsCompleted?: number;
+  incrementalSkipped?: number;
+  attachmentChunkIndex?: number;
+  attachmentChunkTotal?: number;
+  attachmentCurrentFile?: string;
+  attachmentChunked?: boolean;
   currentStep?: string;
   startedAt?: string;
   estimatedTimeRemaining?: number;
+  elapsedTimeMs?: number;
 }
 
 export interface ImportResult {
@@ -85,6 +109,8 @@ export interface ImportResult {
   failedEntities: number;
   successCount: number;
   warningCount: number;
+  durationMs?: number;
+  resultMetadata?: Record<string, unknown>;
   errors: ImportError[];
   warnings: ImportWarning[];
 }
@@ -141,10 +167,18 @@ export interface ImportOptions {
   onConflict?: 'SKIP' | 'OVERWRITE' | 'ERROR';
 }
 
-export type ImportType = 'csv' | 'jira-dc' | 'project-import' | 'project-export';
+export type ImportType = 'csv' | 'jira-dc' | 'workflow-xml' | 'project-import' | 'project-export';
 
 export interface MigrationState {
-  step: 'select' | 'upload' | 'validate' | 'map' | 'preview' | 'importing' | 'complete';
+  step:
+    | 'source'
+    | 'targetProject'
+    | 'map'
+    | 'validate'
+    | 'configure'
+    | 'review'
+    | 'importing'
+    | 'complete';
   importType: ImportType | null;
   selectedFile: File | null;
   validationResult: ValidationResult | null;

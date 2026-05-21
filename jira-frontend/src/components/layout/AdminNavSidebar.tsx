@@ -81,12 +81,12 @@ export const AdminNavSidebar: React.FC<{ pathname: string }> = ({ pathname }) =>
                 'dc-admin-category-btn',
                 isHovered ? 'is-hovered' : '',
                 hasActiveChild ? 'has-active-child' : '',
-                isRouteSection && !hoveredKey ? 'is-route-section' : '',
+                isRouteSection ? 'is-route-section' : '',
               ].filter(Boolean).join(' ')}
               onMouseEnter={() => openFlyout(cat.key)}
               onFocus={() => openFlyout(cat.key)}
               onBlur={scheduleCloseFlyout}
-              aria-expanded={isHovered}
+              aria-expanded={hoveredKey === cat.key}
               aria-haspopup="true"
             >
               <span className="dc-admin-category-icon" aria-hidden="true">
@@ -100,9 +100,9 @@ export const AdminNavSidebar: React.FC<{ pathname: string }> = ({ pathname }) =>
         <Link to="/admin" className="dc-admin-nav-overview">
           Overview
         </Link>
-        {!flyoutCategory && (
+        {!hoveredKey && (
           <p className="dc-admin-nav-hint" aria-live="polite">
-            Hover a section to open its settings
+            Hover a section to browse its settings
           </p>
         )}
       </nav>

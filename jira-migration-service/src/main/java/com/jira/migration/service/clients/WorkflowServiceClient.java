@@ -191,4 +191,9 @@ public class WorkflowServiceClient extends BaseServiceClient {
         String endpoint = SERVICE_PATH + "/" + workflowId;
         executeDelete(endpoint);
     }
+
+    public WorkflowResponse importWorkflowDescriptor(ImportWorkflowDescriptorRequest request) {
+        log.info("Importing workflow descriptor: {}", request.getName());
+        return executePost(SERVICE_PATH + "/import/descriptor", request, WorkflowResponse.class);
+    }
 }

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Jira DC 9.x-style entity-engine export (synthetic production fixture) -->
+<entity-engine-xml>
+  <Project id="10" key="PRD" name="Production Avionics"/>
+  <User id="u1" userName="admin" emailAddress="admin@dc.local"/>
+  <User id="u2" userName="dev1" emailAddress="dev1@dc.local"/>
+  <Group id="g1" groupName="jira-developers"/>
+  <IssueType id="1" name="Story"/>
+  <IssueType id="2" name="Sub-task"/>
+  <Status id="1" name="Open"/>
+  <Status id="2" name="In Progress"/>
+  <Status id="3" name="Done"/>
+  <Priority id="1" name="High"/>
+  <Resolution id="1" name="Fixed"/>
+  <Component id="50" project="PRD" name="Flight Control"/>
+  <Version id="60" project="PRD" name="DC 9.12.0" released="false"/>
+  <Issue id="10001" projectKey="PRD" number="1" type="Story" summary="Production nav computer"
+         status="Open" priority="High" assignee="dev1" reporter="admin"
+         created="2026-01-01T08:00:00Z" updated="2026-01-02T09:00:00Z"/>
+  <Issue id="10002" projectKey="PRD" number="2" type="Sub-task" parent="10001" summary="Harness subtask"
+         status="In Progress" priority="High"/>
+  <Action id="20001" issue="10001" author="admin" created="2026-01-01T10:00:00Z">Production comment</Action>
+  <Worklog id="70001" issue="10001" author="dev1" timeSpent="3h" started="2026-01-01T11:00:00Z">Integration test work</Worklog>
+  <FileAttachment id="30001" issue="10001" fileName="spec.pdf" sourceAttachmentId="10001"/>
+  <ChangeGroup id="40001" issue="10001" author="admin" created="2026-01-01T12:00:00Z">
+    <ChangeItem id="ci1" field="status" oldvalue="Open" newvalue="In Progress"/>
+    <ChangeItem id="ci2" field="assignee" oldvalue="dev1" newvalue="admin"/>
+  </ChangeGroup>
+  <CustomFieldValue issue="10001" customfield="10010">21</CustomFieldValue>
+  <IssueLink source="10001" destination="10002" linkType="Blocks"/>
+  <Label issue="10001" label="production"/>
+  <Label issue="10001" label="dc-backup"/>
+  <Watcher id="80001" issue="10001" user="dev1"/>
+  <Vote id="90001" issue="10001" user="admin"/>
+  <GreenHopperSprint id="gh1" name="Sprint 99" rapidViewId="2"/>
+  <AO_54321 id="ao1" issue="10001" field="com.pyxis.greenhopper.jira:gh-epic-link" value="PRD-100"/>
+</entity-engine-xml>

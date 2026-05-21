@@ -344,6 +344,8 @@ export interface SprintIssueResponse {
   removedAt: string | null;
   completionStatus: 'UNCOMPLETED' | 'COMPLETED' | 'DROPPED';
   completedAt: string | null;
+  assigneeId?: string;
+  updatedAt?: string;
 }
 
 export interface SprintBurndownResponse {

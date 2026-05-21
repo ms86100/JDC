@@ -18,7 +18,31 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       strictPort: true,
+      hmr: {
+        overlay: process.env.VITE_HMR_OVERLAY !== 'false',
+      },
       proxy: {
+        // Workflow admin APIs — direct to workflow service when gateway is not running
+        '/api/workflow-schemes': {
+          target: env.VITE_WORKFLOW_SERVICE_URL || 'http://localhost:8085',
+          changeOrigin: true,
+        },
+        '/api/workflows': {
+          target: env.VITE_WORKFLOW_SERVICE_URL || 'http://localhost:8085',
+          changeOrigin: true,
+        },
+        '/api/admin/workflows': {
+          target: env.VITE_WORKFLOW_SERVICE_URL || 'http://localhost:8085',
+          changeOrigin: true,
+        },
+        '/api/fields': {
+          target: env.VITE_MIGRATION_SERVICE_URL || 'http://localhost:8094',
+          changeOrigin: true,
+        },
+        '/api/migration': {
+          target: env.VITE_MIGRATION_SERVICE_URL || 'http://localhost:8094',
+          changeOrigin: true,
+        },
         '/api': {
           target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
           changeOrigin: true,

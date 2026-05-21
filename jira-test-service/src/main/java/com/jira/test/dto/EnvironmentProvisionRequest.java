@@ -1,5 +1,6 @@
 package com.jira.test.dto;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.util.UUID;
@@ -11,6 +12,9 @@ import java.util.UUID;
 public class EnvironmentProvisionRequest {
 
     private UUID matrixId;
+
+    @NotNull(message = "Project ID is required")
+    private UUID projectId;
 
     private UUID combinationId;
 

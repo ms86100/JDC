@@ -17,6 +17,9 @@ public class CreateExecutionRequest {
     private UUID testSetId;
     private UUID testId;
 
+    @NotNull(message = "Project ID is required")
+    private UUID projectId;
+
     @NotBlank
     private String name;
 
