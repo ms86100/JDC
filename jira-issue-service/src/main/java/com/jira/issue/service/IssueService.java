@@ -93,7 +93,7 @@ public class IssueService {
                 .status(status)
                 .priority(priority)
                 .issueType(issueType)
-                .reporterId(currentUserId)
+                .reporterId(request.getReporterId() != null ? request.getReporterId() : currentUserId)
                 .assigneeId(request.getAssigneeId())
                 .parentIssueId(request.getParentIssueId())
                 // Epic fields

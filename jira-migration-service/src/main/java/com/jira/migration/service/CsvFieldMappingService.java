@@ -28,6 +28,7 @@ public class CsvFieldMappingService {
             Map.entry("summary", "summary"),
             Map.entry("description", "description"),
             Map.entry("issuetype", "issue_type"),
+            Map.entry("issue type", "issue_type"),
             Map.entry("issue_type", "issue_type"),
             Map.entry("priority", "priority"),
             Map.entry("status", "status"),

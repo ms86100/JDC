@@ -43,6 +43,9 @@ public class CreateIssueRequest {
     private Map<String, Object> customFields;
     private String securityLevel;
     private String environment;
+    private Long originalEstimate;
+    private Long remainingEstimate;
+    private Long timeSpent;
     private String originalIssueKey;
     private Map<String, String> fieldMappings;
     private java.time.LocalDateTime migrationCreatedAt;

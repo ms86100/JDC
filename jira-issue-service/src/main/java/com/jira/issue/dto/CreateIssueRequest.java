@@ -29,6 +29,8 @@ public class CreateIssueRequest {
 
     private UUID assigneeId;
 
+    private UUID reporterId;
+
     private UUID parentIssueId;
 
     // Epic fields

@@ -15,6 +15,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -64,6 +65,24 @@ public class IssueServiceClient extends BaseServiceClient {
         log.info("Creating issue in project {} with type {}", request.getProjectId(), request.getIssueType());
         Map<String, Object> payload = payloadMapper.toIssueServicePayload(request);
         return executePost(SERVICE_PATH, payload, IssueResponse.class);
+    }
+
+    public List<JsonNode> listIssueTypes() {
+        ParameterizedTypeReference<List<JsonNode>> typeRef = new ParameterizedTypeReference<>() {};
+        String url = buildUrl(SERVICE_PATH + "/types");
+        HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<List<JsonNode>> response =
+                restTemplate.exchange(url, HttpMethod.GET, entity, typeRef);
+        return response.getBody() != null ? response.getBody() : List.of();
+    }
+
+    public List<JsonNode> listPriorities() {
+        ParameterizedTypeReference<List<JsonNode>> typeRef = new ParameterizedTypeReference<>() {};
+        String url = buildUrl(SERVICE_PATH + "/priorities");
+        HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<List<JsonNode>> response =
+                restTemplate.exchange(url, HttpMethod.GET, entity, typeRef);
+        return response.getBody() != null ? response.getBody() : List.of();
     }
 
     /**

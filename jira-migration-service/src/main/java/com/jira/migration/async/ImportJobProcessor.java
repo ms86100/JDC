@@ -1724,9 +1724,11 @@ public class ImportJobProcessor {
 
     private void recordIssueResults(UUID jobId, IssuePersisterHandler.BatchPersistResult batchResult) {
         for (IssuePersisterHandler.IssuePersisterResult success : batchResult.getSuccesses()) {
+            String sourceKey = success.getSourceIssueKey() != null
+                    ? success.getSourceIssueKey() : success.getIssueKey();
             migrationIssueResultService.recordSuccess(
                     jobId,
-                    success.getIssueKey(),
+                    sourceKey,
                     success,
                     null);
         }

@@ -6,6 +6,7 @@ import com.jira.migration.exception.*;
 import com.jira.migration.repository.EntityStatusRepository;
 import com.jira.migration.repository.ProjectMappingRepository;
 import com.jira.migration.service.MigrationWorkflowStatusApplier;
+import com.jira.migration.service.UserDirectoryMappingService;
 import com.jira.migration.service.clients.*;
 import com.jira.migration.service.clients.dto.*;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public class IssuePersisterHandler {
     private IssueServiceClient issueServiceClient;
     private IssueLinkServiceClient issueLinkServiceClient;
     private MigrationWorkflowStatusApplier migrationWorkflowStatusApplier;
+    private UserDirectoryMappingService userDirectoryMappingService;
 
     // Track created issues for rollback
     private final List<String> createdIssueIds = new ArrayList<>();
@@ -48,10 +50,12 @@ public class IssuePersisterHandler {
     public void setServiceClients(
             IssueServiceClient issueServiceClient,
             IssueLinkServiceClient issueLinkServiceClient,
-            MigrationWorkflowStatusApplier migrationWorkflowStatusApplier) {
+            MigrationWorkflowStatusApplier migrationWorkflowStatusApplier,
+            UserDirectoryMappingService userDirectoryMappingService) {
         this.issueServiceClient = issueServiceClient;
         this.issueLinkServiceClient = issueLinkServiceClient;
         this.migrationWorkflowStatusApplier = migrationWorkflowStatusApplier;
+        this.userDirectoryMappingService = userDirectoryMappingService;
     }
 
     // Issue type hierarchy - use HashMap to allow null values
@@ -96,7 +100,8 @@ public class IssuePersisterHandler {
             String parentIssueKey = (String) issueData.get("parentIssueKey");
             validateParentRelationship(issueType, parentIssueKey, jobId);
 
-            // 4. Build create issue request
+            // 4. Resolve people fields and build create issue request
+            enrichPeopleFields(issueData, jobId);
             CreateIssueRequest request = buildCreateIssueRequest(issueData, projectId);
 
             // 5. Call real issue service
@@ -148,6 +153,7 @@ public class IssuePersisterHandler {
 
             result.setSuccess(true);
             result.setIssueId(UUID.fromString(issueId));
+            result.setSourceIssueKey((String) issueData.getOrDefault("issueKey", issueData.get("issue_key")));
             result.setIssueKey(issueKey);
 
             log.info("Persisted issue: {} ({}) with ID: {}", issueKey, issueType, issueId);
@@ -202,6 +208,48 @@ public class IssuePersisterHandler {
         throw new MigrationException("Issue creation failed after " + maxRetries + " attempts");
     }
 
+    private void enrichPeopleFields(Map<String, Object> data, UUID jobId) {
+        if (userDirectoryMappingService == null || jobId == null) {
+            return;
+        }
+        putResolvedUserId(data, "assignee", "assigneeId", jobId);
+        putResolvedUserId(data, "reporter", "reporterId", jobId);
+    }
+
+    private void putResolvedUserId(Map<String, Object> data, String sourceKey, String targetKey, UUID jobId) {
+        Object raw = data.get(sourceKey);
+        if (raw == null || raw.toString().isBlank()) {
+            return;
+        }
+        String source = raw.toString().trim();
+        if (source.length() == 36 && source.contains("-")) {
+            data.put(targetKey, source);
+            return;
+        }
+        UUID target = userDirectoryMappingService.resolveToTargetUserId(source, jobId);
+        if (target != null) {
+            data.put(targetKey, target.toString());
+        }
+    }
+
+    private Long parseDurationSeconds(Object... candidates) {
+        for (Object c : candidates) {
+            if (c == null) {
+                continue;
+            }
+            String s = c.toString().trim();
+            if (s.isBlank()) {
+                continue;
+            }
+            try {
+                return Long.parseLong(s);
+            } catch (NumberFormatException ignored) {
+                // Jira human durations (e.g. 1h 30m) not parsed yet
+            }
+        }
+        return null;
+    }
+
     private CreateIssueRequest buildCreateIssueRequest(Map<String, Object> data, String projectId) {
         CreateIssueRequest.CreateIssueRequestBuilder builder = CreateIssueRequest.builder()
                 .projectId(projectId)
@@ -232,10 +280,39 @@ public class IssuePersisterHandler {
             }
         }
 
-        // Handle labels
+        // Handle labels (list or comma-separated Jira export)
         Object labelsObj = data.get("labels");
-        if (labelsObj instanceof List) {
-            builder.labels((List<String>) labelsObj);
+        if (labelsObj instanceof List<?> list) {
+            List<String> labels = new ArrayList<>();
+            for (Object o : list) {
+                if (o != null && !o.toString().isBlank()) {
+                    labels.add(o.toString().trim());
+                }
+            }
+            if (!labels.isEmpty()) {
+                builder.labels(labels);
+            }
+        } else if (labelsObj instanceof String labelsStr && !labelsStr.isBlank()) {
+            String trimmed = labelsStr.trim();
+            if (!"0".equals(trimmed)) {
+                builder.labels(Arrays.stream(trimmed.split("[,;]"))
+                        .map(String::trim)
+                        .filter(s -> !s.isBlank())
+                        .toList());
+            }
+        }
+
+        Long originalEstimate = parseDurationSeconds(data.get("original_estimate"), data.get("originalEstimate"));
+        if (originalEstimate != null) {
+            builder.originalEstimate(originalEstimate);
+        }
+        Long remainingEstimate = parseDurationSeconds(data.get("remaining_estimate"), data.get("remainingEstimate"));
+        if (remainingEstimate != null) {
+            builder.remainingEstimate(remainingEstimate);
+        }
+        Long timeSpent = parseDurationSeconds(data.get("time_spent"), data.get("timeSpent"));
+        if (timeSpent != null) {
+            builder.timeSpent(timeSpent);
         }
 
         // Handle parent
@@ -489,6 +566,7 @@ public class IssuePersisterHandler {
         private boolean success;
         private UUID issueId;
         private String issueKey;
+        private String sourceIssueKey;
         private String errorCode;
         private String errorMessage;
 
@@ -498,6 +576,8 @@ public class IssuePersisterHandler {
         public void setIssueId(UUID issueId) { this.issueId = issueId; }
         public String getIssueKey() { return issueKey; }
         public void setIssueKey(String issueKey) { this.issueKey = issueKey; }
+        public String getSourceIssueKey() { return sourceIssueKey; }
+        public void setSourceIssueKey(String sourceIssueKey) { this.sourceIssueKey = sourceIssueKey; }
         public String getErrorCode() { return errorCode; }
         public void setErrorCode(String errorCode) { this.errorCode = errorCode; }
         public String getErrorMessage() { return errorMessage; }
