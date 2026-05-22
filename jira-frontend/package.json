@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test:e2e": "playwright test",
@@ -13,8 +14,6 @@
     "postinstall": "playwright install chromium"
   },
   "dependencies": {
-    "@airbus/components-react": "file:../../Design System/design-system/design-system-3.8.0/packages/components-react",
-    "@airbus/styles": "file:../../Design System/design-system/design-system-3.8.0/packages/styles",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -23,7 +22,7 @@
     "@xyflow/react": "^12.10.2",
     "axios": "^1.7.7",
     "date-fns": "^4.1.0",
-    "lucide-react": "^1.16.0",
+    "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",

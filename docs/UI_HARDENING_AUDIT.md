@@ -292,7 +292,7 @@ None identified.
 1. **Run API Test Validator**
    ```bash
    cd jira-platform
-   node api-test-validator.js
+   node scripts/api-test-validator.js
    ```
    Verify all endpoints return 200.
 

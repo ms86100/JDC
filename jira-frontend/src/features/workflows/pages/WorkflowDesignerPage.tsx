@@ -14,7 +14,7 @@ import {
   useReactFlow,
   type Node,
   type Edge,
-  type NodeDragHandler,
+  type OnNodeDrag,
   type Connection,
   MarkerType,
 } from '@xyflow/react';
@@ -48,13 +48,13 @@ interface WorkflowLayoutResponse {
   edges?: LayoutEdgeDto[];
 }
 
-interface StatusNodeData {
+interface StatusNodeData extends Record<string, unknown> {
   label: string;
   nodeType: string;
   statusId?: string;
 }
 
-interface TransitionEdgeData {
+interface TransitionEdgeData extends Record<string, unknown> {
   transitionId: string;
   layoutEdgeId?: string;
   synthetic?: boolean;
@@ -272,7 +272,7 @@ function WorkflowDesignerCanvas({
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflow-layout', workflowId] }),
   });
 
-  const onNodeDragStop: NodeDragHandler = useCallback(
+  const onNodeDragStop: OnNodeDrag = useCallback(
     (_event, node) => {
       const positions = nodes.map((n) => ({
         nodeId: n.id,

@@ -2,6 +2,14 @@
 platform-runtime/
 logs/
 *.log
+hs_err_pid*.log
+replay_pid*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
 
 # Java build outputs
 jira-*/target/
@@ -12,11 +20,16 @@ jira-*/target/
 
 # Vite build output
 jira-frontend/dist/
+
+# Playwright browser cache (postinstall)
+jira-frontend/.cache/
+jira-frontend/test-results/
 jira-frontend/node_modules/.vite/
 
-# Node modules
+# Node modules (never commit — use npm ci in jira-frontend)
 jira-frontend/node_modules/
 platform-runtime/node_modules/
+**/node_modules/
 
 # IDE
 .idea/
@@ -30,31 +43,30 @@ platform-runtime/node_modules/
 Thumbs.db
 Desktop.ini
 
-# Temporary files
+# Temporary / local-only
 *.tmp
 *.bak
 *.backup
-*.swp
-
-# Credentials (DO NOT COMMIT)
-*.env
-*.env.local
-*.pem
-*.key
-credentials.json
-secrets.json
-# Build artifacts
-*.jar.original
-*.tmp
-*.bak
-
-# Environment files
-.env.local
-.env.production
-
-# Temp files
-*.tmp
 *.temp
 plan-*.txt
 test-*.sh
 .claude/
+
+# Archived one-off reports (source copies live under docs/)
+docs/archive/
+
+# Credentials (DO NOT COMMIT)
+*.env
+*.env.local
+*.env.*.local
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# Build artifacts
+*.jar.original
+
+# Environment files
+.env.local
+.env.production

@@ -360,7 +360,110 @@ def get_pid_on_port(port):
         return None
 
 
-def check_health_for_process(port, proc, path="/actuator/health", timeout=5, paths=None):
+def get_process_tree_pids(root_pid):
+    """Return root_pid and descendant PIDs (Windows Java often listens in a child)."""
+    try:
+        root_pid = int(root_pid)
+    except (TypeError, ValueError):
+        return set()
+    pids = {root_pid}
+    if sys.platform == "win32":
+        try:
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 f"$root = {root_pid}; "
+                 f"$all = @($root); "
+                 f"$queue = @($root); "
+                 f"while ($queue.Count -gt 0) {{ "
+                 f"  $p = $queue[0]; $queue = $queue[1..($queue.Count-1)]; "
+                 f"  Get-CimInstance Win32_Process -Filter \"ParentProcessId = $p\" "
+                 f"-ErrorAction SilentlyContinue | ForEach-Object {{ "
+                 f"    if ($all -notcontains $_.ProcessId) {{ "
+                 f"      $all += $_.ProcessId; $queue += $_.ProcessId "
+                 f"    }} "
+                 f"  }} "
+                 f"}}; $all -join ' '"],
+                capture_output=True, text=True, timeout=15,
+            )
+            for part in (result.stdout or "").split():
+                if part.isdigit():
+                    pids.add(int(part))
+        except Exception:
+            pass
+        return pids
+    try:
+        result = subprocess.run(
+            ["pgrep", "-P", str(root_pid)],
+            capture_output=True, text=True, timeout=10,
+        )
+        for part in (result.stdout or "").split():
+            if part.isdigit():
+                pids.add(int(part))
+                pids.update(get_process_tree_pids(int(part)))
+    except Exception:
+        pass
+    return pids
+
+
+def get_process_command_line(pid):
+    """Return command line for a PID, or empty string."""
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return ""
+    if sys.platform == "win32":
+        try:
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 f"(Get-CimInstance Win32_Process -Filter 'ProcessId = {pid}' "
+                 f"-ErrorAction SilentlyContinue).CommandLine"],
+                capture_output=True, text=True, timeout=10,
+            )
+            return (result.stdout or "").strip()
+        except Exception:
+            return ""
+    try:
+        result = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "args="],
+            capture_output=True, text=True, timeout=10,
+        )
+        return (result.stdout or "").strip()
+    except Exception:
+        return ""
+
+
+def process_owns_port(proc, port, jar_marker=None):
+    """True if proc (or its children) owns the listening port, or runs the expected JAR."""
+    if proc is None:
+        return False
+    owner = get_pid_on_port(port)
+    if owner is None:
+        return False
+    tree = get_process_tree_pids(proc.pid)
+    if owner in tree:
+        return True
+    if jar_marker:
+        cmd = get_process_command_line(owner)
+        if jar_marker in cmd.replace("\\", "/"):
+            return True
+    return False
+
+
+def wait_for_port_free(port, timeout=15, poll_interval=0.5):
+    """Block until nothing is listening on port (after cleanup)."""
+    try:
+        port = int(port)
+    except (TypeError, ValueError):
+        return True
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if not check_port(port):
+            return True
+        time.sleep(poll_interval)
+    return not check_port(port)
+
+
+def check_health_for_process(port, proc, path="/actuator/health", timeout=5, paths=None, jar_marker=None):
     """Health check that also verifies our process owns the listening port."""
     if proc is not None and proc.poll() is not None:
         return False
@@ -368,11 +471,10 @@ def check_health_for_process(port, proc, path="/actuator/health", timeout=5, pat
         return False
     if proc is None:
         return True
-    owner = get_pid_on_port(port)
-    return owner is not None and owner == proc.pid
+    return process_owns_port(proc, port, jar_marker=jar_marker)
 
 
-def wait_for_health(port, path="/actuator/health", timeout=90, poll_interval=2, paths=None, proc=None):
+def wait_for_health(port, path="/actuator/health", timeout=90, poll_interval=2, paths=None, proc=None, jar_marker=None):
     """Poll until health is up and (when proc given) owned by that process."""
     start = time.time()
     try:
@@ -388,9 +490,16 @@ def wait_for_health(port, path="/actuator/health", timeout=90, poll_interval=2, 
     while remaining > 0:
         if proc is not None and proc.poll() is not None:
             return False, round(time.time() - start, 1)
-        if check_health_for_process(port, proc, path=path, timeout=5, paths=health_paths):
+        if check_health_for_process(
+            port, proc, path=path, timeout=5, paths=health_paths, jar_marker=jar_marker
+        ):
             elapsed = time.time() - start
             return True, round(elapsed, 1)
+        # Port healthy but owned by another JVM — stop waiting (caller will retry or fail fast)
+        if proc is not None and check_health(port, path=path, timeout=3, paths=health_paths):
+            owner = get_pid_on_port(port)
+            if owner and not process_owns_port(proc, port, jar_marker=jar_marker):
+                return False, round(time.time() - start, 1)
         time.sleep(poll_interval)
         remaining -= poll_interval
     return False, timeout
@@ -430,20 +539,32 @@ def get_process_on_port(port):
 
 def kill_port(port):
     """Kill whatever process is using a port."""
+    try:
+        port = int(port)
+    except (TypeError, ValueError):
+        return
     if not check_port(port):
         return
     if sys.platform == "win32":
         try:
-            subprocess.run(
+            result = subprocess.run(
                 ["powershell", "-NoProfile", "-Command",
-                 f"Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue | "
-                 f"ForEach-Object {{ Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }}"],
-                capture_output=True, timeout=15,
+                 f"$pids = Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue | "
+                 f"Select-Object -ExpandProperty OwningProcess -Unique; "
+                 f"foreach ($p in $pids) {{ if ($p) {{ taskkill /F /PID $p 2>$null }} }}"],
+                capture_output=True, timeout=20,
             )
+            if result.returncode != 0:
+                subprocess.run(
+                    ["powershell", "-NoProfile", "-Command",
+                     f"Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue | "
+                     f"ForEach-Object {{ Stop-Process -Id $_.OwningProcess -Force "
+                     f"-ErrorAction SilentlyContinue }}"],
+                    capture_output=True, timeout=15,
+                )
         except Exception:
             pass
     else:
-        # Unix
         try:
             pid = subprocess.run(
                 f"lsof -ti:{port}", shell=True, capture_output=True, text=True, timeout=10
@@ -452,6 +573,7 @@ def kill_port(port):
                 subprocess.run(f"kill -9 {pid}", shell=True, timeout=10)
         except Exception:
             pass
+    wait_for_port_free(port, timeout=10)
 
 def jar_is_runnable(jar_path):
     """Spring Boot fat JARs are typically multi-MB; thin JARs fail at runtime."""
@@ -488,11 +610,177 @@ def build_service(dir_path, jar_name, maven_flags="-Dmaven.test.skip=true -q", f
     return True
 
 def is_docker_running():
+    """True only when the Docker daemon responds (CLI alone is not enough)."""
     try:
-        r = subprocess.run(["docker", "info"], capture_output=True, timeout=10)
-        return r.returncode == 0
+        r = subprocess.run(
+            ["docker", "info"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if r.returncode != 0:
+            return False
+        err = (r.stderr or "").lower()
+        return "cannot connect" not in err and "error during connect" not in err
     except Exception:
         return False
+
+
+def find_windows_postgres():
+    """Return (pg_ctl.exe path, data directory) for a local PostgreSQL install, or (None, None)."""
+    if sys.platform != "win32":
+        return None, None
+    candidates = []
+    program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+    pg_root = Path(program_files) / "PostgreSQL"
+    if pg_root.is_dir():
+        for ver_dir in sorted(pg_root.iterdir(), reverse=True):
+            pg_ctl = ver_dir / "bin" / "pg_ctl.exe"
+            data = ver_dir / "data"
+            if pg_ctl.is_file() and data.is_dir():
+                candidates.append((str(pg_ctl), str(data)))
+    pg_ctl_shim = shutil.which("pg_ctl")
+    if pg_ctl_shim:
+        bin_dir = Path(pg_ctl_shim).parent
+        for data in (bin_dir.parent / "data", Path(program_files) / "PostgreSQL" / "17" / "data"):
+            if data.is_dir():
+                candidates.append((pg_ctl_shim, str(data)))
+    return candidates[0] if candidates else (None, None)
+
+
+def get_windows_postgres_service_name():
+    """Return the name of an installed PostgreSQL Windows service, if any."""
+    if sys.platform != "win32":
+        return None
+    try:
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             "(Get-Service -Name '*postgres*' -ErrorAction SilentlyContinue | "
+             "Select-Object -First 1 -ExpandProperty Name)"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        name = (result.stdout or "").strip()
+        return name or None
+    except Exception:
+        return None
+
+
+def start_postgres_local_windows(log_path=None):
+    """Start local PostgreSQL via pg_ctl or Windows service. Returns True if port 5432 opens."""
+    if check_port(5432):
+        return True
+
+    pg_ctl, data_dir = find_windows_postgres()
+    log_file = None
+    if log_path:
+        Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+        log_file = open(log_path, "a", encoding="utf-8")
+
+    if pg_ctl and data_dir:
+        try:
+            status = subprocess.run(
+                [pg_ctl, "status", "-D", data_dir],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if "server is running" in (status.stdout or "").lower():
+                return True
+        except Exception:
+            pass
+        try:
+            log("  Starting local PostgreSQL (pg_ctl)...", color="yellow")
+            args = [pg_ctl, "start", "-D", data_dir, "-w", "-t", "45"]
+            if log_path:
+                args.extend(["-l", str(log_path)])
+            subprocess.run(args, capture_output=True, text=True, timeout=60)
+            ok, _ = wait_for_port(5432, 30)
+            if ok:
+                return True
+        except Exception as e:
+            if log_file:
+                log_file.write(f"pg_ctl start failed: {e}\n")
+
+    svc = get_windows_postgres_service_name()
+    if svc:
+        try:
+            log(f"  Starting Windows service '{svc}' (may require Administrator)...", color="yellow")
+            subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 f"Start-Service -Name '{svc}' -ErrorAction Stop"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            ok, _ = wait_for_port(5432, 30)
+            if ok:
+                return True
+        except Exception as e:
+            if log_file:
+                log_file.write(f"Start-Service failed: {e}\n")
+
+    if log_file:
+        log_file.close()
+    return check_port(5432)
+
+
+def start_postgres_docker(db_cfg, logs_dir):
+    """Start jira-postgres via docker compose or docker run. Returns True if port opens."""
+    compose_file = BASE_DIR / "docker-compose.yml"
+    if compose_file.exists():
+        try:
+            log("  Starting PostgreSQL via docker compose...", color="yellow")
+            subprocess.run(
+                ["docker", "compose", "-f", str(compose_file), "up", "-d", "postgres"],
+                cwd=str(BASE_DIR),
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            ok, _ = wait_for_port(5432, 90)
+            if ok:
+                return True
+        except Exception:
+            pass
+
+    dbs = db_cfg.get("databases", [])
+    multi_db = ",".join(dbs) if dbs else (
+        "auth_db,user_db,project_db,issue_db,workflow_db,comment_db,"
+        "notification_db,search_db,audit_db,attachment_db,sprint_db"
+    )
+    env = [
+        "-e", f"POSTGRES_USER={db_cfg.get('username', 'jiraadmin')}",
+        "-e", f"POSTGRES_PASSWORD={db_cfg.get('password', 'jirapass123')}",
+        "-e", f"POSTGRES_MULTIPLE_DATABASES={multi_db}",
+    ]
+    init_sql = BASE_DIR / "postgres" / "init" / "init-schemas.sql"
+    volumes = ["-v", "jira-postgres-data:/var/lib/postgresql/data"]
+    if init_sql.exists():
+        volumes.extend(["-v", f"{init_sql}:/docker-entrypoint-initdb.d/init-schemas.sql:ro"])
+
+    log("  Starting PostgreSQL via Docker...", color="yellow")
+    try:
+        subprocess.run(["docker", "rm", "-f", "jira-postgres"], capture_output=True, timeout=10)
+    except Exception:
+        pass
+
+    log_path = logs_dir / "postgres.log"
+    log_file = open(str(log_path), "w", encoding="utf-8")
+    subprocess.Popen(
+        ["docker", "run", "--rm", "-d",
+         "--name", "jira-postgres",
+         "-p", "5432:5432",
+         "-e", "POSTGRES_INITDB_ARGS=--encoding=UTF8"] + env + volumes +
+        ["postgres:16-alpine"],
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
+    )
+    ok, _ = wait_for_port(5432, 60)
+    if not ok:
+        log_file.close()
+    return ok
 
 # ============================================================
 # TOPOLOGICAL SORT (Kahn's algorithm)
@@ -652,6 +940,15 @@ class ServiceManager:
         self.force_rebuild = False
         self.skip_build = False
         self.only_services = None  # set of service names to start
+        self._restart_counts = {}
+        try:
+            self._max_restart_attempts = int(self.startup_cfg.get("max_restart_attempts", 3))
+        except (TypeError, ValueError):
+            self._max_restart_attempts = 3
+        try:
+            self._restart_cooldown = int(self.startup_cfg.get("restart_cooldown_seconds", 30))
+        except (TypeError, ValueError):
+            self._restart_cooldown = 30
 
         LOGS_DIR.mkdir(exist_ok=True)
 
@@ -774,8 +1071,10 @@ class ServiceManager:
                         self._log_tail(name)
                         self._stop_process(name, p, port)
                         continue
+                    jar_marker = startable[name].get("jar", "")
                     ok, elapsed = wait_for_health(
-                        port, health_path, svc_timeout, self.health_poll_interval, proc=p
+                        port, health_path, svc_timeout, self.health_poll_interval,
+                        proc=p, jar_marker=jar_marker,
                     )
                     if ok:
                         self.healthy.add(name)
@@ -784,7 +1083,7 @@ class ServiceManager:
                     else:
                         self.failed.add(name)
                         owner = get_pid_on_port(port)
-                        if owner and owner != p.pid:
+                        if owner and not process_owns_port(p, port, jar_marker=jar_marker):
                             log(
                                 f"    {name:15s} ✗ port {port} owned by PID {owner}, not this service "
                                 f"— see logs/{name}.log",
@@ -846,12 +1145,15 @@ class ServiceManager:
             log("  Node:    NOT FOUND", color="red")
 
         # PostgreSQL
-        if check_port:
+        if check_port(5432):
             log("  PostgreSQL: PORT 5432 — OK", color="green")
         elif is_docker_running():
-            log("  PostgreSQL: Docker available, will auto-start", color="yellow")
+            log("  PostgreSQL: not running — will auto-start via Docker", color="yellow")
+        elif find_windows_postgres()[0]:
+            log("  PostgreSQL: not running — will auto-start local PostgreSQL 17", color="yellow")
         else:
             log("  PostgreSQL: NOT running (port 5432 closed)", color="red")
+            log("    Start Docker Desktop, or run: Start-Service postgresql-x64-17 (Admin)", color="gray")
 
         separator()
 
@@ -893,55 +1195,40 @@ class ServiceManager:
         for port, name, proc in ports_in_use:
             log(f"    Port {port} ({name}) — killing {proc or 'unknown process'}", color="gray")
             kill_port(port)
+            if check_port(port):
+                log(f"    Port {port} still busy — retrying kill...", color="yellow")
+                kill_port(port)
 
-        time.sleep(2)
+        time.sleep(1)
 
     def start_postgres(self):
         if check_port(5432):
             log("  PostgreSQL already on :5432", color="green")
             return True
 
-        if not is_docker_running():
-            log("  Docker not available — cannot auto-start PostgreSQL", color="yellow")
+        ok = False
+        if is_docker_running():
+            ok = start_postgres_docker(self.db_cfg, LOGS_DIR)
+        elif find_windows_postgres()[0]:
+            ok = start_postgres_local_windows(str(LOGS_DIR / "postgres-local.log"))
+        else:
+            log("  PostgreSQL: no Docker daemon and no local install found", color="red")
+            log("    Install PostgreSQL or start Docker Desktop, then re-run launcher.py", color="gray")
             return False
 
-        log("  Starting PostgreSQL via Docker...", color="yellow")
-        dbs = self.db_cfg.get("databases", [])
-        multi_db = ",".join(dbs) if dbs else "auth_db,user_db,project_db,issue_db,workflow_db,comment_db,notification_db,search_db,audit_db,attachment_db,sprint_db"
-
-        env = [
-            "-e", f"POSTGRES_USER={self.db_cfg.get('username', 'jiraadmin')}",
-            "-e", f"POSTGRES_PASSWORD={self.db_cfg.get('password', 'jirapass123')}",
-            "-e", f"POSTGRES_MULTIPLE_DATABASES={multi_db}",
-        ]
-
-        # Remove existing container if any
-        try:
-            subprocess.run(["docker", "rm", "-f", "jira-postgres"],
-                          capture_output=True, timeout=10)
-        except Exception:
-            pass
-
-        log_file = open(str(LOGS_DIR / "postgres.log"), "w")
-        proc = subprocess.Popen(
-            ["docker", "run", "--rm", "-d",
-             "--name", "jira-postgres",
-             "-p", "5432:5432",
-             "-e", "POSTGRES_INITDB_ARGS=--encoding=UTF8",
-             "-v", "jira-postgres-data:/var/lib/postgresql/data"] +
-            env +
-            ["postgres:16-alpine"],
-            stdout=log_file, stderr=subprocess.STDOUT,
-        )
-
-        ok, _ = wait_for_port(5432, 60)
         if ok:
             log("  PostgreSQL ready on :5432", color="green")
-            self.running["postgres"] = {"proc": proc, "port": 5432, "log_file": log_file, "start_time": time.time()}
             return True
-        else:
-            log("  PostgreSQL failed to start — check logs/postgres.log", color="red")
-            return False
+
+        log("  PostgreSQL failed to start — see logs/postgres.log or logs/postgres-local.log", color="red")
+        if sys.platform == "win32" and get_windows_postgres_service_name():
+            log(
+                "    Try (Admin PowerShell): Start-Service postgresql-x64-17",
+                color="gray",
+            )
+        elif not is_docker_running() and shutil.which("docker"):
+            log("    Docker CLI found but daemon is down — start Docker Desktop first", color="gray")
+        return False
 
     def build_all(self):
         log("")
@@ -1065,14 +1352,22 @@ class ServiceManager:
             self.failed.add(name)
             return None
 
+        health_path = cfg.get("health", self.health_path)
         owner = get_pid_on_port(port_num)
         if owner is not None:
-            log(
-                f"    {name:15s} ✗ port {port_num} already in use (PID {owner})",
-                color="red",
-            )
-            self.failed.add(name)
-            return None
+            if check_health(port_num, health_path, timeout=3) and jar_name in get_process_command_line(owner):
+                log(f"    {name:15s} ✓ already healthy on port {port_num} (PID {owner})", color="green")
+                self.healthy.add(name)
+                return None
+            log(f"    Port {port_num} busy (PID {owner}) — freeing...", color="yellow")
+            kill_port(port_num)
+            if not wait_for_port_free(port_num, timeout=15):
+                log(
+                    f"    {name:15s} ✗ port {port_num} still in use after cleanup (PID {get_pid_on_port(port_num)})",
+                    color="red",
+                )
+                self.failed.add(name)
+                return None
 
         log_file = open(str(LOGS_DIR / f"{name}.log"), "w")
         env = self._build_env(name)
@@ -1233,8 +1528,9 @@ class ServiceManager:
                 p = self._start_service(name)
                 if p:
                     port = self.services_cfg.get(name, {}).get("port", 0)
+                    jar_marker = self.services_cfg.get(name, {}).get("jar", "")
                     ok, _ = wait_for_health(
-                        port, self.health_path, self.health_timeout, proc=p
+                        port, self.health_path, self.health_timeout, proc=p, jar_marker=jar_marker
                     )
                     if ok:
                         self.healthy.add(name)
@@ -1253,8 +1549,9 @@ class ServiceManager:
                     data = self.running.get(name)
                     port = self.services_cfg.get(name, {}).get("port")
                     proc = data["proc"] if data else None
+                    jar_marker = self.services_cfg.get(name, {}).get("jar", "")
                     if port and not check_health_for_process(
-                        port, proc, path=self.health_path
+                        port, proc, path=self.health_path, jar_marker=jar_marker
                     ):
                         log(f"  [!] {name} not responding — marking unhealthy", color="yellow")
                         self.healthy.discard(name)

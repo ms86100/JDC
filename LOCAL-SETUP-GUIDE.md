@@ -1,5 +1,7 @@
 # Jira Platform - Local Development Setup Guide
 
+> **Quick start:** See [SETUP.md](SETUP.md) for clone + `npm ci` on a new machine.
+
 ## Prerequisites
 
 1. **Java 21** installed
