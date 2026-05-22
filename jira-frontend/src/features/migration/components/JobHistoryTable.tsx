@@ -70,7 +70,7 @@ export default function JobHistoryTable({
         jobType: job.importSource || job.jobType,
         status: job.jobStatus,
         totalEntities: job.totalEntities ?? 0,
-        successCount: (job.processedEntities ?? 0) - (job.failedEntities ?? 0),
+        successCount: Math.max(0, job.processedEntities ?? 0),
         failedCount: job.failedEntities ?? 0,
         initiatedAt: job.initiatedAt || new Date().toISOString(),
         completedAt: job.completedAt,

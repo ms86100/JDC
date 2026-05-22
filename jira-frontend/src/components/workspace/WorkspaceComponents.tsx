@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import type { IssueResponse } from '../../api/issueApi';
 import type { HealthLevel, WorkMetrics } from './metrics';
-import { HEALTH_LABELS, formatRelativeDate } from './metrics';
+import { HEALTH_LABELS, formatRelativeDate, issueStatusLabel } from './metrics';
 import type { RecentView } from './recentViews';
 
 /* ── Health badge ── */
@@ -176,7 +176,7 @@ export function ActivityFeed({ issues, limit = 6 }: { issues: IssueResponse[]; l
             <span className="ws-activity-key">{issue.issueKey}</span>
             <span className="ws-activity-title">{issue.title}</span>
             <span className="ws-activity-meta">
-              <span className="ws-status-pill">{issue.status}</span>
+              <span className="ws-status-pill">{issueStatusLabel(issue) || '—'}</span>
               <time dateTime={issue.updatedAt}>{formatRelativeDate(issue.updatedAt)}</time>
             </span>
           </Link>
@@ -187,17 +187,21 @@ export function ActivityFeed({ issues, limit = 6 }: { issues: IssueResponse[]; l
 }
 
 /* ── Risks & blockers list ── */
+function isIssueDone(issue: IssueResponse): boolean {
+  const status = issueStatusLabel(issue).toLowerCase();
+  if (!status) return false;
+  return ['done', 'closed', 'resolved', 'complete', 'completed'].some((d) => status.includes(d));
+}
+
 export function RisksBlockers({ issues }: { issues: IssueResponse[] }) {
   const blockers = issues.filter((i) => {
     const p = (i.priority || '').toLowerCase();
-    const done = ['done', 'closed', 'resolved'].some((d) => i.status.toLowerCase().includes(d));
-    return !done && ['highest', 'critical', 'blocker', 'high'].includes(p);
+    return !isIssueDone(i) && ['highest', 'critical', 'blocker', 'high'].includes(p);
   }).slice(0, 5);
 
   const overdue = issues.filter((i) => {
     if (!i.dueDate) return false;
-    const done = ['done', 'closed', 'resolved'].some((d) => i.status.toLowerCase().includes(d));
-    return !done && new Date(i.dueDate) < new Date();
+    return !isIssueDone(i) && new Date(i.dueDate) < new Date();
   }).slice(0, 5);
 
   if (!blockers.length && !overdue.length) {

@@ -151,6 +151,11 @@ export default function ImportProgress({
                 )}
                 {isPolling && <span className="ml-2 text-blue-500">● Live</span>}
               </p>
+              {progress.jobStatus === 'FAILED' && progress.errorMessage && (
+                <p className="text-sm text-red-700 mt-2 max-w-2xl break-words" data-testid="import-failure-reason">
+                  {progress.errorMessage}
+                </p>
+              )}
             </div>
           </div>
 

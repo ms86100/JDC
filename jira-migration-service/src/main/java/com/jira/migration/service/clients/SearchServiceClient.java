@@ -32,7 +32,7 @@ public class SearchServiceClient extends BaseServiceClient {
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
             CircuitBreakerRegistry circuitBreakerRegistry,
-            @Value("${services.searchServiceUrl:http://localhost:8085}") String baseUrl) {
+            @Value("${services.searchServiceUrl:http://localhost:8088}") String baseUrl) {
         super(restTemplate, objectMapper, circuitBreakerRegistry, SERVICE_NAME, baseUrl);
     }
 

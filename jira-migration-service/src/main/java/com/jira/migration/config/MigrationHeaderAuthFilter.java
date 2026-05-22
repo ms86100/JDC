@@ -1,5 +1,7 @@
 package com.jira.migration.config;
 
+import com.jira.migration.entity.WizardSession;
+import com.jira.migration.repository.WizardSessionRepository;
 import com.jira.migration.security.MigrationJwtValidator;
 import com.jira.migration.security.MigrationProjectAccessService;
 import jakarta.servlet.FilterChain;
@@ -35,6 +37,7 @@ public class MigrationHeaderAuthFilter extends OncePerRequestFilter {
 
     private final MigrationJwtValidator jwtValidator;
     private final MigrationProjectAccessService projectAccessService;
+    private final WizardSessionRepository wizardSessionRepository;
 
     @Value("${migration.security.enabled:true}")
     private boolean securityEnabled;
@@ -146,6 +149,27 @@ public class MigrationHeaderAuthFilter extends OncePerRequestFilter {
         String param = request.getParameter("targetProjectId");
         if (param != null && !param.isBlank()) {
             return UUID.fromString(param.trim());
+        }
+        return resolveTargetProjectFromWizardSession(request.getRequestURI());
+    }
+
+    /** Wizard execute sends targetProjectId in JSON body; fall back to persisted session. */
+    private UUID resolveTargetProjectFromWizardSession(String uri) {
+        if (uri == null || !uri.contains("/wizard/sessions/") || !uri.endsWith("/execute")) {
+            return null;
+        }
+        String[] parts = uri.split("/");
+        for (int i = 0; i < parts.length - 1; i++) {
+            if ("sessions".equals(parts[i]) && i + 1 < parts.length) {
+                try {
+                    UUID sessionId = UUID.fromString(parts[i + 1]);
+                    return wizardSessionRepository.findById(sessionId)
+                            .map(WizardSession::getTargetProjectId)
+                            .orElse(null);
+                } catch (IllegalArgumentException ignored) {
+                    return null;
+                }
+            }
         }
         return null;
     }

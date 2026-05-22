@@ -376,6 +376,10 @@ public class IssuePersisterHandler {
             } catch (Exception e) {
                 IssuePersisterResult failure = new IssuePersisterResult();
                 failure.setSuccess(false);
+                Object key = issue.get("issueKey");
+                if (key != null) {
+                    failure.setIssueKey(key.toString());
+                }
                 failure.setErrorMessage(e.getMessage());
                 failureList.add(failure);
                 log.error("Failed to persist issue: {}", e.getMessage());

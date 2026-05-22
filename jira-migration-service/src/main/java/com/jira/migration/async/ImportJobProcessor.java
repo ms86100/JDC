@@ -222,10 +222,11 @@ public class ImportJobProcessor {
                 int rowNum = i + 2;
                 String entityType = hasEntityTypeColumn
                         ? rowData.getOrDefault("entity_type", "ISSUE").toUpperCase(Locale.ROOT)
-                        : (rowData.containsKey("comment_body") || rowData.containsKey("comment")
+                        : (hasNonBlank(rowData, "comment_body", "comment")
                         ? "COMMENT"
-                        : (rowData.containsKey("attachment_path") || rowData.containsKey("attachment_url")
-                        || rowData.containsKey("file_name") && rowData.containsKey("issue_key")
+                        : (hasNonBlank(rowData, "attachment_path", "attachment_url")
+                        || (hasNonBlank(rowData, "file_name", "filename")
+                        && hasNonBlank(rowData, "issue_key", "issuekey"))
                         ? "ATTACHMENT" : "ISSUE"));
 
                 if ("ATTACHMENT".equals(entityType)) {
@@ -380,6 +381,16 @@ public class ImportJobProcessor {
                     resultMetadata.put("stages", j.getResultMetadata().get("stages"));
                 }
             });
+            if (processedCount == 0 && failedCount > 0) {
+                String failMsg = "All " + failedCount + " entit"
+                        + (failedCount == 1 ? "y" : "ies")
+                        + " failed to import. Check Imported issues, job console logs, and issue-service health.";
+                migrationJobLogService.appendLog(jobId, "ERROR", failMsg);
+                migrationService.markJobFailed(jobId, failMsg, resultMetadata);
+                sendJobFailed(jobId, userIdStr, failMsg);
+                return CompletableFuture.completedFuture(migrationService.getImportResult(jobId));
+            }
+
             migrationService.markJobCompleted(jobId, resultMetadata);
             migrationAuditPersistenceService.log(jobId, "IMPORT_COMPLETED", "JOB", jobId.toString(), userId,
                     Map.of("processed", processedCount, "failed", failedCount));
@@ -391,6 +402,7 @@ public class ImportJobProcessor {
 
         } catch (Exception e) {
             log.error("CSV import job failed: {}", e.getMessage(), e);
+            migrationJobLogService.appendLog(jobId, "ERROR", "Import failed: " + e.getMessage());
             migrationService.markJobFailed(jobId, e.getMessage(), null);
 
             // Send job failure notification
@@ -1721,7 +1733,7 @@ public class ImportJobProcessor {
         for (IssuePersisterHandler.IssuePersisterResult failure : batchResult.getFailures()) {
             migrationIssueResultService.recordFailure(
                     jobId,
-                    failure.getIssueKey(),
+                    failure.getIssueKey() != null ? failure.getIssueKey() : "unknown",
                     failure.getErrorMessage(),
                     null);
         }
@@ -1743,5 +1755,16 @@ public class ImportJobProcessor {
 
     private String stringVal(Object o) {
         return o == null ? null : o.toString().trim();
+    }
+
+    /** True when any key is present with non-blank text (avoids Jira CSV "Comment" column false positives). */
+    private static boolean hasNonBlank(Map<String, String> row, String... keys) {
+        for (String key : keys) {
+            String v = row.get(key);
+            if (v != null && !v.isBlank()) {
+                return true;
+            }
+        }
+        return false;
     }
 }

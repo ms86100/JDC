@@ -489,6 +489,13 @@ export const migrationApi = {
       headers: migrationUserHeaders(),
     }),
 
+  kickStalledJob: (jobId: string) =>
+    apiClient.post<Record<string, unknown>>(
+      `/api/migration/jobs/${jobId}/kick`,
+      null,
+      { headers: migrationUserHeaders() }
+    ),
+
   getJobProgress: (jobId: string) =>
     apiClient.get<{
       jobId: string;
@@ -770,7 +777,11 @@ export const migrationWizardApi = {
     apiClient.post<MigrationJobResponse>(
       `/api/migration/wizard/sessions/${sessionId}/execute`,
       body ?? {},
-      { headers: migrationUserHeaders() }
+      {
+        headers: migrationUserHeaders({
+          targetProjectId: body?.targetProjectId,
+        }),
+      }
     ),
 };
 

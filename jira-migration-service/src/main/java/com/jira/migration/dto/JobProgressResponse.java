@@ -12,6 +12,7 @@ import java.util.UUID;
 public class JobProgressResponse {
     private UUID jobId;
     private String jobStatus;
+    private String errorMessage;
     private Double progressPercentage;
     private Integer totalEntities;
     private Integer processedEntities;

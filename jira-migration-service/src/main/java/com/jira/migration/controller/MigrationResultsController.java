@@ -9,6 +9,7 @@ import com.jira.migration.entity.MigrationAttachmentResult;
 import com.jira.migration.service.MigrationAttachmentResultService;
 import com.jira.migration.service.MigrationIssueResultService;
 import com.jira.migration.service.MigrationJobLogService;
+import com.jira.migration.service.MigrationJobKickService;
 import com.jira.migration.service.MigrationJobReindexService;
 import com.jira.migration.service.PostMigrationVerificationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,6 +35,12 @@ public class MigrationResultsController {
     private final MigrationAttachmentResultService attachmentResultService;
     private final PostMigrationVerificationService verificationService;
     private final MigrationJobReindexService reindexService;
+    private final MigrationJobKickService kickService;
+
+    @PostMapping("/kick")
+    public ResponseEntity<Map<String, Object>> kickStalledJob(@PathVariable UUID jobId) {
+        return ResponseEntity.accepted().body(kickService.kickStalledJob(jobId));
+    }
 
     @GetMapping("/issue-results")
     public ResponseEntity<List<MigrationIssueResult>> issueResults(@PathVariable UUID jobId) {

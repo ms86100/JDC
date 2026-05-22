@@ -1698,6 +1698,13 @@ export default function MigrationPage() {
             />
           );
         }
+        const importSuccessCount = state.importResult?.successCount ?? 0;
+        const importFailedCount = state.importResult?.failedEntities ?? 0;
+        const importHadSuccess = importSuccessCount > 0;
+        const importShowFailure =
+          state.importResult?.jobStatus === 'FAILED' ||
+          (importFailedCount > 0 && !importHadSuccess);
+
         return (
           <div className="space-y-6">
             {state.currentJobId && (
@@ -1712,26 +1719,26 @@ export default function MigrationPage() {
             {/* Result summary */}
             <div
               className={`rounded-lg border p-6 ${
-                state.importResult?.jobStatus === 'COMPLETED'
+                importHadSuccess && !importShowFailure
                   ? 'bg-green-50 border-green-200'
-                  : state.importResult?.jobStatus === 'FAILED'
+                  : importShowFailure
                   ? 'bg-red-50 border-red-200'
                   : 'bg-gray-50 border-gray-200'
               }`}
             >
               <div className="flex items-center gap-4">
                 <span className="text-4xl">
-                  {state.importResult?.jobStatus === 'COMPLETED'
+                  {importHadSuccess && !importShowFailure
                     ? '🎉'
-                    : state.importResult?.jobStatus === 'FAILED'
+                    : importShowFailure
                     ? '😞'
                     : '🚫'}
                 </span>
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">
-                    {state.importResult?.jobStatus === 'COMPLETED'
+                    {importHadSuccess && !importShowFailure
                       ? 'Import Completed Successfully!'
-                      : state.importResult?.jobStatus === 'FAILED'
+                      : importShowFailure
                       ? 'Import Failed'
                       : 'Import Cancelled'}
                   </h3>

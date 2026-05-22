@@ -14,4 +14,6 @@ public interface WizardSessionRepository extends JpaRepository<WizardSession, UU
     List<WizardSession> findByInitiatedByAndStatusOrderByUpdatedAtDesc(UUID userId, String status);
 
     Optional<WizardSession> findByIdAndInitiatedBy(UUID id, UUID userId);
+
+    Optional<WizardSession> findFirstByMigrationJobId(UUID migrationJobId);
 }

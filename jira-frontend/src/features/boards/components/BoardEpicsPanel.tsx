@@ -25,7 +25,7 @@ export default function BoardEpicsPanel({
 
   const { data: allEpics = [], isLoading } = useQuery({
     queryKey: ['board-epics', projectId],
-    queryFn: () => epicApi.getAll().then((r) => r.data),
+    queryFn: () => epicApi.getAll().then((r) => r.data).catch(() => []),
     enabled: !!projectId,
   });
 

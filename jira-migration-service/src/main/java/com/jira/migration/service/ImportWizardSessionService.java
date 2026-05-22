@@ -21,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -360,16 +362,16 @@ public class ImportWizardSessionService {
         session.setStatus("IN_PROGRESS");
         wizardSessionRepository.save(session);
 
-        byte[] fileContent = upload.getFileContent();
-        String fileName = upload.getFileName();
+        final UUID jobId = job.getId();
+        final byte[] fileContent = upload.getFileContent();
+        final String fileName = upload.getFileName();
+        final String importType = session.getImportType();
+        final Map<String, Object> importOptions = new HashMap<>(options);
+        final UUID actorId = userId;
 
-        if ("JIRA_DC".equals(session.getImportType()) || "ISSUE_XML".equals(session.getImportType())) {
-            importJobProcessor.processJiraDcImport(job.getId(), fileContent, fileName, options, userId);
-        } else {
-            importJobProcessor.processSpreadsheetImport(job.getId(), fileContent, fileName, null, options, userId);
-        }
+        scheduleImportAfterCommit(jobId, fileContent, fileName, importType, importOptions, actorId);
 
-        log.info("Wizard session {} started migration job {}", sessionId, job.getId());
+        log.info("Wizard session {} started migration job {}", sessionId, jobId);
         return job;
     }
 
@@ -381,6 +383,35 @@ public class ImportWizardSessionService {
             session.setStatus("COMPLETED");
             wizardSessionRepository.save(session);
         });
+    }
+
+    /**
+     * Run async import only after the wizard execute transaction commits so the worker sees job + file rows.
+     */
+    private void scheduleImportAfterCommit(
+            UUID jobId,
+            byte[] fileContent,
+            String fileName,
+            String importType,
+            Map<String, Object> options,
+            UUID userId) {
+        Runnable task = () -> {
+            if ("JIRA_DC".equals(importType) || "ISSUE_XML".equals(importType)) {
+                importJobProcessor.processJiraDcImport(jobId, fileContent, fileName, options, userId);
+            } else {
+                importJobProcessor.processSpreadsheetImport(jobId, fileContent, fileName, null, options, userId);
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    task.run();
+                }
+            });
+        } else {
+            task.run();
+        }
     }
 
     private CsvParser.CsvParseResult parseUploadedContent(UUID sessionId, WizardSession session) {

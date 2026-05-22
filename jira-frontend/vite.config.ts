@@ -49,6 +49,10 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_MIGRATION_SERVICE_URL || 'http://localhost:8094',
           changeOrigin: true,
         },
+        '/api/sse': {
+          target: env.VITE_MIGRATION_SERVICE_URL || 'http://localhost:8094',
+          changeOrigin: true,
+        },
         '/graphql': {
           target: env.VITE_ISSUE_SERVICE_URL || 'http://localhost:8084',
           changeOrigin: true,
@@ -59,6 +63,10 @@ export default defineConfig(({ mode }) => {
         },
         '/api/comments': {
           target: env.VITE_COMMENT_SERVICE_URL || 'http://127.0.0.1:8086',
+          changeOrigin: true,
+        },
+        '/api/epics': {
+          target: env.VITE_ISSUE_SERVICE_URL || 'http://localhost:8084',
           changeOrigin: true,
         },
         '/api/boards': {

@@ -3,8 +3,11 @@ package com.jira.migration.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -35,11 +38,13 @@ public class ProjectMapping {
     @Builder.Default
     private Integer issueKeySequence = 0; // Current issue number for this project
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "component_mappings", columnDefinition = "jsonb")
-    private String componentMappings;
+    private Map<String, Object> componentMappings;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "version_mappings", columnDefinition = "jsonb")
-    private String versionMappings;
+    private Map<String, Object> versionMappings;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

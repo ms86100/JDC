@@ -16,7 +16,7 @@ export default function BacklogEpicsPanel({ projectId, projectIssues }: Props) {
 
   const { data: allEpics = [], isLoading } = useQuery({
     queryKey: ['epics-backlog'],
-    queryFn: () => epicApi.getAll().then((r) => r.data),
+    queryFn: () => epicApi.getAll().then((r) => r.data).catch(() => []),
   });
 
   const projectEpicIds = useMemo(() => {

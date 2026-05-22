@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -56,8 +57,8 @@ public class SprintService {
                     .map(sprint -> enrichSprintResponseSafe(SprintResponse.from(sprint)))
                     .collect(Collectors.toList());
         } catch (Exception e) {
-            log.error("Error fetching sprints: {}", e.getMessage(), e);
-            throw e;
+            log.error("Error fetching sprints for project {}: {}", projectId, e.getMessage(), e);
+            return Collections.emptyList();
         }
     }
 

@@ -80,6 +80,7 @@ export interface StageProgress {
 export interface JobProgress {
   jobId: string;
   jobStatus: MigrationJob['jobStatus'];
+  errorMessage?: string;
   progressPercentage: number;
   totalEntities: number;
   processedEntities: number;

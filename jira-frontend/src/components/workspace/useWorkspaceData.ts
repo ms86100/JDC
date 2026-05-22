@@ -1,25 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
 import { issueApi, IssueResponse } from '../../api/issueApi';
+import { normalizeIssue } from '../../api/issueMapper';
 import { sprintApi, SprintResponse } from '../../api/sprintApi';
 import boardApi from '../../api/boardApi';
+import { asArray } from '../../utils/apiList';
 import { computeWorkMetrics, getActiveSprint } from './metrics';
+
+function normalizeIssueList(rows: IssueResponse[]): IssueResponse[] {
+  return rows.map((row) =>
+    normalizeIssue(row as unknown as Record<string, unknown>),
+  );
+}
 
 async function fetchIssuesForProject(projectId: string): Promise<IssueResponse[]> {
   const response = await issueApi.getAll({ projectId });
-  const data = response.data;
-  if (data && typeof data === 'object' && 'content' in data) {
-    return (data as { content: IssueResponse[] }).content || [];
-  }
-  return Array.isArray(data) ? data : [];
+  return normalizeIssueList(asArray<IssueResponse>(response.data));
 }
 
 async function fetchAllIssues(): Promise<IssueResponse[]> {
   const response = await issueApi.getAll();
-  const data = response.data;
-  if (data && typeof data === 'object' && 'content' in data) {
-    return (data as { content: IssueResponse[] }).content || [];
-  }
-  return Array.isArray(data) ? data : [];
+  return normalizeIssueList(asArray<IssueResponse>(response.data));
 }
 
 export function useProjectWorkspaceData(projectId: string | undefined) {

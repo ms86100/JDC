@@ -192,12 +192,22 @@ export function useMigrationJob(options: UseMigrationJobOptions = {}) {
     (jobId: string, onProgress?: (progress: JobProgress) => void): Promise<ImportResult> => {
       return new Promise((resolve, reject) => {
         let pollCount = 0;
-        const currentInterval = Math.min(POLL_INTERVAL * Math.pow(1.5, Math.floor(pollCount / 10)), MAX_POLL_INTERVAL);
+        let kickAttempted = false;
 
         const poll = async () => {
           try {
             const progress = await getJobProgress(jobId);
             pollCount++;
+
+            // Stuck PENDING = import worker never started (schedule after-commit fix handles new jobs)
+            if (progress.jobStatus === 'PENDING' && !kickAttempted && pollCount >= 2) {
+              kickAttempted = true;
+              try {
+                await migrationApi.kickStalledJob(jobId);
+              } catch (e) {
+                console.warn('Failed to kick stalled migration job:', e);
+              }
+            }
 
             // Update progress callback
             onProgress?.(progress);

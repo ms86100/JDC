@@ -11,4 +11,6 @@ import java.util.UUID;
 public interface MigrationFileUploadRepository extends JpaRepository<MigrationFileUpload, UUID> {
 
     Optional<MigrationFileUpload> findFirstByWizardSessionIdOrderByCreatedAtDesc(UUID wizardSessionId);
+
+    Optional<MigrationFileUpload> findFirstByMigrationJobId(UUID migrationJobId);
 }

@@ -17,11 +17,9 @@ const WebSocketContext = createContext<WebSocketContextValue | null>(null);
 
 interface WebSocketProviderProps {
   children: ReactNode;
-  /** Optional: show connection status indicator in UI */
-  showStatusIndicator?: boolean;
 }
 
-export function WebSocketProvider({ children, showStatusIndicator = false }: WebSocketProviderProps) {
+export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const { isAuthenticated } = useAuth();
   const { isConnected, status, connect, disconnect, subscribe, unsubscribe } = useTestWebSocket();
 
@@ -37,12 +35,7 @@ export function WebSocketProvider({ children, showStatusIndicator = false }: Web
     unsubscribe,
   };
 
-  return (
-    <WebSocketContext.Provider value={value}>
-      {children}
-      {showStatusIndicator && <ConnectionStatusIndicator status={status} />}
-    </WebSocketContext.Provider>
-  );
+  return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 }
 
 /**
@@ -54,60 +47,6 @@ export function useWebSocket(): WebSocketContextValue {
     throw new Error('useWebSocket must be used within a WebSocketProvider');
   }
   return context;
-}
-
-/**
- * Connection status indicator component
- * Shows a small badge in the corner of the screen
- */
-function ConnectionStatusIndicator({ status }: { status: ConnectionStatus }) {
-  const statusConfig: Record<ConnectionStatus, { color: string; label: string }> = {
-    connected: { color: '#4CAF50', label: 'Live' },
-    connecting: { color: '#FF9800', label: 'Connecting...' },
-    disconnected: { color: '#9E9E9E', label: 'Offline' },
-    error: { color: '#f44336', label: 'Error' },
-  };
-
-  const config = statusConfig[status];
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: '16px',
-        right: '16px',
-        zIndex: 9999,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '8px 12px',
-        backgroundColor: 'white',
-        borderRadius: '20px',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-        fontSize: '12px',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-      }}
-    >
-      <span
-        style={{
-          width: '8px',
-          height: '8px',
-          borderRadius: '50%',
-          backgroundColor: config.color,
-          animation: status === 'connecting' ? 'pulse 1.5s infinite' : 'none',
-        }}
-      />
-      <span style={{ color: '#333' }}>{config.label}</span>
-      <style>
-        {`
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-          }
-        `}
-      </style>
-    </div>
-  );
 }
 
 /**

@@ -19,6 +19,12 @@ const DONE_STATUSES = new Set(['done', 'closed', 'resolved', 'complete', 'comple
 const IN_PROGRESS_STATUSES = new Set(['in progress', 'in review', 'in development', 'active']);
 const BLOCKED_PRIORITIES = new Set(['highest', 'critical', 'blocker', 'high']);
 
+/** Resolve display status from issue-service (`status` or `statusName`). */
+export function issueStatusLabel(issue: IssueResponse): string {
+  const raw = issue as IssueResponse & { statusName?: string };
+  return (issue.status ?? raw.statusName ?? '').trim();
+}
+
 function normalizeStatus(status?: string | null): string {
   return (status ?? '').trim().toLowerCase();
 }
@@ -37,11 +43,11 @@ function isInProgress(status?: string | null): boolean {
 
 function isBlocked(issue: IssueResponse): boolean {
   const p = (issue.priority || '').toLowerCase();
-  return BLOCKED_PRIORITIES.has(p) && !isDone(issue.status);
+  return BLOCKED_PRIORITIES.has(p) && !isDone(issueStatusLabel(issue));
 }
 
 function isOverdue(issue: IssueResponse): boolean {
-  if (!issue.dueDate || isDone(issue.status)) return false;
+  if (!issue.dueDate || isDone(issueStatusLabel(issue))) return false;
   return new Date(issue.dueDate) < new Date();
 }
 
@@ -65,8 +71,9 @@ export function computeWorkMetrics(issues: IssueResponse[]): WorkMetrics {
   let overdue = 0;
 
   for (const issue of issues) {
-    if (isDone(issue.status)) done += 1;
-    else if (isInProgress(issue.status)) inProgress += 1;
+    const status = issueStatusLabel(issue);
+    if (isDone(status)) done += 1;
+    else if (isInProgress(status)) inProgress += 1;
     if (isBlocked(issue)) blocked += 1;
     if (isOverdue(issue)) overdue += 1;
   }

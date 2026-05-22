@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { sprintApi, BurndownResponse, VelocityResponse } from '../../api/sprintApi';
 import boardApi, { BoardDataResponse, AgileBoard } from '../../api/boardApi';
 import type { IssueResponse } from '../../api/issueApi';
+import { issueStatusLabel } from './metrics';
 import type { SprintResponse } from '../../api/sprintApi';
 
 export function useScrumProjectData(
@@ -64,9 +65,10 @@ export function useKanbanProjectData(projectId: string | undefined, boards: Agil
 export function groupIssuesByStatus(issues: IssueResponse[]): { status: string; count: number; issues: IssueResponse[] }[] {
   const map = new Map<string, IssueResponse[]>();
   for (const issue of issues) {
-    const list = map.get(issue.status) ?? [];
+    const status = issueStatusLabel(issue) || 'Unknown';
+    const list = map.get(status) ?? [];
     list.push(issue);
-    map.set(issue.status, list);
+    map.set(status, list);
   }
   return Array.from(map.entries())
     .map(([status, list]) => ({ status, count: list.length, issues: list }))
@@ -81,7 +83,7 @@ export function groupIssuesByAssignee(issues: IssueResponse[]): { assignee: stri
     const key = issue.assigneeName || 'Unassigned';
     const entry = map.get(key) ?? { count: 0, overdue: 0 };
     entry.count += 1;
-    if (issue.dueDate && new Date(issue.dueDate).getTime() < now && !isDoneStatus(issue.status)) {
+    if (issue.dueDate && new Date(issue.dueDate).getTime() < now && !isDoneStatus(issueStatusLabel(issue))) {
       entry.overdue += 1;
     }
     map.set(key, entry);
@@ -99,7 +101,7 @@ function isDoneStatus(status: string): boolean {
 export function getUpcomingDeadlines(issues: IssueResponse[], limit = 8) {
   const now = Date.now();
   return issues
-    .filter((i) => i.dueDate && !isDoneStatus(i.status))
+    .filter((i) => i.dueDate && !isDoneStatus(issueStatusLabel(i)))
     .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
     .slice(0, limit);
 }
