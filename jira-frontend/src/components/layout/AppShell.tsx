@@ -270,8 +270,8 @@ export const AppShell: React.FC<AppShellProps> = ({ mode, children }) => {
 
       {!isAdmin && <WebsudoBanner />}
 
-      {/* BODY */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      {/* BODY — admin row sits below header with a clear seam (no rail flush against top bar) */}
+      <div className={isAdmin ? 'sa-admin-body-row' : undefined} style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* LEFT RAIL */}
         {isAdmin ? (
           <AdminNavSidebar pathname={location.pathname} />

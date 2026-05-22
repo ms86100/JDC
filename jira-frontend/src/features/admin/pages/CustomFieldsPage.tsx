@@ -2,6 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import AdminLayout from '../components/AdminLayout';
 import { fieldApi, type CreateCustomFieldRequest } from '../../../api/fieldApi';
+import {
+  formatCustomFieldType,
+  formatFieldKeyForDisplay,
+} from '../../migration/utils/formatCustomFieldType';
 import './CustomFieldsPage.css';
 
 interface CustomFieldRow {
@@ -109,6 +113,30 @@ export default function CustomFieldsPage() {
           </p>
         </div>
 
+        <div className="custom-fields-where-callout" data-testid="custom-fields-where-callout">
+          <h3 className="custom-fields-where-title">Where custom field values appear</h3>
+          <ul className="custom-fields-where-list">
+            <li>
+              <strong>After CSV / DC import:</strong> open an issue → <strong>Details</strong> tab →
+              section <strong>Imported custom fields</strong> (values from columns like Epic Name,
+              Story Points, Parent Link, Target start/end).
+            </li>
+            <li>
+              <strong>Migration wizard:</strong> map CSV headers such as{' '}
+              <code>Custom field (Parent Link)</code> to these definitions in the Map Fields step.
+            </li>
+            <li>
+              They do <strong>not</strong> show in the main People / Details sidebar until wired to
+              core issue fields or screen configuration.
+            </li>
+          </ul>
+          <p className="custom-fields-where-note">
+            <strong>Parent Link</strong>, <strong>Target end</strong>, and <strong>Target start</strong>{' '}
+            are Jira Advanced Roadmaps / planning fields — they store link and date planning data on
+            imported issues when those CSV columns have values.
+          </p>
+        </div>
+
         {error && (
           <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2 mb-4">{error}</div>
         )}
@@ -166,11 +194,14 @@ export default function CustomFieldsPage() {
         )}
 
         <div className="custom-fields-grid">
-          {filteredFields.map((field) => (
+          {filteredFields.map((field) => {
+            const typeLabel = formatCustomFieldType(field.type);
+            const keyLabel = formatFieldKeyForDisplay(field.fieldKey);
+            return (
             <div key={field.id} className="custom-field-card">
               <div className="field-card-header">
-                <div className="field-type-badge">{field.type}</div>
-                <span className="text-xs text-gray-500">{field.fieldKey}</span>
+                <div className="field-type-badge">{typeLabel}</div>
+                {keyLabel && <span className="field-key-chip">{keyLabel}</span>}
               </div>
               <div className="field-card-body">
                 <h4 className="field-name">{field.name}</h4>
@@ -191,7 +222,8 @@ export default function CustomFieldsPage() {
                 </button>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
 
         {!isLoading && filteredFields.length === 0 && (
