@@ -99,7 +99,7 @@ public class TestFolderController {
     @PreAuthorize("@projectSecurity.canDeleteTests(authentication, #projectId)")
     @Operation(summary = "Delete a folder")
     public ResponseEntity<Void> deleteFolder(@PathVariable UUID id, @RequestParam UUID projectId) {
-        folderService.deleteFolder(id);
+        folderService.deleteFolder(id, false);
         return ResponseEntity.noContent().build();
     }
 

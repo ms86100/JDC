@@ -29,6 +29,7 @@ import com.jira.migration.service.MigrationJobReindexService;
 import com.jira.migration.service.ProjectImportOrchestrator;
 import com.jira.migration.service.VirusScanService;
 import com.jira.migration.dc.JiraDcAttachmentBundleResolver;
+import com.jira.migration.dc.JiraDcCsvAttachmentResolver;
 import com.jira.migration.dc.JiraDcChangeHistoryReplayer;
 import com.jira.migration.dc.JiraDcImportOrchestrator;
 import com.jira.migration.dc.JiraDcAcSignoffEvaluator;
@@ -122,6 +123,7 @@ public class ImportJobProcessor {
     private final MigrationJobControlService migrationJobControlService;
     private final MigrationEventPublisher migrationEventPublisher;
     private final VirusScanService virusScanService;
+    private final JiraDcCsvAttachmentResolver csvAttachmentResolver;
 
     // Batch size for progress updates
     private static final int PROGRESS_UPDATE_BATCH_SIZE = 50;
@@ -190,11 +192,19 @@ public class ImportJobProcessor {
 
             resolveAssigneeReporterUsers(mappedRows, jobId);
 
-            // Ensure project mappings for target project
             UUID targetProjectId = job != null ? job.getTargetProjectId() : null;
             if (targetProjectId == null && options.get("targetProjectId") != null) {
                 targetProjectId = UUID.fromString(options.get("targetProjectId").toString());
             }
+
+            String csvImportProfile = stringOption(jobOptions, "csvImportProfile", "EXTERNAL");
+            if ("LIGHTWEIGHT".equalsIgnoreCase(csvImportProfile)) {
+                migrationJobLogService.appendLog(jobId, "INFO",
+                        "CSV import profile LIGHTWEIGHT — attachment column import disabled (Jira DC lightweight importer)");
+            } else {
+                validateCsvSingleTargetProject(mappedRows, targetProjectId, jobId);
+            }
+
             projectMappingSetupService.ensureProjectMappings(jobId, targetProjectId, mappedRows);
 
             sendProgressUpdate(jobId, userIdStr, 0, parseResult.getTotalRows(), 0, "VALIDATING", null);
@@ -244,18 +254,9 @@ public class ImportJobProcessor {
                     sendValidationError(jobId, userIdStr, rowNum, validationResult.getErrors());
                     continue;
                 }
-                Map<String, Object> issueData = new HashMap<>(rowData);
-                issueData.put("issueKey", rowData.getOrDefault("issue_key", "ROW-" + rowNum));
-                issueData.put("rowNumber", rowNum);
-                if (rowData.containsKey("parent_key")) {
-                    issueData.put("parentIssueKey", rowData.get("parent_key"));
-                }
-                if (rowData.containsKey("epic_link")) {
-                    issueData.put("epicLink", rowData.get("epic_link"));
-                }
-                if (targetProjectId != null) {
-                    issueData.put("projectId", targetProjectId.toString());
-                }
+                String issueKey = rowData.getOrDefault("issue_key", rowData.getOrDefault("issuekey", "ROW-" + rowNum));
+                Map<String, Object> issueData = csvFieldMappingService.buildIssueDataFromCsvRow(
+                        rowData, issueKey, rowNum, targetProjectId);
                 issueRows.add(issueData);
             }
 
@@ -283,6 +284,11 @@ public class ImportJobProcessor {
                 recordIssueResults(jobId, batchResult);
                 persistIssueLinksPass(issueRows, jobId);
                 updateStageProgress(jobId, "LINKS", issueRows.size(), issueRows.size());
+
+                if (!"LIGHTWEIGHT".equalsIgnoreCase(csvImportProfile)) {
+                    int colAtt = processCsvIssueColumnAttachments(issueRows, jobId, jobOptions);
+                    processedCount += colAtt;
+                }
 
                 migrationService.updateJobProgress(jobId, processedCount, failedCount);
                 sendProgressUpdate(jobId, userIdStr, processedCount + failedCount,
@@ -315,7 +321,7 @@ public class ImportJobProcessor {
                         parseResult.getTotalRows(), failedCount, "PROCESSING", "COMMENT");
             }
 
-            if (!attachmentRows.isEmpty()) {
+            if (!attachmentRows.isEmpty() && !"LIGHTWEIGHT".equalsIgnoreCase(csvImportProfile)) {
                 updateStageProgress(jobId, "ATTACHMENTS", 0, attachmentRows.size());
                 int attOk = 0;
                 int attFail = 0;
@@ -1400,12 +1406,102 @@ public class ImportJobProcessor {
     private byte[] resolveCsvAttachmentContent(Map<String, Object> attData) throws java.io.IOException {
         Object path = attData.get("attachmentPath");
         if (path != null && !path.toString().isBlank()) {
-            java.nio.file.Path p = java.nio.file.Path.of(path.toString());
-            if (java.nio.file.Files.exists(p)) {
-                return java.nio.file.Files.readAllBytes(p);
-            }
+            return csvAttachmentResolver.resolveContent(path.toString());
+        }
+        Object url = attData.get("attachmentUrl");
+        if (url != null && !url.toString().isBlank()) {
+            return csvAttachmentResolver.resolveContent(url.toString());
         }
         return new byte[0];
+    }
+
+    @SuppressWarnings("unchecked")
+    private int processCsvIssueColumnAttachments(
+            List<Map<String, Object>> issueRows, UUID jobId, Map<String, Object> jobOptions) {
+        String attachmentColumn = stringOption(jobOptions, "attachmentColumn", null);
+        if (attachmentColumn == null || attachmentColumn.isBlank()) {
+            attachmentColumn = "attachments";
+        }
+        int ok = 0;
+        for (Map<String, Object> issueData : issueRows) {
+            Object pending = issueData.get("_pendingAttachmentRefs");
+            if (!(pending instanceof List<?> list) || list.isEmpty()) {
+                continue;
+            }
+            String sourceKey = (String) issueData.get("issueKey");
+            if (sourceKey == null) {
+                continue;
+            }
+            var statusOpt = entityStatusRepository.findByJobIdAndEntityTypeAndSourceIdentifier(
+                    jobId, "ISSUE", sourceKey);
+            if (statusOpt.isEmpty() || statusOpt.get().getTargetId() == null) {
+                continue;
+            }
+            String targetIssueId = statusOpt.get().getTargetId();
+            for (Object item : list) {
+                if (!(item instanceof Map<?, ?> refMap)) {
+                    continue;
+                }
+                Object refObj = refMap.get("reference");
+                if (refObj == null) {
+                    continue;
+                }
+                String reference = refObj.toString();
+                Object fnObj = refMap.get("fileName");
+                String fileName = fnObj != null ? fnObj.toString() : "attachment";
+                try {
+                    byte[] content = csvAttachmentResolver.resolveContent(reference);
+                    if (content.length == 0) {
+                        continue;
+                    }
+                    String scan = virusScanService.scanBytes(content, fileName);
+                    if ("INFECTED".equals(scan)) {
+                        continue;
+                    }
+                    Map<String, Object> attData = new HashMap<>();
+                    attData.put("issueId", targetIssueId);
+                    attData.put("fileName", fileName);
+                    attData.put("attachmentPath", reference);
+                    var result = attachmentPersisterHandler.persistAttachment(attData, content, jobId);
+                    if (result != null && result.isSuccess()) {
+                        ok++;
+                    }
+                } catch (Exception e) {
+                    log.debug("CSV column attachment failed for {}: {}", sourceKey, e.getMessage());
+                }
+            }
+        }
+        if (ok > 0) {
+            migrationJobLogService.appendLog(jobId, "INFO",
+                    "CSV Attachments column: " + ok + " file(s) imported");
+        }
+        return ok;
+    }
+
+    private void validateCsvSingleTargetProject(
+            List<Map<String, String>> rows, UUID targetProjectId, UUID jobId) {
+        Set<String> distinct = new HashSet<>();
+        for (Map<String, String> row : rows) {
+            String pk = row.getOrDefault("project_key", row.get("project"));
+            if (pk != null && !pk.isBlank()) {
+                distinct.add(pk.trim().toUpperCase(Locale.ROOT));
+            }
+        }
+        if (distinct.size() > 1) {
+            migrationJobLogService.appendLog(jobId, "WARN",
+                    "CSV contains multiple project keys " + distinct
+                            + " — all rows map to single target project "
+                            + (targetProjectId != null ? targetProjectId : "(unset)")
+                            + ". For true multi-project import use Jira DC XML + project import.");
+        }
+    }
+
+    private String stringOption(Map<String, Object> options, String key, String defaultValue) {
+        if (options == null) {
+            return defaultValue;
+        }
+        Object v = options.get(key);
+        return v != null ? v.toString() : defaultValue;
     }
 
     private boolean isJobPaused(UUID jobId) {

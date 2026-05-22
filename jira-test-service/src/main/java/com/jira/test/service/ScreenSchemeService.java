@@ -391,7 +391,7 @@ public class ScreenSchemeService {
         ScreenScheme scheme = screenSchemeRepository.findById(schemeId)
                 .orElseThrow(() -> new ResourceNotFoundException("ScreenScheme", "id", schemeId));
 
-        screenSchemeScreenRepository.deleteByScreenSchemeId(schemeId);
+        screenSchemeScreenRepository.deleteAll(screenSchemeScreenRepository.findByScreenSchemeId(schemeId));
         screenSchemeRepository.delete(scheme);
         log.info("Screen scheme deleted: {}", schemeId);
     }

@@ -31,6 +31,7 @@ const STATUS_BADGES: Record<string, { bg: string; text: string; icon: string }> 
 
 const JOB_TYPE_LABELS: Record<string, string> = {
   CSV: 'CSV Import',
+  ISSUE_XML: 'Issue XML (Jira DC)',
   JIRA_DC: 'Systems and Avionics Import',
   WORKFLOW_XML: 'Workflow XML',
   PROJECT_IMPORT: 'Project Import',
@@ -238,6 +239,7 @@ export default function JobHistoryTable({
           >
             <option value="ALL">All Types</option>
             <option value="CSV">CSV Import</option>
+            <option value="ISSUE_XML">Issue XML (Jira DC)</option>
             <option value="JIRA_DC">Systems and Avionics Import</option>
             <option value="PROJECT_IMPORT">Project Import</option>
             <option value="WORKFLOW_XML">Workflow XML</option>

@@ -1,20 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import combinedApi from '../../../api/testApi';
 import TestList from '../components/TestList';
 import TestCreateModal from '../components/TestCreateModal';
 import TestReportsDashboard from '../components/TestReportsDashboard';
-import TraceabilityMatrix from '../components/TraceabilityMatrix';
 import ImportPanel from '../components/ImportPanel';
 import TestSetsList from '../components/TestSetsList';
 import TestPlansList from '../components/TestPlansList';
+import XrayTestHub from '../components/XrayTestHub';
+import { XRAY_PLUGIN_LABEL } from '../xrayNavRegistry';
+import '../styles/xray-hub.css';
+
+const VIEW_PARAM_MAP: Record<string, 'tests' | 'sets' | 'plans' | 'reports' | 'import'> = {
+  tests: 'tests',
+  sets: 'sets',
+  plans: 'plans',
+  reports: 'reports',
+  import: 'import',
+};
 
 export const TestManagementPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const [activeView, setActiveView] = useState<'tests' | 'sets' | 'plans' | 'reports' | 'import'>('tests');
+  const [searchParams] = useSearchParams();
+  const initialView = VIEW_PARAM_MAP[searchParams.get('view') || ''] || 'tests';
+  const [activeView, setActiveView] = useState<'tests' | 'sets' | 'plans' | 'reports' | 'import'>(initialView);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filter, setFilter] = useState<{ testType?: string; testStatus?: string; search?: string }>({});
   const [stats, setStats] = useState<{ tests: number; sets: number; plans: number; executions: number } | null>(null);
+  const [showHub, setShowHub] = useState(false);
 
   useEffect(() => {
     if (projectId) {
@@ -36,29 +49,38 @@ export const TestManagementPage: React.FC = () => {
     }
   };
 
+  if (!projectId) {
+    return <XrayTestHub showProjectPicker />;
+  }
+
   return (
-    <div className="test-management-page">
-      {/* Header */}
-      <div className="page-header mb-6 flex items-center justify-between">
+    <div className="test-management-page xray-project-shell">
+      <div className="page-header mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Test Management</h1>
-          {projectId && (
-            <p className="text-gray-500 text-sm mt-1">
-              Project: {projectId.slice(0, 8)}...
-            </p>
-          )}
+          <span className="xray-hub-badge">Xray plugin</span>
+          <h1 className="text-2xl font-bold" style={{ margin: '4px 0 0' }}>
+            {XRAY_PLUGIN_LABEL}
+          </h1>
+          <p className="jdc-muted text-sm mt-1">
+            Project scope · <Link to="/tests" className="jdc-link">Change project</Link>
+            {' · '}
+            <button type="button" className="jdc-link jdc-link-btn" onClick={() => setShowHub(!showHub)}>
+              {showHub ? 'Hide' : 'All Xray modules'}
+            </button>
+          </p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn btn-primary"
-          >
-            + Create Test
+          <Link to={`/tests/create/${projectId}`} className="jdc-btn jdc-btn-secondary">
+            Create test (wizard)
+          </Link>
+          <button type="button" className="jdc-btn jdc-btn-primary" onClick={() => setShowCreateModal(true)}>
+            + Create test
           </button>
         </div>
       </div>
 
-      {/* Quick Stats */}
+      {showHub && <XrayTestHub projectId={projectId} showProjectPicker={false} />}
+
       {stats && (
         <div className="stats-bar grid grid-cols-4 gap-4 mb-6">
           <div className="card border rounded-lg p-4 cursor-pointer hover:bg-gray-50" onClick={() => setActiveView('tests')}>
@@ -80,63 +102,25 @@ export const TestManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="tabs mb-6 flex gap-2 border-b">
-        <button
-          onClick={() => setActiveView('tests')}
-          className={`px-4 py-2 font-medium ${
-            activeView === 'tests'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          📝 Tests
-        </button>
-        <button
-          onClick={() => setActiveView('sets')}
-          className={`px-4 py-2 font-medium ${
-            activeView === 'sets'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          📁 Test Sets
-        </button>
-        <button
-          onClick={() => setActiveView('plans')}
-          className={`px-4 py-2 font-medium ${
-            activeView === 'plans'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          📋 Test Plans
-        </button>
-        <button
-          onClick={() => setActiveView('reports')}
-          className={`px-4 py-2 font-medium ${
-            activeView === 'reports'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          📊 Reports
-        </button>
-        <button
-          onClick={() => setActiveView('import')}
-          className={`px-4 py-2 font-medium ${
-            activeView === 'import'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          📥 Import
-        </button>
+      <div className="tabs mb-6 flex gap-2 border-b flex-wrap">
+        {(['tests', 'sets', 'plans', 'reports', 'import'] as const).map((view) => (
+          <button
+            key={view}
+            type="button"
+            onClick={() => setActiveView(view)}
+            className={`px-4 py-2 font-medium ${activeView === view ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
+          >
+            {view === 'tests' && '📝 Tests'}
+            {view === 'sets' && '📁 Test Sets'}
+            {view === 'plans' && '📋 Test Plans'}
+            {view === 'reports' && '📊 Reports'}
+            {view === 'import' && '📥 Import'}
+          </button>
+        ))}
       </div>
 
-      {/* Content */}
       <div className="content">
-        {activeView === 'tests' && projectId && (
+        {activeView === 'tests' && (
           <>
             <div className="filter-bar mb-4 flex gap-4 items-center">
               <input
@@ -147,9 +131,9 @@ export const TestManagementPage: React.FC = () => {
                 className="px-3 py-2 border rounded w-64"
               />
               <select
+                className="px-3 py-2 border rounded"
                 value={filter.testType || ''}
                 onChange={(e) => setFilter({ ...filter, testType: e.target.value || undefined })}
-                className="px-3 py-2 border rounded"
               >
                 <option value="">All Types</option>
                 <option value="MANUAL">Manual</option>
@@ -157,9 +141,9 @@ export const TestManagementPage: React.FC = () => {
                 <option value="BDD">BDD</option>
               </select>
               <select
+                className="px-3 py-2 border rounded"
                 value={filter.testStatus || ''}
                 onChange={(e) => setFilter({ ...filter, testStatus: e.target.value || undefined })}
-                className="px-3 py-2 border rounded"
               >
                 <option value="">All Statuses</option>
                 <option value="DRAFT">Draft</option>
@@ -171,20 +155,10 @@ export const TestManagementPage: React.FC = () => {
             <TestList projectId={projectId} filter={filter} />
           </>
         )}
-
-        {activeView === 'sets' && projectId && (
-          <TestSetsList projectId={projectId} />
-        )}
-
-        {activeView === 'plans' && projectId && (
-          <TestPlansList projectId={projectId} />
-        )}
-
-        {activeView === 'reports' && projectId && (
-          <TestReportsDashboard projectId={projectId} />
-        )}
-
-        {activeView === 'import' && projectId && (
+        {activeView === 'sets' && <TestSetsList projectId={projectId} />}
+        {activeView === 'plans' && <TestPlansList projectId={projectId} />}
+        {activeView === 'reports' && <TestReportsDashboard projectId={projectId} />}
+        {activeView === 'import' && (
           <div className="grid grid-cols-3 gap-6">
             <div className="col-span-2">
               <div className="card border rounded-lg p-4">
@@ -194,28 +168,14 @@ export const TestManagementPage: React.FC = () => {
             <div>
               <div className="card border rounded-lg p-4">
                 <h3 className="font-semibold mb-3">Import Help</h3>
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <h4 className="font-medium">🥒 Cucumber / Gherkin</h4>
-                    <p className="text-gray-600">
-                      Upload .feature files containing BDD scenarios. Each scenario becomes a test with Given/When/Then steps.
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">📄 JUnit XML</h4>
-                    <p className="text-gray-600">
-                      Import CI/CD test results from Jenkins, GitHub Actions, GitLab CI, or Azure DevOps.
-                    </p>
-                  </div>
-                </div>
+                <p className="text-sm text-gray-600">Cucumber/Gherkin and JUnit XML supported (Xray import).</p>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Create Modal */}
-      {showCreateModal && projectId && (
+      {showCreateModal && (
         <TestCreateModal
           projectId={projectId}
           isOpen={showCreateModal}

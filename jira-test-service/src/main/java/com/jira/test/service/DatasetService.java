@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.SplittableRandom;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -682,7 +683,7 @@ public class DatasetService {
 
         // Structure comparison
         DatasetCompareResponse.StructureComparison structComp = compareStructure(
-                cols1, cols2, types1, types2, request.isCaseSensitive());
+                cols1, cols2, types1, types2, Boolean.TRUE.equals(request.getCaseSensitive()));
 
         // Data comparison
         DatasetCompareResponse.DataComparison dataComp = compareData(
@@ -788,10 +789,10 @@ public class DatasetService {
         if (v1 == null && v2 == null) return true;
         if (v1 == null || v2 == null) return false;
 
-        String s1 = request.isIgnoreWhitespace() ? v1.trim() : v1;
-        String s2 = request.isIgnoreWhitespace() ? v2.trim() : v2;
-        String compare1 = request.isCaseSensitive() ? s1 : s1.toLowerCase();
-        String compare2 = request.isCaseSensitive() ? s2 : s2.toLowerCase();
+        String s1 = Boolean.TRUE.equals(request.getIgnoreWhitespace()) ? v1.trim() : v1;
+        String s2 = Boolean.TRUE.equals(request.getIgnoreWhitespace()) ? v2.trim() : v2;
+        String compare1 = Boolean.TRUE.equals(request.getCaseSensitive()) ? s1 : s1.toLowerCase();
+        String compare2 = Boolean.TRUE.equals(request.getCaseSensitive()) ? s2 : s2.toLowerCase();
 
         if (compare1.equals(compare2)) return true;
 
@@ -839,7 +840,7 @@ public class DatasetService {
             columnTypes.add(col.getType());
         }
 
-        ThreadLocalRandom random = ThreadLocalRandom.of(seed);
+        SplittableRandom random = new SplittableRandom(seed);
 
         for (int r = 0; r < request.getRowCount(); r++) {
             List<String> row = new ArrayList<>();
@@ -887,7 +888,7 @@ public class DatasetService {
         return response;
     }
 
-    private String generateValue(MockDataRequest.ColumnSchema col, ThreadLocalRandom random,
+    private String generateValue(MockDataRequest.ColumnSchema col, SplittableRandom random,
                                  Set<String> generatedValues, int rowIndex) {
         // Handle null values
         if (col.getNullPercentage() != null && random.nextDouble() < col.getNullPercentage()) {
@@ -952,7 +953,7 @@ public class DatasetService {
         return value;
     }
 
-    private String generateString(ThreadLocalRandom random, MockDataRequest.ColumnSchema col) {
+    private String generateString(SplittableRandom random, MockDataRequest.ColumnSchema col) {
         int minLen = col.getMinLength() != null ? col.getMinLength() : 5;
         int maxLen = col.getMaxLength() != null ? col.getMaxLength() : 20;
         int len = minLen + random.nextInt(Math.max(1, maxLen - minLen));
@@ -965,7 +966,7 @@ public class DatasetService {
         return sb.toString();
     }
 
-    private String generateNumber(ThreadLocalRandom random, MockDataRequest.ColumnSchema col) {
+    private String generateNumber(SplittableRandom random, MockDataRequest.ColumnSchema col) {
         double min = col.getMin() != null ? col.getMin() : 0;
         double max = col.getMax() != null ? col.getMax() : 1000;
         int decimals = col.getDecimalPlaces() != null ? col.getDecimalPlaces() : 0;
@@ -977,33 +978,33 @@ public class DatasetService {
         return String.format("%." + decimals + "f", value);
     }
 
-    private String generateDate(ThreadLocalRandom random, MockDataRequest.ColumnSchema col) {
+    private String generateDate(SplittableRandom random, MockDataRequest.ColumnSchema col) {
         int year = 2020 + random.nextInt(6);
         int month = 1 + random.nextInt(12);
         int day = 1 + random.nextInt(28);
         return String.format("%04d-%02d-%02d", year, month, day);
     }
 
-    private String generateDateTime(ThreadLocalRandom random, MockDataRequest.ColumnSchema col) {
+    private String generateDateTime(SplittableRandom random, MockDataRequest.ColumnSchema col) {
         return generateDate(random, col) + "T" + String.format("%02d:%02d:%02d",
                 random.nextInt(24), random.nextInt(60), random.nextInt(60));
     }
 
-    private String generateEmail(ThreadLocalRandom random) {
+    private String generateEmail(SplittableRandom random) {
         String[] domains = {"example.com", "test.org", "demo.net"};
         String[] names = {"user", "test", "demo", "admin", "john", "jane"};
         return names[random.nextInt(names.length)] + random.nextInt(1000) + "@" +
                 domains[random.nextInt(domains.length)];
     }
 
-    private String generateUrl(ThreadLocalRandom random) {
+    private String generateUrl(SplittableRandom random) {
         String[] protocols = {"http", "https"};
         String[] domains = {"example.com", "test.org", "demo.net"};
         return protocols[random.nextInt(protocols.length)] + "://" + domains[random.nextInt(domains.length)] +
                 "/page/" + random.nextInt(1000);
     }
 
-    private String generatePhone(ThreadLocalRandom random, MockDataRequest.ColumnSchema col) {
+    private String generatePhone(SplittableRandom random, MockDataRequest.ColumnSchema col) {
         String pattern = col.getPattern() != null ? col.getPattern() : "XXX-XXX-XXXX";
         StringBuilder sb = new StringBuilder();
         for (char c : pattern.toCharArray()) {
@@ -1016,13 +1017,13 @@ public class DatasetService {
         return sb.toString();
     }
 
-    private String generateName(ThreadLocalRandom random) {
+    private String generateName(SplittableRandom random) {
         String[] first = {"John", "Jane", "Bob", "Alice", "Charlie", "Diana"};
         String[] last = {"Smith", "Johnson", "Williams", "Brown", "Jones", "Miller"};
         return first[random.nextInt(first.length)] + " " + last[random.nextInt(last.length)];
     }
 
-    private String generateAddress(ThreadLocalRandom random) {
+    private String generateAddress(SplittableRandom random) {
         int num = 100 + random.nextInt(9000);
         String[] streets = {"Main St", "Oak Ave", "Park Blvd", "Market St", "First Ave"};
         String[] cities = {"Springfield", "Riverside", "Georgetown", "Fairview", "Madison"};

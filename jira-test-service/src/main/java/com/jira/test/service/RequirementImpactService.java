@@ -1,7 +1,6 @@
 package com.jira.test.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jira.test.entity.*;
 import com.jira.test.exception.ResourceNotFoundException;
@@ -34,11 +33,14 @@ public class RequirementImpactService {
         RequirementVersion version = RequirementVersion.builder()
                 .requirementId(requirementId)
                 .versionNumber(newVersion)
+                .version(String.valueOf(newVersion))
                 .titleSnapshot(title)
                 .descriptionSnapshot(description)
                 .acceptanceCriteriaSnapshot(serializeList(acceptanceCriteria))
                 .changedBy(changedBy)
-                .changeType(determineChangeType(newVersion))
+                .changeMagnitude(newVersion == 1
+                        ? RequirementVersion.ChangeMagnitude.MAJOR
+                        : RequirementVersion.ChangeMagnitude.MINOR)
                 .build();
 
         versionRepository.save(version);
@@ -52,8 +54,8 @@ public class RequirementImpactService {
                     Map<String, Object> map = new HashMap<>();
                     map.put("versionNumber", v.getVersionNumber());
                     map.put("titleSnapshot", v.getTitleSnapshot());
-                    map.put("changeType", v.getChangeType());
-                    map.put("changeDescription", v.getChangeDescription());
+                    map.put("changeMagnitude", v.getChangeMagnitude());
+                    map.put("changelog", v.getChangelog());
                     map.put("createdAt", v.getCreatedAt());
                     return map;
                 }).toList();
@@ -66,10 +68,8 @@ public class RequirementImpactService {
         RequirementVersion to = versionRepository.findByRequirementIdAndVersionNumber(requirementId, toVersion)
                 .orElseThrow(() -> new ResourceNotFoundException("RequirementVersion", "id", requirementId.toString()));
 
-        // Detect field changes
         List<Map<String, String>> fieldChanges = detectFieldChanges(from, to);
 
-        // Find affected tests
         List<RequirementLink> links = requirementLinkRepository.findByRequirementKey(requirementId.toString());
         List<Map<String, Object>> affectedTests = links.stream().map(link -> {
             Map<String, Object> test = new HashMap<>();
@@ -81,14 +81,13 @@ public class RequirementImpactService {
         Map<String, Object> impact = new HashMap<>();
         impact.put("fieldChanges", fieldChanges);
         impact.put("affectedTests", affectedTests);
-        impact.put("changeType", to.getChangeType());
+        impact.put("changeMagnitude", to.getChangeMagnitude());
 
-        // Record change event
         RequirementChangeEvent event = RequirementChangeEvent.builder()
                 .requirementId(requirementId)
                 .fromVersion(fromVersion)
                 .toVersion(toVersion)
-                .changeType(to.getChangeType())
+                .changeType(RequirementChangeEvent.ChangeType.MODIFIED)
                 .fieldChanges(serializeFieldChanges(fieldChanges))
                 .affectedTests(serializeList(affectedTests))
                 .build();
@@ -101,12 +100,19 @@ public class RequirementImpactService {
     public void analyzeCoverageDrift(UUID requirementId) {
         List<RequirementLink> links = requirementLinkRepository.findByRequirementKey(requirementId.toString());
 
-        BigDecimal currentScore = BigDecimal.valueOf(links.size() * 10); // Simplified scoring
+        BigDecimal currentScore = BigDecimal.valueOf(links.size() * 10L);
+        UUID projectId = links.stream()
+                .map(RequirementLink::getTestId)
+                .findFirst()
+                .flatMap(testIssueRepository::findById)
+                .map(TestIssue::getProjectId)
+                .orElse(requirementId);
 
         CoverageDriftRecord drift = CoverageDriftRecord.builder()
                 .requirementId(requirementId)
-                .currentCoverageScore(currentScore)
-                .driftType("stable")
+                .projectId(projectId)
+                .currentCoverage(currentScore)
+                .driftType(CoverageDriftRecord.DriftType.STABLE)
                 .actionRequired(false)
                 .build();
 
@@ -114,15 +120,11 @@ public class RequirementImpactService {
         log.info("Analyzed coverage drift for requirement {}", requirementId);
     }
 
-    private String determineChangeType(int version) {
-        return version == 1 ? "major" : "minor";
-    }
-
     private List<Map<String, String>> detectFieldChanges(RequirementVersion from, RequirementVersion to) {
         List<Map<String, String>> changes = new ArrayList<>();
 
         if (!Objects.equals(from.getTitleSnapshot(), to.getTitleSnapshot())) {
-            changes.add(Map.of("field", "title", "old", from.getTitleSnapshot(), "new", to.getTitleSnapshot()));
+            changes.add(Map.of("field", "title", "old", String.valueOf(from.getTitleSnapshot()), "new", String.valueOf(to.getTitleSnapshot())));
         }
         if (!Objects.equals(from.getDescriptionSnapshot(), to.getDescriptionSnapshot())) {
             changes.add(Map.of("field", "description", "old", "changed", "new", "changed"));
@@ -136,12 +138,18 @@ public class RequirementImpactService {
     }
 
     private String serializeList(Object obj) {
-        try { return objectMapper.writeValueAsString(obj); }
-        catch (JsonProcessingException e) { return "[]"; }
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            return "[]";
+        }
     }
 
     private String serializeFieldChanges(List<Map<String, String>> changes) {
-        try { return objectMapper.writeValueAsString(changes); }
-        catch (JsonProcessingException e) { return "[]"; }
+        try {
+            return objectMapper.writeValueAsString(changes);
+        } catch (JsonProcessingException e) {
+            return "[]";
+        }
     }
 }

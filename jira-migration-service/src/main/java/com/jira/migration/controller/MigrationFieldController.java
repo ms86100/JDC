@@ -16,8 +16,9 @@ import java.util.UUID;
 
 /**
  * REST Controller for Migration Field Management.
- * Provides CRUD operations for field mappings at /api/migration/fields
+ * @deprecated Use {@code /api/migration/mappings} and {@code /api/fields/custom} (G-07).
  */
+@Deprecated(since = "2026-05-22", forRemoval = true)
 @RestController
 @RequestMapping("/api/migration/fields")
 @RequiredArgsConstructor
@@ -31,7 +32,7 @@ public class MigrationFieldController {
      * GET /api/migration/fields - List all field mappings
      */
     @GetMapping
-    @Operation(summary = "List field mappings", description = "Returns all field mappings")
+    @Operation(summary = "List field mappings (deprecated)", description = "Use /api/migration/mappings")
     public ResponseEntity<List<FieldMapping>> listFields(
             @Parameter(description = "Filter by mapping type") @RequestParam(required = false) String mappingType) {
 

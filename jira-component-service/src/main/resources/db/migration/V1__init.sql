@@ -20,9 +20,7 @@ CREATE TABLE project_components (
     created_by UUID,
     updated_by UUID,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-
-    CONSTRAINT fk_project_components_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- Issue to Component (Many-to-Many)
@@ -33,8 +31,6 @@ CREATE TABLE issue_components (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     created_by UUID,
 
-    CONSTRAINT fk_issue_components_issue FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE,
-    CONSTRAINT fk_issue_components_component FOREIGN KEY (component_id) REFERENCES project_components(id) ON DELETE CASCADE,
     UNIQUE(issue_id, component_id)
 );
 

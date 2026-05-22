@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { workflowApi } from '../../../api/workflowApi';
+import WorkflowVersionHistoryPanel from '../../workflows/components/WorkflowVersionHistoryPanel';
+import WorkflowStatusMigrationModal from '../../workflows/components/WorkflowStatusMigrationModal';
 import './WorkflowsPage.css';
 
 const API_BASE = '/api/workflows';
@@ -256,6 +258,12 @@ export default function WorkflowsPage() {
                 <h1 className="wf-page-title">Workflows</h1>
               </div>
               <div className="wf-page-header-right">
+                <Link to="/workflows/admin/tools" className="wf-btn wf-btn-secondary" style={{ marginRight: 8 }}>
+                  Admin API tools
+                </Link>
+                <Link to="/workflows" className="wf-btn wf-btn-secondary" style={{ marginRight: 8 }}>
+                  Workflow hub
+                </Link>
                 <div className="wf-import-wrapper">
                   <button
                     className="wf-btn wf-btn-secondary"
@@ -265,8 +273,26 @@ export default function WorkflowsPage() {
                   </button>
                   {showImport && (
                     <div className="wf-dropdown-menu">
-                      <button className="wf-dropdown-item">Import Workflow Definition</button>
-                      <button className="wf-dropdown-item">Import from XML</button>
+                      <button
+                        type="button"
+                        className="wf-dropdown-item"
+                        onClick={() => {
+                          setShowImport(false);
+                          navigate('/migration?import=workflow-xml');
+                        }}
+                      >
+                        Import Workflow Definition
+                      </button>
+                      <button
+                        type="button"
+                        className="wf-dropdown-item"
+                        onClick={() => {
+                          setShowImport(false);
+                          navigate('/migration?import=workflow-xml');
+                        }}
+                      >
+                        Import from XML
+                      </button>
                     </div>
                   )}
                 </div>
@@ -670,6 +696,7 @@ interface WorkflowDetailViewProps {
 function WorkflowDetailView({ workflow, workflows, onBack }: WorkflowDetailViewProps) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'statuses' | 'transitions' | 'versions'>('statuses');
+  const [showStatusMigration, setShowStatusMigration] = useState(false);
   const [statuses, setStatuses] = useState<WorkflowStatus[]>([]);
   const [transitions, setTransitions] = useState<WorkflowTransition[]>([]);
   const [versions, setVersions] = useState<WorkflowVersion[]>([]);
@@ -689,7 +716,8 @@ function WorkflowDetailView({ workflow, workflows, onBack }: WorkflowDetailViewP
 
       setStatuses(
         (detail.statuses || []).map((s) => ({
-          id: s.id,
+          id: s.statusId || s.id,
+          linkId: s.id,
           name: s.statusName || String(s.statusId),
           category: s.statusCategory,
           color: s.statusColor,
@@ -744,10 +772,13 @@ function WorkflowDetailView({ workflow, workflows, onBack }: WorkflowDetailViewP
             <p className="wf-detail-description">{workflow.description}</p>
           </div>
           <div className="wf-detail-actions">
+            <button type="button" className="wf-btn wf-btn-secondary" onClick={() => setShowStatusMigration(true)}>
+              Status migration
+            </button>
             <button
               type="button"
               className="wf-btn wf-btn-primary"
-              onClick={() => navigate(`/admin/workflows/${workflow.id}/designer`)}
+              onClick={() => navigate(`/workflows/${workflow.id}/designer`)}
             >
               Open diagram editor
             </button>
@@ -845,33 +876,37 @@ function WorkflowDetailView({ workflow, workflows, onBack }: WorkflowDetailViewP
             )}
 
             {activeTab === 'versions' && (
-              <div className="wf-versions-list">
-                {versions.length === 0 ? (
-                  <p className="wf-empty">
-                    No version history yet. Versions are created when you edit and publish this workflow (Jira DC behavior).
-                  </p>
-                ) : (
-                  versions.map((version) => (
-                    <div key={version.id} className="wf-version-card">
-                      <div className="wf-version-number">v{version.versionNumber}</div>
-                      <div className="wf-version-info">
-                        <strong>{version.changeDescription}</strong>
-                        <span className="wf-version-type">{version.changeType}</span>
-                        <span className="wf-version-date">{version.createdAt}</span>
-                      </div>
-                      {version.changeType !== 'CREATE' && (
-                        <button className="wf-btn wf-btn-secondary wf-btn-sm">
-                          Revert
-                        </button>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
+              <WorkflowVersionHistoryPanel
+                workflowId={workflow.id}
+                versions={versions.map((v) => ({
+                  id: v.id,
+                  versionNumber: v.versionNumber,
+                  changeDescription: v.changeDescription,
+                  changeType: v.changeType,
+                  createdAt: v.createdAt,
+                  createdBy: v.createdBy,
+                }))}
+              />
             )}
           </>
         )}
       </div>
+
+      {showStatusMigration && (
+        <WorkflowStatusMigrationModal
+          workflowId={workflow.id}
+          statuses={statuses.map((s) => ({
+            id: s.id,
+            workflowId: workflow.id,
+            statusId: s.id,
+            statusName: s.name,
+            statusCategory: s.category,
+            statusColor: s.color,
+            sequence: s.sequence ?? 0,
+          }))}
+          onClose={() => setShowStatusMigration(false)}
+        />
+      )}
     </div>
   );
 }

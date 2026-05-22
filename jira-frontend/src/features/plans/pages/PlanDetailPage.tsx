@@ -1,21 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { usePlan } from '../hooks/usePlans';
 import { useBoards, useCreateBoard } from '../hooks/useBoardConfig';
-import BacklogView from '../components/backlog/BacklogView';
+import RoadmapView from '../components/roadmap/RoadmapView';
 import TeamsView from '../components/teams/TeamsView';
 import ReleasesView from '../components/releases/ReleasesView';
 import DependenciesView from '../components/dependencies/DependenciesView';
 import WarningsPanel from '../components/warnings/WarningsPanel';
-import PlanHeader from '../components/layout/PlanHeader';
 import BoardDetailPage from './BoardDetailPage';
+import { recordRecentPlanView } from '../utils/recentPlanViews';
 import '../styles/plans.css';
+import '../styles/plan-roadmap.css';
+import { appNotify } from '../../../lib/appNotify';
 
-type TabType = 'backlog' | 'teams' | 'releases' | 'dependencies' | 'warnings' | 'boards';
+type TabType = 'roadmap' | 'teams' | 'releases' | 'dependencies' | 'warnings' | 'boards';
 
 export default function PlanDetailPage() {
   const { planId } = useParams<{ planId: string }>();
-  const [activeTab, setActiveTab] = useState<TabType>('backlog');
+  const [activeTab, setActiveTab] = useState<TabType>('roadmap');
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const { data: plan, isLoading } = usePlan(planId || '');
   const { data: boards } = useBoards(planId || '');
@@ -25,6 +28,10 @@ export default function PlanDetailPage() {
   const [newBoardName, setNewBoardName] = useState('');
   const [newBoardType, setNewBoardType] = useState<'SCRUM' | 'KANBAN'>('SCRUM');
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (plan && planId) recordRecentPlanView(planId, plan.name);
+  }, [plan, planId]);
 
   if (isLoading) {
     return (
@@ -38,7 +45,7 @@ export default function PlanDetailPage() {
     return (
       <div className="ab-empty-state">
         <h3>Plan not found</h3>
-        <Link to="/programs" className="ab-btn ab-btn-primary">Back to Programs</Link>
+        <Link to="/plans" className="ab-btn ab-btn-primary">View plans</Link>
       </div>
     );
   }
@@ -54,24 +61,21 @@ export default function PlanDetailPage() {
         setShowCreateBoard(false);
       },
       onError: (error: Error) => {
-        alert(error.message || 'Failed to create board');
+        appNotify.error(error.message || 'Failed to create board');
       },
     });
   };
 
   const tabs: { id: TabType; label: string; count?: number }[] = [
-    { id: 'backlog', label: 'Backlog', count: plan.itemCount },
+    { id: 'roadmap', label: 'Roadmap', count: plan.itemCount },
     { id: 'teams', label: 'Teams', count: plan.teamCount },
     { id: 'releases', label: 'Releases', count: plan.releaseCount },
-    { id: 'dependencies', label: 'Dependencies' },
-    { id: 'warnings', label: 'Warnings' },
-    { id: 'boards', label: 'Boards', count: boards?.length },
+    { id: 'dependencies', label: 'Dependencies report' },
   ];
 
-  // If board is selected, show board detail page
   if (selectedBoardId && activeTab === 'boards') {
     return (
-      <div className="ab-plan-detail-page">
+      <div className="jdc-plan-page sa-plan-detail">
         <div className="ab-page-header">
           <button className="ab-btn ab-btn-secondary" onClick={() => setSelectedBoardId(null)}>
             Back to Boards
@@ -83,118 +87,73 @@ export default function PlanDetailPage() {
   }
 
   return (
-    <div className="ab-plan-detail-page">
-      <PlanHeader plan={plan} />
+    <div className="jdc-plan-page sa-plan-detail">
+      <header className="sa-plan-detail-header">
+        <div className="jdc-plan-top">
+          <div className="jdc-plan-title-row">
+            <h1 className="jdc-plan-title">{plan.name}</h1>
+            <Link to={`/plans/${planId}/settings`} title="Plan settings">⚙</Link>
+          </div>
+          <div className="jdc-plan-tabs">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={`jdc-plan-tab ${activeTab === tab.id ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.label}
+                {tab.count !== undefined && tab.count > 0 && ` (${tab.count})`}
+              </button>
+            ))}
+            <div style={{ marginLeft: 'auto', position: 'relative' }}>
+              <button type="button" className="jdc-plan-tab" onClick={() => setMoreOpen((o) => !o)}>More ▾</button>
+              {moreOpen && (
+                <div className="jdc-plans-flyout" style={{ right: 0, left: 'auto', top: '100%' }}>
+                  <button type="button" className="jdc-flyout-item" onClick={() => { setActiveTab('warnings'); setMoreOpen(false); }}>Warnings</button>
+                  <button type="button" className="jdc-flyout-item" onClick={() => { setActiveTab('boards'); setMoreOpen(false); }}>Boards ({boards?.length ?? 0})</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
 
-      <div className="ab-tabs">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            className={`ab-tab ${activeTab === tab.id ? 'ab-tab-active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-            {tab.count !== undefined && tab.count > 0 && (
-              <span className="ab-tab-count">{tab.count}</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      <div className="ab-content">
-        {activeTab === 'backlog' && <BacklogView planId={planId || ''} />}
-        {activeTab === 'teams' && <TeamsView planId={planId || ''} />}
-        {activeTab === 'releases' && <ReleasesView planId={planId || ''} />}
-        {activeTab === 'dependencies' && <DependenciesView planId={planId || ''} />}
-        {activeTab === 'warnings' && <WarningsPanel planId={planId || ''} />}
+      <div className="sa-plan-detail-body">
+        {activeTab === 'roadmap' && <RoadmapView plan={plan} />}
+        {activeTab === 'teams' && <div style={{ padding: 16 }}><TeamsView planId={planId || ''} /></div>}
+        {activeTab === 'releases' && <div style={{ padding: 16 }}><ReleasesView planId={planId || ''} /></div>}
+        {activeTab === 'dependencies' && <div style={{ padding: 16 }}><DependenciesView planId={planId || ''} /></div>}
+        {activeTab === 'warnings' && <div style={{ padding: 16 }}><WarningsPanel planId={planId || ''} /></div>}
         {activeTab === 'boards' && (
-          <div className="ab-boards-view">
+          <div className="ab-boards-view" style={{ padding: 16 }}>
             <div className="ab-boards-header">
               <h3>Boards</h3>
-              <button
-                className="ab-btn ab-btn-primary"
-                onClick={() => setShowCreateBoard(true)}
-              >
-                Create Board
-              </button>
+              <button className="ab-btn ab-btn-primary" onClick={() => setShowCreateBoard(true)}>Create Board</button>
             </div>
-
             {boards && boards.length > 0 ? (
               <div className="ab-boards-grid">
-                {boards.map(board => (
-                  <div
-                    key={board.id}
-                    className="ab-board-card"
-                    onClick={() => setSelectedBoardId(board.id)}
-                  >
-                    <div className="ab-board-icon">
-                      {board.boardType === 'SCRUM' ? '🏃' : '📋'}
-                    </div>
-                    <h4 className="ab-board-name">{board.name}</h4>
-                    <span className={`ab-board-type ${board.boardType?.toLowerCase()}`}>
-                      {board.boardType}
-                    </span>
-                    <div className="ab-board-meta">
-                      <span>{board.columns?.length || 0} columns</span>
-                    </div>
+                {boards.map((board) => (
+                  <div key={board.id} className="ab-board-card" onClick={() => setSelectedBoardId(board.id)}>
+                    <h4>{board.name}</h4>
+                    <span>{board.boardType}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="ab-empty-state">
-                <p>No boards yet. Create your first board to start managing sprints.</p>
-              </div>
+              <p>No boards yet.</p>
             )}
-
             {showCreateBoard && (
               <div className="ab-modal-overlay">
                 <div className="ab-modal">
-                  <div className="ab-modal-header">
-                    <h2>Create Board</h2>
-                    <button
-                      className="ab-btn-close"
-                      onClick={() => setShowCreateBoard(false)}
-                    >
-                      &times;
-                    </button>
-                  </div>
-                  <div className="ab-modal-content">
-                    <div className="ab-form-group">
-                      <label>Board Name</label>
-                      <input
-                        type="text"
-                        className="ab-input"
-                        placeholder="e.g., Sprint Board"
-                        value={newBoardName}
-                        onChange={(e) => setNewBoardName(e.target.value)}
-                      />
-                    </div>
-                    <div className="ab-form-group">
-                      <label>Board Type</label>
-                      <select
-                        className="ab-select"
-                        value={newBoardType}
-                        onChange={(e) => setNewBoardType(e.target.value as 'SCRUM' | 'KANBAN')}
-                      >
-                        <option value="SCRUM">Scrum</option>
-                        <option value="KANBAN">Kanban</option>
-                      </select>
-                    </div>
-                    <div className="ab-modal-actions">
-                      <button
-                        className="ab-btn ab-btn-primary"
-                        onClick={handleCreateBoard}
-                      >
-                        Create Board
-                      </button>
-                      <button
-                        className="ab-btn ab-btn-secondary"
-                        onClick={() => setShowCreateBoard(false)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
+                  <h2>Create Board</h2>
+                  <input className="ab-input" value={newBoardName} onChange={(e) => setNewBoardName(e.target.value)} />
+                  <select className="ab-select" value={newBoardType} onChange={(e) => setNewBoardType(e.target.value as 'SCRUM' | 'KANBAN')}>
+                    <option value="SCRUM">Scrum</option>
+                    <option value="KANBAN">Kanban</option>
+                  </select>
+                  <button className="ab-btn ab-btn-primary" onClick={handleCreateBoard}>Create</button>
+                  <button className="ab-btn ab-btn-secondary" onClick={() => setShowCreateBoard(false)}>Cancel</button>
                 </div>
               </div>
             )}

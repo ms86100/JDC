@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/jira_platform
     username: jiraadmin
-    password: UNIpay@123
+    password: ${DB_PASSWORD:UNIpay@123}
   jpa:
     hibernate:
       ddl-auto: none

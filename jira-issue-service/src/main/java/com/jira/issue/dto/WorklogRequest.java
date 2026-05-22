@@ -15,7 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class WorklogRequest {
-    @NotNull(message = "Issue ID is required")
+    /** Set from path variable on POST /api/issues/{issueId}/worklogs */
     private UUID issueId;
 
     @NotNull(message = "Time spent is required")

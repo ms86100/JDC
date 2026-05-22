@@ -79,13 +79,13 @@ public class ValidationEngine {
                                  List<ValidationResult.ValidationError> errors,
                                  List<ValidationResult.ValidationWarning> warnings) {
         // Project key validation
-        String projectKey = row.get("project_key");
+        String projectKey = firstNonBlank(row, "project_key", "project");
         if (projectKey == null || projectKey.isBlank()) {
             errors.add(createError("project_key", "PROJECT_KEY_REQUIRED", "Project key is required", rowNum, null));
         }
 
         // Issue type validation
-        String issueType = row.get("issue_type");
+        String issueType = firstNonBlank(row, "issue_type", "issuetype", "type");
         if (issueType == null || issueType.isBlank()) {
             errors.add(createError("issue_type", "ISSUE_TYPE_REQUIRED", "Issue type is required", rowNum, null));
         } else {
@@ -96,7 +96,7 @@ public class ValidationEngine {
         }
 
         // Summary validation
-        String summary = row.get("summary");
+        String summary = firstNonBlank(row, "summary", "title", "subject");
         if (summary == null || summary.isBlank()) {
             errors.add(createError("summary", "SUMMARY_REQUIRED", "Summary is required", rowNum, null));
         } else if (summary.length() > 500) {
@@ -180,6 +180,16 @@ public class ValidationEngine {
                 return false;
             }
         }
+    }
+
+    private static String firstNonBlank(Map<String, String> row, String... keys) {
+        for (String key : keys) {
+            String value = row.get(key);
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private ValidationResult.ValidationError createError(String field, String code, String message, Integer row, Object value) {

@@ -4,27 +4,33 @@ export interface WorklogResponse {
   id: string;
   issueId: string;
   authorId: string;
-  authorName: string;
-  timeWorkedMinutes: number;
+  authorName?: string;
+  timeSpentSeconds: number;
+  workDescription?: string;
   description?: string;
-  startedAt: string;
+  startedAt?: string;
   createdAt: string;
+  updatedAt?: string;
+  timeWorkedFormatted?: string;
 }
 
 export interface CreateWorklogRequest {
-  issueId: string;
-  timeWorkedMinutes: number;
-  description?: string;
+  issueId?: string;
+  timeSpentSeconds: number;
+  workDescription?: string;
   startedAt?: string;
   authorId?: string;
-  authorName?: string;
 }
 
 export interface UpdateWorklogRequest {
-  timeWorkedMinutes: number;
-  description?: string;
+  timeSpentSeconds: number;
+  workDescription?: string;
   startedAt?: string;
 }
+
+export const secondsToMinutes = (seconds: number) => Math.round(seconds / 60);
+
+export const minutesToSeconds = (minutes: number) => minutes * 60;
 
 export const worklogApi = {
   create: (issueId: string, data: Omit<CreateWorklogRequest, 'issueId'>) =>

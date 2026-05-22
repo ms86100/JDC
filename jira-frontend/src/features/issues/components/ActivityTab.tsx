@@ -1,5 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { changeHistoryApi, ChangeHistoryResponse } from '../../../api/changeHistoryApi';
+import {
+  transitionHistoryApi,
+  IssueTransitionHistoryEntry,
+} from '../../../api/transitionHistoryApi';
 
 interface ActivityTabProps {
   issueId: string;
@@ -37,7 +41,7 @@ function getFieldIcon(field: string): string {
 }
 
 export default function ActivityTab({ issueId }: ActivityTabProps) {
-  const { data: history, isLoading } = useQuery<ChangeHistoryResponse[]>({
+  const { data: history, isLoading: historyLoading } = useQuery<ChangeHistoryResponse[]>({
     queryKey: ['change-history', issueId],
     queryFn: async () => {
       const response = await changeHistoryApi.getByIssue(issueId);
@@ -45,6 +49,17 @@ export default function ActivityTab({ issueId }: ActivityTabProps) {
     },
     enabled: !!issueId,
   });
+
+  const { data: transitions, isLoading: transitionsLoading } = useQuery<IssueTransitionHistoryEntry[]>({
+    queryKey: ['transition-history', issueId],
+    queryFn: async () => {
+      const response = await transitionHistoryApi.listByIssue(issueId);
+      return response.data;
+    },
+    enabled: !!issueId,
+  });
+
+  const isLoading = historyLoading || transitionsLoading;
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -85,14 +100,17 @@ export default function ActivityTab({ issueId }: ActivityTabProps) {
     );
   }
 
-  if (!history || history.length === 0) {
+  const hasHistory = history && history.length > 0;
+  const hasTransitions = transitions && transitions.length > 0;
+
+  if (!hasHistory && !hasTransitions) {
     return (
-      <div className="ab-activity-tab">
-        <div className="ab-empty-state">
-          <div className="ab-empty-state-icon">📋</div>
+      <div className="ab-activity-tab ab-activity-tab--empty">
+        <div className="ab-empty-state ab-empty-state--flat">
+          <div className="ab-empty-state-icon" aria-hidden="true">📋</div>
           <p className="ab-empty-state-title">No activity yet</p>
           <p className="ab-empty-state-description">
-            Changes to this issue will appear here.
+            Changes and workflow transitions for this issue will appear here.
           </p>
         </div>
         <style>{activityStyles}</style>
@@ -106,7 +124,49 @@ export default function ActivityTab({ issueId }: ActivityTabProps) {
         <h3>Activity</h3>
       </div>
 
-      <div className="ab-timeline">
+      {hasTransitions && (
+        <section className="ab-transition-history">
+          <h4 className="ab-subsection-title">Workflow transitions</h4>
+          <div className="ab-timeline ab-timeline-compact">
+            {transitions.map((t) => (
+              <div key={t.id} className="ab-timeline-item">
+                <div className="ab-timeline-marker">
+                  <div className={`ab-timeline-dot ${t.success === false ? 'ab-timeline-dot-error' : ''}`} />
+                  <div className="ab-timeline-line" />
+                </div>
+                <div className="ab-timeline-content">
+                  <div className="ab-change-item">
+                    <span className="ab-change-icon">🔄</span>
+                    <span className="ab-change-field">
+                      {t.transitionName || 'Transition'}
+                    </span>
+                    {t.success === false && (
+                      <span className="ab-change-new ab-change-error">Failed</span>
+                    )}
+                    <span
+                      className="ab-timeline-time"
+                      title={formatDateFull(t.executedAt)}
+                    >
+                      {formatDate(t.executedAt)}
+                    </span>
+                  </div>
+                  {t.comment && (
+                    <p className="ab-transition-comment">{t.comment}</p>
+                  )}
+                  {t.errorMessage && (
+                    <p className="ab-transition-error">{t.errorMessage}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {hasHistory && (
+        <>
+          {hasTransitions && <h4 className="ab-subsection-title">Field changes</h4>}
+          <div className="ab-timeline">
         {history.map((entry) => (
           <div key={entry.id} className="ab-timeline-item">
             <div className="ab-timeline-marker">
@@ -153,7 +213,9 @@ export default function ActivityTab({ issueId }: ActivityTabProps) {
             </div>
           </div>
         ))}
-      </div>
+          </div>
+        </>
+      )}
 
       <style>{activityStyles}</style>
     </div>
@@ -162,7 +224,14 @@ export default function ActivityTab({ issueId }: ActivityTabProps) {
 
 const activityStyles = `
   .ab-activity-tab {
-    padding: var(--ab-spacing-md) 0;
+    padding: 0;
+  }
+
+  .ab-activity-tab--empty .ab-empty-state--flat {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding: 32px 16px;
   }
 
   .ab-activity-header {
@@ -317,5 +386,37 @@ const activityStyles = `
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .ab-subsection-title {
+    font-size: var(--ab-font-size-sm);
+    font-weight: 600;
+    color: var(--ab-gray-600);
+    margin: var(--ab-spacing-md) 0 var(--ab-spacing-sm);
+  }
+
+  .ab-transition-history {
+    margin-bottom: var(--ab-spacing-lg);
+  }
+
+  .ab-timeline-dot-error {
+    background: var(--ab-danger-500);
+    box-shadow: 0 0 0 2px var(--ab-danger-200);
+  }
+
+  .ab-change-error {
+    background: var(--ab-danger-50);
+    color: var(--ab-danger-700);
+  }
+
+  .ab-transition-comment,
+  .ab-transition-error {
+    font-size: var(--ab-font-size-sm);
+    margin: var(--ab-spacing-xs) 0 0;
+    color: var(--ab-gray-600);
+  }
+
+  .ab-transition-error {
+    color: var(--ab-danger-600);
   }
 `;

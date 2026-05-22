@@ -1,11 +1,35 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import AdminLayout from '../components/AdminLayout';
+import { migrationSettingsApi } from '../../../api/serviceApi';
+import { migrationPath } from '../../migration/utils/migrationDeepLinks';
 import './SystemSettingsPage.css';
 
 type TabType = 'general' | 'appearance' | 'attachments' | 'time-tracking' | 'subtasks' | 'import' | 'licensing';
 
+function tabFromPathname(pathname: string): TabType {
+  if (pathname.includes('/system/appearance')) return 'appearance';
+  if (pathname.includes('/system/attachments')) return 'attachments';
+  if (pathname.includes('/system/time-tracking')) return 'time-tracking';
+  if (pathname.includes('/system/subtasks')) return 'subtasks';
+  if (pathname.includes('/system/import')) return 'import';
+  if (pathname.includes('/system/licensing')) return 'licensing';
+  return 'general';
+}
+
 export default function SystemSettingsPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('general');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<TabType>(() => tabFromPathname(location.pathname));
+
+  useEffect(() => {
+    setActiveTab(tabFromPathname(location.pathname));
+  }, [location.pathname]);
+
+  const { data: migrationSettings } = useQuery({
+    queryKey: ['migration-import-settings'],
+    queryFn: () => migrationSettingsApi.getSettings().then((r) => r.data),
+  });
 
   const renderGeneralSettings = () => (
     <div className="settings-section">
@@ -164,6 +188,40 @@ export default function SystemSettingsPage() {
           </select>
         </div>
       </div>
+
+      <div className="settings-group mt-6 border-t pt-4" data-testid="migration-attachment-settings">
+        <h4 className="section-title" style={{ fontSize: '1rem' }}>
+          Migration import (live)
+        </h4>
+        <p className="setting-description mb-3">
+          CSV/XML import attachment limits and FILE: directory from migration-service (G-05).
+        </p>
+        {migrationSettings ? (
+          <dl className="text-sm space-y-2">
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-500">Max attachment size</dt>
+              <dd className="font-medium">{migrationSettings.maxAttachmentSizeMb as number} MB</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">FILE: import directory</dt>
+              <dd className="font-mono text-xs mt-1 break-all">
+                {(migrationSettings.attachmentsImportDir as string) ||
+                  '(not set — MIGRATION_IMPORT_ATTACHMENTS_DIR)'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">Storage</dt>
+              <dd className="text-xs mt-1">{migrationSettings.storageNote as string}</dd>
+            </div>
+          </dl>
+        ) : (
+          <p className="text-sm text-amber-700">Migration settings unavailable (start migration-service).</p>
+        )}
+        <Link to={migrationPath('settings')} className="text-sm text-jira-blue underline mt-3 inline-block">
+          Migration Center → Import settings
+        </Link>
+      </div>
+
       <div className="settings-actions">
         <button className="admin-btn-primary">Save Changes</button>
       </div>

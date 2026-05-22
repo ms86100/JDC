@@ -1030,6 +1030,38 @@
   }
 }
 
+.cpw-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 24px 0;
+  font-size: 13px;
+  border-top: 1px solid var(--jdc-border, #dfe1e6);
+  margin-top: 8px;
+}
+
+.cpw-footer-link {
+  color: #0052cc;
+  text-decoration: none;
+}
+
+.cpw-footer-link:hover {
+  text-decoration: underline;
+}
+
+.cpw-footer-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.cpw-footer-sep {
+  color: #97a0af;
+}
+
 @media (max-width: 640px) {
   .cpw-step-label {
     display: none;

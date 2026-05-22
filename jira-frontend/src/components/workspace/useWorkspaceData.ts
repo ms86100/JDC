@@ -28,13 +28,15 @@ export function useProjectWorkspaceData(projectId: string | undefined) {
     queryFn: () => fetchIssuesForProject(projectId!),
     enabled: !!projectId,
     staleTime: 30000,
+    retry: 1,
   });
 
   const sprintsQuery = useQuery({
     queryKey: ['ws-project-sprints', projectId],
-    queryFn: () => sprintApi.getAll(projectId),
+    queryFn: () => sprintApi.getAll(projectId).catch(() => [] as SprintResponse[]),
     enabled: !!projectId,
     staleTime: 30000,
+    retry: 1,
   });
 
   const boardsQuery = useQuery({
@@ -56,7 +58,8 @@ export function useProjectWorkspaceData(projectId: string | undefined) {
     sprints,
     activeSprint,
     boards,
-    isLoading: issuesQuery.isLoading || sprintsQuery.isLoading,
+    isLoading: (issuesQuery.isPending && !issuesQuery.data) || (sprintsQuery.isPending && !sprintsQuery.data),
+    isError: issuesQuery.isError || sprintsQuery.isError,
   };
 }
 

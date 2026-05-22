@@ -412,8 +412,8 @@ public class RequirementVersionService {
                 .map(link -> {
                     Map<String, Object> test = new HashMap<>();
                     test.put("testId", link.getTestId());
-                    test.put("testKey", link.getTestKey());
-                    test.put("linkType", link.getLinkType());
+                    test.put("testKey", link.getTestId() != null ? link.getTestId().toString() : null);
+                    test.put("linkType", link.getCoverageStatus());
                     return test;
                 })
                 .collect(Collectors.toList());
@@ -512,8 +512,8 @@ public class RequirementVersionService {
                 .map(link -> {
                     Map<String, Object> test = new HashMap<>();
                     test.put("testId", link.getTestId());
-                    test.put("testKey", link.getTestKey());
-                    test.put("linkType", link.getLinkType());
+                    test.put("testKey", link.getTestId() != null ? link.getTestId().toString() : null);
+                    test.put("linkType", link.getCoverageStatus());
                     return test;
                 })
                 .collect(Collectors.toList());

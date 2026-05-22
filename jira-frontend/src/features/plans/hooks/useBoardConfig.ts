@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../api/axiosClient';
+import { appNotify } from '../../../lib/appNotify';
 
 // Types
 export interface BoardConfigResponse {
@@ -169,7 +170,7 @@ export const useCreateBoard = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to create board:', error);
-      alert(error.message || 'Failed to create board');
+      appNotify.error(error.message || 'Failed to create board');
     },
   });
 };
@@ -185,7 +186,7 @@ export const useUpdateBoard = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to update board:', error);
-      alert(error.message || 'Failed to update board');
+      appNotify.error(error.message || 'Failed to update board');
     },
   });
 };
@@ -200,7 +201,7 @@ export const useDeleteBoard = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to delete board:', error);
-      alert(error.message || 'Failed to delete board');
+      appNotify.error(error.message || 'Failed to delete board');
     },
   });
 };
@@ -216,7 +217,7 @@ export const useAddColumn = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to add column:', error);
-      alert(error.message || 'Failed to add column');
+      appNotify.error(error.message || 'Failed to add column');
     },
   });
 };
@@ -232,7 +233,7 @@ export const useUpdateColumn = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to update column:', error);
-      alert(error.message || 'Failed to update column');
+      appNotify.error(error.message || 'Failed to update column');
     },
   });
 };
@@ -247,7 +248,7 @@ export const useDeleteColumn = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to delete column:', error);
-      alert(error.message || 'Failed to delete column');
+      appNotify.error(error.message || 'Failed to delete column');
     },
   });
 };
@@ -263,7 +264,7 @@ export const useUpdateColumnsOrder = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to update columns order:', error);
-      alert(error.message || 'Failed to update columns order');
+      appNotify.error(error.message || 'Failed to update columns order');
     },
   });
 };
@@ -279,7 +280,7 @@ export const useAddSwimlane = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to add swimlane:', error);
-      alert(error.message || 'Failed to add swimlane');
+      appNotify.error(error.message || 'Failed to add swimlane');
     },
   });
 };
@@ -295,7 +296,7 @@ export const useAddCardColor = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to add card color:', error);
-      alert(error.message || 'Failed to add card color');
+      appNotify.error(error.message || 'Failed to add card color');
     },
   });
 };

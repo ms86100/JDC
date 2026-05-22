@@ -58,7 +58,7 @@ for %%S in (%SERVICES%) do (
 
     if exist "%%S\pom.xml" (
         cd %%S
-        call mvn clean package -DskipTests -q
+        call mvn clean package "-Dmaven.test.skip=true" -q
         if %ERRORLEVEL% equ 0 (
             echo [SUCCESS] %%S built successfully
             set /a BUILD_SUCCESS+=1

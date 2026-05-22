@@ -1,9 +1,10 @@
 # Migration Module — Gap Analysis & Phase Tracker
 
-> **Last updated:** 2026-05-21 (Executive summary gaps — audit, validation DB, links, RBAC)  
+> **Last updated:** 2026-05-22 (UI-Hardening gap launch — see [WORKFLOW_AND_MIGRATION_GAP_ANALYSIS.md](./WORKFLOW_AND_MIGRATION_GAP_ANALYSIS.md))  
 > **Scope:** `jira-migration-service`, `jira-frontend/src/features/migration`, downstream services (issue, workflow, attachment)  
 > **Spec sources:** Enterprise migration brief + `MigrationPartone.md` … `MigrationPartfour.md`  
-> **How to use:** Update task `Status` and `Notes` as each gap is closed. Do not mark `DONE` without wiring UI ↔ API ↔ DB ↔ downstream contracts.
+> **How to use:** Update task `Status` and `Notes` as each gap is closed. Do not mark `DONE` without wiring UI ↔ API ↔ DB ↔ downstream contracts.  
+> **⚠️ Stale section:** §“What Is Already Implemented” below predates the 2026-05-22 P0/P1 UI pass (user mapping, global DLQ, option matrix, preview, templates, config summary). Prefer [WORKFLOW_AND_MIGRATION_GAP_ANALYSIS.md](./WORKFLOW_AND_MIGRATION_GAP_ANALYSIS.md) §Implementation status for current UI truth.
 
 ---
 

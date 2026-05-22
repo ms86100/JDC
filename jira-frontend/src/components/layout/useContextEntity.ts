@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { projectApi } from '../../api/projectApi';
 import { planApi } from '../../api/planApi';
-import { useDefaultBoard } from '../workspace/useDefaultBoard';
+import { resolveProjectTemplate } from '../../lib/projectTemplate';
 import type { RouteContext } from './contextNav';
 
 export function useContextEntity(context: RouteContext | null) {
@@ -25,7 +25,15 @@ export function useContextEntity(context: RouteContext | null) {
     staleTime: 60000,
   });
 
-  const defaultBoard = useDefaultBoard(context?.type === 'project' ? context.id : undefined);
+  const planQuery = useQuery({
+    queryKey: ['context-plan', context?.id],
+    queryFn: async () => {
+      const res = await planApi.getPlanById(context!.id);
+      return res.data;
+    },
+    enabled: context?.type === 'plan',
+    staleTime: 60000,
+  });
 
   if (!context) {
     return {
@@ -37,12 +45,23 @@ export function useContextEntity(context: RouteContext | null) {
   }
 
   if (context.type === 'project') {
+    const projectBoardPath = `/projects/${context.id}/board/active`;
     return {
       label: projectQuery.data?.name ?? null,
-      template: projectQuery.data?.template,
+      template: resolveProjectTemplate(projectQuery.data),
       subtitle: projectQuery.data?.projectKey,
-      defaultBoardPath: defaultBoard.boardHref,
-      isLoading: projectQuery.isLoading || defaultBoard.isLoading,
+      defaultBoardPath: projectBoardPath,
+      isLoading: projectQuery.isPending && !projectQuery.data,
+    };
+  }
+
+  if (context.type === 'plan') {
+    return {
+      label: planQuery.data?.name ?? null,
+      template: undefined,
+      subtitle: planQuery.data ? `${planQuery.data.itemCount} items` : undefined,
+      defaultBoardPath: undefined,
+      isLoading: planQuery.isLoading,
     };
   }
 

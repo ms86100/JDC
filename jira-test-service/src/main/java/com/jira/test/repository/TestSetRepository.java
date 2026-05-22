@@ -3,6 +3,7 @@ package com.jira.test.repository;
 import com.jira.test.entity.TestIssue;
 import com.jira.test.entity.TestSet;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;

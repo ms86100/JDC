@@ -1,230 +1,169 @@
-import React, { useState } from 'react';
-import JiraGlobalLayout from '../../../components/JiraGlobalLayout';
-import CreateProjectModal from '../../../components/CreateProjectModal';
+import React, { useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
+import boardApi from '../../../api/boardApi';
+import { projectApi } from '../../../api/projectApi';
+import { asArray } from '../../../utils/apiList';
+import EnhancedKanbanBoard from '../components/EnhancedKanbanBoard';
+import { useEnsureKanbanBoard } from '../hooks/useEnsureKanbanBoard';
+import type { KanbanStatusBanner } from '../components/KanbanWorkspaceToolbar';
+import '../../projects/styles/project-subpages.css';
 
-interface Card {
-  id: string;
-  key: string;
-  title: string;
-  priority: string;
-  type: string;
-  assignee?: string;
-}
-
-interface Column {
-  id: string;
-  name: string;
-  color: string;
-  cards: Card[];
-}
-
-const INITIAL_COLUMNS: Column[] = [
-  {
-    id: 'backlog',
-    name: 'BACKLOG',
-    color: '#6b778c',
-    cards: [
-      { id: '1', key: 'MK-1', title: 'mine', priority: 'high', type: 'bug', assignee: 'SS' },
-    ],
-  },
-  {
-    id: 'selected',
-    name: 'SELECTED FOR DEVELOPMENT',
-    color: '#0052cc',
-    cards: [],
-  },
-  {
-    id: 'inprogress',
-    name: 'IN PROGRESS',
-    color: '#ff8b00',
-    cards: [],
-  },
-  {
-    id: 'done',
-    name: 'DONE',
-    color: '#36b37e',
-    cards: [],
-  },
-];
-
-export default function KanbanBoardPage() {
-  const [columns] = useState<Column[]>(INITIAL_COLUMNS);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [qfFilters, setQfFilters] = useState<Record<string, boolean>>({});
-  const [draggedCard, setDraggedCard] = useState<{ colId: string; card: Card } | null>(null);
-  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
-
-  const toggleQf = (key: string) => {
-    setQfFilters((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const handleDragStart = (colId: string, card: Card) => {
-    setDraggedCard({ colId, card });
-  };
-
-  const handleDragEnd = () => {
-    setDraggedCard(null);
-    setDragOverCol(null);
-  };
-
-  const handleDragOver = (e: React.DragEvent, colId: string) => {
-    e.preventDefault();
-    setDragOverCol(colId);
-  };
-
-  const handleDragLeave = () => {
-    setDragOverCol(null);
-  };
-
-  const handleDrop = (e: React.DragEvent, targetColId: string) => {
-    e.preventDefault();
-    if (draggedCard && draggedCard.colId !== targetColId) {
-      // In real app: call API to move card
-      console.log(`Move ${draggedCard.card.key} from ${draggedCard.colId} to ${targetColId}`);
-    }
-    setDraggedCard(null);
-    setDragOverCol(null);
-  };
-
-  const getPriorityDot = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'highest': case 'high': return '#ff5630';
-      case 'medium': return '#ffab00';
-      case 'low': return '#36b37e';
-      default: return '#dfe1e6';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'bug': return '🐛';
-      case 'story': return '📖';
-      case 'task': return '✓';
-      case 'epic': return '⚡';
-      default: return '📋';
-    }
-  };
-
+function pickKanbanBoard(
+  boards: Awaited<ReturnType<typeof boardApi.getBoardsByProject>>,
+) {
+  if (!boards?.length) return undefined;
   return (
-    <JiraGlobalLayout
-      projectName="My Kanban"
-      projectKey="MK"
-      boardName="MK board"
-      activeSection="board"
-    >
-      <div className="ab-board-page">
-        {/* Board Toolbar */}
-        <div className="ab-board-toolbar">
-          <div className="ab-board-title-area">
-            <h1 className="ab-board-page-title">Kanban board</h1>
-            <button className="ab-board-action-btn">
-              MK board ▾
-            </button>
-          </div>
-          <div className="ab-board-actions">
-            <button className="ab-board-action-btn" title="Expand">
-              ⛶
-            </button>
-          </div>
-        </div>
+    boards.find((b) => b.boardType === 'KANBAN') ??
+    boards.find((b) => b.isDefault) ??
+    boards[0]
+  );
+}
 
-        {/* Quick Filters */}
-        <div className="ab-quick-filters-bar">
-          <span className="ab-qf-label">Quick Filters:</span>
-          <button
-            className={`ab-qf-link ${qfFilters.mine ? 'active' : ''}`}
-            onClick={() => toggleQf('mine')}
-          >
-            Only My Issues
-          </button>
-          <button
-            className={`ab-qf-link ${qfFilters.recent ? 'active' : ''}`}
-            onClick={() => toggleQf('recent')}
-          >
-            Recently Updated
-          </button>
-        </div>
+/**
+ * Jira DC Kanban workspace — /kanban and /board/classic.
+ */
+export default function KanbanBoardPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const projectIdParam = searchParams.get('project') ?? '';
+  const boardIdParam = searchParams.get('boardId') ?? '';
 
-        {/* Kanban Columns */}
-        <div className="ab-kanban-board">
-          {columns.map((col) => (
-            <div
-              key={col.id}
-              className={`ab-kanban-col ${dragOverCol === col.id ? 'drag-over' : ''}`}
-              onDragOver={(e) => handleDragOver(e, col.id)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, col.id)}
-            >
-              {/* Column Header */}
-              <div className="ab-kanban-col-header">
-                <div className="ab-col-indicator" style={{ backgroundColor: col.color }} />
-                <span className="ab-col-title">{col.name}</span>
-                <span className="ab-col-count">{col.cards.length}</span>
-                <button className="ab-col-add-btn" title="Add issue">+</button>
-              </div>
+  const { data: projectsRaw, isLoading: projectsLoading } = useQuery({
+    queryKey: ['classic-board-projects'],
+    queryFn: () => projectApi.getAll({ size: 100 }),
+    retry: 1,
+  });
 
-              {/* Cards */}
-              <div className="ab-col-cards">
-                {col.cards.length === 0 ? (
-                  col.id === 'done' ? (
-                    <div className="ab-col-empty">
-                      <p className="ab-col-empty-title">We're only showing recently modified issues.</p>
-                      <p className="ab-col-empty-title">Looking for an older issue?</p>
-                      <button className="ab-col-empty-cta">View all issues</button>
-                    </div>
-                  ) : (
-                    <div className="ab-col-empty">
-                      <button className="ab-col-empty-cta" onClick={() => setShowCreateModal(true)}>
-                        + Create issue
-                      </button>
-                    </div>
-                  )
-                ) : (
-                  col.cards.map((card) => (
-                    <div
-                      key={card.id}
-                      className={`ab-jira-card ${draggedCard?.card.id === card.id ? 'dragging' : ''}`}
-                      draggable
-                      onDragStart={() => handleDragStart(col.id, card)}
-                      onDragEnd={handleDragEnd}
-                      style={{ borderLeftColor: getPriorityDot(card.priority) }}
-                    >
-                      <div className="ab-jira-card-header">
-                        <span className="ab-card-type-icon">{getTypeIcon(card.type)}</span>
-                        <span className="ab-card-key">{card.key}</span>
-                        <div
-                          className="ab-card-priority-dot"
-                          style={{ background: getPriorityDot(card.priority) }}
-                        />
-                      </div>
-                      <p className="ab-jira-card-title">{card.title}</p>
-                      <div className="ab-jira-card-footer">
-                        <div className="ab-card-assignee">
-                          {card.assignee && (
-                            <div className="ab-avatar-sm">{card.assignee}</div>
-                          )}
-                        </div>
-                        <div className="ab-card-meta">
-                          <span className="ab-card-meta-item">📎</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          ))}
+  const projects = useMemo(() => asArray(projectsRaw), [projectsRaw]);
+
+  const resolvedProjectId = projectIdParam || projects[0]?.id || '';
+
+  const { data: boards = [], isLoading: boardsLoading, refetch: refetchBoards } = useQuery({
+    queryKey: ['classic-board-boards', resolvedProjectId],
+    queryFn: () => boardApi.getBoardsByProject(resolvedProjectId),
+    enabled: !!resolvedProjectId,
+    retry: 1,
+  });
+
+  const selectedProject = projects.find((p) => p.id === resolvedProjectId);
+
+  const { isProvisioning } = useEnsureKanbanBoard(
+    resolvedProjectId,
+    boards,
+    boardsLoading,
+    selectedProject?.name,
+  );
+
+  const defaultBoard = useMemo(() => pickKanbanBoard(boards), [boards]);
+  const resolvedBoardId = boardIdParam || defaultBoard?.id || '';
+
+  useEffect(() => {
+    if (projectsLoading || !resolvedProjectId) return;
+    const next = new URLSearchParams(searchParams);
+    let changed = false;
+    if (!projectIdParam) {
+      next.set('project', resolvedProjectId);
+      changed = true;
+    }
+    if (!boardIdParam && resolvedBoardId) {
+      next.set('boardId', resolvedBoardId);
+      changed = true;
+    }
+    if (changed) setSearchParams(next, { replace: true });
+  }, [
+    projectsLoading,
+    projectIdParam,
+    boardIdParam,
+    resolvedProjectId,
+    resolvedBoardId,
+    setSearchParams,
+    searchParams,
+  ]);
+
+  useEffect(() => {
+    if (resolvedBoardId && boards.some((b) => b.id === resolvedBoardId)) return;
+    if (defaultBoard?.id) refetchBoards();
+  }, [isProvisioning, defaultBoard?.id, resolvedBoardId, boards, refetchBoards]);
+
+  const onProjectChange = (projectId: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('project', projectId);
+    next.delete('boardId');
+    setSearchParams(next, { replace: true });
+  };
+
+  const onBoardChange = (boardId: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('boardId', boardId);
+    setSearchParams(next, { replace: true });
+  };
+
+  const statusBanner: KanbanStatusBanner | null = useMemo(() => {
+    if (isProvisioning) {
+      return { tone: 'info', message: 'Creating your Kanban board for this project…' };
+    }
+    if (!resolvedBoardId && !boardsLoading) {
+      return {
+        tone: 'warn',
+        message:
+          'Board service is offline. You can still move issues by workflow; start sprint-service to save board settings.',
+        actionLabel: 'Retry',
+        onAction: () => refetchBoards(),
+      };
+    }
+    return null;
+  }, [isProvisioning, resolvedBoardId, boardsLoading, refetchBoards]);
+
+  if (projectsLoading) {
+    return (
+      <div className="sa-project-board-shell sa-kanban-workspace">
+        <div className="ab-loading" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="ab-spinner" />
         </div>
       </div>
+    );
+  }
 
-      {/* Create Project Modal */}
-      <CreateProjectModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSelect={(templateId) => {
-          console.log('Selected template:', templateId);
-        }}
-      />
-    </JiraGlobalLayout>
+  if (!projects.length) {
+    return (
+      <div className="sa-project-board-shell sa-kanban-workspace">
+        <div className="sa-project-board-empty">
+          <h3>No projects yet</h3>
+          <p>Create a project from the top bar, then return here to plan work on your Kanban board.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!resolvedProjectId) {
+    return null;
+  }
+
+  return (
+    <div className="sa-project-board-shell sa-kanban-workspace">
+      {(boardsLoading || isProvisioning) && !resolvedBoardId ? (
+        <div className="ab-loading" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="ab-spinner" />
+        </div>
+      ) : (
+        <EnhancedKanbanBoard
+          projectId={resolvedProjectId}
+          initialBoardId={resolvedBoardId || undefined}
+          kanbanClassicMode
+          unifiedWorkspace
+          useIssueDrawer
+          workspaceContext={{
+            projects,
+            projectId: resolvedProjectId,
+            onProjectChange,
+            boards,
+            boardId: resolvedBoardId || undefined,
+            onBoardChange: boards.length > 1 ? onBoardChange : undefined,
+            statusBanner,
+            onRetryBoard: refetchBoards,
+          }}
+        />
+      )}
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import React from 'react';
+import type { ImportType } from '../types/migration';
 
-export type ImportType = 'csv' | 'jira-dc' | 'workflow-xml' | 'project-import' | 'project-export';
+export type { ImportType };
 
 interface ImportTypeSelectorProps {
   selectedType: ImportType | null;
@@ -30,9 +31,20 @@ const IMPORT_TYPES = [
     selectedColor: 'border-indigo-500 bg-indigo-50',
   },
   {
+    type: 'issue-xml' as const,
+    title: 'Issue XML (Jira DC)',
+    description:
+      'Import Jira Data Center issue export XML (RSS/channel). Issues, comments, worklogs, links, custom fields, and optional attachment bundle.',
+    icon: '📋',
+    iconBg: 'bg-teal-100',
+    iconColor: 'text-teal-700',
+    borderColor: 'hover:border-teal-400',
+    selectedColor: 'border-teal-500 bg-teal-50',
+  },
+  {
     type: 'jira-dc' as const,
     title: 'Systems and Avionics Backup',
-    description: 'Import from Systems and Avionics XML backup file. Preserves workflows, custom fields, and history.',
+    description: 'Full backup ZIP or entities.xml. Preserves workflows, custom fields, attachments, and full history.',
     icon: '🔄',
     iconBg: 'bg-purple-100',
     iconColor: 'text-purple-600',
@@ -95,7 +107,6 @@ export default function ImportTypeSelector({
                 }
               }}
             >
-              {/* Selected indicator */}
               {isSelected && (
                 <div className="absolute top-3 right-3">
                   <span className="text-jira-blue text-xl">✓</span>
@@ -103,12 +114,12 @@ export default function ImportTypeSelector({
               )}
 
               <div className="flex items-start gap-4">
-                {/* Icon */}
-                <div className={`w-12 h-12 ${importType.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                <div
+                  className={`w-12 h-12 ${importType.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}
+                >
                   <span className={`text-2xl ${importType.iconColor}`}>{importType.icon}</span>
                 </div>
 
-                {/* Content */}
                 <div className="flex-1">
                   <h4 className="text-base font-semibold text-gray-900">{importType.title}</h4>
                   <p className="text-sm text-gray-500 mt-1 leading-relaxed">
@@ -117,7 +128,6 @@ export default function ImportTypeSelector({
                 </div>
               </div>
 
-              {/* Features list */}
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <ul className="space-y-1.5">
                   {importType.type === 'csv' && (
@@ -136,15 +146,31 @@ export default function ImportTypeSelector({
                       </li>
                     </>
                   )}
+                  {importType.type === 'issue-xml' && (
+                    <>
+                      <li className="flex items-center text-xs text-gray-600">
+                        <span className="text-teal-600 mr-2">✓</span>
+                        RSS/channel issue export XML
+                      </li>
+                      <li className="flex items-center text-xs text-gray-600">
+                        <span className="text-teal-600 mr-2">✓</span>
+                        Comments, worklogs, links, custom fields
+                      </li>
+                      <li className="flex items-center text-xs text-gray-600">
+                        <span className="text-teal-600 mr-2">✓</span>
+                        Conflict resolution and dry-run
+                      </li>
+                    </>
+                  )}
                   {importType.type === 'jira-dc' && (
                     <>
                       <li className="flex items-center text-xs text-gray-600">
                         <span className="text-green-500 mr-2">✓</span>
-                        Preserve custom fields
+                        Full backup ZIP / entities.xml
                       </li>
                       <li className="flex items-center text-xs text-gray-600">
                         <span className="text-green-500 mr-2">✓</span>
-                        Migrate workflows
+                        Workflows and custom fields
                       </li>
                       <li className="flex items-center text-xs text-gray-600">
                         <span className="text-green-500 mr-2">✓</span>
@@ -191,16 +217,16 @@ export default function ImportTypeSelector({
         })}
       </div>
 
-      {/* Help text */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
         <span className="text-blue-500 text-lg mt-0.5">ℹ</span>
         <div>
           <p className="text-blue-800 text-sm font-medium">Need help choosing?</p>
           <p className="text-blue-600 text-xs mt-1">
-            <strong>CSV Import:</strong> Best for importing data from spreadsheets or other systems.
-            <strong> Systems and Avionics Backup:</strong> Use when migrating from Systems and Avionics with full fidelity.
-            <strong> Project Copy:</strong> Duplicate an existing project within your platform.
-            <strong> Project Export:</strong> Create backups or export data for use in other systems.
+            <strong>Issue XML (Jira DC):</strong> Single issue export XML from Jira DC (RSS/channel format).
+            <strong> Systems and Avionics Backup:</strong> Full backup ZIP with workflows and history.
+            <strong> Workflow XML:</strong> Workflow descriptors only.
+            <strong> CSV Import:</strong> Spreadsheets and templates.
+            <strong> Project Copy / Export:</strong> Within-platform copy or export.
           </p>
         </div>
       </div>

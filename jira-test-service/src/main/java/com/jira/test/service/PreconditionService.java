@@ -266,7 +266,7 @@ public class PreconditionService {
     }
 
     public List<Precondition> getPreconditionsForTest(UUID testId) {
-        List<TestPreconditionLink> links = linkRepository.findByTestIdOrderByStepOrderAsc(testId);
+        List<TestPreconditionLink> links = linkRepository.findByTestId(testId);
         List<UUID> preconditionIds = links.stream()
                 .map(TestPreconditionLink::getPreconditionId)
                 .collect(Collectors.toList());
@@ -279,7 +279,7 @@ public class PreconditionService {
     }
 
     public List<TestPreconditionLink> getPreconditionLinksForTest(UUID testId) {
-        return linkRepository.findByTestIdOrderByStepOrderAsc(testId);
+        return linkRepository.findByTestId(testId);
     }
 
     public List<TestIssue> getTestsUsingPrecondition(UUID preconditionId) {
@@ -344,7 +344,7 @@ public class PreconditionService {
             }
         }
 
-        List<TestPreconditionLink> links = linkRepository.findByTestIdOrderByStepOrderAsc(testId);
+        List<TestPreconditionLink> links = linkRepository.findByTestId(testId);
         List<Precondition> preconditions = links.stream()
                 .map(link -> {
                     try {
@@ -664,11 +664,6 @@ public class PreconditionService {
         List<TestIssue> affectedTests = getTestsUsingPrecondition(preconditionId);
         List<TestPreconditionLink> links = linkRepository.findByPreconditionId(preconditionId);
 
-        Set<String> affectedEnvironments = affectedTests.stream()
-                .map(TestIssue::getEnvironment)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
         Set<String> affectedPriorities = affectedTests.stream()
                 .map(TestIssue::getPriority)
                 .filter(Objects::nonNull)
@@ -682,8 +677,8 @@ public class PreconditionService {
                 .preconditionId(preconditionId)
                 .preconditionName(precondition.getName())
                 .totalAffectedTests(affectedTests.size())
-                .criticalTests(criticalTests)
-                .affectedEnvironments(new ArrayList<>(affectedEnvironments))
+                .criticalTests((int) criticalTests)
+                .affectedEnvironments(List.of())
                 .affectedPriorities(new ArrayList<>(affectedPriorities))
                 .links(links)
                 .canSafelyDelete(affectedTests.isEmpty())

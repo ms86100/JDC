@@ -3,6 +3,7 @@ package com.jira.plan.controller;
 import com.jira.plan.dto.request.CreateProgramRequest;
 import com.jira.plan.dto.request.UpdateProgramRequest;
 import com.jira.plan.dto.response.ProgramResponse;
+import com.jira.plan.service.ProgramAggregationService;
 import com.jira.plan.service.ProgramService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import java.util.UUID;
 public class ProgramController {
 
     private final ProgramService programService;
+    private final ProgramAggregationService programAggregationService;
 
     @GetMapping
     public ResponseEntity<List<ProgramResponse>> getAllPrograms() {
@@ -65,5 +67,11 @@ public class ProgramController {
             @PathVariable UUID planId) {
         programService.unlinkPlanFromProgram(id, planId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/aggregation")
+    public ResponseEntity<ProgramAggregationService.ProgramAggregationResponse> getProgramAggregation(
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(programAggregationService.getProgramAggregation(id));
     }
 }

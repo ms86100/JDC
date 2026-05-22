@@ -198,7 +198,15 @@ public class FieldDiscoveryService {
     private String normalizeFieldKey(String key) {
         if (key == null) return "";
 
-        String normalized = key.trim().toLowerCase()
+        String trimmed = key.trim();
+        java.util.regex.Matcher jiraCustom = java.util.regex.Pattern
+                .compile("(?i)custom\\s+field\\s*\\(([^)]+)\\)")
+                .matcher(trimmed);
+        if (jiraCustom.find()) {
+            trimmed = jiraCustom.group(1).trim();
+        }
+
+        String normalized = trimmed.toLowerCase()
                 .replace(" ", "_")
                 .replace("-", "_")
                 .replace(".", "_")
@@ -232,6 +240,10 @@ public class FieldDiscoveryService {
         }
 
         if (normalizedKey.startsWith("customfield") || normalizedKey.startsWith("cf_")) {
+            return FieldCategory.CUSTOM;
+        }
+
+        if (sourceKey != null && sourceKey.toLowerCase().startsWith("custom field (")) {
             return FieldCategory.CUSTOM;
         }
 

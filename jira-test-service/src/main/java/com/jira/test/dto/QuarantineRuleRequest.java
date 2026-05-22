@@ -28,4 +28,6 @@ public class QuarantineRuleRequest {
     private Boolean autoQuarantine;
 
     private Boolean notifyOnTrigger;
+
+    private Boolean isActive;
 }

@@ -19,6 +19,7 @@ export interface CreateProgramRequest {
   description?: string;
   ownerId?: string;
   accessType?: 'OPEN' | 'RESTRICTED';
+  linkedPlanIds?: string[];
 }
 
 export interface UpdateProgramRequest {
@@ -76,6 +77,7 @@ export interface PlanItemResponse {
   parentKey?: string;
   sortOrder: string;
   targetDate?: string;
+  targetEndDate?: string;
   assigneeId?: string;
   assigneeName?: string;
   storyPoints?: number;
@@ -91,7 +93,60 @@ export interface CreatePlanItemRequest {
   parentId?: string;
   sortOrder?: string;
   targetDate?: string;
+  targetEndDate?: string;
   status?: string;
+}
+
+export interface InitiativeResponse {
+  id: string;
+  name: string;
+  description?: string;
+  programId?: string;
+  status?: string;
+  targetDate?: string;
+  epicCount?: number;
+}
+
+export interface ProgramAggregationResponse {
+  programId: string;
+  programName: string;
+  planCount: number;
+  plans: Array<{
+    planId: string;
+    planName: string;
+    issuesByType?: Record<string, Array<{
+      id: string;
+      issueKey?: string;
+      issueTitle?: string;
+      issueType: string;
+      targetDate?: string;
+      targetEndDate?: string;
+      status?: string;
+    }>>;
+    metrics?: { totalIssues: number; epicCount: number; storyCount: number };
+  }>;
+  releases?: Array<{ name: string; releaseDate?: string; issueCount: number; progress: number }>;
+}
+
+export interface PlanIssueSourceResponse {
+  id: string;
+  sourceType: string;
+  sourceId: string;
+  sourceName: string;
+  issueCount?: number;
+}
+
+export interface ExclusionRuleResponse {
+  id: string;
+  fieldName: string;
+  operator: string;
+  fieldValue: string;
+}
+
+export interface ScheduleResultResponse {
+  success: boolean;
+  message?: string;
+  scheduleDates: Record<string, { startDate: string; endDate: string; durationDays: number }>;
 }
 
 export interface ReorderRequest {
@@ -443,6 +498,8 @@ export const planApi = {
     apiClient.post(`/api/plans/programs/${programId}/plans/${planId}`),
   unlinkPlanFromProgram: (programId: string, planId: string) =>
     apiClient.delete(`/api/plans/programs/${programId}/plans/${planId}`),
+  getProgramAggregation: (programId: string) =>
+    apiClient.get<ProgramAggregationResponse>(`/api/plans/programs/${programId}/aggregation`),
 
   // Plans
   getPlans: () => apiClient.get<PlanResponse[]>('/api/plans'),
@@ -456,6 +513,26 @@ export const planApi = {
   deletePlan: (id: string) => apiClient.delete(`/api/plans/${id}`),
   updatePlanSettings: (id: string, settings: Record<string, unknown>) =>
     apiClient.put<PlanResponse>(`/api/plans/${id}/settings`, settings),
+
+  getIssueSources: (planId: string) =>
+    apiClient.get<PlanIssueSourceResponse[]>(`/api/plans/${planId}/issue-sources`),
+  addIssueSource: (planId: string, data: { sourceType: string; sourceId: string; sourceName: string }) =>
+    apiClient.post<PlanIssueSourceResponse>(`/api/plans/${planId}/issue-sources`, data),
+  removeIssueSource: (planId: string, sourceId: string, sourceType: string) =>
+    apiClient.delete(`/api/plans/${planId}/issue-sources/${sourceId}`, { params: { sourceType } }),
+
+  getExclusionRules: (planId: string) =>
+    apiClient.get<ExclusionRuleResponse[]>(`/api/plans/${planId}/exclusion-rules`),
+  createExclusionRule: (planId: string, data: { fieldName: string; operator: string; fieldValue: string }) =>
+    apiClient.post<ExclusionRuleResponse>(`/api/plans/${planId}/exclusion-rules`, data),
+  deleteExclusionRule: (planId: string, ruleId: string) =>
+    apiClient.delete(`/api/plans/${planId}/exclusion-rules/${ruleId}`),
+
+  runAutoSchedule: (planId: string, startDate?: string) =>
+    apiClient.post<ScheduleResultResponse>(`/api/schedule/forward?planId=${planId}&startDate=${startDate || new Date().toISOString().slice(0, 10)}`),
+
+  getInitiativesByProgram: (programId: string) =>
+    apiClient.get<InitiativeResponse[]>(`/api/initiatives/program/${programId}`),
 
   // Backlog
   getBacklog: (planId: string) => apiClient.get<BacklogResponse>(`/api/plans/${planId}/backlog`),

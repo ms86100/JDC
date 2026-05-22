@@ -110,7 +110,7 @@ export default function TraceabilityPage() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (projectId) params.append('projectId', projectId);
-      const response = await apiClient.get(`/traceability/matrix?${params}`);
+      const response = await apiClient.get(`/api/traceability/matrix?${params}`);
       return response.data;
     },
     enabled: true,
@@ -119,7 +119,9 @@ export default function TraceabilityPage() {
   const { data: defectLinks = [] } = useQuery<DefectLinkResponse[]>({
     queryKey: ['traceability-defects', projectId],
     queryFn: async () => {
-      const response = await apiClient.get('/traceability/defects');
+      const response = await apiClient.get('/api/traceability/defects', {
+        params: projectId ? { executionId: projectId } : undefined,
+      });
       return response.data;
     },
     enabled: true,
@@ -133,7 +135,7 @@ export default function TraceabilityPage() {
         requirementKey: selectedRequirement,
         projectId: projectId || '',
       });
-      const response = await apiClient.get(`/traceability/coverage?${params}`);
+      const response = await apiClient.get(`/api/traceability/coverage?${params}`);
       return response.data;
     },
     enabled: !!selectedRequirement && !!projectId,
@@ -142,7 +144,7 @@ export default function TraceabilityPage() {
   // Mutations
   const linkRequirementMutation = useMutation({
     mutationFn: async (request: RequirementLinkRequest) => {
-      const response = await apiClient.post('/requirements/links', request);
+      const response = await apiClient.post('/api/traceability/requirements', request);
       return response.data;
     },
     onSuccess: () => {

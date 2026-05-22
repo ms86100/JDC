@@ -24,7 +24,7 @@ public interface CucumberScenarioRepository extends JpaRepository<CucumberScenar
     @Query("SELECT cs FROM CucumberScenario cs WHERE cs.issueId IS NULL AND cs.featureKey = :featureKey")
     List<CucumberScenario> findUnlinkedByFeature(@Param("featureKey") String featureKey);
 
-    @Query("SELECT cs FROM CucumberScenario cs WHERE :tag = ANY(cs.tags)")
+    @Query(value = "SELECT * FROM jira_issue.cucumber_scenarios WHERE :tag = ANY(tags)", nativeQuery = true)
     List<CucumberScenario> findByTag(@Param("tag") String tag);
 
     @Query("SELECT cs FROM CucumberScenario cs WHERE cs.importBatchId = :batchId")

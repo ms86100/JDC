@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { worklogApi, WorklogResponse } from '../../../api/worklogApi';
+import { worklogApi, WorklogResponse, secondsToMinutes, minutesToSeconds } from '../../../api/worklogApi';
+
+const worklogMinutes = (w: WorklogResponse) => secondsToMinutes(w.timeSpentSeconds ?? 0);
+const worklogDescription = (w: WorklogResponse) => w.workDescription ?? w.description;
 
 interface WorklogsTabProps {
   issueId: string;
@@ -29,7 +32,7 @@ export default function WorklogsTab({ issueId }: WorklogsTabProps) {
     enabled: !!issueId,
   });
 
-  const { data: totalTime } = useQuery<number>({
+  const { data: totalTimeSeconds } = useQuery<number>({
     queryKey: ['worklogs-total', issueId],
     queryFn: async () => {
       const response = await worklogApi.getTotalTime(issueId);
@@ -39,7 +42,7 @@ export default function WorklogsTab({ issueId }: WorklogsTabProps) {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: { timeWorkedMinutes: number; description?: string }) =>
+    mutationFn: (data: { timeSpentSeconds: number; workDescription?: string }) =>
       worklogApi.create(issueId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['worklogs', issueId] });
@@ -94,7 +97,7 @@ export default function WorklogsTab({ issueId }: WorklogsTabProps) {
   const calculateStats = () => {
     if (!worklogs || worklogs.length === 0) return null;
 
-    const totalMinutes = worklogs.reduce((sum, w) => sum + w.timeWorkedMinutes, 0);
+    const totalMinutes = worklogs.reduce((sum, w) => sum + worklogMinutes(w), 0);
     const avgPerDay = totalMinutes / 7; // Last 7 days
     const thisWeek = worklogs.filter(w => {
       const date = new Date(w.createdAt);
@@ -102,13 +105,13 @@ export default function WorklogsTab({ issueId }: WorklogsTabProps) {
       weekAgo.setDate(weekAgo.getDate() - 7);
       return date >= weekAgo;
     });
-    const thisWeekMinutes = thisWeek.reduce((sum, w) => sum + w.timeWorkedMinutes, 0);
+    const thisWeekMinutes = thisWeek.reduce((sum, w) => sum + worklogMinutes(w), 0);
 
     // Group by day
     const byDay: Record<string, number> = {};
     worklogs.forEach(w => {
       const day = new Date(w.createdAt).toLocaleDateString();
-      byDay[day] = (byDay[day] || 0) + w.timeWorkedMinutes;
+      byDay[day] = (byDay[day] || 0) + worklogMinutes(w);
     });
 
     return { totalMinutes, avgPerDay, thisWeekMinutes, byDay };
@@ -147,9 +150,9 @@ export default function WorklogsTab({ issueId }: WorklogsTabProps) {
       <div className="ab-section-header">
         <div className="ab-section-info">
           <h3>Time Tracking</h3>
-          {totalTime !== undefined && totalTime > 0 && (
+          {totalTimeSeconds !== undefined && totalTimeSeconds > 0 && (
             <span className="ab-total-time">
-              Total: <strong>{formatDuration(totalTime)}</strong>
+              Total: <strong>{formatDuration(secondsToMinutes(totalTimeSeconds))}</strong>
             </span>
           )}
         </div>
@@ -281,7 +284,10 @@ export default function WorklogsTab({ issueId }: WorklogsTabProps) {
               </button>
               <button
                 className="ab-btn ab-btn-primary"
-                onClick={() => createMutation.mutate({ timeWorkedMinutes: minutes, description })}
+                onClick={() => createMutation.mutate({
+                  timeSpentSeconds: minutesToSeconds(minutes),
+                  workDescription: description || undefined,
+                })}
                 disabled={createMutation.isPending || minutes < 15}
               >
                 {createMutation.isPending ? 'Logging...' : 'Log Work'}
@@ -312,21 +318,21 @@ export default function WorklogsTab({ issueId }: WorklogsTabProps) {
                 <div className="ab-worklog-date-header">
                   <span className="ab-date-label">{getRelativeDate(date)}</span>
                   <span className="ab-date-total">
-                    {formatDuration(dayWorklogs.reduce((s, w) => s + w.timeWorkedMinutes, 0))}
+                    {formatDuration(dayWorklogs.reduce((s, w) => s + worklogMinutes(w), 0))}
                   </span>
                 </div>
                 {dayWorklogs.map((worklog) => (
                   <div key={worklog.id} className="ab-worklog-item">
                     <div className="ab-worklog-time">
-                      <span className="ab-time-badge">{formatDuration(worklog.timeWorkedMinutes)}</span>
+                      <span className="ab-time-badge">{formatDuration(worklogMinutes(worklog))}</span>
                     </div>
                     <div className="ab-worklog-details">
                       <div className="ab-worklog-meta">
                         <span className="ab-worklog-author">{worklog.authorName || 'Unknown'}</span>
                         <span className="ab-worklog-time-start">{formatDateTime(worklog.createdAt)}</span>
                       </div>
-                      {worklog.description && (
-                        <div className="ab-worklog-description">{worklog.description}</div>
+                      {worklogDescription(worklog) && (
+                        <div className="ab-worklog-description">{worklogDescription(worklog)}</div>
                       )}
                     </div>
                     <button

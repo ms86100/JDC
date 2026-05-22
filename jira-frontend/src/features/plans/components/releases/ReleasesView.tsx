@@ -1,9 +1,17 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useReleases, useCreateRelease, useApproveRelease, useReleaseVersion, useDeleteRelease } from '../../hooks/useReleases';
+import { useBacklog } from '../../hooks/useBacklog';
 import { CreateReleaseRequest } from '../../../../api/planApi';
+import { appNotify } from '../../../../lib/appNotify';
 
 interface ReleasesViewProps {
   planId: string;
+}
+
+function projectKeyFromIssueKey(key?: string) {
+  if (!key) return 'Unknown';
+  const idx = key.indexOf('-');
+  return idx > 0 ? key.slice(0, idx) : key;
 }
 
 export default function ReleasesView({ planId }: ReleasesViewProps) {
@@ -13,10 +21,38 @@ export default function ReleasesView({ planId }: ReleasesViewProps) {
   const [releaseDate, setReleaseDate] = useState('');
 
   const { data: releases, isLoading } = useReleases(planId);
+  const { data: backlog } = useBacklog(planId);
   const createMutation = useCreateRelease();
   const approveMutation = useApproveRelease();
   const releaseMutation = useReleaseVersion();
   const deleteMutation = useDeleteRelease();
+
+  const projectRows = useMemo(() => {
+    const byProject = new Map<string, { key: string; releases: typeof releases; issueCount: number }>();
+    const items = backlog?.items ?? [];
+    const projectsFromIssues = new Set(items.map((i) => projectKeyFromIssueKey(i.issueKey)));
+
+    projectsFromIssues.forEach((pk) => {
+      byProject.set(pk, {
+        key: pk,
+        releases: [],
+        issueCount: items.filter((i) => projectKeyFromIssueKey(i.issueKey) === pk).length,
+      });
+    });
+
+    (releases ?? []).forEach((r) => {
+      const pk = projectKeyFromIssueKey(r.name) || 'Plan';
+      const row = byProject.get(pk) ?? { key: pk, releases: [], issueCount: 0 };
+      row.releases = [...(row.releases ?? []), r];
+      byProject.set(pk, row);
+    });
+
+    if (byProject.size === 0 && (releases?.length ?? 0) > 0) {
+      byProject.set('Plan', { key: 'Plan', releases: releases ?? [], issueCount: items.length });
+    }
+
+    return Array.from(byProject.values());
+  }, [releases, backlog]);
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,175 +71,118 @@ export default function ReleasesView({ planId }: ReleasesViewProps) {
           setReleaseDate('');
         },
         onError: (error: Error) => {
-          alert(error.message || 'Failed to create release');
+          appNotify.error(error.message || 'Failed to create release');
         },
-      }
+      },
     );
-  };
-
-  const handleApprove = (releaseId: string) => {
-    approveMutation.mutate({ planId, releaseId, approvedBy: 'current-user' }, {
-      onError: (error: Error) => {
-        alert(error.message || 'Failed to approve release');
-      },
-    });
-  };
-
-  const handleRelease = (releaseId: string) => {
-    releaseMutation.mutate({ planId, releaseId }, {
-      onError: (error: Error) => {
-        alert(error.message || 'Failed to release');
-      },
-    });
-  };
-
-  const handleDelete = (releaseId: string) => {
-    deleteMutation.mutate({ planId, releaseId }, {
-      onError: (error: Error) => {
-        alert(error.message || 'Failed to delete release');
-      },
-    });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return 'ab-badge-secondary';
-      case 'APPROVED': return 'ab-badge-warning';
-      case 'RELEASED': return 'ab-badge-success';
-      default: return 'ab-badge-secondary';
-    }
   };
 
   if (isLoading) {
     return (
       <div className="ab-loading">
-        <div className="ab-spinner"></div>
+        <div className="ab-spinner" />
       </div>
     );
   }
 
   return (
-    <div className="ab-releases-view">
-      <div className="ab-toolbar">
-        <h3 className="ab-section-title">Releases ({releases?.length || 0})</h3>
-        <button className="ab-btn ab-btn-primary" onClick={() => setShowCreate(true)}>
-          <span className="ab-icon-plus"></span>
-          Create Release
+    <div className="jdc-releases-dc">
+      <div className="jdc-releases-toolbar">
+        <h3>Releases</h3>
+        <button type="button" className="jdc-btn jdc-btn-primary" onClick={() => setShowCreate(true)}>
+          + Create release
         </button>
       </div>
 
-      {releases && releases.length > 0 ? (
-        <div className="ab-releases-list">
-          {releases.map((release) => (
-            <div key={release.id} className="ab-card ab-release-card">
-              <div className="ab-release-header">
-                <div className="ab-release-info">
-                  <h4 className="ab-release-name">
-                    {release.name}
-                    {release.version && <span className="ab-release-version">v{release.version}</span>}
-                  </h4>
-                  <span className={`ab-badge ${getStatusColor(release.status)}`}>
+      <table className="jdc-releases-cross-table">
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>Release name</th>
+            <th>Release date</th>
+            <th>Status</th>
+            <th>Issues</th>
+            <th>Progress</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {projectRows.flatMap((row) => {
+            const list = row.releases?.length ? row.releases : [];
+            if (list.length === 0) {
+              return (
+                <tr key={`empty-${row.key}`}>
+                  <td><strong>{row.key}</strong></td>
+                  <td colSpan={6} className="jdc-muted">No releases for this project</td>
+                </tr>
+              );
+            }
+            return list.map((release) => (
+              <tr key={`${row.key}-${release.id}`}>
+                <td><strong>{row.key}</strong></td>
+                <td>{release.name}{release.version ? ` v${release.version}` : ''}</td>
+                <td>
+                  {release.releaseDate
+                    ? new Date(release.releaseDate).toLocaleDateString()
+                    : '—'}
+                </td>
+                <td>
+                  <span className={`jdc-lozenge jdc-lozenge-${release.status.toLowerCase()}`}>
                     {release.status}
                   </span>
-                </div>
-                <div className="ab-release-actions">
-                  {release.status === 'DRAFT' && (
-                    <button className="ab-btn ab-btn-sm" onClick={() => handleApprove(release.id)}>
-                      Approve
-                    </button>
-                  )}
-                  {release.status === 'APPROVED' && (
-                    <button className="ab-btn ab-btn-sm ab-btn-primary" onClick={() => handleRelease(release.id)}>
-                      Release
-                    </button>
-                  )}
-                  <button className="ab-btn ab-btn-sm ab-btn-danger" onClick={() => handleDelete(release.id)}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-              <div className="ab-release-details">
-                {release.releaseDate && (
-                  <div className="ab-release-date">
-                    <span className="ab-label">Release Date:</span>
-                    <span>{new Date(release.releaseDate).toLocaleDateString()}</span>
-                  </div>
-                )}
-                {release.approvedBy && (
-                  <div className="ab-release-approved">
-                    <span className="ab-label">Approved by:</span>
-                    <span>{release.approvedByName || release.approvedBy}</span>
-                  </div>
-                )}
-                {release.progress !== undefined && (
-                  <div className="ab-release-progress">
-                    <div className="ab-progress-bar">
-                      <div className="ab-progress-fill" style={{ width: `${release.progress}%` }}></div>
+                </td>
+                <td>{row.issueCount}</td>
+                <td>
+                  {release.progress != null ? (
+                    <div className="jdc-progress-mini">
+                      <div><div style={{ width: `${release.progress}%` }} /></div>
+                      <span>{Math.round(release.progress)}%</span>
                     </div>
-                    <span>{Math.round(release.progress)}% complete</span>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td>
+                  <div className="jdc-releases-actions">
+                    {release.status === 'DRAFT' && (
+                      <button type="button" className="jdc-btn" onClick={() => approveMutation.mutate({ planId, releaseId: release.id, approvedBy: 'user' })}>
+                        Approve
+                      </button>
+                    )}
+                    {release.status === 'APPROVED' && (
+                      <button type="button" className="jdc-btn" onClick={() => releaseMutation.mutate({ planId, releaseId: release.id })}>
+                        Release
+                      </button>
+                    )}
+                    <button type="button" className="jdc-btn" onClick={() => deleteMutation.mutate({ planId, releaseId: release.id })}>
+                      Delete
+                    </button>
                   </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="ab-empty-state">
-          <div className="ab-empty-state-icon">🚀</div>
-          <h3 className="ab-empty-state-title">No releases yet</h3>
-          <p className="ab-empty-state-description">Create releases to track your planned versions</p>
-        </div>
-      )}
+                </td>
+              </tr>
+            ));
+          })}
+          {projectRows.length === 0 && (
+            <tr>
+              <td colSpan={7} className="jdc-empty-cell">
+                No releases or cross-project data yet. Create a release or add issues from multiple projects.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
 
       {showCreate && (
-        <div className="ab-modal-overlay" onClick={() => setShowCreate(false)}>
-          <div className="ab-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="ab-modal-header">
-              <h2 className="ab-modal-title">Create Release</h2>
-              <button className="ab-btn-icon" onClick={() => setShowCreate(false)}>
-                <span className="ab-icon-close"></span>
-              </button>
-            </div>
+        <div className="jdc-modal-overlay" onClick={() => setShowCreate(false)}>
+          <div className="jdc-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Create release</h3>
             <form onSubmit={handleCreate}>
-              <div className="ab-modal-body">
-                <div className="ab-form-group">
-                  <label className="ab-label">Release Name *</label>
-                  <input
-                    type="text"
-                    className="ab-input"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g., Q1 2026 Release"
-                    required
-                  />
-                </div>
-                <div className="ab-form-group">
-                  <label className="ab-label">Version</label>
-                  <input
-                    type="text"
-                    className="ab-input"
-                    value={version}
-                    onChange={(e) => setVersion(e.target.value)}
-                    placeholder="e.g., 1.0.0"
-                  />
-                </div>
-                <div className="ab-form-group">
-                  <label className="ab-label">Release Date</label>
-                  <input
-                    type="date"
-                    className="ab-input"
-                    value={releaseDate}
-                    onChange={(e) => setReleaseDate(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="ab-modal-footer">
-                <button type="button" className="ab-btn ab-btn-secondary" onClick={() => setShowCreate(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="ab-btn ab-btn-primary" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Creating...' : 'Create Release'}
-                </button>
+              <label>Name *<input value={name} onChange={(e) => setName(e.target.value)} required /></label>
+              <label>Version<input value={version} onChange={(e) => setVersion(e.target.value)} /></label>
+              <label>Date<input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} /></label>
+              <div className="jdc-modal-footer">
+                <button type="button" className="jdc-btn" onClick={() => setShowCreate(false)}>Cancel</button>
+                <button type="submit" className="jdc-btn jdc-btn-primary" disabled={createMutation.isPending}>Create</button>
               </div>
             </form>
           </div>

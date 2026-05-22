@@ -1,4 +1,6 @@
 import apiClient from './axiosClient';
+import { normalizeIssue } from './issueMapper';
+import { toBackendCreatePayload, toBackendUpdatePayload } from './issuePayload';
 
 // ==================== Full Issue Types ====================
 
@@ -21,6 +23,7 @@ export interface IssueResponse {
   parentId?: string;
   epicId?: string;
   sprintId?: string;
+  rank?: string;
   createdAt: string;
   updatedAt: string;
   dueDate?: string;
@@ -37,7 +40,11 @@ export interface IssueResponse {
   watchers?: string[];
   votes?: number;
   securityLevel?: string;
+  securityLevelId?: string;
   environment?: string;
+  componentIds?: string[];
+  affectsVersionIds?: string[];
+  fixVersionIds?: string[];
   // Calculated fields
   assigneeName?: string;
   reporterName?: string;
@@ -158,10 +165,24 @@ export interface Component {
 
 export const issueApi = {
   // Issue CRUD
-  create: (data: CreateIssueRequest) => apiClient.post<IssueResponse>('/api/issues', data),
+  create: (data: CreateIssueRequest) =>
+    apiClient.post<IssueResponse>('/api/issues', toBackendCreatePayload(data)),
   getAll: (params?: Record<string, string>) => apiClient.get<{ content: IssueResponse[]; totalElements: number }>('/api/issues', { params }),
-  getById: (id: string) => apiClient.get<IssueResponse>(`/api/issues/${id}`),
-  update: (id: string, data: UpdateIssueRequest) => apiClient.put<IssueResponse>(`/api/issues/${id}`, data),
+  getById: async (id: string) => {
+    const response = await apiClient.get<IssueResponse>(`/api/issues/${id}`);
+    response.data = normalizeIssue(response.data as unknown as Record<string, unknown>);
+    return response;
+  },
+
+  getByKey: (issueKey: string) =>
+    apiClient.get<IssueResponse>(`/api/issues/by-key/${encodeURIComponent(issueKey)}`),
+
+  getBatch: (ids: string[]) =>
+    apiClient.get<IssueResponse[]>('/api/issues/batch', {
+      params: { ids: ids.join(',') },
+    }),
+  update: (id: string, data: UpdateIssueRequest) =>
+    apiClient.put<IssueResponse>(`/api/issues/${id}`, toBackendUpdatePayload(data)),
   delete: (id: string) => apiClient.delete(`/api/issues/${id}`),
 
   // Status transitions (workflow engine)
@@ -204,8 +225,10 @@ export const issueApi = {
   unvote: (id: string) => apiClient.delete(`/api/issues/${id}/vote`),
 
   // Clone & Move
-  clone: (id: string, data?: { projectId?: string }) => apiClient.post<IssueResponse>(`/api/issues/${id}/clone`, data),
-  move: (id: string, data: { projectId: string }) => apiClient.post<IssueResponse>(`/api/issues/${id}/move`, data),
+  clone: (id: string, data?: { projectId?: string }) =>
+    apiClient.post<IssueResponse>(`/api/issues/${id}/clone`, data ?? {}),
+  move: (id: string, data: { projectId: string }) =>
+    apiClient.post<IssueResponse>(`/api/issues/${id}/move`, data),
 
   // Link issues
   linkIssue: (id: string, data: { targetIssueId?: string; targetIssueKey?: string; linkType: string }) => apiClient.post(`/api/issues/${id}/links`, data),
@@ -242,8 +265,14 @@ export const projectApi = {
   delete: (id: string) => apiClient.delete(`/api/projects/${id}`),
   archive: (id: string) => apiClient.post(`/api/projects/${id}/archive`),
   unarchive: (id: string) => apiClient.post(`/api/projects/${id}/unarchive`),
-  getVersions: (projectId: string) => apiClient.get<Version[]>(`/api/versions?projectId=${projectId}`),
-  getComponents: (projectId: string) => apiClient.get<Component[]>(`/api/components?projectId=${projectId}`),
+  getVersions: async (projectId: string) => {
+    const { versionApi } = await import('./versionApi');
+    return { data: await versionApi.getByProject(projectId) };
+  },
+  getComponents: async (projectId: string) => {
+    const { componentApi } = await import('./componentApi');
+    return { data: await componentApi.getByProject(projectId) };
+  },
   getSprints: (projectId: string) => apiClient.get<Sprint[]>(`/api/sprints?projectId=${projectId}`),
 };
 
@@ -257,19 +286,70 @@ export const sprintApi = {
   complete: (id: string) => apiClient.post<Sprint>(`/api/sprints/${id}/complete`),
 };
 
+/** @deprecated Import from `api/versionApi` — thin wrappers for legacy callers */
 export const versionApi = {
-  getByProject: (projectId: string) => apiClient.get<Version[]>(`/api/versions?projectId=${projectId}`),
-  create: (projectId: string, data: Partial<Version>) => apiClient.post<Version>('/api/versions', { ...data, projectId }),
-  update: (versionId: string, data: Partial<Version>) => apiClient.put<Version>(`/api/versions/${versionId}`, data),
-  release: (versionId: string) => apiClient.post<Version>(`/api/versions/${versionId}/release`),
-  archive: (versionId: string) => apiClient.post<Version>(`/api/versions/${versionId}/archive`),
+  getByProject: async (projectId: string) => {
+    const { versionApi: vApi } = await import('./versionApi');
+    const data = await vApi.getByProject(projectId);
+    return { data: data as Version[] };
+  },
+  create: async (projectId: string, data: Partial<Version>) => {
+    const { versionApi: vApi } = await import('./versionApi');
+    const created = await vApi.create({
+      projectId,
+      name: data.name ?? 'Version',
+      description: data.description,
+      releaseDate: data.releaseDate,
+    });
+    return { data: created as unknown as Version };
+  },
+  update: async (versionId: string, data: Partial<Version>) => {
+    const { versionApi: vApi } = await import('./versionApi');
+    const updated = await vApi.update(versionId, data);
+    return { data: updated as unknown as Version };
+  },
+  release: async (versionId: string) => {
+    const { versionApi: vApi } = await import('./versionApi');
+    const released = await vApi.release(versionId);
+    return { data: released as unknown as Version };
+  },
+  archive: async (versionId: string) => {
+    const { versionApi: vApi } = await import('./versionApi');
+    const archived = await vApi.archive(versionId);
+    return { data: archived as unknown as Version };
+  },
 };
 
+/** @deprecated Import from `api/componentApi` */
 export const componentApi = {
-  getByProject: (projectId: string) => apiClient.get<Component[]>(`/api/components?projectId=${projectId}`),
-  create: (projectId: string, data: Partial<Component>) => apiClient.post<Component>('/api/components', { ...data, projectId }),
-  update: (componentId: string, data: Partial<Component>) => apiClient.put<Component>(`/api/components/${componentId}`, data),
-  delete: (componentId: string) => apiClient.delete(`/api/components/${componentId}`),
+  getByProject: async (projectId: string) => {
+    const { componentApi: cApi } = await import('./componentApi');
+    const data = await cApi.getByProject(projectId);
+    return { data: data as unknown as Component[] };
+  },
+  create: async (projectId: string, data: Partial<Component>) => {
+    const { componentApi: cApi } = await import('./componentApi');
+    const created = await cApi.create({
+      projectId,
+      name: data.name ?? 'Component',
+      description: data.description,
+      leadUserId: data.leadId,
+    });
+    return { data: created as unknown as Component };
+  },
+  update: async (componentId: string, data: Partial<Component>) => {
+    const { componentApi: cApi } = await import('./componentApi');
+    const updated = await cApi.update(componentId, {
+      name: data.name,
+      description: data.description,
+      leadUserId: data.leadId,
+    });
+    return { data: updated as unknown as Component };
+  },
+  delete: async (componentId: string) => {
+    const { componentApi: cApi } = await import('./componentApi');
+    await cApi.delete(componentId);
+  },
 };
 
 // ==================== Custom Fields ====================

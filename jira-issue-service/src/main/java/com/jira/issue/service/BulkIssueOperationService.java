@@ -192,7 +192,7 @@ public class BulkIssueOperationService {
         if (priorityId != null) {
             update.setPriorityId(priorityId);
         }
-        issueService.updateIssue(issue.getId(), update, userId);
+        issueService.updateIssue(issue.getId(), update);
         return BulkOperationResultItem.builder()
                 .issueId(issue.getId())
                 .issueKey(issue.getIssueKey())

@@ -80,15 +80,28 @@ textarea:focus-visible {
 .idc-breadcrumb-key:hover { text-decoration: underline; }
 .idc-breadcrumb-sep { color: var(--jdc-text-muted); }
 
-.idc-description,
-.idc-activity-section,
-.idc-comment-section {
+/* Standalone description/activity blocks only — not when nested in section/tab shell */
+.idc-description:not(.idc-section .idc-description),
+.idc-activity-section:not(.idc-tab-content .idc-activity-section),
+.idc-comment-section:not(.idc-tab-content .idc-comment-section) {
   background: var(--jdc-surface);
   border: 1px solid var(--jdc-border);
   border-radius: var(--jdc-radius-lg);
   padding: 16px 20px;
   margin-bottom: 16px;
   box-shadow: var(--jdc-shadow-card);
+}
+
+/* Inside issue detail cards: no double borders */
+.idc-section .idc-description,
+.idc-tab-content .idc-activity-section,
+.idc-tab-content .idc-comment-section {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 0;
+  padding: 0;
 }
 .idc-description-text { line-height: 1.6; color: var(--jdc-text); }
 .idc-description-placeholder {
@@ -629,9 +642,10 @@ textarea:focus-visible {
 .ab-modal-overlay {
   position: fixed; inset: 0;
   background: rgba(9,30,66,.54);
-  display: flex; align-items: flex-start; justify-content: center;
-  z-index: 1000;
-  padding: 60px 20px 20px;
+  display: flex; align-items: center; justify-content: center;
+  z-index: var(--sa-z-modal, 1200);
+  padding: max(16px, env(safe-area-inset-top, 16px)) 16px
+    max(16px, env(safe-area-inset-bottom, 16px));
   overflow-y: auto;
   backdrop-filter: blur(2px);
   animation: jdc-fade-in .15s ease-out;
@@ -1070,6 +1084,14 @@ textarea:focus-visible {
 .ab-empty-state-description {
   font-size: 13px; color: var(--jdc-text-subtle);
   margin: 0 0 16px; max-width: 360px;
+  line-height: 1.55;
+  padding: 0 8px;
+}
+
+.ab-empty-state--flat {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
 
 /* ============================================================
@@ -1124,6 +1146,47 @@ textarea:focus-visible {
   .admin-toolbar { flex-direction: column; align-items: stretch; }
   .admin-toolbar-left, .admin-toolbar-right { width: 100%; }
   .admin-search-input-toolbar { min-width: 0; width: 100%; }
+}
+
+/* Jira DC — Done column release link */
+.ab-column-dc-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 8px 8px;
+  font-size: 11px;
+}
+.ab-column-dc-link {
+  color: var(--jdc-primary, #0052cc);
+  text-decoration: none;
+}
+.ab-column-dc-link:hover {
+  text-decoration: underline;
+}
+.ab-column-dc-link-muted {
+  color: var(--jdc-text-subtle, #5e6c84);
+}
+
+/* Jira DC websudo elevation banner */
+.sa-websudo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  background: #fff7d6;
+  border-bottom: 1px solid #e3b100;
+  color: #172b4d;
+  font-size: 13px;
+}
+.sa-websudo-dismiss {
+  background: transparent;
+  border: 1px solid #c9a000;
+  border-radius: 3px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
 }
 
 /* End of overlay */

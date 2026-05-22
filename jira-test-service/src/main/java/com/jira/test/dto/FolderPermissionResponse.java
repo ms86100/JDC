@@ -2,7 +2,6 @@ package com.jira.test.dto;
 
 import lombok.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,18 +19,4 @@ public class FolderPermissionResponse {
 
     private Boolean inheritanceEnabled;
     private String effectivePermission;
-}
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-class FolderAccessEntry {
-    private UUID id;
-    private String name;
-    private String email;
-    private String type;
-    private String permissionLevel;
-    private LocalDateTime grantedAt;
-    private UUID grantedBy;
 }

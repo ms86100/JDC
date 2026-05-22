@@ -1,5 +1,8 @@
 package com.jira.test.plugin.hook;
 
+import com.jira.test.plugin.hook.PluginHook.HookContext;
+import com.jira.test.plugin.hook.PluginHook.HookResult;
+import com.jira.test.plugin.hook.PluginHook.HookType;
 import com.jira.test.plugin.sandbox.PluginSandbox;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

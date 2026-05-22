@@ -66,6 +66,12 @@ export default function IssuesPage() {
               Bulk Operations ({selectedIds.size})
             </button>
           )}
+          <button
+            className="ab-btn ab-btn-secondary"
+            onClick={() => navigate('/issues/batch')}
+          >
+            Batch lookup
+          </button>
           <button className="ab-btn ab-btn-primary" onClick={() => setShowCreate(true)}>
             <span className="ab-icon-plus"></span>
             Create Issue

@@ -104,7 +104,27 @@ public class FieldMappingService {
             Map.entry("comments", "comments"),
             Map.entry("comment", "comments"),
             Map.entry("worklog", "worklog"),
-            Map.entry("work_logs", "worklog")
+            Map.entry("work_logs", "worklog"),
+            Map.entry("issue_key", "issue_key"),
+            Map.entry("issuekey", "issue_key"),
+            Map.entry("issue_id", "issue_id"),
+            Map.entry("issueid", "issue_id"),
+            Map.entry("last_viewed", "last_viewed"),
+            Map.entry("lastviewed", "last_viewed"),
+            Map.entry("project_name", "project_name"),
+            Map.entry("projectname", "project_name"),
+            Map.entry("project_type", "project_type"),
+            Map.entry("project_lead", "project_lead"),
+            Map.entry("project_description", "project_description"),
+            Map.entry("project_url", "project_url"),
+            Map.entry("affects_version_s", "affects_versions"),
+            Map.entry("fix_version_s", "fix_versions"),
+            Map.entry("component_s", "components"),
+            Map.entry("log_work", "worklog"),
+            Map.entry("original_story_points", "story_points"),
+            Map.entry("target_end", "target_end"),
+            Map.entry("target_start", "target_start"),
+            Map.entry("parent_link", "parent")
     );
 
     private static final Map<String, String> SEMANTIC_MAPPINGS = Map.ofEntries(

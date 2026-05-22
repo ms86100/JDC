@@ -170,9 +170,12 @@ public class MigrationController {
         }
         dcOptions.put("backupZip", isBackup);
 
+        String importSource = "issue-xml".equals(String.valueOf(dcOptions.get("importProfile")))
+                ? "ISSUE_XML" : "JIRA_DC";
+
         StartMigrationRequest request = StartMigrationRequest.builder()
                 .jobType("IMPORT")
-                .importSource("JIRA_DC")
+                .importSource(importSource)
                 .targetProjectId(targetProjectId)
                 .options(dcOptions)
                 .build();

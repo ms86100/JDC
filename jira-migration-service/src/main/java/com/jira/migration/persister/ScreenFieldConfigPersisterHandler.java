@@ -16,6 +16,7 @@ public class ScreenFieldConfigPersisterHandler {
 
     private final AdminServiceClient adminServiceClient;
     private final FieldDefinitionRepository fieldDefinitionRepository;
+    private final com.jira.migration.service.field.FieldScreenConfigurationService fieldScreenConfigurationService;
 
     public ScreenFieldPersistResult importScreen(UUID jobId, UUID targetProjectId) {
         ScreenFieldPersistResult result = new ScreenFieldPersistResult();
@@ -58,9 +59,11 @@ public class ScreenFieldConfigPersisterHandler {
     public ScreenFieldPersistResult importFieldConfig(UUID jobId, UUID targetProjectId) {
         ScreenFieldPersistResult result = new ScreenFieldPersistResult();
         try {
+            int aligned = fieldScreenConfigurationService.ensureAllCustomFieldsOnScreen(targetProjectId);
             long fieldCount = fieldDefinitionRepository.count();
             result.setSuccess(true);
-            result.setMessage("Field configuration aligned: " + fieldCount + " field definitions in migration registry");
+            result.setMessage("Field configuration aligned: " + fieldCount + " definitions, "
+                    + aligned + " custom fields on screen");
             log.info("Field config import job {}: {} definitions", jobId, fieldCount);
         } catch (Exception e) {
             result.setSuccess(false);

@@ -6,6 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jira.test.entity.CustomField;
 import com.jira.test.exception.ValidationException;
 import com.jira.test.repository.CustomFieldRepository;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -423,7 +426,6 @@ public class FieldValidationService {
     }
 
     @Data
-    @AllArgsConstructor
     @NoArgsConstructor
     public static class ValidationMessage {
         private ValidationSeverity severity;

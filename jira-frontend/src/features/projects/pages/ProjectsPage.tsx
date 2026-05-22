@@ -16,7 +16,6 @@ import { getRecentViews, recordRecentView } from '../../../components/workspace/
 import { useProjectsPortfolioData } from '../../../components/workspace/useWorkspaceData';
 import { formatShortDate } from '../../../components/workspace/metrics';
 import type { HealthLevel } from '../../../components/workspace/metrics';
-import '../../../components/workspace/workspace-dashboard.css';
 
 type ViewMode = 'grid' | 'list';
 type FilterType = 'all' | 'software' | 'business' | 'archived';

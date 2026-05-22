@@ -39,6 +39,7 @@ public class FieldController {
     private final CustomFieldDefinitionRepository customFieldDefinitionRepository;
     private final CustomFieldOptionRepository customFieldOptionRepository;
     private final FieldTypeCompatibilityValidator fieldTypeCompatibilityValidator;
+    private final FieldScreenConfigurationService fieldScreenConfigurationService;
 
     // ========================================================================
     // FIELD DEFINITION APIs
@@ -214,8 +215,80 @@ public class FieldController {
                 .build();
 
         CustomFieldDefinition saved = customFieldDefinitionRepository.save(customField);
+        fieldDefinitionRepository.findByFieldKey(fieldKey).ifPresent(def ->
+                fieldScreenConfigurationService.ensureFieldVisibleOnScreen(def.getFieldKey(), null));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(CustomFieldDefinitionResponse.fromEntity(saved));
+    }
+
+    @GetMapping("/custom/{id}")
+    @Operation(summary = "Get custom field by ID")
+    public ResponseEntity<CustomFieldDefinitionResponse> getCustomField(@PathVariable UUID id) {
+        return customFieldDefinitionRepository.findById(id)
+                .map(CustomFieldDefinitionResponse::fromEntity)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/custom/{id}")
+    @Operation(summary = "Update custom field")
+    public ResponseEntity<CustomFieldDefinitionResponse> updateCustomField(
+            @PathVariable UUID id,
+            @RequestBody UpdateCustomFieldRequest request) {
+        return customFieldDefinitionRepository.findById(id)
+                .map(cf -> {
+                    if (request.getName() != null) cf.setName(request.getName());
+                    if (request.getDescription() != null) cf.setDescription(request.getDescription());
+                    if (request.getType() != null) cf.setType(request.getType());
+                    if (request.getEnabled() != null) cf.setEnabled(request.getEnabled());
+                    if (request.getSearchable() != null) cf.setSearchable(request.getSearchable());
+                    if (request.getNavigable() != null) cf.setNavigable(request.getNavigable());
+                    CustomFieldDefinition saved = customFieldDefinitionRepository.save(cf);
+                    fieldDefinitionRepository.findByFieldKey(saved.getFieldKey()).ifPresent(def -> {
+                        if (request.getName() != null) def.setDisplayName(request.getName());
+                        fieldDefinitionRepository.save(def);
+                    });
+                    fieldScreenConfigurationService.ensureFieldVisibleOnScreen(saved.getFieldKey(), null);
+                    return ResponseEntity.ok(CustomFieldDefinitionResponse.fromEntity(saved));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/custom/{id}")
+    @Operation(summary = "Disable custom field (soft delete)")
+    public ResponseEntity<Void> deleteCustomField(@PathVariable UUID id) {
+        return customFieldDefinitionRepository.findById(id)
+                .map(cf -> {
+                    cf.setEnabled(false);
+                    customFieldDefinitionRepository.save(cf);
+                    fieldDefinitionRepository.findByFieldKey(cf.getFieldKey()).ifPresent(def -> {
+                        def.setHidden(true);
+                        def.setDeprecated(true);
+                        fieldDefinitionRepository.save(def);
+                    });
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/schemes/projects/{projectId}/ensure-fields")
+    @Operation(summary = "Ensure custom fields appear on issue screen for project")
+    public ResponseEntity<Map<String, Object>> ensureProjectFieldScheme(
+            @PathVariable UUID projectId,
+            @RequestBody(required = false) List<String> fieldKeys) {
+        int count = fieldScreenConfigurationService.ensureProjectFieldsVisible(projectId, fieldKeys);
+        return ResponseEntity.ok(Map.of(
+                "projectId", projectId,
+                "fieldsAligned", count,
+                "status", "ok"
+        ));
+    }
+
+    @GetMapping("/schemes/projects/{projectId}")
+    @Operation(summary = "Get visible field configuration for project")
+    public ResponseEntity<ScreenConfigurationResponse> getProjectFieldScheme(@PathVariable UUID projectId) {
+        fieldScreenConfigurationService.ensureAllCustomFieldsOnScreen(projectId);
+        return getScreenConfiguration("issue");
     }
 
     // ========================================================================

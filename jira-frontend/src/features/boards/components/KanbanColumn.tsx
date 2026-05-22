@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { BoardColumn, BoardIssue } from '../../../api/boardApi';
 import IssueCard from './IssueCard';
 
@@ -12,6 +13,10 @@ interface KanbanColumnProps {
   onDragOver: (e: React.DragEvent) => void;
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent) => void;
+  onDropAtIndex?: (e: React.DragEvent, index: number) => void;
+  dragOverIndex?: number | null;
+  onDragOverIndex?: (index: number) => void;
+  wipBlocked?: boolean;
   onDragStart: (e: React.DragEvent, issue: BoardIssue) => void;
   onDragEnd: () => void;
   onCardClick: (issue: BoardIssue) => void;
@@ -21,6 +26,9 @@ interface KanbanColumnProps {
   draggedIssue: BoardIssue | null;
   showWorkVsCapacity: boolean;
   boardCapacity: { capacity: number; committed: number };
+  /** Jira DC Done column — link to releases */
+  releaseLink?: { label: string; href: string };
+  olderIssuesLink?: string;
 }
 
 export default function KanbanColumn({
@@ -31,6 +39,10 @@ export default function KanbanColumn({
   onDragOver,
   onDragLeave,
   onDrop,
+  onDropAtIndex,
+  dragOverIndex = null,
+  onDragOverIndex,
+  wipBlocked = false,
   onDragStart,
   onDragEnd,
   onCardClick,
@@ -40,11 +52,13 @@ export default function KanbanColumn({
   draggedIssue,
   showWorkVsCapacity,
   boardCapacity,
+  releaseLink,
+  olderIssuesLink,
 }: KanbanColumnProps) {
   const isCollapsed = column.isHidden;
 
   return (
-    <div className={`ab-kanban-column ${isOver ? 'ab-drag-over' : ''} ${isCollapsed ? 'ab-collapsed' : ''}`}>
+    <div className={`ab-kanban-column ${isOver ? 'ab-drag-over' : ''} ${isCollapsed ? 'ab-collapsed' : ''} ${wipBlocked ? 'ab-wip-exceeded' : ''}`}>
       {/* Column Header */}
       <div className="ab-column-header" onClick={() => {}}>
         <div className="ab-column-indicator" style={{ backgroundColor: column.color }} />
@@ -80,6 +94,21 @@ export default function KanbanColumn({
         </div>
       </div>
 
+      {(releaseLink || olderIssuesLink) && (
+        <div className="ab-column-dc-links">
+          {releaseLink && (
+            <Link to={releaseLink.href} className="ab-column-dc-link">
+              {releaseLink.label}
+            </Link>
+          )}
+          {olderIssuesLink && (
+            <Link to={olderIssuesLink} className="ab-column-dc-link ab-column-dc-link-muted">
+              Looking for older issues?
+            </Link>
+          )}
+        </div>
+      )}
+
       {/* WIP Warning */}
       {wipStatus.status !== 'ok' && (
         <div className={`ab-wip-warning ab-wip-${wipStatus.status}`}>
@@ -91,7 +120,7 @@ export default function KanbanColumn({
       )}
 
       {/* Work vs Capacity Bar (for In Progress columns) */}
-      {showWorkVsCapacity && column.statusCategory === 'IN_PROGRESS' && (
+      {showWorkVsCapacity && column.statusCategory === 'IN_PROGRESS' && issues.length > 0 && (
         <div className="ab-capacity-bar-container">
           <div className="ab-capacity-bar">
             <div
@@ -129,18 +158,49 @@ export default function KanbanColumn({
         ) : (
           <div className="ab-issue-list">
             {issues.map((issue, index) => (
-              <IssueCard
-                key={issue.id}
-                issue={issue}
-                layout={cardLayout}
-                color={getCardColor(issue)}
-                isDragging={draggedIssue?.id === issue.id}
-                onDragStart={(e) => onDragStart(e, issue)}
-                onDragEnd={onDragEnd}
-                onClick={() => onCardClick(issue)}
-                rank={index + 1}
-              />
+              <React.Fragment key={issue.id}>
+                {onDropAtIndex && (
+                  <div
+                    className={`ab-card-drop-slot${dragOverIndex === index ? ' is-over' : ''}`}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onDragOverIndex?.(index);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onDropAtIndex(e, index);
+                    }}
+                  />
+                )}
+                <IssueCard
+                  issue={issue}
+                  layout={cardLayout}
+                  color={getCardColor(issue)}
+                  isDragging={draggedIssue?.id === issue.id}
+                  onDragStart={(e) => onDragStart(e, issue)}
+                  onDragEnd={onDragEnd}
+                  onClick={() => onCardClick(issue)}
+                  rank={index + 1}
+                />
+              </React.Fragment>
             ))}
+            {onDropAtIndex && (
+              <div
+                className={`ab-card-drop-slot${dragOverIndex === issues.length ? ' is-over' : ''}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDragOverIndex?.(issues.length);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDropAtIndex(e, issues.length);
+                }}
+              />
+            )}
           </div>
         )}
 

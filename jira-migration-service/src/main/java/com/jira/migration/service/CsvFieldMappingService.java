@@ -12,6 +12,18 @@ import java.util.*;
 @Slf4j
 public class CsvFieldMappingService {
 
+    /** Canonical keys that map to core issue columns (not stored as custom field values). */
+    private static final Set<String> STANDARD_ISSUE_FIELD_KEYS = Set.of(
+            "summary", "description", "issue_type", "issue_type_id", "priority", "status", "resolution",
+            "project_key", "project", "project_id", "assignee", "reporter", "creator", "labels", "components",
+            "fix_version", "fix_versions", "affects_version", "affects_versions", "due_date", "parent_key",
+            "parent", "epic_link", "epic", "sprint", "environment", "security_level", "issue_key", "issuekey",
+            "issue_id", "created", "updated", "resolved", "votes", "watches", "time_spent", "remaining_estimate",
+            "original_estimate", "comment", "comment_body", "comment_author", "author", "entity_type",
+            "attachment_path", "attachment_url", "attachments", "attachment", "file_name", "filename",
+            "row_number", "parentissuekey", "issuetype", "projectkey", "projectname"
+    );
+
     private static final Map<String, String> TARGET_ALIASES = Map.ofEntries(
             Map.entry("summary", "summary"),
             Map.entry("description", "description"),
@@ -107,5 +119,80 @@ public class CsvFieldMappingService {
 
     private String stringVal(Object o) {
         return o == null ? null : o.toString().trim();
+    }
+
+    /**
+     * Splits a mapped CSV row into core issue fields and custom field values (Jira DC import behavior).
+     */
+    public Map<String, Object> buildIssueDataFromCsvRow(
+            Map<String, String> rowData,
+            String issueKey,
+            int rowNum,
+            UUID targetProjectId) {
+
+        Map<String, Object> issueData = new LinkedHashMap<>();
+        Map<String, Object> customFields = new LinkedHashMap<>();
+        List<Map<String, String>> pendingAttachmentRefs = new ArrayList<>();
+
+        for (Map.Entry<String, String> entry : rowData.entrySet()) {
+            String key = entry.getKey().toLowerCase(Locale.ROOT).trim();
+            String value = entry.getValue();
+            if (value == null || value.isBlank()) {
+                continue;
+            }
+            if ("attachments".equals(key) || "attachment".equals(key)) {
+                for (String part : value.split("[;|]")) {
+                    String ref = part.trim();
+                    if (!ref.isBlank()) {
+                        Map<String, String> refEntry = new LinkedHashMap<>();
+                        refEntry.put("reference", ref);
+                        int slash = Math.max(ref.lastIndexOf('/'), ref.lastIndexOf('\\'));
+                        refEntry.put("fileName", slash >= 0 ? ref.substring(slash + 1) : ref);
+                        pendingAttachmentRefs.add(refEntry);
+                    }
+                }
+            } else if (STANDARD_ISSUE_FIELD_KEYS.contains(key) || key.contains("custom field (")) {
+                if (key.contains("custom field (")) {
+                    String label = extractCustomFieldLabel(entry.getKey());
+                    customFields.put(normalizeCustomKey(label), value);
+                } else {
+                    issueData.put(key, value);
+                }
+            } else {
+                customFields.put(key, value);
+            }
+        }
+
+        if (!customFields.isEmpty()) {
+            issueData.put("customFields", customFields);
+        }
+        if (!pendingAttachmentRefs.isEmpty()) {
+            issueData.put("_pendingAttachmentRefs", pendingAttachmentRefs);
+        }
+        issueData.put("issueKey", issueKey);
+        issueData.put("rowNumber", rowNum);
+        if (rowData.containsKey("parent_key")) {
+            issueData.put("parentIssueKey", rowData.get("parent_key"));
+        }
+        if (rowData.containsKey("epic_link")) {
+            issueData.put("epicLink", rowData.get("epic_link"));
+        }
+        if (targetProjectId != null) {
+            issueData.put("projectId", targetProjectId.toString());
+        }
+        return issueData;
+    }
+
+    private String extractCustomFieldLabel(String header) {
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(?i)custom\\s+field\\s*\\(([^)]+)\\)")
+                .matcher(header);
+        return m.find() ? m.group(1).trim() : header;
+    }
+
+    private String normalizeCustomKey(String label) {
+        return label.trim().toLowerCase(Locale.ROOT)
+                .replace(" ", "_")
+                .replaceAll("[^a-z0-9_]", "");
     }
 }

@@ -521,6 +521,20 @@ export default function WorkflowDesignerPage() {
           </button>
           <button
             type="button"
+            className="ab-btn ab-btn-secondary"
+            onClick={() => workflowApi.lockLayout(workflowId!)}
+          >
+            Lock layout
+          </button>
+          <button
+            type="button"
+            className="ab-btn ab-btn-secondary"
+            onClick={() => workflowApi.unlockLayout(workflowId!)}
+          >
+            Unlock layout
+          </button>
+          <button
+            type="button"
             className="ab-btn ab-btn-primary"
             disabled={publishMutation.isPending}
             onClick={() => publishMutation.mutate()}

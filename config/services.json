@@ -114,9 +114,9 @@
         "SPRING_PROFILES_ACTIVE": "local",
         "DB_HOST": "localhost",
         "DB_PORT": 5432,
-        "DB_NAME": "project_db",
+        "DB_NAME": "jira_platform",
         "DB_USERNAME": "jiraadmin",
-        "DB_PASSWORD": "jirapass123",
+        "DB_PASSWORD": "UNIpay@123",
         "SERVER_PORT": 8083,
         "AUTH_SERVICE_URL": "http://localhost:8081"
       }

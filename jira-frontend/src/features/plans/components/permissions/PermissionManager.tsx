@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBoardPermissions, useGrantBoardPermission, useRevokeBoardPermission } from '../../hooks/usePermissions';
+import { appNotify } from '../../../../lib/appNotify';
 
 interface PermissionManagerProps {
   boardId: string;
@@ -31,7 +32,7 @@ export default function PermissionManager({ boardId, onClose }: PermissionManage
 
   const handleGrant = () => {
     if (!formData.principalId.trim()) {
-      alert('Please enter a user or group ID');
+      appNotify.warning('Please enter a user or group ID');
       return;
     }
     grantPermission.mutate({

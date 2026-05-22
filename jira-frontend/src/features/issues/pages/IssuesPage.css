@@ -73,7 +73,13 @@
   border: 1px solid var(--ab-gray-200);
   border-radius: var(--ab-radius-lg);
   box-shadow: var(--ab-shadow-sm);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ab-issues-page .ab-card .ab-table {
+  min-width: 720px;
 }
 
 /* Table */

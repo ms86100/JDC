@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './features/auth/context/AuthContext';
+import { AppToastProvider } from './components/ui/AppToast';
 import { WebSocketProvider } from './features/tests/components/WebSocketProvider';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './features/auth/pages/LoginPage';
@@ -8,17 +9,33 @@ import RegisterPage from './features/auth/pages/RegisterPage';
 import DashboardPage from './features/dashboard/pages/DashboardPage';
 import ProjectsPage from './features/projects/pages/ProjectsPage';
 import ProjectDetailPage from './features/projects/pages/ProjectDetailPage';
-import ProjectSettingsPage from './features/projects/pages/ProjectSettingsPage';
+import ProjectDcLayout from './features/projects/components/ProjectDcLayout';
+import ProjectBacklogPage from './features/projects/pages/ProjectBacklogPage';
+import ProjectActiveBoardPage from './features/projects/pages/ProjectActiveBoardPage';
+import ProjectReleasesPage from './features/projects/pages/ProjectReleasesPage';
+import ProjectReportsPage from './features/projects/pages/ProjectReportsPage';
+import ProjectComponentsPage from './features/projects/pages/ProjectComponentsPage';
+import ProjectSettingsDcLayout from './features/projects/pages/ProjectSettingsDcLayout';
+import ProjectIssuesLayout from './features/projects/pages/ProjectIssuesLayout';
 import CreateProjectWizard from './features/projects/components/CreateProjectWizard';
-import IssuesPage from './features/issues/pages/IssuesPage';
+import IssuesLayout from './features/issues/pages/IssuesLayout';
+import IssueNavigatorPlaceholder from './features/issues/pages/IssueNavigatorPlaceholder';
 import IssueDetailPage from './features/issues/pages/IssueDetailPage';
 import WorkflowManagementPage from './features/workflows/pages/WorkflowManagementPage';
 import WorkflowDetailPage from './features/workflows/pages/WorkflowDetailPage';
 import WorkflowDesignerPage from './features/workflows/pages/WorkflowDesignerPage';
-import SearchPage from './features/search/pages/SearchPage';
+import WorkflowTransitionScreensPage from './features/workflows/pages/WorkflowTransitionScreensPage';
+import WorkflowAdminToolsPage from './features/workflows/pages/WorkflowAdminToolsPage';
+import WorkflowOpenPage from './features/workflows/pages/WorkflowOpenPage';
+import WorkflowAdminShell from './features/workflows/components/WorkflowAdminShell';
+import WorkflowAdminHubPage from './features/workflows/pages/WorkflowAdminHubPage';
+import WorkflowAdminSchemesPage from './features/workflows/pages/WorkflowAdminSchemesPage';
+import WorkflowAdminScreensAdminPage from './features/workflows/pages/WorkflowAdminScreensAdminPage';
+import WorkflowAdminDefinitionsPage from './features/workflows/pages/WorkflowAdminDefinitionsPage';
+import WorkflowAdminAuditPage from './features/workflows/pages/WorkflowAdminAuditPage';
+import EnhancedSearchPage from './features/search/pages/EnhancedSearchPage';
 import NotificationsPage from './features/notifications/pages/NotificationsPage';
 import SprintsPage from './features/sprints/pages/SprintsPage';
-import KanbanBoard from './features/issues/components/KanbanBoard';
 import BoardsPage from './features/boards/pages/BoardsPage';
 import KanbanBoardPage from './features/boards/pages/KanbanBoardPage';
 import AuditLogsPage from './features/audit/pages/AuditLogsPage';
@@ -27,8 +44,11 @@ import AdminRoutes from './features/admin/routes/AdminRoutes';
 import SystemSettingsPage from './features/admin/pages/SystemSettingsPage';
 import UserManagementPage from './features/admin/pages/UserManagementPage';
 import ProgramsPage from './features/plans/pages/ProgramsPage';
+import ProgramDetailDcPage from './features/plans/pages/ProgramDetailDcPage';
 import ProgramDetailPage from './features/plans/pages/ProgramDetailPage';
 import PlanDetailPage from './features/plans/pages/PlanDetailPage';
+import PlanSettingsPage from './features/plans/pages/PlanSettingsPage';
+import ProgramSettingsPage from './features/plans/pages/ProgramSettingsPage';
 import ManagePlansPage from './features/plans/pages/ManagePlansPage';
 import CreateProgramPage from './features/plans/pages/CreateProgramPage';
 import CreatePlanPage from './features/plans/pages/CreatePlanPage';
@@ -53,8 +73,32 @@ import PreconditionPage from './features/tests/pages/PreconditionPage';
 import CoveragePage from './features/tests/pages/CoveragePage';
 import RequirementVersionPage from './features/tests/pages/RequirementVersionPage';
 import TraceabilityPage from './features/tests/pages/TraceabilityPage';
+import EpicsPage from './features/epics/pages/EpicsPage';
+import EpicDetailPage from './features/epics/pages/EpicDetailPage';
+import AiTestPage from './features/tests/pages/AiTestPage';
+import CiCdWebhooksPage from './features/tests/pages/CiCdWebhooksPage';
+import TestImportPage from './features/tests/pages/TestImportPage';
+import TimeTrackingReports from './features/time-tracking/pages/TimeTrackingReports';
+import IssueBatchPage from './features/issues/pages/IssueBatchPage';
+import GraphQLExplorerPage from './features/developer/pages/GraphQLExplorerPage';
+import TestScreenConfigHubPage from './features/tests/pages/TestScreenConfigHubPage';
+import PluginManagementPage from './features/tests/pages/PluginManagementPage';
+import FlakyTestDashboardPage from './features/tests/pages/FlakyTestDashboardPage';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 30_000,
+    },
+  },
+});
+
+function ProjectSettingsRedirect() {
+  const { projectId } = useParams<{ projectId: string }>();
+  return <Navigate to={`/projects/${projectId}/settings/summary`} replace />;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('accessToken');
@@ -68,6 +112,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <AppToastProvider>
         <WebSocketProvider showStatusIndicator={true}>
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
@@ -85,16 +130,49 @@ function App() {
                 <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="projects" element={<ProjectsPage />} />
                 <Route path="projects/create" element={<CreateProjectWizard />} />
-                <Route path="projects/:projectId" element={<ProjectDetailPage />} />
-                <Route path="projects/:projectId/settings" element={<ProjectSettingsPage />} />
-                <Route path="issues" element={<IssuesPage />} />
-                <Route path="issues/:issueId" element={<IssueDetailPage />} />
-                <Route path="kanban" element={<KanbanBoard />} />
+                <Route path="projects/:projectId" element={<ProjectDcLayout />}>
+                  <Route index element={<ProjectDetailPage />} />
+                  <Route path="backlog" element={<ProjectBacklogPage />} />
+                  <Route path="board" element={<Navigate to="active" replace />} />
+                  <Route path="board/active" element={<ProjectActiveBoardPage />} />
+                  <Route path="sprints/active" element={<Navigate to="../board/active" replace />} />
+                  <Route path="releases" element={<ProjectReleasesPage />} />
+                  <Route path="reports" element={<ProjectReportsPage />} />
+                  <Route path="components" element={<ProjectComponentsPage />} />
+                  <Route path="issues" element={<ProjectIssuesLayout />}>
+                    <Route index element={<IssueNavigatorPlaceholder />} />
+                    <Route path=":issueId" element={<IssueDetailPage />} />
+                  </Route>
+                  <Route path="settings" element={<Navigate to="summary" replace />} />
+                  <Route path="settings/:section" element={<ProjectSettingsDcLayout />} />
+                </Route>
+                <Route path="projects/:projectId/settings" element={<ProjectSettingsRedirect />} />
+                <Route path="issues" element={<IssuesLayout />}>
+                  <Route index element={<IssueNavigatorPlaceholder />} />
+                  <Route path=":issueId" element={<IssueDetailPage />} />
+                </Route>
+                <Route path="issues/batch" element={<IssueBatchPage />} />
+                <Route path="developer/graphql" element={<GraphQLExplorerPage />} />
+                <Route path="epics" element={<EpicsPage />} />
+                <Route path="epics/:epicId" element={<EpicDetailPage />} />
+                <Route path="reports/time-tracking" element={<TimeTrackingReports />} />
+                <Route path="kanban" element={<KanbanBoardPage />} />
                 <Route path="sprints" element={<SprintsPage />} />
                 <Route path="workflows" element={<WorkflowManagementPage />} />
-                <Route path="workflows/:workflowId" element={<WorkflowDetailPage />} />
+                <Route path="workflows/open" element={<WorkflowOpenPage />} />
+                <Route path="workflows/admin" element={<WorkflowAdminShell />}>
+                  <Route index element={<WorkflowAdminHubPage />} />
+                  <Route path="tools" element={<WorkflowAdminToolsPage />} />
+                  <Route path="schemes" element={<WorkflowAdminSchemesPage />} />
+                  <Route path="screens" element={<WorkflowAdminScreensAdminPage />} />
+                  <Route path="definitions" element={<WorkflowAdminDefinitionsPage />} />
+                  <Route path="audit" element={<WorkflowAdminAuditPage />} />
+                </Route>
+                <Route path="workflows/admin-tools" element={<Navigate to="/workflows/admin/tools" replace />} />
+                <Route path="workflows/screens" element={<WorkflowTransitionScreensPage />} />
                 <Route path="workflows/:workflowId/designer" element={<WorkflowDesignerPage />} />
-                <Route path="search" element={<SearchPage />} />
+                <Route path="workflows/:workflowId" element={<WorkflowDetailPage />} />
+                <Route path="search" element={<EnhancedSearchPage />} />
                 <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="boards" element={<BoardsPage />} />
                 <Route path="board/classic" element={<KanbanBoardPage />} />
@@ -102,16 +180,19 @@ function App() {
                 <Route path="migration" element={<MigrationPage />} />
                 <Route path="programs" element={<ProgramsPage />} />
                 <Route path="programs/create" element={<CreateProgramPage />} />
-                <Route path="programs/:programId" element={<ProgramDetailPage />} />
+                <Route path="programs/:programId" element={<ProgramDetailDcPage />} />
+                <Route path="programs/:programId/portfolio" element={<ProgramDetailPage />} />
+                <Route path="programs/:programId/settings" element={<ProgramSettingsPage />} />
                 <Route path="plans" element={<ManagePlansPage />} />
                 <Route path="plans/create" element={<CreatePlanPage />} />
                 <Route path="plans/:planId" element={<PlanDetailPage />} />
+                <Route path="plans/:planId/settings" element={<PlanSettingsPage />} />
                 <Route path="tests" element={<TestManagementPage />} />
-                <Route path="tests/:projectId" element={<TestManagementPage />} />
-                <Route path="tests/:testId" element={<TestDetailPage />} />
                 <Route path="tests/create" element={<TestCreationPage />} />
                 <Route path="tests/create/:projectId" element={<TestCreationPage />} />
-                <Route path="tests/:testId/history" element={<TestExecutionHistoryPage />} />
+                <Route path="tests/screen-config" element={<TestScreenConfigHubPage />} />
+                <Route path="tests/screen-config/:projectId" element={<TestScreenConfigHubPage />} />
+                <Route path="tests/plugins" element={<PluginManagementPage />} />
                 <Route path="tests/defects" element={<DefectTrackingPage />} />
                 <Route path="tests/evidence" element={<EvidenceGalleryPage />} />
                 <Route path="tests/shared-steps" element={<SharedStepsPage />} />
@@ -120,6 +201,8 @@ function App() {
                 <Route path="tests/datasets/:projectId" element={<DatasetPage />} />
                 <Route path="tests/flaky" element={<FlakyTestsPage />} />
                 <Route path="tests/flaky/:projectId" element={<FlakyTestsPage />} />
+                <Route path="tests/flaky-dashboard" element={<FlakyTestDashboardPage />} />
+                <Route path="tests/flaky-dashboard/:projectId" element={<FlakyTestDashboardPage />} />
                 <Route path="tests/quarantine" element={<QuarantinePage />} />
                 <Route path="tests/quarantine/:projectId" element={<QuarantinePage />} />
                 <Route path="tests/environment-matrix" element={<EnvironmentMatrixPage />} />
@@ -144,6 +227,14 @@ function App() {
                 <Route path="tests/requirement-versions/:projectId" element={<RequirementVersionPage />} />
                 <Route path="tests/traceability" element={<TraceabilityPage />} />
                 <Route path="tests/traceability/:projectId" element={<TraceabilityPage />} />
+                <Route path="tests/ai" element={<AiTestPage />} />
+                <Route path="tests/webhooks" element={<CiCdWebhooksPage />} />
+                <Route path="tests/import" element={<TestImportPage />} />
+                <Route path="tests/import/:projectId" element={<TestImportPage />} />
+                <Route path="tests/:testId/history" element={<TestExecutionHistoryPage />} />
+                <Route path="tests/:testId/execute" element={<TestDetailPage />} />
+                <Route path="tests/:testId" element={<TestDetailPage />} />
+                <Route path="tests/:projectId" element={<TestManagementPage />} />
               </Route>
               <Route
                 path="/admin/*"
@@ -156,6 +247,7 @@ function App() {
             </Routes>
           </BrowserRouter>
         </WebSocketProvider>
+        </AppToastProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

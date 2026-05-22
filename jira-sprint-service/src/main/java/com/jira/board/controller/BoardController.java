@@ -129,4 +129,13 @@ public class BoardController {
         log.info("Updating config for board: {}", boardId);
         return ResponseEntity.ok(boardService.updateBoardConfig(boardId, request));
     }
+
+    @PutMapping("/{boardId}/columns/{columnId}")
+    public ResponseEntity<BoardColumnResponse> updateColumn(
+            @PathVariable UUID boardId,
+            @PathVariable UUID columnId,
+            @RequestBody BoardColumnResponse request) {
+        log.info("Updating column {} on board {}", columnId, boardId);
+        return ResponseEntity.ok(boardService.updateColumn(boardId, columnId, request));
+    }
 }

@@ -1,0 +1,20 @@
+/**
+ * Airbus Design System ↔ Jira DC shell bridge.
+ * Maps airbus-theme.css (--ab-*) tokens onto DC composition variables (--jdc-*)
+ * so jira-dc-ui.css stays aligned with Airbus brand colours.
+ */
+:root {
+  --jdc-header-bg: var(--ab-primary-700, #003d99);
+  --jdc-header-text: var(--ab-white, #ffffff);
+  --jdc-header-hover: var(--ab-primary-600, #0052cc);
+  --jdc-gadget-header: var(--ab-primary-600, #0052cc);
+  --jdc-page-bg: var(--ab-gray-50, #f8f9fa);
+  --jdc-border: var(--ab-gray-200, #dee2e6);
+  --jdc-text: var(--ab-gray-900, #0d1117);
+  --jdc-text-subtle: var(--ab-gray-500, #6c757d);
+  --jdc-lozenge-todo: var(--ab-todo-bg, #e9ecef);
+  --jdc-today: var(--ab-accent-500, #ff9200);
+  --jdc-primary: var(--ab-primary-600, #0052cc);
+  --jdc-radius: var(--ab-radius-sm, 3px);
+  --jdc-font: var(--ab-font-family, var(--sa-font-sans, system-ui, sans-serif));
+}

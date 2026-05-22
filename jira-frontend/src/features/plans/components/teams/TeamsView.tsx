@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTeams, useCreateTeam, useDeleteTeam } from '../../hooks/useTeams';
 import { useAddTeamMember } from '../../hooks/useTeams';
 import { CreateTeamRequest, AddTeamMemberRequest } from '../../../../api/planApi';
+import { appNotify } from '../../../../lib/appNotify';
 
 interface TeamsViewProps {
   planId: string;
@@ -32,7 +33,7 @@ export default function TeamsView({ planId }: TeamsViewProps) {
           setTeamDescription('');
         },
         onError: (error: Error) => {
-          alert(error.message || 'Failed to create team');
+          appNotify.error(error.message || 'Failed to create team');
         },
       }
     );
@@ -49,7 +50,7 @@ export default function TeamsView({ planId }: TeamsViewProps) {
           setMemberRole('');
         },
         onError: (error: Error) => {
-          alert(error.message || 'Failed to add member');
+          appNotify.error(error.message || 'Failed to add member');
         },
       }
     );
@@ -58,7 +59,7 @@ export default function TeamsView({ planId }: TeamsViewProps) {
   const handleDeleteTeam = (teamId: string) => {
     deleteTeamMutation.mutate({ planId, teamId }, {
       onError: (error: Error) => {
-        alert(error.message || 'Failed to delete team');
+        appNotify.error(error.message || 'Failed to delete team');
       },
     });
   };

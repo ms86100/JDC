@@ -10,8 +10,8 @@ export function boardsListPath(): string {
 }
 
 /** Prefer explicit default flag, then SCRUM, then first board */
-export function pickDefaultBoard(boards: AgileBoard[]): AgileBoard | undefined {
-  if (!boards.length) return undefined;
+export function pickDefaultBoard(boards: AgileBoard[] | null | undefined): AgileBoard | undefined {
+  if (!boards?.length) return undefined;
   return (
     boards.find((b) => b.isDefault) ??
     boards.find((b) => b.boardType === 'SCRUM') ??

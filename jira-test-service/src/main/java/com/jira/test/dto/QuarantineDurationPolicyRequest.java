@@ -13,6 +13,9 @@ import java.util.UUID;
 @Builder
 public class QuarantineDurationPolicyRequest {
 
+    @NotNull(message = "Project ID is required")
+    private UUID projectId;
+
     @NotNull(message = "Policy name is required")
     private String policyName;
 

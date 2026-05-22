@@ -15,6 +15,7 @@ public class BoardColumnResponse {
     private String statusCategory;
     private boolean isDone;
     private Integer maxIssues;
+    private int currentIssues;
     private String color;
     private boolean isCollapsible;
     private boolean isHidden;

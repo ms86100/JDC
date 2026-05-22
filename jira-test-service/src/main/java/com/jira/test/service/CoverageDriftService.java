@@ -69,8 +69,8 @@ public class CoverageDriftService {
                 .map(link -> {
                     Map<String, Object> testInfo = new HashMap<>();
                     testInfo.put("testId", link.getTestId());
-                    testInfo.put("testKey", link.getTestKey());
-                    testInfo.put("linkType", link.getLinkType());
+                    testInfo.put("testKey", link.getTestId() != null ? link.getTestId().toString() : null);
+                    testInfo.put("linkType", link.getCoverageStatus());
                     testInfo.put("status", assessTestStatus(link));
                     return testInfo;
                 })
@@ -213,11 +213,13 @@ public class CoverageDriftService {
                 .filter(r -> r.getDrift() != null && r.getDrift().compareTo(BigDecimal.ZERO) < 0)
                 .sorted(Comparator.comparing(CoverageDriftRecord::getDrift))
                 .limit(5)
-                .map(r -> Map.of(
-                        "requirementId", r.getRequirementId(),
-                        "drift", r.getDrift(),
-                        "currentCoverage", r.getCurrentCoverage()
-                ))
+                .map(r -> {
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("requirementId", r.getRequirementId());
+                    row.put("drift", r.getDrift());
+                    row.put("currentCoverage", r.getCurrentCoverage());
+                    return row;
+                })
                 .collect(Collectors.toList());
         summary.put("mostDegraded", mostDegraded);
 
@@ -382,8 +384,8 @@ public class CoverageDriftService {
 
         int linkedTests = links.size();
         int totalWeight = links.stream()
-                .mapToInt(link -> "BLOCKER".equals(link.getLinkType()) ? 3 :
-                        "CRITICAL".equals(link.getLinkType()) ? 2 : 1)
+                .mapToInt(link -> "BLOCKER".equals(link.getCoverageStatus()) ? 3 :
+                        "CRITICAL".equals(link.getCoverageStatus()) ? 2 : 1)
                 .sum();
 
         // Weighted coverage calculation
@@ -448,7 +450,7 @@ public class CoverageDriftService {
         return links.stream()
                 .filter(link -> link.getCreatedAt() != null &&
                         link.getCreatedAt().isBefore(LocalDateTime.now().minusMonths(6)))
-                .map(RequirementLink::getTestKey)
+                .map(link -> link.getTestId() != null ? link.getTestId().toString() : null)
                 .collect(Collectors.toList());
     }
 
@@ -463,7 +465,7 @@ public class CoverageDriftService {
     }
 
     private UUID getProjectIdFromLinks(List<RequirementLink> links) {
-        return links.isEmpty() ? null : links.get(0).getProjectId();
+        return links.isEmpty() ? null : null;
     }
 
     private Integer getPreviousTestCount(UUID requirementId) {

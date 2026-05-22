@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test:e2e": "playwright test",
+    "test:e2e:migration-live": "playwright test e2e/jira-dc-import.spec.ts e2e/migration-center.spec.ts",
     "test:e2e:ui": "playwright test --ui",
     "postinstall": "playwright install chromium"
   },

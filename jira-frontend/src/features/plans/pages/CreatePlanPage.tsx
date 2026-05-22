@@ -123,10 +123,30 @@ export default function CreatePlanPage() {
         access: formData.access,
       };
 
-      await createPlan.mutateAsync({
+      const created = await createPlan.mutateAsync({
         name: formData.name,
         settings,
       });
+      const newPlanId = created.data?.id;
+      if (newPlanId) {
+        for (const src of formData.issueSources) {
+          const sourceType = src.type.toUpperCase();
+          await planApi.addIssueSource(newPlanId, {
+            sourceType,
+            sourceId: src.id,
+            sourceName: src.name,
+          }).catch(() => undefined);
+        }
+        for (const rule of formData.exclusionRules) {
+          await planApi.createExclusionRule(newPlanId, {
+            fieldName: rule.field,
+            operator: rule.operator.toUpperCase().replace(/ /g, '_'),
+            fieldValue: rule.value,
+          }).catch(() => undefined);
+        }
+        navigate(`/plans/${newPlanId}`);
+        return;
+      }
       navigate('/plans');
     } catch (error) {
       console.error('Failed to create plan:', error);
@@ -134,7 +154,7 @@ export default function CreatePlanPage() {
   };
 
   return (
-    <div className="create-plan-page">
+    <div className="create-plan-page jdc-create-plan-wizard">
       <div className="create-page-container">
         <div className="create-page-header">
           <h1 className="create-page-title">Create plan</h1>

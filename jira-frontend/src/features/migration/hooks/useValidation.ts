@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { migrationApi } from '../../../api/serviceApi';
 import type { ValidationResult, ValidationError, FieldMapping } from '../types/migration';
+import { matchHeaderToTargetField } from '../utils/fieldMappingMatch';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_PREVIEW_ROWS = 10;
@@ -28,7 +29,10 @@ export function useValidation(options: UseValidationOptions = {}) {
 
       reader.onload = (event) => {
         try {
-          const content = event.target?.result as string;
+          let content = event.target?.result as string;
+          if (content.charCodeAt(0) === 0xfeff) {
+            content = content.slice(1);
+          }
           const lines = content.split(/\r?\n/).filter((line) => line.trim());
 
           if (lines.length === 0) {
@@ -292,55 +296,11 @@ export function useValidation(options: UseValidationOptions = {}) {
     (headers: string[], targetFields: Array<{ field: string; dataType: string; required: boolean }>): FieldMapping[] => {
       const mappings: FieldMapping[] = [];
 
-      // Standard Systems and Avionics CSV field mappings
-      const standardMappings: Record<string, string[]> = {
-        summary: ['summary', 'title', 'name', 'subject'],
-        description: ['description', 'desc', 'body', 'details'],
-        issuetype: ['issuetype', 'type', 'issue type', 'issue_type'],
-        priority: ['priority', 'importance', 'severity'],
-        project: ['project', 'project key', 'project_key'],
-        status: ['status', 'state'],
-        assignee: ['assignee', 'assigned to', 'assigned_to', 'assignee name'],
-        reporter: ['reporter', 'reported by', 'reported_by'],
-        created: ['created', 'created date', 'created_at', 'creation date'],
-        updated: ['updated', 'updated date', 'updated_at', 'last updated'],
-        labels: ['labels', 'tags'],
-        components: ['components', 'component'],
-        fixVersion: ['fixversion', 'fix version', 'fix_version', 'version'],
-        affectedVersion: ['affectedversion', 'affected version', 'affected_version'],
-        epicLink: ['epic link', 'epic_link', 'parent epic'],
-        sprint: ['sprint', 'sprints'],
-        storyPoints: ['story points', 'story_points', 'estimate', 'points'],
-        customfield_10010: ['story points', 'story_points', 'points'],
-      };
+      const targetFieldKeys = targetFields.map((tf) => tf.field);
 
       headers.forEach((header) => {
-        const normalizedHeader = header.toLowerCase().replace(/[\s_-]/g, '');
-
-        // Try to find a matching target field
-        let matchedField = '';
-        let matched = false;
-
-        for (const [targetField, aliases] of Object.entries(standardMappings)) {
-          if (aliases.some((alias) => alias === normalizedHeader || normalizedHeader.includes(alias))) {
-            matchedField = targetField;
-            matched = true;
-            break;
-          }
-        }
-
-        // If no standard mapping, check if header matches any target field directly
-        if (!matched) {
-          const targetMatch = targetFields.find(
-            (tf) =>
-              tf.field.toLowerCase().replace(/[\s_-]/g, '') === normalizedHeader ||
-              normalizedHeader.includes(tf.field.toLowerCase().replace(/[\s_-]/g, ''))
-          );
-          if (targetMatch) {
-            matchedField = targetMatch.field;
-            matched = true;
-          }
-        }
+        const matchedField = matchHeaderToTargetField(header, targetFieldKeys) ?? '';
+        const matched = matchedField.length > 0;
 
         const targetFieldInfo = targetFields.find((tf) => tf.field === matchedField);
 
@@ -394,6 +354,7 @@ export function useValidation(options: UseValidationOptions = {}) {
   return {
     // State
     validationResult,
+    setValidationResult,
     isValidating,
     parseError,
 

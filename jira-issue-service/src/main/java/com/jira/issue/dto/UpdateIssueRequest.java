@@ -18,6 +18,8 @@ public class UpdateIssueRequest {
 
     private String description;  // No length limit for description (may be rich text)
 
+    private String environment;
+
     // Assignee and priority
     private UUID assigneeId;
     private UUID priorityId;
@@ -63,8 +65,7 @@ public class UpdateIssueRequest {
     private UUID resolutionId;
     private LocalDateTime resolutionDate;
 
-    // Due date
-    @FutureOrPresent(message = "Due date cannot be in the past")
+    // Due date (no @FutureOrPresent — allow existing/backdated issues on edit)
     private LocalDate dueDate;
 
     // Labels

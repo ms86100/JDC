@@ -29,6 +29,14 @@ test.describe('Migration center', () => {
 
   });
 
+  test('global DLQ and mapping templates tabs', async ({ page }) => {
+    await page.getByTestId('migration-nav-dlq').click();
+    await expect(page.getByTestId('global-dlq-console')).toBeVisible({ timeout: 5000 });
+
+    await page.getByTestId('migration-nav-templates').click();
+    await expect(page.getByTestId('saved-mapping-templates')).toBeVisible({ timeout: 5000 });
+  });
+
 
 
   test('project export wizard surfaces panel and review', async ({ page }) => {

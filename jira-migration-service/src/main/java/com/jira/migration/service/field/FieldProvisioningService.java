@@ -26,6 +26,7 @@ public class FieldProvisioningService {
     private final CustomFieldOptionRepository customFieldOptionRepository;
     private final IssueFieldValueRepository issueFieldValueRepository;
     private final PluginFieldRegistryRepository pluginFieldRegistryRepository;
+    private final FieldScreenConfigurationService fieldScreenConfigurationService;
 
     private static final Map<String, FieldDefinition.FieldType> DEFAULT_TYPE_MAP = Map.ofEntries(
             Map.entry("summary", FieldDefinition.FieldType.TEXT),
@@ -369,6 +370,7 @@ public class FieldProvisioningService {
                 .build();
 
         customFieldContextRepository.save(defaultContext);
+        fieldScreenConfigurationService.ensureFieldVisibleOnScreen(fieldDef.getFieldKey(), null);
     }
 
     private void createPluginFieldRegistry(FieldDefinition fieldDef, DiscoveredField discovered) {

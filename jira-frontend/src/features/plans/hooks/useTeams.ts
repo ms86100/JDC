@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { planApi } from '../../../api/planApi';
+import { appNotify } from '../../../lib/appNotify';
 
 export const useTeams = (planId: string) => {
   return useQuery({
@@ -30,7 +31,7 @@ export const useCreateTeam = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to create team:', error);
-      alert(error.message || 'Failed to create team');
+      appNotify.error(error.message || 'Failed to create team');
     },
   });
 };
@@ -45,7 +46,7 @@ export const useUpdateTeam = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to update team:', error);
-      alert(error.message || 'Failed to update team');
+      appNotify.error(error.message || 'Failed to update team');
     },
   });
 };
@@ -61,7 +62,7 @@ export const useDeleteTeam = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to delete team:', error);
-      alert(error.message || 'Failed to delete team');
+      appNotify.error(error.message || 'Failed to delete team');
     },
   });
 };
@@ -77,7 +78,7 @@ export const useAddTeamMember = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to add team member:', error);
-      alert(error.message || 'Failed to add team member');
+      appNotify.error(error.message || 'Failed to add team member');
     },
   });
 };
@@ -93,7 +94,7 @@ export const useRemoveTeamMember = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to remove team member:', error);
-      alert(error.message || 'Failed to remove team member');
+      appNotify.error(error.message || 'Failed to remove team member');
     },
   });
 };

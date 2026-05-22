@@ -10,6 +10,8 @@ export function mapMigrationImportSource(
   }
   const src = (importSource ?? '').toUpperCase();
   switch (src) {
+    case 'ISSUE_XML':
+      return 'issue-xml';
     case 'JIRA_DC':
       return 'jira-dc';
     case 'CSV':

@@ -1,0 +1,89 @@
+/**
+ * Enterprise UI polish — cosmetic-only overrides.
+ * Loaded after feature CSS, before Tailwind utilities.
+ */
+
+/* ---------- Modals: consistent centering, scroll, footer visibility ---------- */
+.ab-modal-overlay {
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top, 16px)) 16px
+    max(16px, env(safe-area-inset-bottom, 16px));
+  overflow-y: auto;
+}
+
+.ab-modal,
+.ab-modal-content,
+.ab-jira-modal {
+  max-height: min(90vh, calc(100vh - 32px));
+}
+
+.ab-modal-body {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.jdc-modal-overlay {
+  align-items: center;
+  padding: max(16px, env(safe-area-inset-top, 16px)) 16px
+    max(16px, env(safe-area-inset-bottom, 16px));
+  overflow-y: auto;
+}
+
+.jdc-modal {
+  width: min(100%, 640px);
+  min-width: min(480px, calc(100vw - 32px));
+  max-height: min(90vh, calc(100vh - 32px));
+  display: flex;
+  flex-direction: column;
+}
+
+.jdc-modal-body {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.jdc-modal-footer {
+  flex-shrink: 0;
+}
+
+.sa-rm-modal {
+  max-height: min(90vh, calc(100vh - 32px));
+}
+
+.sa-rm-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sa-rm-modal-footer {
+  flex-shrink: 0;
+}
+
+@media (max-width: 520px) {
+  .jdc-modal {
+    min-width: 0;
+    width: calc(100vw - 24px);
+  }
+
+  .sa-rm-overwrite-table td {
+    min-width: 44px;
+    padding: 12px 8px;
+  }
+}
+
+/* ---------- Workspace nav flyout: scroll on long lists ---------- */
+.sa-workspace-nav-flyout .sa-workspace-nav-items-list {
+  max-height: min(70vh, 480px);
+  overflow-y: auto;
+}
+
+.sa-workspace-nav--collapsed .sa-context-link {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  min-width: 28px;
+  text-align: center;
+}

@@ -538,10 +538,13 @@
    ============================================================ */
 .idc-issue-body {
   display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 16px;
-  padding: 16px 24px;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  padding: 20px 24px;
   flex: 1;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
   align-items: start;
 }
 
@@ -549,6 +552,8 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 .idc-right-col {
@@ -563,8 +568,10 @@
 .idc-section {
   background: white;
   border: 1px solid #dfe1e6;
-  border-radius: 3px;
-  margin-bottom: 8px;
+  border-radius: var(--sa-radius-lg, 8px);
+  margin-bottom: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(9, 30, 66, 0.06);
 }
 
 .idc-section-header {
@@ -636,7 +643,7 @@
 
 /* Description */
 .idc-description {
-  padding: 10px 14px;
+  padding: 20px 24px;
 }
 
 .idc-description-text {
@@ -750,49 +757,64 @@
 }
 
 /* ============================================================
-   TABS
+   TABS — single panel shell
    ============================================================ */
+.idc-tabs-panel {
+  background: white;
+  border: 1px solid #dfe1e6;
+  border-radius: var(--sa-radius-lg, 8px);
+  margin-bottom: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(9, 30, 66, 0.06);
+}
+
 .idc-tabs {
   display: flex;
-  border-bottom: 1px solid #dfe1e6;
-  background: white;
-  border-top: 1px solid #dfe1e6;
-  padding: 0 14px;
-  gap: 0;
+  flex-wrap: wrap;
+  overflow-x: visible;
+  border-bottom: 1px solid #ebecf0;
+  background: #fafbfc;
+  padding: 6px 8px 0;
+  gap: 2px;
 }
 
 .idc-tab {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  height: 40px;
-  padding: 0 12px;
-  font-size: 14px;
+  height: 44px;
+  padding: 0 14px;
+  font-size: 13px;
   color: #5e6c84;
   cursor: pointer;
   border: none;
   background: none;
   font-family: inherit;
   border-bottom: 2px solid transparent;
-  transition: color 0.1s, border-color 0.1s;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
   margin-bottom: -1px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border-radius: 6px 6px 0 0;
 }
 
 .idc-tab:hover {
   color: #172b4d;
+  background: rgba(9, 30, 66, 0.04);
 }
 
 .idc-tab-active {
   color: #0052CC;
   border-bottom-color: #0052CC;
-  font-weight: 500;
+  font-weight: 600;
+  background: #fff;
 }
 
 .idc-tab-content {
   background: white;
-  border: 1px solid #dfe1e6;
-  border-top: none;
-  border-radius: 0 0 3px 3px;
-  padding: 16px;
+  border: none;
+  border-radius: 0;
+  padding: 24px 28px;
+  min-height: 200px;
 }
 
 /* Tab Details */

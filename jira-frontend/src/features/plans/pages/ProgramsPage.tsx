@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { usePrograms, useCreateProgram, useDeleteProgram } from '../hooks/usePlans';
 import { usePlans } from '../hooks/usePlans';
 import { CreateProgramRequest, ProgramResponse } from '../../../api/planApi';
+import { appNotify } from '../../../lib/appNotify';
 import {
   WorkspaceHeader,
   KpiCard,
@@ -15,8 +16,6 @@ import {
 import { getRecentViews, recordRecentView } from '../../../components/workspace/recentViews';
 import { aggregatePlanMetrics } from '../../../components/workspace/metrics';
 import { ProgramPortfolioDelivery } from '../../../components/workspace/ProgramPortfolioDelivery';
-import '../../../components/workspace/workspace-dashboard.css';
-
 export default function ProgramsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,7 +59,7 @@ export default function ProgramsPage() {
         setShowCreate(false);
         setForm({ name: '', description: '' });
       },
-      onError: (error: Error) => alert(error.message || 'Failed to create program'),
+      onError: (error: Error) => appNotify.error(error.message || 'Failed to create program'),
     });
   };
 
@@ -69,7 +68,7 @@ export default function ProgramsPage() {
     e.stopPropagation();
     if (!confirm(`Delete program "${name}"? This cannot be undone.`)) return;
     deleteMutation.mutate(id, {
-      onError: (error: Error) => alert(error.message || 'Failed to delete program'),
+      onError: (error: Error) => appNotify.error(error.message || 'Failed to delete program'),
     });
   };
 

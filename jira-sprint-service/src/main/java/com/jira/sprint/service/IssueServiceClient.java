@@ -1,16 +1,23 @@
 package com.jira.sprint.service;
 
-import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jira.board.dto.BoardIssueResponse;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Client to fetch issue data from jira-issue-service
+ * HTTP client for jira-issue-service — board issue loading, status, rank.
  */
 @Component
 @RequiredArgsConstructor
@@ -18,141 +25,279 @@ import java.util.stream.Collectors;
 public class IssueServiceClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private static final String ISSUE_SERVICE_URL = "http://jira-issue-service:8084";
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /**
-     * Fetch a single issue with story points
-     */
-    public IssueData getIssue(UUID issueId) {
+    @Value("${jira.issue-service-url:http://localhost:8084}")
+    private String issueServiceUrl;
+
+    public List<BoardIssueResponse> fetchBoardIssues(UUID projectId, String extraJql) {
+        List<Map<String, Object>> raw = new ArrayList<>();
         try {
-            String url = ISSUE_SERVICE_URL + "/api/issues/" + issueId;
-            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
-            if (response != null) {
-                return mapToIssueData(response);
+            if (extraJql != null && !extraJql.isBlank()) {
+                String jql = appendProjectScope(extraJql, projectId);
+                raw = searchJql(jql);
+            } else {
+                raw = listByProject(projectId, 0, 500);
             }
         } catch (Exception e) {
-            log.warn("Failed to fetch issue {}: {}", issueId, e.getMessage());
+            log.warn("Issue fetch failed for project {}: {}", projectId, e.getMessage());
         }
-        return new IssueData();
+        return raw.stream().map(this::mapToBoardIssue).collect(Collectors.toList());
     }
 
-    /**
-     * Fetch multiple issues by IDs
-     */
-    public List<IssueData> getIssues(List<UUID> issueIds) {
-        if (issueIds == null || issueIds.isEmpty()) {
-            return Collections.emptyList();
+    public BoardIssueResponse moveIssueStatus(UUID issueId, UUID projectId, String targetStatusName, String rank) {
+        UUID statusId = resolveStatusIdByName(targetStatusName);
+        if (statusId != null) {
+            patchStatus(issueId, projectId, statusId);
         }
+        if (rank != null && !rank.isBlank()) {
+            patchRank(issueId, rank);
+        }
+        Map<String, Object> issue = getIssueRaw(issueId);
+        return issue != null ? mapToBoardIssue(issue) : BoardIssueResponse.builder().id(issueId).status(targetStatusName).rank(rank).build();
+    }
 
+    public void reorderIssueRank(UUID issueId, String rank) {
+        patchRank(issueId, rank);
+    }
+
+    public BoardIssueResponse getBoardIssue(UUID issueId) {
+        Map<String, Object> raw = getIssueRaw(issueId);
+        return raw != null ? mapToBoardIssue(raw) : null;
+    }
+
+    // --- legacy sprint helpers ---
+
+    public IssueData getIssue(UUID issueId) {
+        Map<String, Object> response = getIssueRaw(issueId);
+        return response != null ? mapToIssueData(response) : new IssueData();
+    }
+
+    public List<IssueData> getIssues(List<UUID> issueIds) {
+        if (issueIds == null || issueIds.isEmpty()) return Collections.emptyList();
         try {
-            String ids = issueIds.stream()
-                    .map(UUID::toString)
-                    .collect(Collectors.joining(","));
-            String url = ISSUE_SERVICE_URL + "/api/issues/batch?ids=" + ids;
-
-            Object response = restTemplate.getForObject(url, Object.class);
-            if (response instanceof List) {
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> issuesList = (List<Map<String, Object>>) response;
-                return issuesList.stream()
-                        .map(this::mapToIssueData)
-                        .collect(Collectors.toList());
+            String ids = issueIds.stream().map(UUID::toString).collect(Collectors.joining(","));
+            String url = issueServiceUrl + "/api/issues/batch?ids=" + ids;
+            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                    url, HttpMethod.GET, null, new ParameterizedTypeReference<>() {});
+            if (response.getBody() != null) {
+                return response.getBody().stream().map(this::mapToIssueData).collect(Collectors.toList());
             }
         } catch (Exception e) {
-            log.warn("Failed to fetch issues: {}", e.getMessage());
+            log.warn("Failed to fetch issues batch: {}", e.getMessage());
         }
         return Collections.emptyList();
     }
 
-    /**
-     * Get story points for issues in a sprint
-     */
     public int calculateSprintPoints(List<UUID> issueIds) {
-        List<IssueData> issues = getIssues(issueIds);
-        return issues.stream()
+        return getIssues(issueIds).stream()
                 .mapToInt(i -> i.getStoryPoints() != null ? i.getStoryPoints() : 0)
                 .sum();
     }
 
-    /**
-     * Get completed story points (issues with status Done/Completed)
-     */
     public int calculateCompletedPoints(List<UUID> issueIds) {
-        List<IssueData> issues = getIssues(issueIds);
-        return issues.stream()
+        return getIssues(issueIds).stream()
                 .filter(i -> isCompletedStatus(i.getStatusName()))
                 .mapToInt(i -> i.getStoryPoints() != null ? i.getStoryPoints() : 0)
                 .sum();
     }
 
-    private boolean isCompletedStatus(String status) {
-        if (status == null) return false;
-        String normalized = status.toLowerCase();
-        return normalized.contains("done") ||
-               normalized.contains("completed") ||
-               normalized.contains("closed") ||
-               normalized.equals("resolved");
+    // --- internals ---
+
+    private List<Map<String, Object>> listByProject(UUID projectId, int page, int size) {
+        String url = issueServiceUrl + "/api/issues?projectId=" + projectId + "&page=" + page + "&size=" + size;
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                url, HttpMethod.GET, null, new ParameterizedTypeReference<>() {});
+        return extractContent(response.getBody());
+    }
+
+    private List<Map<String, Object>> searchJql(String jql) {
+        String url = issueServiceUrl + "/api/issues/search?jql=" + java.net.URLEncoder.encode(jql, java.nio.charset.StandardCharsets.UTF_8) + "&pageSize=500";
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                url, HttpMethod.GET, null, new ParameterizedTypeReference<>() {});
+        Map<String, Object> body = response.getBody();
+        if (body == null) return Collections.emptyList();
+        Object issues = body.get("issues");
+        if (issues instanceof List<?> list) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> cast = (List<Map<String, Object>>) list;
+            return cast;
+        }
+        return extractContent(body);
+    }
+
+    private String appendProjectScope(String jql, UUID projectId) {
+        String scope = "projectId = \"" + projectId + "\"";
+        if (jql == null || jql.isBlank()) return scope;
+        return scope + " AND (" + jql + ")";
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> extractContent(Map<String, Object> page) {
+        if (page == null) return Collections.emptyList();
+        Object content = page.get("content");
+        if (content instanceof List<?> list) {
+            return (List<Map<String, Object>>) list;
+        }
+        return Collections.emptyList();
+    }
+
+    private Map<String, Object> getIssueRaw(UUID issueId) {
+        try {
+            String url = issueServiceUrl + "/api/issues/" + issueId;
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, HttpMethod.GET, null, new ParameterizedTypeReference<>() {});
+            return response.getBody();
+        } catch (Exception e) {
+            log.warn("Failed to fetch issue {}: {}", issueId, e.getMessage());
+            return null;
+        }
+    }
+
+    private void patchStatus(UUID issueId, UUID projectId, UUID statusId) {
+        String url = issueServiceUrl + "/api/issues/" + issueId + "/status?projectId=" + projectId;
+        Map<String, Object> body = Map.of("statusId", statusId.toString());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        try {
+            restTemplate.exchange(url, HttpMethod.PATCH, new HttpEntity<>(body, headers), Map.class);
+        } catch (Exception e) {
+            log.warn("Status patch failed for {}: {}", issueId, e.getMessage());
+        }
+    }
+
+    private void patchRank(UUID issueId, String rank) {
+        String url = issueServiceUrl + "/api/issues/" + issueId;
+        Map<String, Object> body = Map.of("rank", rank);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        try {
+            restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(body, headers), Map.class);
+        } catch (Exception e) {
+            log.warn("Rank update failed for {}: {}", issueId, e.getMessage());
+        }
+    }
+
+    private UUID resolveStatusIdByName(String statusName) {
+        if (statusName == null) return null;
+        try {
+            String url = issueServiceUrl + "/api/issues/statuses";
+            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                    url, HttpMethod.GET, null, new ParameterizedTypeReference<>() {});
+            if (response.getBody() == null) return null;
+            String norm = normalize(statusName);
+            for (Map<String, Object> s : response.getBody()) {
+                String name = String.valueOf(s.getOrDefault("name", ""));
+                if (normalize(name).equals(norm) || normalize(name).contains(norm) || norm.contains(normalize(name))) {
+                    return parseUUID(s.get("id"));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Status lookup failed: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private BoardIssueResponse mapToBoardIssue(Map<String, Object> response) {
+        LocalDateTime created = parseDateTime(response.get("createdAt"));
+        LocalDateTime updated = parseDateTime(response.get("updatedAt"));
+
+        @SuppressWarnings("unchecked")
+        List<String> labels = response.get("labels") instanceof List<?> l
+                ? (List<String>) l
+                : Collections.emptyList();
+
+        return BoardIssueResponse.builder()
+                .id(parseUUID(response.get("id")))
+                .issueKey(stringVal(response.get("issueKey"), response.get("key")))
+                .title(stringVal(response.get("title"), response.get("summary")))
+                .status(stringVal(response.get("status"), response.get("statusName"), extractNestedName(response.get("status"))))
+                .priority(stringVal(response.get("priority"), response.get("priorityName"), extractNestedName(response.get("priority"))))
+                .issueType(stringVal(response.get("issueType"), response.get("issueTypeName"), extractNestedName(response.get("issueType"))))
+                .assigneeId(parseUUID(response.get("assigneeId")))
+                .assigneeName(stringVal(response.get("assigneeName")))
+                .reporterId(parseUUID(response.get("reporterId")))
+                .epicId(parseUUID(response.get("epicId")))
+                .epicName(stringVal(response.get("epicName")))
+                .epicColor(stringVal(response.get("epicColor")))
+                .storyPoints(intVal(response.get("storyPoints")))
+                .labels(labels)
+                .created(created)
+                .updated(updated)
+                .sprintId(parseUUID(response.get("sprintId")))
+                .sprintName(stringVal(response.get("sprintName")))
+                .dueDate(stringVal(response.get("dueDate")))
+                .rank(stringVal(response.get("rank")))
+                .build();
     }
 
     @SuppressWarnings("unchecked")
     private IssueData mapToIssueData(Map<String, Object> response) {
         IssueData data = new IssueData();
-
         data.setId(parseUUID(response.get("id")));
-        data.setIssueKey((String) response.getOrDefault("issueKey", response.getOrDefault("key", "")));
-        data.setTitle((String) response.getOrDefault("title", ""));
-        data.setStoryPoints((Integer) response.getOrDefault("storyPoints", 0));
-
-        // Extract status
-        Object statusObj = response.getOrDefault("statusName", response.get("status"));
-        if (statusObj instanceof String) {
-            data.setStatusName((String) statusObj);
-        }
-
-        // Extract priority
-        Object priorityObj = response.getOrDefault("priorityName", response.get("priority"));
-        if (priorityObj instanceof String) {
-            data.setPriorityName((String) priorityObj);
-        }
-
-        // Extract issue type
-        Object typeObj = response.getOrDefault("issueTypeName", response.get("issueType"));
-        if (typeObj instanceof String) {
-            data.setIssueTypeName((String) typeObj);
-        }
-
-        // Extract assignee
-        Object assigneeId = response.get("assigneeId");
-        if (assigneeId != null) {
-            data.setAssigneeId(parseUUID(assigneeId));
-        }
-
-        // Extract assignee name (display name)
-        Object assigneeNameObj = response.get("assigneeName");
-        if (assigneeNameObj instanceof String) {
-            data.setAssigneeName((String) assigneeNameObj);
-        } else if (assigneeId != null) {
-            // Use ID as fallback name if no display name available
-            data.setAssigneeName(data.getAssigneeId().toString().substring(0, 8));
-        }
-
-        // Extract reporter
-        Object reporterId = response.get("reporterId");
-        if (reporterId != null) {
-            data.setReporterId(parseUUID(reporterId));
-        }
-
+        data.setIssueKey(stringVal(response.get("issueKey"), response.get("key")));
+        data.setTitle(stringVal(response.get("title"), ""));
+        data.setStoryPoints(intVal(response.get("storyPoints")));
+        data.setStatusName(stringVal(response.get("status"), response.get("statusName"), extractNestedName(response.get("status"))));
+        data.setPriorityName(stringVal(response.get("priority"), response.get("priorityName"), extractNestedName(response.get("priority"))));
+        data.setIssueTypeName(stringVal(response.get("issueType"), response.get("issueTypeName"), extractNestedName(response.get("issueType"))));
+        data.setAssigneeId(parseUUID(response.get("assigneeId")));
+        data.setAssigneeName(stringVal(response.get("assigneeName")));
+        data.setReporterId(parseUUID(response.get("reporterId")));
         return data;
+    }
+
+    private String extractNestedName(Object statusObj) {
+        if (statusObj instanceof Map<?, ?> m) {
+            Object name = m.get("name");
+            return name != null ? name.toString() : null;
+        }
+        return statusObj instanceof String s ? s : null;
+    }
+
+    private String stringVal(Object... vals) {
+        for (Object v : vals) {
+            if (v != null && !v.toString().isBlank()) return v.toString();
+        }
+        return null;
+    }
+
+    private Integer intVal(Object o) {
+        if (o instanceof Number n) return n.intValue();
+        return null;
+    }
+
+    private LocalDateTime parseDateTime(Object o) {
+        if (o == null) return null;
+        try {
+            return LocalDateTime.parse(o.toString(), DateTimeFormatter.ISO_DATE_TIME);
+        } catch (Exception e) {
+            try {
+                return LocalDateTime.parse(o.toString().replace("Z", ""));
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
     }
 
     private UUID parseUUID(Object obj) {
         if (obj == null) return null;
-        if (obj instanceof UUID) return (UUID) obj;
+        if (obj instanceof UUID u) return u;
         try {
             return UUID.fromString(obj.toString());
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private String normalize(String s) {
+        return s.toLowerCase().replaceAll("[\\s_-]+", "");
+    }
+
+    private boolean isCompletedStatus(String status) {
+        if (status == null) return false;
+        String n = status.toLowerCase();
+        return n.contains("done") || n.contains("completed") || n.contains("closed") || n.equals("resolved");
     }
 
     @Data

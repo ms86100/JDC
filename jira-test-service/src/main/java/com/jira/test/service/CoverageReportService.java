@@ -309,9 +309,9 @@ public class CoverageReportService {
     public CoverageExportResponse generateTestDiversityReport(CoverageExportRequest request) {
         List<TestIssue> tests = testIssueRepository.findByProjectId(request.getProjectId());
 
-        Map<TestIssue.TestType, Long> testTypeCounts = tests.stream()
+        Map<String, Long> testTypeCounts = tests.stream()
                 .filter(t -> t.getTestType() != null)
-                .collect(Collectors.groupingBy(TestIssue.TestType, Collectors.counting()));
+                .collect(Collectors.groupingBy(TestIssue::getTestType, Collectors.counting()));
 
         int totalDiverseTypes = testTypeCounts.size();
         int minimumDiversity = 3; // Expected minimum test types

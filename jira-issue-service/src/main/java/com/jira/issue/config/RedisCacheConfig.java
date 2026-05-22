@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -44,8 +45,8 @@ public class RedisCacheConfig {
     private static final int LONG_TTL = 60;
 
     @Bean
-    @Primary
-    public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
+    @ConditionalOnBean(RedisConnectionFactory.class)
+    public CacheManager redisCacheManager(RedisConnectionFactory redisConnectionFactory) {
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(MEDIUM_TTL))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair
@@ -73,6 +74,7 @@ public class RedisCacheConfig {
     }
 
     @Bean
+    @Primary
     public CacheManager caffeineCacheManager() {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager();
         cacheManager.setCaffeine(Caffeine.newBuilder()
@@ -82,6 +84,7 @@ public class RedisCacheConfig {
     }
 
     @Bean
+    @ConditionalOnBean(RedisConnectionFactory.class)
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);

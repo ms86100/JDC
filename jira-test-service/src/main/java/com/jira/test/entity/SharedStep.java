@@ -45,6 +45,15 @@ public class SharedStep {
     @Column(name = "folder_id")
     private UUID folderId;
 
+    @Column(name = "tags", columnDefinition = "TEXT")
+    private String tags;
+
+    @Column(name = "categories", columnDefinition = "TEXT")
+    private String categories;
+
+    @Column(name = "labels", columnDefinition = "TEXT")
+    private String labels;
+
     @Column(name = "created_by")
     private UUID createdBy;
 

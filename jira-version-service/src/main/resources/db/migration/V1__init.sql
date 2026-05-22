@@ -30,9 +30,7 @@ CREATE TABLE project_versions (
     archived_by UUID,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    deleted BOOLEAN DEFAULT FALSE NOT NULL,
-
-    CONSTRAINT fk_project_versions_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    deleted BOOLEAN DEFAULT FALSE NOT NULL
 );
 
 -- Issue to Fix Versions (Many-to-Many)
@@ -43,8 +41,6 @@ CREATE TABLE issue_fix_versions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     created_by UUID,
 
-    CONSTRAINT fk_issue_fix_versions_issue FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE,
-    CONSTRAINT fk_issue_fix_versions_version FOREIGN KEY (version_id) REFERENCES project_versions(id) ON DELETE CASCADE,
     UNIQUE(issue_id, version_id)
 );
 
@@ -56,8 +52,6 @@ CREATE TABLE issue_affects_versions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     created_by UUID,
 
-    CONSTRAINT fk_issue_affects_versions_issue FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE,
-    CONSTRAINT fk_issue_affects_versions_version FOREIGN KEY (version_id) REFERENCES project_versions(id) ON DELETE CASCADE,
     UNIQUE(issue_id, version_id)
 );
 

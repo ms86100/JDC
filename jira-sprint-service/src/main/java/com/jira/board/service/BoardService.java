@@ -5,8 +5,10 @@ import com.jira.board.entity.AgileBoard;
 import com.jira.board.entity.BoardColumn;
 import com.jira.board.entity.BoardSprint;
 import com.jira.board.exception.ResourceNotFoundException;
+import com.jira.board.entity.BoardConfig;
 import com.jira.board.repository.AgileBoardRepository;
 import com.jira.board.repository.BoardColumnRepository;
+import com.jira.board.repository.BoardConfigRepository;
 import com.jira.board.repository.BoardSprintRepository;
 import com.jira.sprint.entity.Sprint;
 import com.jira.sprint.repository.SprintIssueRepository;
@@ -33,7 +35,7 @@ public class BoardService {
     private final SprintRepository sprintRepository;
     private final SprintIssueRepository sprintIssueRepository;
     private final IssueServiceClient issueServiceClient;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final BoardConfigRepository boardConfigRepository;
 
     // Default quick filters
     private static final List<BoardConfigResponse.QuickFilterConfig> DEFAULT_QUICK_FILTERS = Arrays.asList(
@@ -152,66 +154,15 @@ public class BoardService {
     @Transactional(readOnly = true)
     public List<BoardIssueResponse> getBoardIssues(UUID boardId, String jql) {
         AgileBoard board = findBoardById(boardId);
-        log.info("Fetching issues for board {} with JQL: {}", boardId, jql);
-
-        // Try to call issue service via REST
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-            String url = "http://jira-issue-service:8084/api/issues?projectId=" + board.getProjectId();
-            if (jql != null && !jql.isEmpty()) {
-                url += "&jql=" + jql;
-            }
-
-            // For now, return mock data - in production this would call the actual service
-            List<BoardIssueResponse> mockIssues = createMockIssues(boardId);
-            return mockIssues;
-        } catch (Exception e) {
-            log.warn("Failed to fetch issues from issue service, using mock data: {}", e.getMessage());
-            return createMockIssues(boardId);
+        String effectiveJql = jql;
+        if ((effectiveJql == null || effectiveJql.isBlank()) && board.getJqlQuery() != null && !board.getJqlQuery().isBlank()) {
+            effectiveJql = board.getJqlQuery();
         }
-    }
-
-    private List<BoardIssueResponse> createMockIssues(UUID boardId) {
-        // Return sample data for demo
-        return Arrays.asList(
-                BoardIssueResponse.builder()
-                        .id(UUID.randomUUID())
-                        .issueKey("PROJ-1")
-                        .title("Implement user authentication")
-                        .status("In Progress")
-                        .priority("High")
-                        .issueType("Story")
-                        .assigneeId(UUID.randomUUID())
-                        .assigneeName("John Doe")
-                        .storyPoints(5)
-                        .labels(Arrays.asList("auth", "security"))
-                        .created(LocalDateTime.now().minusDays(2))
-                        .updated(LocalDateTime.now())
-                        .build(),
-                BoardIssueResponse.builder()
-                        .id(UUID.randomUUID())
-                        .issueKey("PROJ-2")
-                        .title("Fix login button styling")
-                        .status("To Do")
-                        .priority("Medium")
-                        .issueType("Bug")
-                        .created(LocalDateTime.now().minusDays(1))
-                        .updated(LocalDateTime.now())
-                        .build(),
-                BoardIssueResponse.builder()
-                        .id(UUID.randomUUID())
-                        .issueKey("PROJ-3")
-                        .title("Setup CI/CD pipeline")
-                        .status("Done")
-                        .priority("High")
-                        .issueType("Task")
-                        .assigneeId(UUID.randomUUID())
-                        .assigneeName("Jane Smith")
-                        .storyPoints(8)
-                        .created(LocalDateTime.now().minusDays(5))
-                        .updated(LocalDateTime.now().minusDays(1))
-                        .build()
-        );
+        List<BoardIssueResponse> issues = issueServiceClient.fetchBoardIssues(board.getProjectId(), effectiveJql);
+        issues.sort(Comparator.comparing(
+                (BoardIssueResponse i) -> i.getRank() != null ? i.getRank() : "",
+                Comparator.nullsLast(String::compareTo)));
+        return issues;
     }
 
     @Transactional
@@ -237,21 +188,45 @@ public class BoardService {
 
     @Transactional
     public BoardIssueResponse moveIssue(UUID boardId, UUID issueId, String status, String rank) {
+        AgileBoard board = findBoardById(boardId);
         log.info("Moving issue {} to status {} on board {}", issueId, status, boardId);
-
-        // This would call the issue service to update the status
-        // For now, return a mock response
-        return BoardIssueResponse.builder()
-                .id(issueId)
-                .status(status)
-                .rank(rank)
-                .build();
+        return issueServiceClient.moveIssueStatus(issueId, board.getProjectId(), status, rank);
     }
 
     @Transactional
     public void reorderIssue(UUID boardId, UUID issueId, int index, String status) {
-        log.info("Reordering issue {} to position {} in status {} on board {}", issueId, index, status, boardId);
-        // Store ranking information for proper ordering
+        AgileBoard board = findBoardById(boardId);
+        List<BoardIssueResponse> all = getBoardIssues(boardId, null);
+        List<BoardIssueResponse> inColumn = all.stream()
+                .filter(i -> statusMatchesColumn(i, status))
+                .sorted(Comparator.comparing(i -> i.getRank() != null ? i.getRank() : ""))
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        inColumn.removeIf(i -> i.getId().equals(issueId));
+        BoardIssueResponse moved = all.stream().filter(i -> i.getId().equals(issueId)).findFirst().orElse(null);
+        if (moved == null) {
+            moved = issueServiceClient.getBoardIssue(issueId);
+        }
+        if (moved == null) return;
+
+        int safeIndex = Math.max(0, Math.min(index, inColumn.size()));
+        inColumn.add(safeIndex, moved);
+
+        for (int i = 0; i < inColumn.size(); i++) {
+            String rank = String.format("rank|%09d", (i + 1) * 1000);
+            issueServiceClient.reorderIssueRank(inColumn.get(i).getId(), rank);
+        }
+    }
+
+    private boolean statusMatchesColumn(BoardIssueResponse issue, String statusLabel) {
+        if (issue.getStatus() == null || statusLabel == null) return false;
+        return issue.getStatus().equalsIgnoreCase(statusLabel)
+                || normalize(issue.getStatus()).contains(normalize(statusLabel))
+                || normalize(statusLabel).contains(normalize(issue.getStatus()));
+    }
+
+    private String normalize(String s) {
+        return s.toLowerCase().replaceAll("[\\s_-]+", "");
     }
 
     @Transactional(readOnly = true)
@@ -261,25 +236,48 @@ public class BoardService {
         Map<String, List<BoardIssueResponse>> grouped = new LinkedHashMap<>();
 
         for (BoardIssueResponse issue : issues) {
-            String key = switch (field) {
-                case "epic" -> issue.getEpicId() != null ? issue.getEpicId().toString() : "no-epic";
-                case "assignee" -> issue.getAssigneeId() != null ? issue.getAssigneeId().toString() : "unassigned";
-                case "priority" -> issue.getPriority() != null ? issue.getPriority() : "none";
-                case "labels" -> issue.getLabels() != null && !issue.getLabels().isEmpty()
-                        ? issue.getLabels().get(0) : "no-labels";
-                default -> "all";
-            };
-
+            String key;
+            String label;
+            switch (field) {
+                case "epic" -> {
+                    key = issue.getEpicId() != null ? issue.getEpicId().toString() : "no-epic";
+                    label = issue.getEpicName() != null ? issue.getEpicName() : "Issues without epic";
+                }
+                case "assignee" -> {
+                    key = issue.getAssigneeId() != null ? issue.getAssigneeId().toString() : "unassigned";
+                    label = issue.getAssigneeName() != null ? issue.getAssigneeName() : "Unassigned";
+                }
+                case "priority" -> {
+                    key = issue.getPriority() != null ? issue.getPriority() : "none";
+                    label = key;
+                }
+                case "labels" -> {
+                    key = issue.getLabels() != null && !issue.getLabels().isEmpty()
+                            ? issue.getLabels().get(0) : "no-labels";
+                    label = key;
+                }
+                default -> {
+                    key = "all";
+                    label = "All issues";
+                }
+            }
             grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(issue);
         }
 
-        List<SwimlaneDataResponse.Swimlane> swimlanes = grouped.entrySet().stream()
-                .map(e -> SwimlaneDataResponse.Swimlane.builder()
-                        .key(e.getKey())
-                        .label(e.getKey())
-                        .issues(e.getValue())
-                        .build())
-                .collect(Collectors.toList());
+        List<SwimlaneDataResponse.Swimlane> swimlanes = new ArrayList<>();
+        for (Map.Entry<String, List<BoardIssueResponse>> e : grouped.entrySet()) {
+            String label = e.getValue().isEmpty() ? e.getKey()
+                    : switch (field) {
+                case "epic" -> e.getValue().get(0).getEpicName() != null ? e.getValue().get(0).getEpicName() : "Issues without epic";
+                case "assignee" -> e.getValue().get(0).getAssigneeName() != null ? e.getValue().get(0).getAssigneeName() : "Unassigned";
+                default -> e.getKey();
+            };
+            swimlanes.add(SwimlaneDataResponse.Swimlane.builder()
+                    .key(e.getKey())
+                    .label(label)
+                    .issues(e.getValue())
+                    .build());
+        }
 
         return SwimlaneDataResponse.builder()
                 .swimlanes(swimlanes)
@@ -361,20 +359,24 @@ public class BoardService {
 
     @Transactional(readOnly = true)
     public BoardConfigResponse getBoardConfig(UUID boardId) {
-        AgileBoard board = findBoardById(boardId);
+        findBoardById(boardId);
+        BoardConfig config = boardConfigRepository.findByBoardIdAndUserIdIsNull(boardId)
+                .orElse(null);
 
         return BoardConfigResponse.builder()
                 .boardId(boardId)
                 .quickFilters(DEFAULT_QUICK_FILTERS)
                 .swimlane(BoardConfigResponse.SwimlaneConfigResponse.builder()
-                        .enabled(false)
-                        .field("none")
-                        .collapsedSwimlanes(Collections.emptyList())
+                        .enabled(config != null && !"none".equals(config.getSwimlaneField()))
+                        .field(config != null ? config.getSwimlaneField() : "none")
+                        .collapsedSwimlanes(config != null && config.getCollapsedSwimlanes() != null
+                                ? Arrays.asList(config.getCollapsedSwimlanes())
+                                : Collections.emptyList())
                         .build())
-                .showWorkVsCapacity(true)
+                .showWorkVsCapacity(config == null || Boolean.TRUE.equals(config.getShowWorkVsCapacity()))
                 .cardColors(BoardConfigResponse.CardColorConfig.builder()
                         .enabled(true)
-                        .field("priority")
+                        .field(config != null ? config.getCardColorField() : "priority")
                         .build())
                 .build();
     }
@@ -382,11 +384,45 @@ public class BoardService {
     @Transactional
     public BoardConfigResponse updateBoardConfig(UUID boardId, UpdateBoardConfigRequest request) {
         AgileBoard board = findBoardById(boardId);
-        // Store config changes
+        BoardConfig config = boardConfigRepository.findByBoardIdAndUserIdIsNull(boardId)
+                .orElse(BoardConfig.builder().boardId(boardId).build());
+
+        if (request.getSwimlane() != null) {
+            config.setSwimlaneField(request.getSwimlane().getField() != null
+                    ? request.getSwimlane().getField() : "none");
+            if (request.getSwimlane().getCollapsedSwimlanes() != null) {
+                config.setCollapsedSwimlanes(
+                        request.getSwimlane().getCollapsedSwimlanes().toArray(new String[0]));
+            }
+        }
+        if (request.getShowWorkVsCapacity() != null) {
+            config.setShowWorkVsCapacity(request.getShowWorkVsCapacity());
+        }
+        if (request.getCardColors() != null && request.getCardColors().getField() != null) {
+            config.setCardColorField(request.getCardColors().getField());
+        }
+
+        boardConfigRepository.save(config);
         board.setUpdatedAt(LocalDateTime.now());
         boardRepository.save(board);
 
         return getBoardConfig(boardId);
+    }
+
+    @Transactional
+    public BoardColumnResponse updateColumn(UUID boardId, UUID columnId, BoardColumnResponse updates) {
+        findBoardById(boardId);
+        BoardColumn column = columnRepository.findById(columnId)
+                .orElseThrow(() -> new ResourceNotFoundException("Column not found: " + columnId));
+        if (!column.getBoardId().equals(boardId)) {
+            throw new ResourceNotFoundException("Column does not belong to board");
+        }
+        if (updates.getName() != null) column.setName(updates.getName());
+        if (updates.getMaxIssues() != null) column.setMaxIssues(updates.getMaxIssues());
+        if (updates.getColor() != null) column.setColor(updates.getColor());
+        column.setIsHidden(updates.isHidden());
+        column = columnRepository.save(column);
+        return mapColumnToResponse(column);
     }
 
     private void createDefaultColumns(AgileBoard board) {
@@ -394,9 +430,10 @@ public class BoardService {
 
         if ("KANBAN".equals(board.getBoardType())) {
             defaultColumns = Arrays.asList(
-                    createColumn(board.getId(), "To Do", 0, "TODO", "#6c757d"),
-                    createColumn(board.getId(), "In Progress", 1, "IN_PROGRESS", "#0066ff"),
-                    createColumn(board.getId(), "Done", 2, "DONE", "#28a745")
+                    createColumn(board.getId(), "Backlog", 0, "TODO", "#6b778c"),
+                    createColumn(board.getId(), "Selected for Development", 1, "TODO", "#0052cc"),
+                    createColumn(board.getId(), "In Progress", 2, "IN_PROGRESS", "#ff8b00", 5),
+                    createColumn(board.getId(), "Done", 3, "DONE", "#36b37e")
             );
         } else {
             // SCRUM default columns
@@ -456,6 +493,13 @@ public class BoardService {
     }
 
     private BoardColumnResponse mapColumnToResponse(BoardColumn column) {
+        int count = 0;
+        try {
+            List<BoardIssueResponse> issues = getBoardIssues(column.getBoardId(), null);
+            count = (int) issues.stream().filter(i -> columnMatchesIssue(column, i)).count();
+        } catch (Exception ignored) {
+            /* count stays 0 */
+        }
         return BoardColumnResponse.builder()
                 .id(column.getId())
                 .boardId(column.getBoardId())
@@ -464,9 +508,26 @@ public class BoardService {
                 .statusCategory(column.getStatusCategory())
                 .isDone(column.getIsDone())
                 .maxIssues(column.getMaxIssues())
+                .currentIssues(count)
                 .color(column.getColor())
                 .isCollapsible(column.getIsCollapsible())
                 .isHidden(column.getIsHidden())
                 .build();
+    }
+
+    private boolean columnMatchesIssue(BoardColumn column, BoardIssueResponse issue) {
+        if (issue.getStatus() == null) return false;
+        String status = normalize(issue.getStatus());
+        String name = normalize(column.getName());
+        if ("DONE".equals(column.getStatusCategory()) || Boolean.TRUE.equals(column.getIsDone())) {
+            return status.contains("done") || status.contains("closed") || status.contains("resolved");
+        }
+        if ("IN_PROGRESS".equals(column.getStatusCategory())) {
+            return status.contains("progress") || status.contains("review");
+        }
+        if (name.contains("backlog")) return status.contains("backlog") || status.equals("open") || status.equals("new");
+        if (name.contains("selected")) return status.contains("todo") || status.contains("selected");
+        return "TODO".equals(column.getStatusCategory())
+                && (status.contains("todo") || status.contains("backlog"));
     }
 }

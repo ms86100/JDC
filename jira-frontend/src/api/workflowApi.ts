@@ -169,4 +169,116 @@ export const workflowApi = {
   createWorkflowDraft: (workflowId: string) =>
     apiClient.post(`/api/workflow-schemes/workflows/${workflowId}/draft`),
   getVersions: (workflowId: string) => apiClient.get<WorkflowVersion[]>(`/api/workflow-schemes/workflows/${workflowId}/versions`),
+  rollbackToVersion: (workflowId: string, versionNumber: number) =>
+    apiClient.post<Workflow>(`/api/workflow-schemes/workflows/${workflowId}/rollback/${versionNumber}`),
+
+  createSchemeDraft: (schemeId: string) =>
+    apiClient.post<WorkflowScheme>(`/api/workflow-schemes/${schemeId}/draft`),
+  createWorkflowDraftByScheme: (workflowId: string) =>
+    apiClient.post(`/api/workflow-schemes/workflows/${workflowId}/draft`),
+  getWorkflowDraft: (workflowId: string) => apiClient.get(`/api/workflow-schemes/workflows/${workflowId}/draft`),
+  publishDraft: (draftId: string, changeDescription?: string) =>
+    apiClient.post<Workflow>(`/api/workflow-schemes/drafts/${draftId}/publish`, null, {
+      params: changeDescription ? { changeDescription } : undefined,
+    }),
+  discardDraft: (draftId: string) => apiClient.post(`/api/workflow-schemes/drafts/${draftId}/discard`),
+
+  lockLayout: (workflowId: string) => apiClient.post(`/api/workflow-schemes/workflows/${workflowId}/layout/lock`),
+  unlockLayout: (workflowId: string) => apiClient.post(`/api/workflow-schemes/workflows/${workflowId}/layout/unlock`),
+
+  assignSchemeBulk: (schemeId: string, projectIds: string[]) =>
+    apiClient.post<{ schemeId: string; updatedProjects: number }>('/api/workflow-schemes/projects/assign-bulk', {
+      schemeId,
+      projectIds,
+    }),
+
+  createStatusMigration: (data: {
+    workflowId: string;
+    oldStatusId: string;
+    newStatusId: string;
+    migrationType?: string;
+    userId?: string;
+  }) => apiClient.post<WorkflowStatusMigration>('/api/workflow-schemes/migrations', data),
+  previewStatusMigration: (migrationId: string, oldStatusId: string, newStatusId: string) =>
+    apiClient.post<MigrationPreview>(`/api/workflow-schemes/migrations/${migrationId}/preview`, null, {
+      params: { oldStatusId, newStatusId },
+    }),
+  executeStatusMigration: (migrationId: string) =>
+    apiClient.post<WorkflowStatusMigration>(`/api/workflow-schemes/migrations/${migrationId}/execute`),
+  getStatusMigration: (migrationId: string) =>
+    apiClient.get<WorkflowStatusMigration>(`/api/workflow-schemes/migrations/${migrationId}`),
+  cancelStatusMigration: (migrationId: string) =>
+    apiClient.post<WorkflowStatusMigration>(`/api/workflow-schemes/migrations/${migrationId}/cancel`),
+  retryStatusMigration: (migrationId: string) =>
+    apiClient.post<WorkflowStatusMigration>(`/api/workflow-schemes/migrations/${migrationId}/retry`),
+
+  listTransitionScreens: () => apiClient.get<WorkflowTransitionScreen[]>('/api/admin/workflows/screens'),
+  getTransitionScreen: (screenId: string) =>
+    apiClient.get<WorkflowTransitionScreen>(`/api/admin/workflows/screens/${screenId}`),
+  createTransitionScreen: (data: { name: string; description?: string }) =>
+    apiClient.post<WorkflowTransitionScreen>('/api/admin/workflows/screens', data),
+  updateTransitionScreen: (screenId: string, data: Record<string, unknown>) =>
+    apiClient.put<WorkflowTransitionScreen>(`/api/admin/workflows/screens/${screenId}`, data),
+  deleteTransitionScreen: (screenId: string) => apiClient.delete(`/api/admin/workflows/screens/${screenId}`),
+  assignScreenToTransition: (transitionId: string, screenId: string) =>
+    apiClient.post(`/api/admin/workflows/transitions/${transitionId}/screen`, { screenId }),
+  removeScreenFromTransition: (transitionId: string) =>
+    apiClient.delete(`/api/admin/workflows/transitions/${transitionId}/screen`),
+
+  getAvailableTransitions: (issueId: string, projectId: string) =>
+    apiClient.get<{ transitions: AvailableTransition[] }>(
+      `/api/workflows/issues/${issueId}/available-transitions`,
+      { params: { projectId } },
+    ),
+
+  executeBulkTransitions: (data: {
+    projectId: string;
+    items: Array<{ issueId: string; transitionId: string; comment?: string }>;
+  }) =>
+    apiClient.post<{
+      total: number;
+      succeeded: number;
+      failed: number;
+      results: Array<{ issueId: string; success: boolean; error?: string }>;
+    }>('/api/workflows/transitions/execute-bulk', data),
 };
+
+export interface WorkflowDefinition {
+  type: string;
+  name?: string;
+  description?: string;
+  category?: string;
+}
+
+export interface WorkflowStatusMigration {
+  id: string;
+  workflowId: string;
+  oldStatusId: string;
+  newStatusId: string;
+  status: string;
+  totalIssues?: number;
+  migratedIssues?: number;
+  failedIssues?: number;
+}
+
+export interface MigrationPreview {
+  migrationId: string;
+  affectedIssueCount: number;
+  sampleIssues?: Array<{ issueId: string; issueKey: string; currentStatus: string }>;
+}
+
+export interface WorkflowTransitionScreen {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface AvailableTransition {
+  id: string;
+  name: string;
+  description?: string;
+  toStatusId?: string;
+  toStatusName?: string;
+  hasScreen?: boolean;
+  screenFields?: Array<{ fieldId: string; fieldName: string; required: boolean }>;
+}

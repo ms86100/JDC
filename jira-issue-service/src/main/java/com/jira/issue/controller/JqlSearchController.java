@@ -27,7 +27,7 @@ public class JqlSearchController {
         String jql = body != null && body.getJql() != null ? body.getJql() : "";
         int page = body != null && body.getPage() != null ? body.getPage() : 0;
         int pageSize = body != null && body.getPageSize() != null ? body.getPageSize() : 50;
-        return ResponseEntity.ok(issueService.searchByJql(jql, page, pageSize, userId));
+        return ResponseEntity.ok(issueService.searchByJql(jql, page, pageSize));
     }
 
     @lombok.Data

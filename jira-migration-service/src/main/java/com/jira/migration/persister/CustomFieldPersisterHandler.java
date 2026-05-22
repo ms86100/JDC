@@ -1,6 +1,15 @@
 package com.jira.migration.persister;
 
+import com.jira.migration.entity.field.CustomFieldDefinition;
+import com.jira.migration.entity.field.CustomFieldOption;
+import com.jira.migration.entity.field.FieldDefinition;
 import com.jira.migration.exception.*;
+import com.jira.migration.repository.field.CustomFieldDefinitionRepository;
+import com.jira.migration.repository.field.CustomFieldOptionRepository;
+import com.jira.migration.repository.field.FieldDefinitionRepository;
+import com.jira.migration.service.field.FieldProvisioningService;
+import com.jira.migration.service.field.FieldScreenConfigurationService;
+import com.jira.migration.service.field.FieldValueService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -9,42 +18,41 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 /**
- * Custom Field Persister Handler
- * Handles custom field definition and value persistence
- * Supports 18+ Jira DC custom field types
+ * Custom Field Persister Handler — persists definitions via {@link FieldProvisioningService}
+ * and values via {@link FieldValueService}.
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class CustomFieldPersisterHandler {
 
-    // Custom field types supported
+    private static final UUID SYSTEM_USER = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
     private static final Map<String, String> FIELD_TYPE_MAP;
 
     static {
         Map<String, String> map = new HashMap<>();
-        map.put("TEXTFIELD", "TEXT");
-        map.put("TEXTAREA", "TEXT");
-        map.put("DATEPICKER", "DATE");
-        map.put("DATETIME", "DATETIME");
-        map.put("NUMBER", "NUMBER");
-        map.put("FLOAT", "DECIMAL");
-        map.put("CHECKBOX", "BOOLEAN");
-        map.put("RADIOBUTTON", "SELECT");
-        map.put("SELECT", "SELECT");
-        map.put("MULTISELECT", "MULTI_SELECT");
-        map.put("CASCADING_SELECT", "CASCADING_SELECT");
-        map.put("USERPICKER", "USER");
-        map.put("GROUP_PICKER", "GROUP");
-        map.put("PROJECT_PICKER", "PROJECT");
-        map.put("ISSUE_PICKER", "ISSUE");
-        map.put("LABEL", "LABEL");
-        map.put("URL", "URL");
-        map.put("EMAIL", "EMAIL");
-        map.put("VERSION_PICKER", "VERSION");
-        map.put("COMPONENT_PICKER", "COMPONENT");
+        map.put("TEXTFIELD", "text");
+        map.put("TEXTAREA", "textarea");
+        map.put("DATEPICKER", "datepicker");
+        map.put("DATETIME", "datetime");
+        map.put("NUMBER", "number");
+        map.put("FLOAT", "number");
+        map.put("CHECKBOX", "checkbox");
+        map.put("RADIOBUTTON", "select");
+        map.put("SELECT", "select");
+        map.put("MULTISELECT", "multiselect");
+        map.put("USERPICKER", "userpicker");
+        map.put("URL", "url");
         FIELD_TYPE_MAP = Collections.unmodifiableMap(map);
     }
+
+    private final FieldProvisioningService fieldProvisioningService;
+    private final FieldValueService fieldValueService;
+    private final FieldDefinitionRepository fieldDefinitionRepository;
+    private final CustomFieldDefinitionRepository customFieldDefinitionRepository;
+    private final CustomFieldOptionRepository customFieldOptionRepository;
+    private final FieldScreenConfigurationService fieldScreenConfigurationService;
 
     @Transactional(rollbackFor = Exception.class)
     public CustomFieldPersistResult persistCustomField(Map<String, Object> fieldData, UUID jobId) {
@@ -56,35 +64,36 @@ public class CustomFieldPersisterHandler {
                 throw new ValidationException("Custom field name is required", "FIELD_NAME_REQUIRED", "name");
             }
 
-            String fieldType = (String) fieldData.get("fieldType");
+            String fieldType = (String) fieldData.getOrDefault("fieldType", fieldData.get("type"));
             if (fieldType == null) {
-                throw new ValidationException("Custom field type is required", "FIELD_TYPE_REQUIRED", "fieldType");
+                fieldType = "TEXTFIELD";
             }
 
-            UUID projectId = (UUID) fieldData.get("projectId");
+            UUID projectId = fieldData.get("projectId") instanceof UUID u
+                    ? u
+                    : (fieldData.get("projectId") != null
+                    ? UUID.fromString(fieldData.get("projectId").toString())
+                    : null);
 
-            // 1. Build custom field entity
-            CustomFieldEntity customField = buildCustomFieldEntity(fieldData, projectId);
+            String mappedType = FIELD_TYPE_MAP.getOrDefault(fieldType.toUpperCase(Locale.ROOT), fieldType.toLowerCase(Locale.ROOT));
+            FieldDefinition saved = fieldProvisioningService.provisionCustomField(fieldName, mappedType, SYSTEM_USER);
+            fieldScreenConfigurationService.ensureFieldVisibleOnScreen(saved.getFieldKey(), projectId);
 
-            // 2. Persist custom field definition
-            UUID fieldId = persistCustomFieldDefinition(customField);
+            UUID customFieldId = customFieldDefinitionRepository.findByFieldKey(saved.getFieldKey())
+                    .map(CustomFieldDefinition::getId)
+                    .orElse(saved.getId());
 
-            // 3. Handle type-specific configuration
-            persistFieldConfiguration(fieldId, fieldType, fieldData);
-
-            // 4. Create searcher configuration
-            createSearcherConfiguration(fieldId, fieldType, fieldData);
-
-            // 5. Persist options for select-type fields
             if (isSelectField(fieldType)) {
-                persistFieldOptions(fieldId, (List<Map<String, Object>>) fieldData.get("options"));
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> options = (List<Map<String, Object>>) fieldData.get("options");
+                persistFieldOptions(customFieldId, options);
             }
 
             result.setSuccess(true);
-            result.setFieldId(fieldId);
+            result.setFieldId(customFieldId);
             result.setFieldName(fieldName);
 
-            log.info("Persisted custom field: {} ({})", fieldName, fieldType);
+            log.info("Persisted custom field: {} ({}) id={}", fieldName, fieldType, customFieldId);
 
         } catch (Exception e) {
             result.setSuccess(false);
@@ -95,126 +104,81 @@ public class CustomFieldPersisterHandler {
         return result;
     }
 
-    private CustomFieldEntity buildCustomFieldEntity(Map<String, Object> data, UUID projectId) {
-        String fieldType = (String) data.get("fieldType");
-        String mappedType = FIELD_TYPE_MAP.getOrDefault(fieldType.toUpperCase(), "TEXT");
-
-        return CustomFieldEntity.builder()
-                .name((String) data.get("name"))
-                .description((String) data.get("description"))
-                .fieldType(mappedType)
-                .searcherKey((String) data.get("searcherKey"))
-                .projectId(projectId)
-                .isGlobal((Boolean) data.getOrDefault("isGlobal", false))
-                .isLocked((Boolean) data.getOrDefault("isLocked", false))
-                .configuration(Map.class.cast(data.get("configuration")))
-                .build();
-    }
-
-    private UUID persistCustomFieldDefinition(CustomFieldEntity customField) {
-        log.debug("Persisting custom field definition: {}", customField.getName());
-        return UUID.randomUUID();
-    }
-
-    private void persistFieldConfiguration(UUID fieldId, String fieldType, Map<String, Object> fieldData) {
-        Map<String, Object> config = new HashMap<>();
-
-        switch (fieldType.toUpperCase()) {
-            case "TEXTFIELD", "TEXTAREA" -> {
-                config.put("maxLength", fieldData.getOrDefault("maxLength", 1000));
-                config.put("defaultValue", fieldData.get("defaultValue"));
-            }
-            case "NUMBER", "FLOAT" -> {
-                config.put("minValue", fieldData.get("minValue"));
-                config.put("maxValue", fieldData.get("maxValue"));
-                config.put("precision", fieldData.getOrDefault("precision", 2));
-            }
-            case "DATEPICKER", "DATETIME" -> {
-                config.put("dateFormat", fieldData.getOrDefault("dateFormat", "yyyy-MM-dd"));
-                config.put("includeTime", fieldData.getOrDefault("includeTime", false));
-            }
-            case "URL" -> {
-                config.put("linkPattern", fieldData.get("linkPattern"));
-            }
-            default -> log.debug("No specific configuration for field type: {}", fieldType);
+    private void persistFieldOptions(UUID customFieldId, List<Map<String, Object>> options) {
+        if (options == null || options.isEmpty()) {
+            return;
         }
-
-        log.debug("Persisting field configuration: {}", config);
-    }
-
-    private void createSearcherConfiguration(UUID fieldId, String fieldType, Map<String, Object> fieldData) {
-        String searcherKey = getSearcherKey(fieldType);
-        log.debug("Creating searcher configuration with key: {}", searcherKey);
-        // In production: Persist searcher configuration
-    }
-
-    private String getSearcherKey(String fieldType) {
-        return switch (fieldType.toUpperCase()) {
-            case "TEXTFIELD", "TEXTAREA" -> "textsearcher";
-            case "NUMBER", "FLOAT" -> "numberrangesearcher";
-            case "DATEPICKER" -> "datesearcher";
-            case "DATETIME" -> "datetimerange";
-            case "SELECT", "RADIOBUTTON" -> "optionsearcher";
-            case "MULTISELECT" -> "multiselectsearcher";
-            case "USERPICKER" -> "userpickersearcher";
-            case "GROUP_PICKER" -> "grouppicker";
-            default -> "textsearcher";
-        };
-    }
-
-    private void persistFieldOptions(UUID fieldId, List<Map<String, Object>> options) {
-        if (options == null || options.isEmpty()) return;
-
-        log.debug("Persisting {} options for field {}", options.size(), fieldId);
-
+        int seq = 0;
         for (Map<String, Object> option : options) {
-            String optionValue = (String) option.get("value");
-            int sequence = (Integer) option.getOrDefault("sequence", 0);
-            boolean disabled = (Boolean) option.getOrDefault("disabled", false);
-
-            // In production: Persist to custom_field_options table
-            log.debug("  Option: {} (seq={}, disabled={})", optionValue, sequence, disabled);
+            String optionValue = option.get("value") != null ? option.get("value").toString() : null;
+            if (optionValue == null || optionValue.isBlank()) {
+                continue;
+            }
+            String label = option.get("label") != null ? option.get("label").toString() : optionValue;
+            CustomFieldOption entity = CustomFieldOption.builder()
+                    .customFieldId(customFieldId)
+                    .value(optionValue)
+                    .label(label)
+                    .sequence(option.get("sequence") instanceof Number n ? n.intValue() : seq++)
+                    .disabled(Boolean.TRUE.equals(option.get("disabled")))
+                    .build();
+            customFieldOptionRepository.save(entity);
         }
     }
 
     private boolean isSelectField(String fieldType) {
-        return Set.of("SELECT", "RADIOBUTTON", "MULTISELECT", "CASCADING_SELECT").contains(fieldType.toUpperCase());
+        return Set.of("SELECT", "RADIOBUTTON", "MULTISELECT", "CASCADING_SELECT")
+                .contains(fieldType.toUpperCase(Locale.ROOT));
     }
 
-    /**
-     * Persist custom field values for an issue
-     */
     @Transactional(rollbackFor = Exception.class)
     public void persistCustomFieldValues(UUID issueId, Map<String, Object> customFieldValues, UUID jobId) {
-        if (customFieldValues == null || customFieldValues.isEmpty()) return;
+        if (customFieldValues == null || customFieldValues.isEmpty() || issueId == null) {
+            return;
+        }
+
+        UUID actor = jobId != null ? jobId : SYSTEM_USER;
+        Map<String, Object> resolved = new LinkedHashMap<>();
 
         for (Map.Entry<String, Object> entry : customFieldValues.entrySet()) {
-            String fieldKey = entry.getKey();
+            String key = entry.getKey();
             Object value = entry.getValue();
+            if (value == null || (value instanceof String s && s.isBlank())) {
+                continue;
+            }
+            String fieldKey = resolveFieldKey(key);
+            if (fieldKey == null) {
+                log.warn("Skipping custom field value — unknown key: {}", key);
+                continue;
+            }
+            resolved.put(fieldKey, value);
+        }
 
-            log.debug("Persisting custom field value: {} = {}", fieldKey, value);
-
-            // Validate value type matches field type
-            validateFieldValueType(fieldKey, value);
-
-            // Persist value
-            persistFieldValue(issueId, fieldKey, value);
+        if (!resolved.isEmpty()) {
+            fieldValueService.setFieldValues(issueId, resolved, actor);
+            log.debug("Persisted {} custom field values for issue {}", resolved.size(), issueId);
         }
     }
 
-    private void validateFieldValueType(String fieldKey, Object value) {
-        // In production: Query field type from custom field definition
-        // and validate value type matches
-    }
-
-    private void persistFieldValue(UUID issueId, String fieldKey, Object value) {
-        // In production: Persist to custom_field_values table
-        // Handle different value types:
-        // - String for text fields
-        // - Number for numeric fields
-        // - Boolean for checkbox
-        // - List for multi-select
-        // - UUID for user/project/issue references
+    private String resolveFieldKey(String key) {
+        if (key == null || key.isBlank()) {
+            return null;
+        }
+        String normalized = key.trim().toLowerCase(Locale.ROOT)
+                .replace(" ", "_")
+                .replaceAll("[^a-z0-9_]", "");
+        if (fieldDefinitionRepository.existsByFieldKey(normalized)) {
+            return normalized;
+        }
+        if (fieldDefinitionRepository.existsByFieldKey(key)) {
+            return key;
+        }
+        if (key.startsWith("customfield_")) {
+            return fieldDefinitionRepository.findByFieldKey(key).map(FieldDefinition::getFieldKey).orElse(key);
+        }
+        return fieldDefinitionRepository.findByFieldKey("customfield_" + normalized)
+                .map(FieldDefinition::getFieldKey)
+                .orElse(normalized);
     }
 
     public static class CustomFieldPersistResult {
@@ -231,19 +195,5 @@ public class CustomFieldPersisterHandler {
         public void setFieldName(String fieldName) { this.fieldName = fieldName; }
         public String getErrorMessage() { return errorMessage; }
         public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class CustomFieldEntity {
-        private UUID id;
-        private String name;
-        private String description;
-        private String fieldType;
-        private String searcherKey;
-        private UUID projectId;
-        private Boolean isGlobal;
-        private Boolean isLocked;
-        private Map<String, Object> configuration;
     }
 }

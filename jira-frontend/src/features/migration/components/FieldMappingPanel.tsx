@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import type { FieldMapping } from '../types/migration';
+import { matchHeaderToTargetField } from '../utils/fieldMappingMatch';
 
 interface TargetField {
   field: string;
@@ -57,6 +58,24 @@ export default function FieldMappingPanel({
   const [searchSource, setSearchSource] = useState('');
   const [searchTarget, setSearchTarget] = useState('');
 
+  useEffect(() => {
+    if (sourceHeaders.length === 0) return;
+    setMappings((prev) => {
+      const bySource = new Map(prev.map((m) => [m.sourceColumn, m]));
+      return sourceHeaders.map((header) => {
+        const existing = bySource.get(header);
+        if (existing) return existing;
+        return {
+          sourceColumn: header,
+          targetField: '',
+          dataType: 'STRING',
+          required: false,
+          mapped: false,
+        };
+      });
+    });
+  }, [sourceHeaders.join('\u0001')]);
+
   // Auto-map suggestions
   const autoMapSuggestions = useMemo(() => {
     const suggestions: Array<{ sourceIndex: number; targetField: string; confidence: number }> = [];
@@ -81,7 +100,8 @@ export default function FieldMappingPanel({
         // Alias match
         else {
           const aliases: Record<string, string[]> = {
-            summary: ['summary', 'title', 'name', 'subject', 'headline'],
+            issueKey: ['issuekey', 'issue key', 'key', 'issue id'],
+            summary: ['summary', 'title', 'subject', 'headline'],
             description: ['description', 'desc', 'body', 'details', 'content'],
             issuetype: ['issuetype', 'type', 'issue_type', 'issue type'],
             priority: ['priority', 'prio', 'importance', 'severity'],
@@ -107,26 +127,30 @@ export default function FieldMappingPanel({
     return suggestions.sort((a, b) => b.confidence - a.confidence);
   }, [mappings, targetFields]);
 
-  // Apply auto-mapping
+  // Apply auto-mapping (strict header match — avoids "Project name" → summary)
   const applyAutoMapping = useCallback(() => {
-    const newMappings = [...mappings];
-
-    autoMapSuggestions.forEach(({ sourceIndex, targetField }) => {
-      const target = targetFields.find((t) => t.field === targetField);
-      if (target && !newMappings[sourceIndex].mapped) {
-        newMappings[sourceIndex] = {
-          ...newMappings[sourceIndex],
-          targetField,
-          dataType: target.dataType,
-          required: target.required,
-          mapped: true,
-        };
+    const targetFieldKeys = targetFields.map((t) => t.field);
+    const newMappings = mappings.map((mapping) => {
+      if (mapping.mapped) {
+        return mapping;
       }
+      const matchedField = matchHeaderToTargetField(mapping.sourceColumn, targetFieldKeys);
+      if (!matchedField) {
+        return mapping;
+      }
+      const target = targetFields.find((t) => t.field === matchedField);
+      return {
+        ...mapping,
+        targetField: matchedField,
+        dataType: target?.dataType ?? mapping.dataType,
+        required: target?.required ?? mapping.required,
+        mapped: true,
+      };
     });
 
     setMappings(newMappings);
     onMappingsChange?.(newMappings);
-  }, [autoMapSuggestions, mappings, targetFields, onMappingsChange]);
+  }, [mappings, targetFields, onMappingsChange]);
 
   // Handle mapping change
   const updateMapping = useCallback(

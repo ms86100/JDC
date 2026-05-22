@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { planApi } from '../../../api/planApi';
+import { appNotify } from '../../../lib/appNotify';
+import { asArray } from '../../../utils/apiList';
 
 export const usePrograms = () => {
   return useQuery({
@@ -27,7 +29,7 @@ export const useCreateProgram = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to create program:', error);
-      alert(error.message || 'Failed to create program');
+      appNotify.error(error.message || 'Failed to create program');
     },
   });
 };
@@ -43,7 +45,7 @@ export const useUpdateProgram = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to update program:', error);
-      alert(error.message || 'Failed to update program');
+      appNotify.error(error.message || 'Failed to update program');
     },
   });
 };
@@ -57,7 +59,7 @@ export const useDeleteProgram = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to delete program:', error);
-      alert(error.message || 'Failed to delete program');
+      appNotify.error(error.message || 'Failed to delete program');
     },
   });
 };
@@ -65,8 +67,10 @@ export const useDeleteProgram = () => {
 export const usePlans = () => {
   return useQuery({
     queryKey: ['plans'],
-    queryFn: () => planApi.getPlans(),
-    select: (res) => res.data,
+    queryFn: async () => {
+      const res = await planApi.getPlans();
+      return asArray(res.data);
+    },
   });
 };
 
@@ -88,7 +92,7 @@ export const useCreatePlan = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to create plan:', error);
-      alert(error.message || 'Failed to create plan');
+      appNotify.error(error.message || 'Failed to create plan');
     },
   });
 };
@@ -104,7 +108,7 @@ export const useUpdatePlan = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to update plan:', error);
-      alert(error.message || 'Failed to update plan');
+      appNotify.error(error.message || 'Failed to update plan');
     },
   });
 };
@@ -118,7 +122,7 @@ export const useDeletePlan = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to delete plan:', error);
-      alert(error.message || 'Failed to delete plan');
+      appNotify.error(error.message || 'Failed to delete plan');
     },
   });
 };

@@ -124,7 +124,7 @@ export default function SwimlaneView({
                 <div className="ab-swimlane-columns">
                   {columns.filter(col => !col.isHidden).map((column) => {
                     const columnIssues = getIssuesByColumn(column, swimlane.key);
-                    const isOver = dragOverColumn === column.id && dragOverColumn?.includes(swimlane.key);
+                    const isOver = dragOverColumn === `${swimlane.key}-${column.id}`;
 
                     return (
                       <KanbanColumn

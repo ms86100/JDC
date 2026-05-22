@@ -406,8 +406,8 @@ public class ScreenService {
                 .name(screen.getName())
                 .screenType(screen.getScreenType().name())
                 .position(screen.getPosition())
-                .createdAt(screen.getCreatedAt())
-                .updatedAt(screen.getUpdatedAt())
+                .createdAt(null)
+                .updatedAt(null)
                 .build();
     }
 

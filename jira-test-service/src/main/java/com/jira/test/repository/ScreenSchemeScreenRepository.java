@@ -22,5 +22,7 @@ public interface ScreenSchemeScreenRepository extends JpaRepository<ScreenScheme
 
     void deleteByScreenSchemeIdAndScreenId(UUID screenSchemeId, UUID screenId);
 
+    void deleteByScreenSchemeId(UUID screenSchemeId);
+
     List<ScreenSchemeScreen> findByScreenId(UUID screenId);
 }

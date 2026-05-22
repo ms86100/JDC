@@ -33,8 +33,12 @@ public class WorklogController {
     })
     public ResponseEntity<WorklogResponse> createWorklog(
             @Parameter(description = "Issue ID") @PathVariable UUID issueId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @Valid @RequestBody WorklogRequest request) {
         request.setIssueId(issueId);
+        if (request.getAuthorId() == null) {
+            request.setAuthorId(userId != null ? userId : UUID.fromString("5ba38176-421f-431c-87f9-3836e4147a8c"));
+        }
         return ResponseEntity.ok(worklogService.createWorklog(request));
     }
 

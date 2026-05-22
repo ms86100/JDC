@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMigrationJob } from '../hooks/useMigrationJob';
 import { useMigrationSse } from '../hooks/useMigrationSse';
@@ -10,12 +10,17 @@ import {
   migrationWizardApi,
   type JiraDcValidateResponse,
 } from '../../../api/serviceApi';
-import { migrationMappingApi } from '../../../api/fieldApi';
+import { migrationMappingApi, type OptionMappingDto } from '../../../api/fieldApi';
 import ConfigureImportPanel from '../components/ConfigureImportPanel';
 import { useValidation } from '../hooks/useValidation';
 import MigrationFileUploader from '../components/MigrationFileUploader';
 import ValidationResults from '../components/ValidationResults';
 import FieldMappingPanel from '../components/FieldMappingPanel';
+import MigrationFieldProvisionPanel from '../components/MigrationFieldProvisionPanel';
+import CsvImportOptionsPanel, { type CsvImportOptions } from '../components/CsvImportOptionsPanel';
+import MigrationImportSettingsPanel from '../components/MigrationImportSettingsPanel';
+import { migrationSettingsApi } from '../../../api/serviceApi';
+import { canAdminMigration } from '../utils/migrationRoleUtils';
 import ImportProgress from '../components/ImportProgress';
 import JobHistoryTable from '../components/JobHistoryTable';
 import ImportTypeSelector, { ImportType } from '../components/ImportTypeSelector';
@@ -30,6 +35,16 @@ import DcImportConflictPanel from '../components/DcImportConflictPanel';
 import DcImportUnknownFieldsPanel from '../components/DcImportUnknownFieldsPanel';
 import DcImportReviewPanel from '../components/DcImportReviewPanel';
 import DcRelationshipGraphPanel from '../components/DcRelationshipGraphPanel';
+import WizardUserMappingPanel, {
+  draftToSessionPayload,
+  type UserMappingDraft,
+} from '../components/WizardUserMappingPanel';
+import GlobalDlqConsolePanel from '../components/GlobalDlqConsolePanel';
+import OptionMappingMatrixPanel from '../components/OptionMappingMatrixPanel';
+import UploadPreviewTable from '../components/UploadPreviewTable';
+import SavedMappingTemplatesPanel from '../components/SavedMappingTemplatesPanel';
+import { canWriteMigration } from '../utils/migrationRoleUtils';
+import DcEnterpriseReadinessBanner from '../components/DcEnterpriseReadinessBanner';
 import MigrationServiceHealthPanel from '../components/MigrationServiceHealthPanel';
 import WorkflowXmlImportPanel, {
   WorkflowXmlImportOutcome,
@@ -48,6 +63,7 @@ import MigrationVerificationPanel from '../components/MigrationVerificationPanel
 import MigrationReindexPanel from '../components/MigrationReindexPanel';
 import ImportedAttachmentsPanel from '../components/ImportedAttachmentsPanel';
 import MigrationCenterNav, { type MigrationCenterView } from '../components/MigrationCenterNav';
+import { appNotify } from '../../../lib/appNotify';
 import MigrationFeatureCatalog from '../components/MigrationFeatureCatalog';
 import MigrationPlatformHealthView from '../components/MigrationPlatformHealthView';
 import { PageHeader } from '../../../components/ui/PageHeader';
@@ -74,9 +90,27 @@ import {
 } from '../types/dcConflictResolution';
 import { mapMigrationImportSource } from '../utils/mapMigrationImportSource';
 import '../styles/migration-tokens.css';
+import {
+  parseMigrationCenterView,
+  parseMigrationImportType,
+} from '../utils/migrationDeepLinks';
+import {
+  dcImportProfile,
+  isIssueXmlImport,
+  isJiraDcIssueImport,
+} from '../utils/importTypeHelpers';
+import {
+  csvServerUploadReady,
+  formatRowCountSummary,
+} from '../utils/migrationWizardUpload';
+import {
+  hasBlockingValidationErrors,
+  mapWizardValidationResult,
+} from '../utils/mapWizardValidationResult';
 
 export default function MigrationPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importTypeRef = useRef<ImportType | null>(null);
@@ -90,6 +124,9 @@ export default function MigrationPage() {
     fieldMappings: [],
     importOptions: {
       importMode: 'CREATE_UPDATE',
+      csvImportProfile: 'EXTERNAL',
+      attachmentColumn: 'Attachments',
+      attachmentsImportDir: '',
     },
     currentJobId: null,
     jobProgress: null,
@@ -116,6 +153,22 @@ export default function MigrationPage() {
   const [workflowXmlStub, setWorkflowXmlStub] = useState(true);
   const [workflowXmlMakeDefault, setWorkflowXmlMakeDefault] = useState(false);
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
+  const [userMappingDrafts, setUserMappingDrafts] = useState<UserMappingDraft[]>([]);
+  const [optionMappingDrafts, setOptionMappingDrafts] = useState<OptionMappingDto[]>([]);
+  const migrationCanWrite = canWriteMigration();
+  const migrationIsAdmin = canAdminMigration();
+
+  const { data: migrationSettings } = useQuery({
+    queryKey: ['migration-import-settings'],
+    queryFn: () => migrationSettingsApi.getSettings().then((r) => r.data),
+    staleTime: 60_000,
+  });
+
+  const [csvImportOptions, setCsvImportOptions] = useState<CsvImportOptions>({
+    csvImportProfile: 'EXTERNAL',
+    attachmentColumn: 'Attachments',
+    attachmentsImportDir: '',
+  });
   const [dcImportOptions, setDcImportOptions] = useState<DcImportOptions>({
     dryRun: false,
     resume: false,
@@ -138,6 +191,7 @@ export default function MigrationPage() {
     Array<{ from: string; to: string; type: string }>
   >([]);
   const [virusScanStatus, setVirusScanStatus] = useState<string | null>(null);
+  const [serverUploadOk, setServerUploadOk] = useState(false);
   const [exportFormat, setExportFormat] = useState<ExportFormat>('xml');
   const [detailJobImportType, setDetailJobImportType] = useState<ImportType | null>(null);
   const [detailJobResultMetadata, setDetailJobResultMetadata] = useState<Record<
@@ -146,6 +200,50 @@ export default function MigrationPage() {
   > | null>(null);
 
   const wizard = useMigrationWizard();
+
+  const serverRowCount = wizard.session?.totalRows;
+
+  const csvUploadReady = csvServerUploadReady(
+    state.importType,
+    serverUploadOk,
+    serverRowCount,
+  );
+
+  const handleCenterViewChange = useCallback(
+    (view: MigrationCenterView) => {
+      setCenterView(view);
+      const next = new URLSearchParams(searchParams);
+      if (view === 'wizard') {
+        next.delete('view');
+      } else {
+        next.set('view', view);
+      }
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  const applyImportTypeFromUrl = useCallback((imp: ImportType) => {
+    setCenterView('wizard');
+    importTypeRef.current = imp;
+    setState((prev) => ({
+      ...prev,
+      importType: imp,
+      step: 'source',
+    }));
+  }, []);
+
+  useEffect(() => {
+    const qs = searchParams.toString();
+    const view = parseMigrationCenterView(qs ? `?${qs}` : '');
+    if (view) {
+      setCenterView(view);
+    }
+    const imp = parseMigrationImportType(qs ? `?${qs}` : '');
+    if (imp) {
+      applyImportTypeFromUrl(imp);
+    }
+  }, [searchParams, applyImportTypeFromUrl]);
 
   const refreshVirusScanStatus = useCallback(async (uploadId?: string, initial?: string | null) => {
     if (initial) {
@@ -165,7 +263,7 @@ export default function MigrationPage() {
   const activeStepOrder =
     state.importType === 'workflow-xml'
       ? WORKFLOW_XML_STEP_ORDER
-      : state.importType === 'jira-dc'
+      : isJiraDcIssueImport(state.importType)
       ? JIRA_DC_STEP_ORDER
       : state.importType === 'project-import'
       ? PROJECT_IMPORT_STEP_ORDER
@@ -178,7 +276,12 @@ export default function MigrationPage() {
     state.step === 'validate' ||
     state.step === 'review' ||
     !!state.validationResult?.headers?.length;
-  const { targetFields, isLoading: loadingTargetFields, autoMapFromHeaders } = useTargetFields(needsTargetFields);
+  const {
+    targetFields,
+    isLoading: loadingTargetFields,
+    autoMapFromHeaders,
+    refetch: refetchTargetFields,
+  } = useTargetFields(needsTargetFields);
 
   // Hooks
   const {
@@ -209,7 +312,11 @@ export default function MigrationPage() {
   });
 
   // Projects query for target selection
-  const { data: projects = [] } = useQuery({
+  const {
+    data: projects = [],
+    isError: projectsLoadError,
+    error: projectsLoadErrorDetail,
+  } = useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
       return await projectApi.getAll();
@@ -219,7 +326,7 @@ export default function MigrationPage() {
       state.step === 'review' ||
       state.step === 'source' ||
       state.importType === 'csv' ||
-      state.importType === 'jira-dc' ||
+      isJiraDcIssueImport(state.importType) ||
       state.importType === 'workflow-xml' ||
       state.importType === 'project-import' ||
       state.importType === 'project-export',
@@ -230,6 +337,7 @@ export default function MigrationPage() {
     validateCsvClientSide,
     isValidating,
     validationResult,
+    setValidationResult,
     parseError,
     generateFieldMappings,
     exportErrorsToCsv,
@@ -244,6 +352,9 @@ export default function MigrationPage() {
       }));
     },
   });
+
+  /** Client hook + page state can diverge after server validate; prefer page state when set. */
+  const activeValidationResult = state.validationResult ?? validationResult;
 
   // Job query for current job
   const { data: currentJob } = useJobQuery(state.currentJobId);
@@ -294,6 +405,14 @@ export default function MigrationPage() {
         if (state.importType === 'project-import' || state.importType === 'project-export') {
           return state.importType !== null;
         }
+        if (state.importType === 'csv') {
+          return (
+            state.importType !== null &&
+            state.selectedFile !== null &&
+            !wizard.uploadFile.isPending &&
+            csvUploadReady
+          );
+        }
         return state.importType !== null && state.selectedFile !== null;
       case 'targetProject':
         if (state.importType === 'workflow-xml') return true;
@@ -303,11 +422,15 @@ export default function MigrationPage() {
         if (state.importType === 'project-export') {
           return !!targetProjectId;
         }
+        if (state.importType === 'csv') {
+          return !!targetProjectId && csvUploadReady;
+        }
         return !!targetProjectId;
       case 'map':
-        if (state.importType === 'jira-dc') {
+        if (isJiraDcIssueImport(state.importType)) {
           return !!dcValidationResult || !!state.selectedFile;
         }
+        if (state.importType === 'csv' && !csvUploadReady) return false;
         return state.fieldMappings.some((m) => m.mapped);
       case 'validate':
         if (state.importType === 'workflow-xml') {
@@ -317,15 +440,16 @@ export default function MigrationPage() {
             (workflowXmlValidation.errors?.length ?? 0) === 0
           );
         }
-        if (state.importType === 'jira-dc') {
+        if (isJiraDcIssueImport(state.importType)) {
           return dcValidationReady();
         }
+        if (state.importType === 'csv' && !csvUploadReady) return false;
         return (
-          state.validationResult !== null &&
-          (state.validationResult.errors?.length ?? 0) === 0
+          activeValidationResult !== null &&
+          !hasBlockingValidationErrors(activeValidationResult)
         );
       case 'configure':
-        if (state.importType === 'jira-dc') {
+        if (isJiraDcIssueImport(state.importType)) {
           return dcValidationReady();
         }
         return !!state.importOptions.importMode;
@@ -334,11 +458,14 @@ export default function MigrationPage() {
         if (state.importType === 'project-import') {
           return !!sourceProjectId && !!targetProjectId;
         }
-        if (state.importType === 'jira-dc') {
+        if (isJiraDcIssueImport(state.importType)) {
           return !!targetProjectId && dcValidationReady();
         }
         if (state.importType === 'project-export') {
           return !!targetProjectId;
+        }
+        if (state.importType === 'csv') {
+          return !!targetProjectId && csvUploadReady;
         }
         return !!targetProjectId;
       default:
@@ -361,11 +488,24 @@ export default function MigrationPage() {
     setWizardError(null);
     const currentIndex = getStepIndex(state.step);
 
+    const usesWizardSession =
+      state.importType === 'csv' ||
+      isJiraDcIssueImport(state.importType) ||
+      state.importType === 'workflow-xml';
+
+    if (
+      state.importType === 'csv' &&
+      usesWizardSession &&
+      state.step !== 'source' &&
+      !csvUploadReady
+    ) {
+      setWizardError(
+        'Complete server upload on the Source step before continuing (migration-service on port 8094).',
+      );
+      return;
+    }
+
     try {
-      const usesWizardSession =
-        state.importType === 'csv' ||
-        state.importType === 'jira-dc' ||
-        state.importType === 'workflow-xml';
 
       if (state.step === 'source' && state.importType && usesWizardSession) {
         await wizard.ensureSession(state.importType, targetProjectId || undefined);
@@ -376,21 +516,66 @@ export default function MigrationPage() {
           targetProjectId,
         });
       }
+      if (
+        state.step === 'targetProject' &&
+        state.importType === 'csv' &&
+        wizard.sessionId
+      ) {
+        const refreshed = await wizard.refetchSession();
+        const headers = refreshed.data?.detectedHeaders ?? [];
+        const resolvedHeaders =
+          (state.validationResult?.headers?.length ? state.validationResult.headers : headers) ?? [];
+        if (resolvedHeaders.length > 0 && state.fieldMappings.length === 0) {
+          setState((prev) => ({
+            ...prev,
+            fieldMappings: generateFieldMappings(resolvedHeaders, targetFields),
+            validationResult: prev.validationResult
+              ? { ...prev.validationResult, headers: resolvedHeaders }
+              : {
+                  valid: true,
+                  totalRows: refreshed.data?.totalRows ?? 0,
+                  validRows: refreshed.data?.totalRows ?? 0,
+                  errors: [],
+                  warnings: [],
+                  headers: resolvedHeaders,
+                  fileName: prev.selectedFile?.name ?? '',
+                  previewRows: [],
+                },
+          }));
+        }
+      }
       if (state.step === 'map' && state.fieldMappings.length > 0 && wizard.sessionId) {
         await wizard.saveFieldMappings.mutateAsync(state.fieldMappings);
       }
       if (state.step === 'validate' && state.importType === 'csv') {
         const entityType = wizard.session?.detectedEntityType || 'ISSUE';
-        const serverResult = await wizard.validateSession.mutateAsync(entityType);
-        if (serverResult) {
-          setState((prev) => ({ ...prev, validationResult: serverResult }));
-        }
-        if (serverResult && (serverResult.errors?.length ?? 0) > 0) {
-          setWizardError('Fix validation errors before continuing');
+        try {
+          const serverPayload = await wizard.validateSession.mutateAsync(entityType);
+          const mapped = mapWizardValidationResult(
+            serverPayload,
+            state.validationResult ?? validationResult,
+          );
+          setValidationResult(mapped);
+          setState((prev) => ({ ...prev, validationResult: mapped }));
+          if (hasBlockingValidationErrors(mapped)) {
+            setWizardError(
+              `Fix ${mapped.errors.length} validation error(s) before continuing`,
+            );
+            return;
+          }
+          if (wizard.sessionId) {
+            await wizard.updateSession.mutateAsync({ step: 'CONFIGURE' });
+          }
+        } catch (validateErr) {
+          setWizardError(
+            validateErr instanceof Error
+              ? validateErr.message
+              : 'Server validation failed — ensure migration-service is running.',
+          );
           return;
         }
       }
-      if (state.step === 'validate' && state.importType === 'jira-dc' && !dcValidationReady()) {
+      if (state.step === 'validate' && isJiraDcIssueImport(state.importType) && !dcValidationReady()) {
         setWizardError('Complete DC validation and resolve conflicts before continuing');
         return;
       }
@@ -402,11 +587,18 @@ export default function MigrationPage() {
             fieldDefaults,
             workflowStatusMappings: { status: workflowStatusMappings },
           },
+          userMappings:
+            isJiraDcIssueImport(state.importType) && userMappingDrafts.length > 0
+              ? draftToSessionPayload(userMappingDrafts)
+              : undefined,
         });
         await migrationMappingApi.saveSessionFieldDefaults(wizard.sessionId, fieldDefaults);
         await migrationMappingApi.saveSessionWorkflowMappings(wizard.sessionId, {
           status: workflowStatusMappings,
         });
+        if (optionMappingDrafts.length > 0) {
+          await migrationMappingApi.saveSessionOptionMappings(wizard.sessionId, optionMappingDrafts);
+        }
       }
       if (state.step === 'review' && targetProjectId && wizard.sessionId && usesWizardSession) {
         await wizard.updateSession.mutateAsync({
@@ -428,30 +620,50 @@ export default function MigrationPage() {
   // Handlers
   const handleTypeSelect = (type: ImportType) => {
     importTypeRef.current = type;
+    setCenterView('wizard');
     setState((prev) => ({ ...prev, importType: type }));
+    if (isIssueXmlImport(type)) {
+      setDcImportOptions((prev) => ({ ...prev, backupZip: false }));
+    }
+    setDcValidationResult(null);
+    setDcRelationshipEdges([]);
+    setDcConflictResolutions({});
+    setDcWarningsAcknowledged(false);
+    setServerUploadOk(false);
+    const next = new URLSearchParams(searchParams);
+    next.set('import', type);
+    next.delete('view');
+    setSearchParams(next, { replace: true });
   };
 
   const handleFileSelect = async (file: File) => {
     const importType = importTypeRef.current;
     setState((prev) => ({ ...prev, selectedFile: file }));
     setWizardError(null);
+    setServerUploadOk(false);
 
     if (!importType || importType === 'project-export') return;
 
     try {
-      await wizard.ensureSession(importType, targetProjectId || undefined);
+      const sessionIdForUpload = await wizard.ensureSession(
+        importType,
+        targetProjectId || undefined,
+      );
 
       if (importType === 'workflow-xml') {
         return;
       }
 
-      if (importType === 'jira-dc') {
+      if (isJiraDcIssueImport(importType)) {
         const isZip = file.name.toLowerCase().endsWith('.zip');
+        const backupZip = isIssueXmlImport(importType)
+          ? dcImportOptions.backupZip && isZip
+          : dcImportOptions.backupZip || isZip;
         try {
           const validateRes = await migrationApi.validateJiraDcImport({
             file,
             attachmentBundle: dcAttachmentBundleFile,
-            backupZip: dcImportOptions.backupZip || isZip,
+            backupZip,
             options: {
               dryRun: dcImportOptions.dryRun,
               blockOnValidationErrors: dcImportOptions.blockOnValidationErrors,
@@ -486,24 +698,55 @@ export default function MigrationPage() {
       }
 
       if (importType === 'csv') {
-        const upload = await wizard.uploadFile.mutateAsync({
-          file,
-          importType: 'CSV',
-        });
-        if (!upload.success) {
-          setWizardError(upload.errorMessage || 'Upload failed');
-          return;
-        }
-        await refreshVirusScanStatus(upload.uploadId, upload.virusScanStatus);
-
-        const headers = upload.detectedHeaders || [];
         const clientResult = await validateCsvClientSide(file);
-        if (headers.length > 0 && clientResult) {
+        let upload: Awaited<ReturnType<typeof wizard.uploadFile.mutateAsync>> | null = null;
+        try {
+          upload = await wizard.uploadFile.mutateAsync({
+            file,
+            importType: 'CSV',
+            sessionId: sessionIdForUpload,
+          });
+        } catch (uploadErr) {
+          setServerUploadOk(false);
+          setWizardError(
+            uploadErr instanceof Error
+              ? `${uploadErr.message} — start jira-migration-service (8094) and gateway (8080), then re-upload.`
+              : 'Server upload failed — migration service may be down.',
+          );
+        }
+
+        if (upload && !upload.success) {
+          setServerUploadOk(false);
+          setWizardError(
+            upload.errorMessage ||
+              'Server upload failed. Start jira-migration-service (port 8094) and ensure Flyway V9–V10 are applied.',
+          );
+          if (!clientResult?.headers?.length) {
+            return;
+          }
+        } else if (upload?.success) {
+          setServerUploadOk((upload.totalRows ?? 0) > 0);
+          if ((upload.totalRows ?? 0) === 0) {
+            setWizardError(
+              'Server parsed 0 data rows. Check CSV encoding or re-export from Jira with standard columns.',
+            );
+          }
+        }
+
+        if (upload?.uploadId) {
+          await refreshVirusScanStatus(upload.uploadId, upload.virusScanStatus);
+        }
+
+        const serverHeaders = upload?.detectedHeaders?.filter((h) => h?.trim()) ?? [];
+        const headers =
+          serverHeaders.length > 0 ? serverHeaders : (clientResult?.headers ?? []);
+
+        if (headers.length > 0) {
           let mappings = generateFieldMappings(headers, targetFields);
           try {
             const { mappings: serverMappings, typeWarnings: warnings } = await autoMapFromHeaders(
               headers,
-              targetFields
+              targetFields,
             );
             if (serverMappings.some((m) => m.mapped)) {
               mappings = serverMappings;
@@ -516,9 +759,29 @@ export default function MigrationPage() {
           }
           setState((prev) => ({
             ...prev,
-            validationResult: clientResult,
+            validationResult: clientResult
+              ? { ...clientResult, headers }
+              : {
+                  valid: true,
+                  totalRows: upload?.totalRows ?? 0,
+                  validRows: upload?.totalRows ?? 0,
+                  errors: [],
+                  warnings: [],
+                  headers,
+                  fileName: file.name,
+                  previewRows: [],
+                },
             fieldMappings: mappings,
           }));
+          await wizard.refetchSession();
+        } else if (clientResult) {
+          setState((prev) => ({
+            ...prev,
+            validationResult: clientResult,
+            fieldMappings: generateFieldMappings(clientResult.headers, targetFields),
+          }));
+        } else {
+          setWizardError('Could not read CSV headers. Check file encoding and format.');
         }
 
         return;
@@ -543,6 +806,43 @@ export default function MigrationPage() {
   const handleMappingsChange = (mappings: FieldMapping[]) => {
     setState((prev) => ({ ...prev, fieldMappings: mappings }));
   };
+
+  const handleProvisionComplete = useCallback(
+    async () => {
+      const refetched = await refetchTargetFields();
+      const mergedTargets = refetched.data ?? targetFields;
+      const headers =
+        (state.validationResult?.headers?.length
+          ? state.validationResult.headers
+          : wizard.session?.detectedHeaders) ?? [];
+      if (headers.length === 0) return;
+      try {
+        const { mappings, typeWarnings: warnings } = await autoMapFromHeaders(headers, mergedTargets);
+        if (mappings.length > 0) {
+          setState((prev) => ({ ...prev, fieldMappings: mappings }));
+          setTypeWarnings(warnings);
+        } else {
+          setState((prev) => ({
+            ...prev,
+            fieldMappings: generateFieldMappings(headers, mergedTargets),
+          }));
+        }
+      } catch {
+        setState((prev) => ({
+          ...prev,
+          fieldMappings: generateFieldMappings(headers, mergedTargets),
+        }));
+      }
+    },
+    [
+      refetchTargetFields,
+      targetFields,
+      state.validationResult?.headers,
+      wizard.session?.detectedHeaders,
+      autoMapFromHeaders,
+      generateFieldMappings,
+    ]
+  );
 
   useMigrationSse(state.currentJobId, {
     onProgress: (progress) => {
@@ -592,14 +892,19 @@ export default function MigrationPage() {
         const res = await migrationApi.startProjectExport(targetProjectId, exportFormat);
         const jobData = res.data as { id: string; jobStatus?: string };
         job = { id: jobData.id, jobStatus: jobData.jobStatus || 'IN_PROGRESS' };
-      } else if (state.importType === 'jira-dc' && state.selectedFile) {
+      } else if (isJiraDcIssueImport(state.importType) && state.selectedFile) {
         const isZip = state.selectedFile.name.toLowerCase().endsWith('.zip');
+        const backupZip = isIssueXmlImport(state.importType)
+          ? dcImportOptions.backupZip && isZip
+          : dcImportOptions.backupZip || isZip;
+        const profile = dcImportProfile(state.importType);
         job = await startImport('jira-dc', {
           file: state.selectedFile,
           targetProjectId,
           attachmentBundle: dcAttachmentBundleFile,
-          backupZip: dcImportOptions.backupZip || isZip,
+          backupZip,
           options: {
+            importProfile: profile,
             blockOnValidationErrors: dcImportOptions.blockOnValidationErrors,
             dryRun: dcImportOptions.dryRun,
             resume: dcImportOptions.resume,
@@ -614,11 +919,19 @@ export default function MigrationPage() {
           },
         });
       } else if (wizard.sessionId && state.importType === 'csv') {
+        if (!csvUploadReady) {
+          setWizardError('Server upload is required before import. Re-upload your CSV on the Source step.');
+          return;
+        }
         await wizard.saveFieldMappings.mutateAsync(state.fieldMappings);
         job = await wizard.executeImport.mutateAsync({
           targetProjectId: targetProjectId || undefined,
           options: {
             importMode: state.importOptions.importMode,
+            csvImportProfile: csvImportOptions.csvImportProfile,
+            attachmentColumn: csvImportOptions.attachmentColumn,
+            attachmentsImportDir: csvImportOptions.attachmentsImportDir || undefined,
+            fieldMappings: state.fieldMappings,
           },
         });
       } else {
@@ -673,6 +986,8 @@ export default function MigrationPage() {
 
   const jobTypeToImportType = (jobType?: string): ImportType | null => {
     switch (jobType?.toUpperCase()) {
+      case 'ISSUE_XML':
+        return 'issue-xml';
       case 'JIRA_DC':
         return 'jira-dc';
       case 'CSV':
@@ -731,13 +1046,13 @@ export default function MigrationPage() {
     }
     try {
       const response = await migrationApi.rollbackJob(jobId);
-      alert(
-        `Rollback finished: ${response.data.rolledBackCount} entities removed, ${response.data.failedCount} failures.`
+      appNotify.success(
+        `Rollback finished: ${response.data.rolledBackCount} entities removed, ${response.data.failedCount} failures.`,
       );
       queryClient.invalidateQueries({ queryKey: ['migration-job-history'] });
     } catch (error) {
       console.error('Rollback failed:', error);
-      alert('Rollback failed. See console for details.');
+      appNotify.error('Rollback failed. Check job history for details.');
     }
   };
 
@@ -786,6 +1101,7 @@ export default function MigrationPage() {
     setWorkflowXmlOutcome(null);
     setWorkflowXmlStub(true);
     setWorkflowXmlMakeDefault(false);
+    setServerUploadOk(false);
     stopPolling();
   };
 
@@ -844,15 +1160,19 @@ export default function MigrationPage() {
                 uploadProgress={wizard.uploadProgress}
                 validationResult={state.validationResult}
                 accept={
-                  state.importType === 'jira-dc' || state.importType === 'workflow-xml'
-                    ? '.xml'
+                  isIssueXmlImport(state.importType)
+                    ? '.xml,.zip'
+                    : isJiraDcIssueImport(state.importType) || state.importType === 'workflow-xml'
+                    ? '.xml,.zip'
                     : '.csv,.xlsx,.xml'
                 }
                 importTypeLabel={
                   state.importType === 'workflow-xml'
                     ? 'Jira DC workflow-descriptor XML'
-                    : state.importType === 'jira-dc'
-                    ? 'Jira DC XML export'
+                    : isIssueXmlImport(state.importType)
+                    ? 'Jira DC issue export XML (RSS/channel)'
+                    : isJiraDcIssueImport(state.importType)
+                    ? 'Jira DC backup XML or ZIP'
                     : 'CSV or Excel (.xlsx)'
                 }
                 virusScanStatus={virusScanStatus}
@@ -890,11 +1210,20 @@ export default function MigrationPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Target Project *
             </label>
+            {projectsLoadError && (
+              <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2 mb-3">
+                Could not load projects (project-service on port 8083 / gateway 8080).{' '}
+                {projectsLoadErrorDetail instanceof Error
+                  ? projectsLoadErrorDetail.message
+                  : 'Check that jira-project-service is running.'}
+              </p>
+            )}
             <select
               data-testid="migration-target-project-select"
               value={targetProjectId}
               onChange={(e) => setTargetProjectId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-jira-blue"
+              disabled={projectsLoadError}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-jira-blue disabled:bg-gray-100"
             >
               <option value="">Select a project...</option>
               {projects?.map((project: { id: string; name: string; projectKey: string }) => (
@@ -904,12 +1233,23 @@ export default function MigrationPage() {
               ))}
             </select>
             {state.selectedFile && (
-              <p className="text-sm text-gray-500 mt-4">
-                Source file: <span className="font-medium">{state.selectedFile.name}</span>
-                {wizard.session?.totalRows != null && (
-                  <> · {wizard.session.totalRows} rows detected</>
+              <div className="text-sm text-gray-500 mt-4 space-y-1">
+                <p>
+                  Source file: <span className="font-medium">{state.selectedFile.name}</span>
+                </p>
+                <p>
+                  {formatRowCountSummary(
+                    state.validationResult?.totalRows,
+                    serverRowCount,
+                  )}
+                </p>
+                {state.importType === 'csv' && !csvUploadReady && (
+                  <p className="text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                    Server upload is missing or has 0 rows. Go back to Source and re-upload after starting
+                    migration-service (8094).
+                  </p>
                 )}
-              </p>
+              </div>
             )}
           </div>
         );
@@ -935,7 +1275,7 @@ export default function MigrationPage() {
             />
           );
         }
-        if (state.importType === 'jira-dc' && dcValidationResult) {
+        if (isJiraDcIssueImport(state.importType) && dcValidationResult) {
           return (
             <div className="space-y-4">
               <DcImportValidationPanel
@@ -978,7 +1318,7 @@ export default function MigrationPage() {
                 <p className="text-red-800 font-medium">Validation Error</p>
                 <p className="text-red-600 mt-1">{parseError}</p>
               </div>
-            ) : validationResult ? (
+            ) : activeValidationResult ? (
               <>
                 <div className="flex justify-end">
                   <button
@@ -990,13 +1330,13 @@ export default function MigrationPage() {
                   </button>
                 </div>
                 <ValidationResults
-                  result={validationResult}
+                  result={activeValidationResult}
                   onExportErrors={exportErrorsToCsv}
                   onRowClick={(row, column) => {
                     console.log(`Navigate to row ${row}, column ${column}`);
                   }}
                 />
-                {state.importType === 'jira-dc' && (
+                {isJiraDcIssueImport(state.importType) && (
                   <>
                     <DcImportValidationPanel
                       xmlOrZipFile={state.selectedFile}
@@ -1051,19 +1391,48 @@ export default function MigrationPage() {
             <p className="text-gray-600">Loading target fields from platform catalog…</p>
           </div>
         ) : (
-          <FieldMappingPanel
-            sourceHeaders={state.validationResult?.headers || wizard.session?.detectedHeaders || []}
-            targetFields={targetFields}
-            initialMappings={state.fieldMappings}
-            onMappingsChange={handleMappingsChange}
-            typeWarnings={typeWarnings}
-          />
+          <div className="space-y-6">
+            {wizard.sessionId && (state.importType === 'csv' || isJiraDcIssueImport(state.importType)) && (
+              <UploadPreviewTable sessionId={wizard.sessionId} />
+            )}
+            {wizard.sessionId && (
+              <MigrationFieldProvisionPanel
+                sessionId={wizard.sessionId}
+                sourceHeaders={
+                  (state.validationResult?.headers?.length
+                    ? state.validationResult.headers
+                    : wizard.session?.detectedHeaders) ?? []
+                }
+                onProvisionComplete={handleProvisionComplete}
+                allowProvision={migrationIsAdmin || csvImportOptions.csvImportProfile === 'EXTERNAL'}
+              />
+            )}
+            <FieldMappingPanel
+              sourceHeaders={
+                (state.validationResult?.headers?.length
+                  ? state.validationResult.headers
+                  : wizard.session?.detectedHeaders) ?? []
+              }
+              targetFields={targetFields}
+              initialMappings={state.fieldMappings}
+              onMappingsChange={handleMappingsChange}
+              typeWarnings={typeWarnings}
+            />
+            {wizard.sessionId && (
+              <OptionMappingMatrixPanel
+                sessionId={wizard.sessionId}
+                value={optionMappingDrafts}
+                onChange={setOptionMappingDrafts}
+              />
+            )}
+          </div>
         );
 
       case 'configure':
-        if (state.importType === 'jira-dc') {
+        if (isJiraDcIssueImport(state.importType)) {
           return (
             <div className="space-y-6">
+              <DcEnterpriseReadinessBanner />
               <DcImportOptionsPanel
                 options={dcImportOptions}
                 onChange={setDcImportOptions}
@@ -1081,6 +1450,16 @@ export default function MigrationPage() {
                   setDcWarningsAcknowledged(false);
                 }}
               />
+              {wizard.sessionId && (
+                <button
+                  type="button"
+                  data-testid="download-dc-validation-csv"
+                  className="px-4 py-2 border rounded text-sm hover:bg-gray-50"
+                  onClick={handleDownloadValidationReport}
+                >
+                  Download persisted validation report (CSV)
+                </button>
+              )}
               <DcImportConflictPanel
                 conflicts={dcValidationResult?.conflicts}
                 acknowledged={dcWarningsAcknowledged}
@@ -1089,7 +1468,23 @@ export default function MigrationPage() {
                 onResolutionChange={handleDcConflictResolution}
               />
               <DcImportUnknownFieldsPanel unknownFields={dcValidationResult?.unknownCustomFields} />
+              {dcValidationResult?.acSignoffPreview && (
+                <DcImportAcSignoffPanel
+                  jobId={null}
+                  embeddedSignoff={dcValidationResult.acSignoffPreview}
+                />
+              )}
               <DcRelationshipGraphPanel edges={dcRelationshipEdges} />
+              <WizardUserMappingPanel
+                sessionId={wizard.sessionId}
+                migrationJobId={wizard.session?.migrationJobId}
+                userCountHint={
+                  dcValidationResult?.entitiesByType?.User
+                  ?? dcValidationResult?.entitiesByType?.users
+                }
+                value={userMappingDrafts}
+                onChange={setUserMappingDrafts}
+              />
               <ConfigureImportPanel
                 importMode={state.importOptions.importMode}
                 onImportModeChange={(mode) =>
@@ -1111,27 +1506,47 @@ export default function MigrationPage() {
           );
         }
         return (
-          <ConfigureImportPanel
-            importMode={state.importOptions.importMode}
-            onImportModeChange={(mode) =>
-              setState((prev) => ({
-                ...prev,
-                importOptions: {
-                  ...prev.importOptions,
-                  importMode: mode as 'CREATE_ONLY' | 'UPDATE_ONLY' | 'CREATE_UPDATE',
-                },
-              }))
-            }
-            fieldDefaults={fieldDefaults}
-            onFieldDefaultsChange={setFieldDefaults}
-            workflowStatusMappings={workflowStatusMappings}
-            onWorkflowStatusMappingsChange={setWorkflowStatusMappings}
-            requiredTargetFields={targetFields}
-          />
+          <div className="space-y-6">
+            <CsvImportOptionsPanel
+              value={csvImportOptions}
+              onChange={setCsvImportOptions}
+              hasAttachmentColumn={
+                (state.validationResult?.headers ?? wizard.session?.detectedHeaders ?? []).some((h) =>
+                  /^attachments?$/i.test(h.trim())
+                )
+              }
+              maxAttachmentSizeMb={
+                typeof migrationSettings?.maxAttachmentSizeMb === 'number'
+                  ? migrationSettings.maxAttachmentSizeMb
+                  : 10
+              }
+            />
+            <ConfigureImportPanel
+              importMode={state.importOptions.importMode}
+              onImportModeChange={(mode) =>
+                setState((prev) => ({
+                  ...prev,
+                  importOptions: {
+                    ...prev.importOptions,
+                    importMode: mode as 'CREATE_ONLY' | 'UPDATE_ONLY' | 'CREATE_UPDATE',
+                  },
+                }))
+              }
+              fieldDefaults={fieldDefaults}
+              onFieldDefaultsChange={setFieldDefaults}
+              workflowStatusMappings={workflowStatusMappings}
+              onWorkflowStatusMappingsChange={setWorkflowStatusMappings}
+              requiredTargetFields={targetFields}
+            />
+            <p className="text-xs text-gray-500">
+              Multi-project CSV: all rows map to one target project (G-04). Subtasks supported via parent_key
+              column.
+            </p>
+          </div>
         );
 
       case 'review':
-        if (state.importType === 'jira-dc') {
+        if (isJiraDcIssueImport(state.importType)) {
           const targetName = projects?.find((p: { id: string }) => p.id === targetProjectId)?.name;
           return (
             <DcImportReviewPanel
@@ -1399,7 +1814,7 @@ export default function MigrationPage() {
               </div>
             )}
 
-            {state.importType === 'jira-dc' && (
+            {isJiraDcIssueImport(state.importType) && (
               <>
                 <DcImportParityReportPanel
                   resultMetadata={state.importResult?.resultMetadata}
@@ -1488,15 +1903,11 @@ export default function MigrationPage() {
       <PageHeader
         title="Migration Center"
         subtitle="Import data from CSV, Excel, or Jira Data Center backups into your target project"
-        actions={
-          centerView === 'wizard' ? (
-            <MigrationRoleSelector />
-          ) : undefined
-        }
+        actions={<MigrationRoleSelector />}
       />
 
       <div className="mb-6">
-        <MigrationCenterNav active={centerView} onChange={setCenterView} />
+        <MigrationCenterNav active={centerView} onChange={handleCenterViewChange} />
       </div>
 
       <ClusterHealthBanner />
@@ -1506,6 +1917,33 @@ export default function MigrationPage() {
           {wizardError}
         </p>
       )}
+
+      {centerView === 'wizard' &&
+        state.importType === 'csv' &&
+        state.selectedFile &&
+        !csvUploadReady &&
+        !wizard.uploadFile.isPending && (
+          <div
+            className="text-sm mb-4 px-3 py-2 rounded border border-amber-200 bg-amber-50 text-amber-900"
+            role="status"
+          >
+            <strong>Server upload required.</strong> Column mapping preview may work in the browser, but import
+            will not run until the file is stored on migration-service. Check Platform health, then re-upload on
+            the Source step.
+          </div>
+        )}
+
+      {centerView === 'wizard' &&
+        state.importType === 'csv' &&
+        csvUploadReady &&
+        serverRowCount != null && (
+          <div
+            className="text-sm mb-4 px-3 py-2 rounded border border-green-200 bg-green-50 text-green-900"
+            role="status"
+          >
+            Server upload OK — {serverRowCount} row{serverRowCount === 1 ? '' : 's'} ready for mapping and import.
+          </div>
+        )}
 
       {centerView === 'history' && (
         <div className="space-y-4" data-testid="migration-history-view">
@@ -1522,10 +1960,24 @@ export default function MigrationPage() {
 
       {centerView === 'health' && <MigrationPlatformHealthView />}
 
+      {centerView === 'dlq' && (
+        <div data-testid="migration-dlq-view">
+          <GlobalDlqConsolePanel />
+        </div>
+      )}
+
+      {centerView === 'templates' && (
+        <div data-testid="migration-templates-view">
+          <SavedMappingTemplatesPanel />
+        </div>
+      )}
+
+      {centerView === 'settings' && <MigrationImportSettingsPanel />}
+
       {centerView === 'catalog' && (
         <MigrationFeatureCatalog
           onNavigate={(view) => {
-            setCenterView(view);
+            handleCenterViewChange(view);
             if (view === 'wizard') {
               setState((prev) => ({ ...prev, step: 'source' }));
             }
@@ -1535,6 +1987,12 @@ export default function MigrationPage() {
 
       {centerView === 'wizard' && (
         <>
+      {!migrationCanWrite && (
+        <p className="text-sm mb-4 px-3 py-2 rounded border border-amber-200 bg-amber-50 text-amber-800">
+          Viewer role: import execute and destructive actions are disabled. Use Migration role selector (header) to
+          switch to Operator or Admin.
+        </p>
+      )}
       {wizard.sessionId && (
         <p className="text-xs mb-4" style={{ color: 'var(--sa-n500)' }}>
           Wizard session: {wizard.sessionId} · step: {wizard.session?.step ?? '—'}
@@ -1577,12 +2035,14 @@ export default function MigrationPage() {
                 data-testid="import-execute-button"
                 onClick={handleStartImport}
                 disabled={
-                  state.importType === 'workflow-xml'
+                  !migrationCanWrite
+                  || (state.importType === 'workflow-xml'
                     ? !state.selectedFile
-                    : state.importType === 'jira-dc'
+                    : isJiraDcIssueImport(state.importType)
                     ? !targetProjectId || !dcValidationReady()
-                    : !targetProjectId
+                    : !targetProjectId)
                 }
+                title={!migrationCanWrite ? 'Requires MIGRATION_OPERATOR or MIGRATION_ADMIN role' : undefined}
                 className="migration-btn-primary"
               >
                 {state.importType === 'workflow-xml'

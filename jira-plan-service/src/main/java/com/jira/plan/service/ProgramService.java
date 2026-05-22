@@ -45,6 +45,15 @@ public class ProgramService {
                 .accessType(request.getAccessType() != null ? request.getAccessType() : "OPEN")
                 .build();
         program = programRepository.save(program);
+
+        if (request.getLinkedPlanIds() != null) {
+            for (UUID planId : request.getLinkedPlanIds()) {
+                linkPlanToProgram(program.getId(), planId);
+            }
+        } else if (request.getPlanId() != null) {
+            linkPlanToProgram(program.getId(), request.getPlanId());
+        }
+
         return toResponse(program);
     }
 

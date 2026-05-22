@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { planApi } from '../../../api/planApi';
+import { appNotify } from '../../../lib/appNotify';
 
 export const useDependencies = (planId: string) => {
   return useQuery({
@@ -20,7 +21,7 @@ export const useCreateDependency = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to create dependency:', error);
-      alert(error.message || 'Failed to create dependency. Check for circular dependencies.');
+      appNotify.error(error.message || 'Failed to create dependency. Check for circular dependencies.');
     },
   });
 };
@@ -35,7 +36,7 @@ export const useDeleteDependency = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to delete dependency:', error);
-      alert(error.message || 'Failed to delete dependency');
+      appNotify.error(error.message || 'Failed to delete dependency');
     },
   });
 };
@@ -59,7 +60,7 @@ export const useDismissWarning = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to dismiss warning:', error);
-      alert(error.message || 'Failed to dismiss warning');
+      appNotify.error(error.message || 'Failed to dismiss warning');
     },
   });
 };

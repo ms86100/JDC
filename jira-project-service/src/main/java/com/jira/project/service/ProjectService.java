@@ -16,7 +16,7 @@ import com.jira.project.repository.TemplateSchemeDefaultRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import com.jira.project.exception.OptimisticLockException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -208,10 +208,9 @@ public class ProjectService {
 
         // Optimistic locking: check version if provided
         if (request.getVersion() != null && !request.getVersion().equals(project.getVersion())) {
-            throw new ObjectOptimisticLockingFailureException(
+            throw new OptimisticLockException(
                 "Project was modified by another user. Please refresh and try again. " +
-                "Expected version: " + project.getVersion() + ", provided: " + request.getVersion(),
-                projectId);
+                "Expected version: " + project.getVersion() + ", provided: " + request.getVersion());
         }
 
         if (request.getName() != null) {

@@ -4,7 +4,7 @@
 
 **Agent:** [.claude/agents/UI-Hardening.md](../.claude/agents/UI-Hardening.md)  
 
-**Date:** 2026-05-21 (updated)  
+**Date:** 2026-05-22 (updated)  
 
 **Scope:** `jira-frontend/src/features/migration` + `jira-migration-service` migration APIs
 
@@ -22,7 +22,7 @@
 
 | Breadcrumbs **Operations / Migration** (`routeMeta.ts`) | OK |
 
-| **Migration Center** tabs: Wizard, Job history, Platform health, Capability map | OK |
+| **Migration Center** tabs: Wizard, Job history, Platform health, Capability map, **Import settings**, DLQ, Templates | OK |
 
 
 
@@ -71,6 +71,14 @@
 | Service / cluster / observability health | health endpoints | **Platform health** tab + banner | Yes |
 
 | Capability catalog | — | **Capability map** tab (`MigrationFeatureCatalog`) | Yes |
+| CSV External / Lightweight profile | job `csvImportProfile` | Wizard → Configure → `CsvImportOptionsPanel` | Yes |
+| CSV attachment URLs / FILE: | `JiraDcCsvAttachmentResolver` | Configure + Import settings | Yes |
+| Migration import settings | `GET /api/migration/settings` | **Import settings** tab + Admin → Attachments | Yes |
+| Custom fields admin CRUD | `/api/custom-fields` | **Admin → Custom fields** | Yes |
+| Issue migrated field values | `GET /api/fields/issues/{id}/values` | Issue → Details → Imported custom fields | Yes |
+| Field provision (G-08) | wizard provision API | Map step → gated by role/profile | Yes |
+| Option mapping matrix (G-09) | mappings API | Map step | Yes |
+| DC bundle parity checklist (G-06) | validate response | `DcImportValidationPanel` | Yes |
 
 
 
@@ -126,13 +134,31 @@
 
 **Overall UI hardening:** **~93%** — migration UI gaps from the original audit are closed; formal AC sign-off still separate ([issue_xml_ac_signoff_checklist.md](./issue_xml_ac_signoff_checklist.md)).
 
+### Hidden APIs (2026-05-22 UI-Hardening pass)
+
+| API | UI |
+|-----|-----|
+| `POST /import/workflow-xml/sync` | Hidden |
+| `GET /api/migration/dlq` (global admin) | Hidden |
+| `GET .../config-import-summary` | Hidden |
+| Mapping engine option/user GET-PUT | Hidden (field defaults only) |
+| `downloadJobLogs` (blob) | Client only, unused |
+
+**Cross-service:** [WORKFLOW_AND_MIGRATION_GAP_ANALYSIS.md](./WORKFLOW_AND_MIGRATION_GAP_ANALYSIS.md)
+
 
 
 ## How to verify
 
 
 
-1. Open **Migration** from sidebar → confirm four tabs.
+1. Open **Migration** from sidebar → confirm tabs (Wizard, Job history, Platform health, Import settings, Capability map).
+
+7. **Import settings** tab → max attachment MB, FILE: dir, API notes.
+
+8. **Admin → Custom fields** → CRUD against live API.
+
+9. Open imported issue → **Details** → **Imported custom fields**.
 
 2. **Capability map** tab → every row has **Open** to wizard/history/health.
 

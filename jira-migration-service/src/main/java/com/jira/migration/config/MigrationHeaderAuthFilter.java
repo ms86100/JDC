@@ -1,9 +1,12 @@
 package com.jira.migration.config;
 
+import com.jira.migration.security.MigrationJwtValidator;
+import com.jira.migration.security.MigrationProjectAccessService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -14,21 +17,34 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Lightweight RBAC for migration APIs: requires X-User-Id and optional X-Migration-Role (P1-08 / P9-02).
+ * Migration API security: JWT Bearer and/or headers, role checks, project scope (MG-P0-4).
  */
 @Component
+@RequiredArgsConstructor
 public class MigrationHeaderAuthFilter extends OncePerRequestFilter {
+
+    public static final String ATTR_MIGRATION_ROLE = "migrationRole";
+    public static final String ATTR_USER_ID = "migrationUserId";
 
     private static final Set<String> WRITE_ROLES = Set.of("MIGRATION_ADMIN", "MIGRATION_OPERATOR");
     private static final Set<String> READ_ROLES = Set.of("MIGRATION_ADMIN", "MIGRATION_OPERATOR", "MIGRATION_VIEWER");
+    private static final Set<String> ADMIN_ONLY_PATHS = Set.of(
+            "/api/migration/dlq/purge",
+            "/api/migration/dlq/retry/all"
+    );
+
+    private final MigrationJwtValidator jwtValidator;
+    private final MigrationProjectAccessService projectAccessService;
 
     @Value("${migration.security.enabled:true}")
     private boolean securityEnabled;
 
+    @Value("${migration.security.require-jwt:false}")
+    private boolean requireJwt;
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return !path.startsWith("/api/migration");
+        return !request.getRequestURI().startsWith("/api/migration");
     }
 
     @Override
@@ -40,31 +56,97 @@ public class MigrationHeaderAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        String userIdHeader = request.getHeader("X-User-Id");
-        if (userIdHeader == null || userIdHeader.isBlank()) {
-            response.sendError(HttpStatus.UNAUTHORIZED.value(), "X-User-Id header is required");
+        String authHeader = request.getHeader("Authorization");
+        var parsedJwt = jwtValidator.parseBearer(authHeader);
+
+        UUID userId;
+        if (parsedJwt.isPresent()) {
+            userId = parsedJwt.get().userId();
+        } else if (requireJwt) {
+            response.sendError(HttpStatus.UNAUTHORIZED.value(), "Valid Bearer JWT is required");
             return;
-        }
-        try {
-            UUID.fromString(userIdHeader.trim());
-        } catch (IllegalArgumentException e) {
-            response.sendError(HttpStatus.BAD_REQUEST.value(), "Invalid X-User-Id");
-            return;
+        } else {
+            String userIdHeader = request.getHeader("X-User-Id");
+            if (userIdHeader == null || userIdHeader.isBlank()) {
+                response.sendError(HttpStatus.UNAUTHORIZED.value(), "X-User-Id or Bearer JWT is required");
+                return;
+            }
+            try {
+                userId = UUID.fromString(userIdHeader.trim());
+            } catch (IllegalArgumentException e) {
+                response.sendError(HttpStatus.BAD_REQUEST.value(), "Invalid X-User-Id");
+                return;
+            }
         }
 
-        String role = request.getHeader("X-Migration-Role");
-        if (role == null || role.isBlank()) {
-            role = "MIGRATION_OPERATOR";
-        }
+        String headerRole = request.getHeader("X-Migration-Role");
+        String migrationRole = parsedJwt
+                .map(j -> MigrationJwtValidator.resolveMigrationRole(j.platformRoles(), headerRole))
+                .orElse(headerRole != null && !headerRole.isBlank() ? headerRole.trim() : "MIGRATION_OPERATOR");
 
         String method = request.getMethod();
         boolean write = "POST".equals(method) || "PUT".equals(method) || "PATCH".equals(method) || "DELETE".equals(method);
         Set<String> allowed = write ? WRITE_ROLES : READ_ROLES;
-        if (!allowed.contains(role)) {
+
+        if (isAdminOnlyPath(request.getRequestURI(), method) && !"MIGRATION_ADMIN".equals(migrationRole)) {
+            response.sendError(HttpStatus.FORBIDDEN.value(), "MIGRATION_ADMIN role required");
+            return;
+        }
+
+        if (!allowed.contains(migrationRole)) {
             response.sendError(HttpStatus.FORBIDDEN.value(), "Insufficient migration role");
             return;
         }
 
+        if (write && requiresProjectScope(request.getRequestURI(), method)) {
+            try {
+                UUID projectId = extractTargetProjectId(request);
+                projectAccessService.requireProjectHeaderForImport(projectId, migrationRole);
+            } catch (SecurityException e) {
+                response.sendError(HttpStatus.FORBIDDEN.value(), e.getMessage());
+                return;
+            }
+        }
+
+        request.setAttribute(ATTR_USER_ID, userId);
+        request.setAttribute(ATTR_MIGRATION_ROLE, migrationRole);
         chain.doFilter(request, response);
+    }
+
+    private boolean isAdminOnlyPath(String uri, String method) {
+        if (!"DELETE".equals(method) && !"POST".equals(method)) {
+            return false;
+        }
+        return ADMIN_ONLY_PATHS.stream().anyMatch(uri::startsWith);
+    }
+
+    private boolean requiresProjectScope(String uri, String method) {
+        if (!"POST".equals(method) && !"PUT".equals(method) && !"PATCH".equals(method)) {
+            return false;
+        }
+        if (uri.contains("/validate")) {
+            return false;
+        }
+        if (uri.startsWith("/api/migration/import/csv")
+                || uri.startsWith("/api/migration/import/jira-dc")
+                || uri.startsWith("/api/migration/import/project")) {
+            return !uri.contains("/validate");
+        }
+        if (uri.contains("/wizard/sessions") && uri.contains("/execute")) {
+            return true;
+        }
+        return false;
+    }
+
+    private UUID extractTargetProjectId(HttpServletRequest request) {
+        String header = request.getHeader("X-Target-Project-Id");
+        if (header != null && !header.isBlank()) {
+            return UUID.fromString(header.trim());
+        }
+        String param = request.getParameter("targetProjectId");
+        if (param != null && !param.isBlank()) {
+            return UUID.fromString(param.trim());
+        }
+        return null;
     }
 }

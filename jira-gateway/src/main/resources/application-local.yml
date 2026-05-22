@@ -52,6 +52,30 @@ spring:
           uri: http://localhost:8083
           predicates:
             - Path=/api/security-levels/**
+        - id: epic-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/epics/**
+        - id: traceability-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/traceability/**
+        - id: ai-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/ai/**
+        - id: webhooks-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/webhooks/**
+        - id: issue-import-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/import/**
+        - id: issue-reports-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/reports/**
         - id: issue-service
           uri: http://localhost:8084
           predicates:
@@ -97,7 +121,7 @@ spring:
           predicates:
             - Path=/api/workflow-schemes/**
         - id: comment-service
-          uri: http://localhost:8086
+          uri: http://127.0.0.1:8086
           predicates:
             - Path=/api/comments/**
         - id: test-service
@@ -160,6 +184,10 @@ spring:
           uri: http://localhost:8091
           predicates:
             - Path=/api/sprints/**
+        - id: board-service
+          uri: http://localhost:8091
+          predicates:
+            - Path=/api/boards/**
         - id: attachment-service
           uri: http://localhost:8090
           predicates:
@@ -176,6 +204,10 @@ spring:
           uri: http://localhost:8094
           predicates:
             - Path=/api/fields/**
+        - id: migration-custom-fields-service
+          uri: http://localhost:8094
+          predicates:
+            - Path=/api/custom-fields/**
         - id: integration-service
           uri: http://localhost:8093
           predicates:
@@ -184,6 +216,110 @@ spring:
           uri: http://localhost:8093
           predicates:
             - Path=/api/admin/**
+
+        # Swagger UI Routes - Aggregate from all services
+        - id: swagger-auth
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api-docs/auth/**
+          filters:
+            - RewritePath=/api-docs/auth/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-user
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api-docs/user/**
+          filters:
+            - RewritePath=/api-docs/user/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-project
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api-docs/project/**
+          filters:
+            - RewritePath=/api-docs/project/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-issue
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api-docs/issue/**
+          filters:
+            - RewritePath=/api-docs/issue/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-workflow
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api-docs/workflow/**
+          filters:
+            - RewritePath=/api-docs/workflow/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-comment
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api-docs/comment/**
+          filters:
+            - RewritePath=/api-docs/comment/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-notification
+          uri: http://localhost:8087
+          predicates:
+            - Path=/api-docs/notification/**
+          filters:
+            - RewritePath=/api-docs/notification/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-search
+          uri: http://localhost:8088
+          predicates:
+            - Path=/api-docs/search/**
+          filters:
+            - RewritePath=/api-docs/search/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-audit
+          uri: http://localhost:8089
+          predicates:
+            - Path=/api-docs/audit/**
+          filters:
+            - RewritePath=/api-docs/audit/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-attachment
+          uri: http://localhost:8090
+          predicates:
+            - Path=/api-docs/attachment/**
+          filters:
+            - RewritePath=/api-docs/attachment/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-sprint
+          uri: http://localhost:8091
+          predicates:
+            - Path=/api-docs/sprint/**
+          filters:
+            - RewritePath=/api-docs/sprint/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-plan
+          uri: http://localhost:8092
+          predicates:
+            - Path=/api-docs/plan/**
+          filters:
+            - RewritePath=/api-docs/plan/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-admin
+          uri: http://localhost:8093
+          predicates:
+            - Path=/api-docs/admin/**
+          filters:
+            - RewritePath=/api-docs/admin/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-migration
+          uri: http://localhost:8094
+          predicates:
+            - Path=/api-docs/migration/**
+          filters:
+            - RewritePath=/api-docs/migration/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-test
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api-docs/test/**
+          filters:
+            - RewritePath=/api-docs/test/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-version
+          uri: http://localhost:8096
+          predicates:
+            - Path=/api-docs/version/**
+          filters:
+            - RewritePath=/api-docs/version/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-component
+          uri: http://localhost:8097
+          predicates:
+            - Path=/api-docs/component/**
+          filters:
+            - RewritePath=/api-docs/component/(?<path>.*), /api-docs/$\{path}
 
 jwt:
   secret: jira-platform-super-secret-key-that-is-at-least-256-bits-long

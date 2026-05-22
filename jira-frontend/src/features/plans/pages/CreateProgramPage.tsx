@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateProgram } from '../hooks/usePlans';
+import { useCreateProgram, usePlans } from '../hooks/usePlans';
+import { asArray } from '../../../utils/apiList';
 import '../styles/plans.css';
 
 export default function CreateProgramPage() {
@@ -10,15 +11,28 @@ export default function CreateProgramPage() {
     name: '',
     description: '',
     accessType: 'OPEN' as 'OPEN' | 'RESTRICTED',
+    linkedPlanIds: [] as string[],
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const { data: plansRaw } = usePlans();
+  const plans = asArray(plansRaw);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: '' }));
     }
+  };
+
+  const togglePlan = (planId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      linkedPlanIds: prev.linkedPlanIds.includes(planId)
+        ? prev.linkedPlanIds.filter((id) => id !== planId)
+        : [...prev.linkedPlanIds, planId],
+    }));
   };
 
   const validateForm = () => {
@@ -37,15 +51,21 @@ export default function CreateProgramPage() {
     if (!validateForm()) return;
 
     try {
-      await createProgram.mutateAsync(formData);
-      navigate('/plans');
+      const res = await createProgram.mutateAsync({
+        name: formData.name,
+        description: formData.description,
+        accessType: formData.accessType,
+        linkedPlanIds: formData.linkedPlanIds.length ? formData.linkedPlanIds : undefined,
+      });
+      const programId = res.data?.id;
+      navigate(programId ? `/programs/${programId}` : '/programs');
     } catch (error) {
       console.error('Failed to create program:', error);
     }
   };
 
   return (
-    <div className="create-program-page">
+    <div className="create-program-page jdc-create-program-dc">
       <div className="create-page-container">
         <div className="create-page-header">
           <h1 className="create-page-title">Create a program.</h1>
@@ -79,41 +99,42 @@ export default function CreateProgramPage() {
               <label className="form-label" htmlFor="accessType">
                 Privacy
               </label>
-              <div className="select-with-icon">
-                <span className="select-icon">
-                  {formData.accessType === 'OPEN' ? (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <rect x="3" y="7" width="10" height="8" rx="1" stroke="currentColor" strokeWidth="1.5"/>
-                      <path d="M5 7V5C5 3.34315 6.34315 2 8 2C9.65685 2 11 3.34315 11 5V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                    </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <rect x="3" y="7" width="10" height="8" rx="1" stroke="currentColor" strokeWidth="1.5"/>
-                      <path d="M5 7V5C5 3.34315 6.34315 2 8 2C9.65685 2 11 3.34315 11 5V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                      <circle cx="8" cy="11" r="1.5" fill="currentColor"/>
-                    </svg>
-                  )}
-                </span>
-                <select
-                  id="accessType"
-                  name="accessType"
-                  className="form-select"
-                  value={formData.accessType}
-                  onChange={handleChange}
-                >
-                  <option value="OPEN">No restrictions</option>
-                  <option value="RESTRICTED">Restricted</option>
-                </select>
+              <select
+                id="accessType"
+                name="accessType"
+                className="form-select"
+                value={formData.accessType}
+                onChange={handleChange}
+              >
+                <option value="OPEN">No restrictions</option>
+                <option value="RESTRICTED">Restricted</option>
+              </select>
+            </div>
+
+            <div className="form-group jdc-connected-plans">
+              <label className="form-label">Connected plans</label>
+              <p className="form-hint">Select plans to include in this program (DC connected plans checkboxes).</p>
+              <div className="jdc-plan-checkbox-list">
+                {plans.map((plan) => (
+                  <label key={plan.id} className="jdc-plan-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={formData.linkedPlanIds.includes(plan.id)}
+                      onChange={() => togglePlan(plan.id)}
+                    />
+                    {plan.name}
+                    <span className="jdc-muted">({plan.itemCount ?? 0} issues)</span>
+                  </label>
+                ))}
+                {plans.length === 0 && (
+                  <p className="jdc-muted">No plans available. Create a plan first.</p>
+                )}
               </div>
             </div>
           </div>
 
           <div className="form-actions">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => navigate('/plans')}
-            >
+            <button type="button" className="btn-secondary" onClick={() => navigate('/programs')}>
               Cancel
             </button>
             <button
@@ -127,23 +148,9 @@ export default function CreateProgramPage() {
         </form>
 
         <div className="info-banner">
-          <div className="info-banner-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <circle cx="10" cy="10" r="9" stroke="#0066FF" strokeWidth="2"/>
-              <line x1="10" y1="9" x2="10" y2="14" stroke="#0066FF" strokeWidth="2" strokeLinecap="round"/>
-              <circle cx="10" cy="6.5" r="1" fill="#0066FF"/>
-            </svg>
-          </div>
           <div className="info-banner-content">
-            <h4 className="info-banner-title">Can't find the plan you're looking for?</h4>
-            <p className="info-banner-text">This could be for various reasons, including:</p>
-            <ul className="info-banner-list">
-              <li>You may not have the necessary permissions to view the plans in your roadmap.</li>
-              <li>The plan you're looking for may be in another program.</li>
-            </ul>
-            <a href="https://docs.example.com/portfolio" target="_blank" rel="noopener noreferrer" className="info-banner-link">
-              See the documentation for more details.
-            </a>
+            <h4 className="info-banner-title">Can&apos;t find the plan you&apos;re looking for?</h4>
+            <p className="info-banner-text">You may not have permission to view some plans, or they may already be in another program.</p>
           </div>
         </div>
       </div>

@@ -42,7 +42,7 @@ public class FieldTypeRegistry {
         textareaConfig.setType(CustomField.FieldType.TEXTAREA);
         textareaConfig.setDisplayName("Text Area");
         textareaConfig.setDescription("Multi-line text input");
-        textareaConfig.setDefaultMaxLength;
+        textareaConfig.setDefaultMaxLength(10000);
         textareaConfig.setSupportsMinLength(true);
         textareaConfig.setSupportsMaxLength(true);
         textareaConfig.setSupportsRegex(true);
@@ -162,7 +162,7 @@ public class FieldTypeRegistry {
         urlConfig.setType(CustomField.FieldType.URL);
         urlConfig.setDisplayName("URL");
         urlConfig.setDescription("Website URL");
-        urlConfig.setDefaultMaxLength;
+        urlConfig.setDefaultMaxLength(2048);
         urlConfig.setSupportsRegex(false);
         urlConfig.setSupportsDefaultValue(true);
         urlConfig.setEditorComponent("url-input");

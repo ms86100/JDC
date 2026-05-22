@@ -3,6 +3,8 @@ package com.jira.migration.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -37,8 +39,8 @@ public class MigrationFileUpload {
     @Column(name = "checksum", length = 128)
     private String checksum;
 
-    @Lob
-    @Column(name = "file_content", columnDefinition = "BYTEA")
+    @JdbcTypeCode(SqlTypes.VARBINARY)
+    @Column(name = "file_content")
     private byte[] fileContent;
 
     @Column(name = "storage_path", columnDefinition = "TEXT")

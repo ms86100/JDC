@@ -10,6 +10,7 @@ import type { FieldMapping, MigrationTargetField } from '../types/migration';
 
 /** Fallback when field API is empty or unreachable */
 export const DEFAULT_TARGET_FIELDS: MigrationTargetField[] = [
+  { field: 'issueKey', displayName: 'Issue Key', dataType: 'STRING', required: false, description: 'External issue key (e.g. PROJ-1)' },
   { field: 'summary', displayName: 'Summary', dataType: 'STRING', required: true, description: 'Issue title' },
   { field: 'description', displayName: 'Description', dataType: 'TEXT', required: false },
   { field: 'issuetype', displayName: 'Issue Type', dataType: 'ENUM', required: true },
@@ -105,7 +106,7 @@ export function useTargetFields(enabled = true) {
     queryKey: ['migration-target-fields'],
     queryFn: async () => {
       const [defsRes, customRes] = await Promise.all([
-        fieldApi.getDefinitions(),
+        fieldApi.getDefinitions().catch(() => ({ data: [] as FieldDefinitionDto[] })),
         fieldApi.getCustomFields().catch(() => ({ data: [] as CustomFieldDefinitionDto[] })),
       ]);
       const merged = mergeTargetFields(defsRes.data ?? [], customRes.data ?? []);

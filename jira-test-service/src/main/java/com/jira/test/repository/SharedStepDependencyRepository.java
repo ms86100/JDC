@@ -6,8 +6,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Repository
 public interface SharedStepDependencyRepository extends JpaRepository<SharedStepDependency, UUID> {
@@ -25,4 +28,13 @@ public interface SharedStepDependencyRepository extends JpaRepository<SharedStep
     void deleteByParentSharedStepId(UUID parentSharedStepId);
 
     void deleteByChildSharedStepId(UUID childSharedStepId);
+
+    default List<SharedStepDependency> findByParentSharedStepIdOrChildSharedStepId(UUID parentId, UUID childId) {
+        return Stream.concat(
+                        findByParentSharedStepId(parentId).stream(),
+                        findByChildSharedStepId(childId).stream())
+                .collect(Collectors.toMap(SharedStepDependency::getId, d -> d, (a, b) -> a))
+                .values().stream()
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
 }

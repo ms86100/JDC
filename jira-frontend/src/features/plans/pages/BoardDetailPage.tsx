@@ -6,6 +6,7 @@ import BoardConfigPanel from '../components/board/BoardConfigPanel';
 import SprintBoard from '../components/sprint/SprintBoard';
 import CreateSprintDialog from '../components/sprint/CreateSprintDialog';
 import PermissionManager from '../components/permissions/PermissionManager';
+import { appNotify } from '../../../lib/appNotify';
 
 export default function BoardDetailPage() {
   const { boardId } = useParams<{ boardId: string }>();
@@ -45,7 +46,7 @@ export default function BoardDetailPage() {
         setShowCreateSprint(false);
       },
       onError: (error: Error) => {
-        alert(error.message || 'Failed to create sprint');
+        appNotify.error(error.message || 'Failed to create sprint');
       },
     });
   };

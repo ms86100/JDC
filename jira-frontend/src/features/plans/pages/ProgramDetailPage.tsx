@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useProgram, useUpdateProgram, useDeleteProgram, useCreatePlan } from '../hooks/usePlans';
 import { planApi, CreatePlanRequest } from '../../../api/planApi';
+import { appNotify } from '../../../lib/appNotify';
 import {
   WorkspaceHeader,
   QuickNavTabs,
@@ -18,8 +19,6 @@ import { recordRecentView } from '../../../components/workspace/recentViews';
 import { aggregatePlanMetrics, formatShortDate } from '../../../components/workspace/metrics';
 import type { HealthLevel } from '../../../components/workspace/metrics';
 import { ProgramPortfolioDelivery } from '../../../components/workspace/ProgramPortfolioDelivery';
-import '../../../components/workspace/workspace-dashboard.css';
-
 type ProgramTab = 'overview' | 'plans' | 'initiatives';
 
 export default function ProgramDetailPage() {
@@ -419,7 +418,7 @@ export default function ProgramDetailPage() {
                       setShowEdit(false);
                       queryClient.invalidateQueries({ queryKey: ['programs', programId] });
                     },
-                    onError: (error: Error) => alert(error.message || 'Failed to update'),
+                    onError: (error: Error) => appNotify.error(error.message || 'Failed to update'),
                   }
                 );
               }}

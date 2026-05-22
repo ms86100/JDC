@@ -271,7 +271,7 @@ public class PreconditionAnalyzerService {
     // ========== Optimization Suggestions ==========
 
     public OptimizationSuggestions getOptimizationSuggestions(UUID testId) {
-        List<TestPreconditionLink> links = linkRepository.findByTestIdOrderByStepOrderAsc(testId);
+        List<TestPreconditionLink> links = linkRepository.findByTestId(testId);
         List<OptimizationSuggestion> suggestions = new ArrayList<>();
 
         // Check for duplicate evaluations
@@ -445,7 +445,7 @@ public class PreconditionAnalyzerService {
 
     private double calculateTotalCoverage(UUID projectId) {
         // Get total tests in project
-        return testIssueRepository.countByProjectId(projectId);
+        return testIssueRepository.findByProjectId(projectId).size();
     }
 
     private String determineRiskLevel(double coveragePercent, int affectedCount) {

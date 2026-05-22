@@ -6,6 +6,7 @@ export function useDefaultBoard(projectId: string | undefined) {
   const query = useQuery({
     queryKey: ['ws-default-board', projectId],
     queryFn: () => boardApi.getBoardsByProject(projectId!),
+    retry: 1,
     enabled: !!projectId,
     staleTime: 60000,
   });

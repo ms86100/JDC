@@ -31,6 +31,13 @@ public class IssueLinkService {
 
     @Transactional
     public IssueLinkResponse createIssueLink(IssueLinkRequest request) {
+        if (request.getLinkTypeId() == null) {
+            request.setLinkTypeId(resolveLinkTypeId(request.getLinkTypeName()));
+        }
+        if (request.getLinkTypeId() == null) {
+            throw new IllegalArgumentException("linkTypeId or linkType/linkTypeName is required");
+        }
+
         if (!issueRepository.existsById(request.getSourceIssueId())) {
             throw new ResourceNotFoundException("Source issue not found: " + request.getSourceIssueId());
         }
@@ -148,5 +155,16 @@ public class IssueLinkService {
         return issueLinkTypeRepository.findById(linkTypeId)
                 .map(IssueLinkType::getName)
                 .orElse("Related");
+    }
+
+    private UUID resolveLinkTypeId(String linkTypeName) {
+        if (linkTypeName == null || linkTypeName.isBlank()) {
+            return null;
+        }
+        String normalized = linkTypeName.trim().toLowerCase();
+        return issueLinkTypeRepository.findByNameIgnoreCase(normalized)
+                .or(() -> issueLinkTypeRepository.findByNameIgnoreCase(normalized.replace('_', ' ')))
+                .map(IssueLinkType::getId)
+                .orElse(null);
     }
 }

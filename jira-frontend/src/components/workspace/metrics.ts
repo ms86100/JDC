@@ -19,17 +19,19 @@ const DONE_STATUSES = new Set(['done', 'closed', 'resolved', 'complete', 'comple
 const IN_PROGRESS_STATUSES = new Set(['in progress', 'in review', 'in development', 'active']);
 const BLOCKED_PRIORITIES = new Set(['highest', 'critical', 'blocker', 'high']);
 
-function normalizeStatus(status: string): string {
-  return status.trim().toLowerCase();
+function normalizeStatus(status?: string | null): string {
+  return (status ?? '').trim().toLowerCase();
 }
 
-function isDone(status: string): boolean {
+function isDone(status?: string | null): boolean {
   const s = normalizeStatus(status);
+  if (!s) return false;
   return DONE_STATUSES.has(s) || s.includes('done') || s.includes('closed');
 }
 
-function isInProgress(status: string): boolean {
+function isInProgress(status?: string | null): boolean {
   const s = normalizeStatus(status);
+  if (!s) return false;
   return IN_PROGRESS_STATUSES.has(s) || s.includes('progress') || s.includes('review');
 }
 

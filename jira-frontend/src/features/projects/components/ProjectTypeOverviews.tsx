@@ -86,7 +86,7 @@ function ScrumOverview({
                 </div>
                 <div className="ws-mini-metric">
                   <span>Average</span>
-                  <strong>{velocity.averageVelocity.toFixed(1)}</strong>
+                  <strong>{(velocity.averageVelocity ?? 0).toFixed(1)}</strong>
                 </div>
                 <div className="ws-mini-metric">
                   <span>Sprints</span>

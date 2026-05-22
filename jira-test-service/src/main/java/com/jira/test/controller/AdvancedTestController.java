@@ -82,7 +82,7 @@ public class AdvancedTestController {
     @PreAuthorize("@projectSecurity.hasProjectAccess(authentication, #projectId)")
     @Operation(summary = "Start replay session")
     public ResponseEntity<Map<String, Object>> startReplay(@PathVariable UUID executionId, @RequestParam UUID projectId) {
-        Map<String, Object> session = timelineReplayService.startReplay(executionId, null);
+        Map<String, Object> session = timelineReplayService.startReplay(executionId, null, "Replay session");
         return ResponseEntity.ok(session);
     }
 

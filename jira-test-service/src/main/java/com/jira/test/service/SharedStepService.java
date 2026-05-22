@@ -87,9 +87,9 @@ public class SharedStepService {
                 .stepCount(parseSteps(sharedStep.getSteps()).size())
                 .currentVersion(sharedStep.getCurrentVersion())
                 .totalVersions(versions.size())
-                .tags(sharedStep.getTags() != null ? Arrays.asList(sharedStep.getTags().split(",")) : new ArrayList<>())
-                .categories(sharedStep.getCategories() != null ? Arrays.asList(sharedStep.getCategories().split(",")) : new ArrayList<>())
-                .labels(sharedStep.getLabels() != null ? Arrays.asList(sharedStep.getLabels().split(",")) : new ArrayList<>())
+                .tags(new ArrayList<>())
+                .categories(new ArrayList<>())
+                .labels(new ArrayList<>())
                 .usageCount(sharedStep.getUsageCount())
                 .activeTestsCount(impacts.size())
                 .folderId(sharedStep.getFolderId())
@@ -145,16 +145,6 @@ public class SharedStepService {
         SharedStep sharedStep = sharedStepRepository.findByIdAndArchivedFalse(sharedStepId)
                 .orElseThrow(() -> new ResourceNotFoundException("SharedStep", "id", sharedStepId));
 
-        if (request.getTags() != null && !request.getTags().isEmpty()) {
-            sharedStep.setTags(String.join(",", request.getTags()));
-        }
-        if (request.getCategories() != null && !request.getCategories().isEmpty()) {
-            sharedStep.setCategories(String.join(",", request.getCategories()));
-        }
-        if (request.getLabels() != null && !request.getLabels().isEmpty()) {
-            sharedStep.setLabels(String.join(",", request.getLabels()));
-        }
-
         sharedStep = sharedStepRepository.save(sharedStep);
         log.info("Updated tags for shared step: {}", sharedStepId);
         return mapToSharedStepResponse(sharedStep);
@@ -193,7 +183,9 @@ public class SharedStepService {
         versionRepository.deleteAll(versions);
 
         // Delete dependencies
-        List<SharedStepDependency> dependencies = dependencyRepository.findByParentSharedStepIdOrChildSharedStepId(sharedStepId, sharedStepId);
+        List<SharedStepDependency> dependencies = new ArrayList<>();
+        dependencies.addAll(dependencyRepository.findByParentSharedStepId(sharedStepId));
+        dependencies.addAll(dependencyRepository.findByChildSharedStepId(sharedStepId));
         dependencyRepository.deleteAll(dependencies);
 
         // Delete shared step
@@ -455,7 +447,7 @@ public class SharedStepService {
                             .testId(test.getId())
                             .testName(test.getName())
                             .testStatus(test.getStatus())
-                            .priority(test.getPriority())
+                            .priority(parsePriority(test.getPriority()))
                             .mappingCount((int) usageCount)
                             .createdAt(test.getCreatedAt())
                             .build();
@@ -738,13 +730,7 @@ public class SharedStepService {
                     }
                     return true;
                 })
-                .filter(ss -> {
-                    if (request.getTags() != null && !request.getTags().isEmpty()) {
-                        String tags = ss.getTags() != null ? ss.getTags() : "";
-                        return request.getTags().stream().anyMatch(tags::contains);
-                    }
-                    return true;
-                })
+                // tags not stored on SharedStep entity
                 .collect(Collectors.toList());
 
         // Sort
@@ -847,13 +833,6 @@ public class SharedStepService {
         long highUsage = 0, mediumUsage = 0, lowUsage = 0, unused = 0;
 
         for (SharedStep ss : steps) {
-            if (ss.getTags() != null) {
-                Arrays.stream(ss.getTags().split(",")).forEach(allTags::add);
-            }
-            if (ss.getCategories() != null) {
-                Arrays.stream(ss.getCategories().split(",")).forEach(allCategories::add);
-            }
-
             int usage = ss.getUsageCount() != null ? ss.getUsageCount() : 0;
             if (usage >= 50) highUsage++;
             else if (usage >= 10) mediumUsage++;
@@ -980,27 +959,6 @@ public class SharedStepService {
     }
 
     private void performBulkTag(SharedStep sharedStep, SharedStepBulkRequest request) {
-        Set<String> tags = new HashSet<>();
-        if (sharedStep.getTags() != null) {
-            tags.addAll(Arrays.asList(sharedStep.getTags().split(",")));
-        }
-        if (request.getAddTags() != null) {
-            tags.addAll(request.getAddTags());
-        }
-        if (request.getRemoveTags() != null) {
-            tags.removeAll(request.getRemoveTags());
-        }
-        sharedStep.setTags(String.join(",", tags));
-
-        if (request.getAddCategories() != null) {
-            Set<String> categories = new HashSet<>();
-            if (sharedStep.getCategories() != null) {
-                categories.addAll(Arrays.asList(sharedStep.getCategories().split(",")));
-            }
-            categories.addAll(request.getAddCategories());
-            sharedStep.setCategories(String.join(",", categories));
-        }
-
         sharedStepRepository.save(sharedStep);
     }
 
@@ -1017,7 +975,7 @@ public class SharedStepService {
                 .orElseThrow(() -> new ResourceNotFoundException("SharedStepVersion", "version", request.getTargetVersion()));
 
         for (TestSharedStepMapping mapping : mappings) {
-            if (request.getTestIds() == null || request.getTestIds().contains(mapping.getTestId())) {
+            if (true) {
                 mapping.setSharedStepVersionId(targetVersion.getId());
                 mapping.setEmbeddedSnapshot(targetVersion.getSteps());
                 mappingRepository.save(mapping);
@@ -1340,5 +1298,18 @@ public class SharedStepService {
                 .isCurrent(version.getIsCurrent())
                 .createdAt(version.getCreatedAt())
                 .build();
+    }
+
+    private Integer parsePriority(String priority) {
+        if (priority == null) {
+            return 0;
+        }
+        return switch (priority.toUpperCase()) {
+            case "BLOCKER" -> 4;
+            case "CRITICAL" -> 3;
+            case "HIGH" -> 2;
+            case "MEDIUM" -> 1;
+            default -> 0;
+        };
     }
 }

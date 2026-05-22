@@ -13,19 +13,19 @@ import java.util.UUID;
 @Repository
 public interface TestImportBatchRepository extends JpaRepository<TestImportBatch, UUID> {
 
-    List<TestImportBatch> findByStatusOrderByCreatedAtDesc(String status);
+    List<TestImportBatch> findByStatusOrderByStartedAtDesc(String status);
 
-    List<TestImportBatch> findByImportTypeOrderByCreatedAtDesc(String importType);
+    List<TestImportBatch> findByImportTypeOrderByStartedAtDesc(String importType);
 
-    List<TestImportBatch> findByCiSourceOrderByCreatedAtDesc(String ciSource);
+    List<TestImportBatch> findByCiSourceOrderByStartedAtDesc(String ciSource);
 
     @Query("SELECT tb FROM TestImportBatch tb WHERE tb.ciBuildUrl = :buildUrl")
     List<TestImportBatch> findByCiBuildUrl(@Param("buildUrl") String buildUrl);
 
-    @Query("SELECT tb FROM TestImportBatch tb WHERE tb.createdAt >= :start AND tb.createdAt <= :end ORDER BY tb.createdAt DESC")
+    @Query("SELECT tb FROM TestImportBatch tb WHERE tb.startedAt >= :start AND tb.startedAt <= :end ORDER BY tb.startedAt DESC")
     List<TestImportBatch> findByDateRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    @Query("SELECT tb FROM TestImportBatch tb WHERE tb.status = 'PROCESSING' ORDER BY tb.createdAt ASC")
+    @Query("SELECT tb FROM TestImportBatch tb WHERE tb.status = 'PROCESSING' ORDER BY tb.startedAt ASC")
     List<TestImportBatch> findPendingImports();
 
     @Query("SELECT AVG(tb.totalTests) FROM TestImportBatch tb WHERE tb.status = 'COMPLETED'")

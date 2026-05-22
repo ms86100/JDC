@@ -14,7 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LabelRequest {
-    @NotNull(message = "Issue ID is required")
+    /** Set from path variable on POST /api/issues/{issueId}/labels */
     private UUID issueId;
 
     @NotBlank(message = "Label name is required")

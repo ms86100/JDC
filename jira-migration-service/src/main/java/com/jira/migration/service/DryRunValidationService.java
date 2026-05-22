@@ -52,6 +52,54 @@ public class DryRunValidationService {
                 .build();
     }
 
+    /**
+     * Persist Jira DC (or other non-row) validation outcomes for wizard CSV export (P4-02 / MG-P0-3).
+     */
+    @Transactional
+    public void persistValidationResult(
+            UUID jobId,
+            UUID sessionId,
+            String entityType,
+            ValidationResult result,
+            boolean clearPrevious) {
+        if (clearPrevious) {
+            if (jobId != null) {
+                validationResultRepository.deleteByJobId(jobId);
+            } else if (sessionId != null) {
+                validationResultRepository.deleteByWizardSessionId(sessionId);
+            }
+        }
+        int rowNum = 1;
+        for (ValidationResult.ValidationError e : result.getErrors()) {
+            validationResultRepository.save(MigrationValidationResult.builder()
+                    .jobId(jobId)
+                    .wizardSessionId(sessionId)
+                    .rowNumber(rowNum++)
+                    .entityType(entityType)
+                    .entityKey(e.getField())
+                    .severity("ERROR")
+                    .fieldName(e.getField())
+                    .errorCode(e.getErrorCode())
+                    .message(e.getMessage())
+                    .rowData(Map.of())
+                    .build());
+        }
+        for (ValidationResult.ValidationWarning w : result.getWarnings()) {
+            validationResultRepository.save(MigrationValidationResult.builder()
+                    .jobId(jobId)
+                    .wizardSessionId(sessionId)
+                    .rowNumber(rowNum++)
+                    .entityType(entityType)
+                    .entityKey(w.getField())
+                    .severity("WARNING")
+                    .fieldName(w.getField())
+                    .errorCode(w.getWarningCode())
+                    .message(w.getMessage())
+                    .rowData(Map.of())
+                    .build());
+        }
+    }
+
     private void persistRowResults(
             UUID jobId,
             UUID sessionId,

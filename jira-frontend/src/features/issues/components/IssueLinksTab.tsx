@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { issueLinkApi, IssueLinkResponse } from '../../../api/issueLinkApi';
-import { issueApi } from '../../../api/issueApi';
+import { resolveIssueByKey } from '../../../api/issueLookup';
 
 interface IssueLinksTabProps {
   issueId: string;
@@ -64,14 +64,8 @@ export default function IssueLinksTab({ issueId }: IssueLinksTabProps) {
   const handleCreateLink = async () => {
     if (!targetIssueKey.trim()) return;
 
-    // First, find the issue by key
     try {
-      const response = await issueApi.getAll({ projectId: '', search: targetIssueKey });
-      const data = response.data;
-      const issues = 'content' in data ? data.content || [] : [];
-      const foundIssue = issues.find(
-        (i: any) => i.issueKey?.toLowerCase() === targetIssueKey.toLowerCase()
-      );
+      const foundIssue = await resolveIssueByKey(targetIssueKey);
 
       if (foundIssue) {
         createMutation.mutate({

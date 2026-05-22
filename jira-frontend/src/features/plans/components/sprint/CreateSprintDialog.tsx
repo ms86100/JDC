@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCreateSprint, useWorkingDays } from '../../hooks/useSprint';
 import { useBoard } from '../../hooks/useBoardConfig';
+import { appNotify } from '../../../../lib/appNotify';
 
 interface CreateSprintDialogProps {
   boardId: string;
@@ -80,7 +81,7 @@ export default function CreateSprintDialog({ boardId, onClose, onSuccess }: Crea
 
   const handleSubmit = () => {
     if (!formData.name.trim()) {
-      alert('Please enter a sprint name');
+      appNotify.warning('Please enter a sprint name');
       return;
     }
 

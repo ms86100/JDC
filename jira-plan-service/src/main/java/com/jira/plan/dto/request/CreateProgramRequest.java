@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -23,4 +24,7 @@ public class CreateProgramRequest {
     private UUID ownerId;
 
     private UUID planId;
+
+    /** Plans to link when creating the program (DC connected plans checkboxes). */
+    private List<UUID> linkedPlanIds;
 }

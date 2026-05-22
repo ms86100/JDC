@@ -1,24 +1,17 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import AdminLayout from '../components/AdminLayout';
+import { fieldApi, type CreateCustomFieldRequest } from '../../../api/fieldApi';
 import './CustomFieldsPage.css';
 
-interface CustomField {
+interface CustomFieldRow {
   id: string;
   name: string;
   type: string;
   description: string;
-  contextCount: number;
-  isRequired: boolean;
+  fieldKey: string;
+  enabled?: boolean;
 }
-
-const mockCustomFields: CustomField[] = [
-  { id: '1', name: 'Story Points', type: 'number', description: 'Estimation in story points', contextCount: 3, isRequired: false },
-  { id: '2', name: 'Sprint', type: 'sprint', description: 'Current sprint assignment', contextCount: 5, isRequired: false },
-  { id: '3', name: 'Team', type: 'select', description: 'Development team', contextCount: 2, isRequired: true },
-  { id: '4', name: 'Release Date', type: 'datepicker', description: 'Target release date', contextCount: 4, isRequired: false },
-  { id: '5', name: 'Epic Link', type: 'issuelink', description: 'Parent epic', contextCount: 8, isRequired: false },
-  { id: '6', name: 'Department', type: 'select', description: 'Department assignment', contextCount: 1, isRequired: true },
-];
 
 const fieldTypes = [
   { key: 'text', label: 'Text Field', icon: 'T' },
@@ -28,27 +21,83 @@ const fieldTypes = [
   { key: 'select', label: 'Select List', icon: '▼' },
   { key: 'multiselect', label: 'Multi-Select', icon: '⊞' },
   { key: 'checkbox', label: 'Checkboxes', icon: '☑' },
-  { key: 'radio', label: 'Radio Buttons', icon: '○' },
   { key: 'textarea', label: 'Text Area', icon: '≡' },
   { key: 'url', label: 'URL', icon: '🔗' },
-  { key: 'issuelink', label: 'Issue Link', icon: '⛓' },
-  { key: 'sprint', label: 'Sprint', icon: '⚡' },
-  { key: 'project', label: 'Project', icon: '📁' },
   { key: 'userpicker', label: 'User Picker', icon: '👤' },
 ];
 
 export default function CustomFieldsPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedField, setSelectedField] = useState<CustomField | null>(null);
+  const [newName, setNewName] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newType, setNewType] = useState('text');
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredFields = mockCustomFields.filter(field => {
-    const matchesSearch = field.name.toLowerCase().includes(search.toLowerCase()) ||
-      field.description.toLowerCase().includes(search.toLowerCase());
-    const matchesType = !typeFilter || field.type === typeFilter;
-    return matchesSearch && matchesType;
+  const { data: fields = [], isLoading, isError } = useQuery({
+    queryKey: ['admin-custom-fields'],
+    queryFn: async () => {
+      const res = await fieldApi.getCustomFields();
+      return (res.data ?? []).map(
+        (f): CustomFieldRow => ({
+          id: f.id,
+          name: f.name,
+          type: f.type,
+          description: f.description ?? '',
+          fieldKey: f.fieldKey,
+          enabled: f.enabled,
+        })
+      );
+    },
   });
+
+  const createMutation = useMutation({
+    mutationFn: (body: CreateCustomFieldRequest) => fieldApi.createCustomField(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-custom-fields'] });
+      queryClient.invalidateQueries({ queryKey: ['migration-target-fields'] });
+      setShowCreateModal(false);
+      setNewName('');
+      setNewDescription('');
+      setNewType('text');
+      setError(null);
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => fieldApi.deleteCustomField(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-custom-fields'] });
+      queryClient.invalidateQueries({ queryKey: ['migration-target-fields'] });
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const filteredFields = useMemo(() => {
+    return fields.filter((field) => {
+      const matchesSearch =
+        field.name.toLowerCase().includes(search.toLowerCase()) ||
+        field.description.toLowerCase().includes(search.toLowerCase()) ||
+        field.fieldKey.toLowerCase().includes(search.toLowerCase());
+      const matchesType = !typeFilter || field.type === typeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [fields, search, typeFilter]);
+
+  const handleCreate = () => {
+    if (!newName.trim()) {
+      setError('Field name is required');
+      return;
+    }
+    createMutation.mutate({
+      name: newName.trim(),
+      description: newDescription.trim() || undefined,
+      type: newType,
+    });
+  };
 
   return (
     <AdminLayout>
@@ -56,26 +105,26 @@ export default function CustomFieldsPage() {
         <div className="admin-page-header">
           <h1 className="admin-page-title">Custom Fields</h1>
           <p className="admin-page-description">
-            Create and manage custom fields to capture additional data on issues.
+            Create and manage custom fields (Jira DC parity — backed by migration field registry).
           </p>
         </div>
+
+        {error && (
+          <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2 mb-4">{error}</div>
+        )}
 
         <div className="admin-stats-grid">
           <div className="admin-stat-card">
             <div className="admin-stat-label">Total Custom Fields</div>
-            <div className="admin-stat-value">{mockCustomFields.length}</div>
+            <div className="admin-stat-value">{fields.length}</div>
           </div>
           <div className="admin-stat-card">
             <div className="admin-stat-label">Field Types Used</div>
-            <div className="admin-stat-value">
-              {new Set(mockCustomFields.map(f => f.type)).size}
-            </div>
+            <div className="admin-stat-value">{new Set(fields.map((f) => f.type)).size}</div>
           </div>
           <div className="admin-stat-card">
-            <div className="admin-stat-label">Required Fields</div>
-            <div className="admin-stat-value">
-              {mockCustomFields.filter(f => f.isRequired).length}
-            </div>
+            <div className="admin-stat-label">Enabled</div>
+            <div className="admin-stat-value">{fields.filter((f) => f.enabled !== false).length}</div>
           </div>
         </div>
 
@@ -95,111 +144,124 @@ export default function CustomFieldsPage() {
               style={{ width: '160px' }}
             >
               <option value="">All Types</option>
-              {fieldTypes.map(type => (
-                <option key={type.key} value={type.key}>{type.label}</option>
+              {fieldTypes.map((type) => (
+                <option key={type.key} value={type.key}>
+                  {type.label}
+                </option>
               ))}
             </select>
           </div>
           <div className="admin-toolbar-right">
-            <button className="admin-btn-secondary">Reorder Fields</button>
             <button className="admin-btn-primary" onClick={() => setShowCreateModal(true)}>
               Add Custom Field
             </button>
           </div>
         </div>
 
+        {isLoading && <p className="text-gray-500 p-4">Loading custom fields…</p>}
+        {isError && (
+          <p className="text-red-600 p-4">
+            Failed to load fields. Ensure migration-service is running on port 8094.
+          </p>
+        )}
+
         <div className="custom-fields-grid">
           {filteredFields.map((field) => (
             <div key={field.id} className="custom-field-card">
               <div className="field-card-header">
                 <div className="field-type-badge">{field.type}</div>
-                {field.isRequired && (
-                  <span className="required-badge">Required</span>
-                )}
+                <span className="text-xs text-gray-500">{field.fieldKey}</span>
               </div>
               <div className="field-card-body">
                 <h4 className="field-name">{field.name}</h4>
-                <p className="field-description">{field.description}</p>
-                <div className="field-meta">
-                  <span className="field-contexts">{field.contextCount} contexts</span>
-                </div>
+                <p className="field-description">{field.description || '—'}</p>
               </div>
               <div className="field-card-footer">
-                <button className="admin-btn-secondary" onClick={() => setSelectedField(field)}>
-                  Configure
+                <button
+                  type="button"
+                  className="admin-btn-secondary text-red-700"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => {
+                    if (window.confirm(`Disable custom field "${field.name}"?`)) {
+                      deleteMutation.mutate(field.id);
+                    }
+                  }}
+                >
+                  Disable
                 </button>
-                <button className="admin-btn-secondary">Screens</button>
               </div>
             </div>
           ))}
         </div>
 
-        {filteredFields.length === 0 && (
+        {!isLoading && filteredFields.length === 0 && (
           <div className="admin-empty-state">
-            <div className="admin-empty-state-icon">🔍</div>
             <div className="admin-empty-state-title">No custom fields found</div>
             <div className="admin-empty-state-description">
               {search || typeFilter
                 ? 'Try adjusting your search or filter criteria.'
-                : 'Get started by creating your first custom field.'}
+                : 'Create a custom field or provision fields from the migration wizard.'}
             </div>
-            {!search && !typeFilter && (
-              <button className="admin-btn-primary" onClick={() => setShowCreateModal(true)}>
-                Add Custom Field
-              </button>
-            )}
           </div>
         )}
       </div>
 
-      {/* Create Custom Field Modal */}
       {showCreateModal && (
         <div className="admin-modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="admin-modal" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="admin-modal" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
               <h2 className="admin-modal-title">Add Custom Field</h2>
-              <button className="admin-modal-close" onClick={() => setShowCreateModal(false)}>×</button>
+              <button type="button" className="admin-modal-close" onClick={() => setShowCreateModal(false)}>
+                ×
+              </button>
             </div>
-            <div className="admin-modal-body">
-              <div className="field-type-selector">
-                <h4 className="field-type-title">Select the type of field</h4>
-                <div className="field-types-grid">
-                  {fieldTypes.map((type) => (
-                    <button key={type.key} className="field-type-option">
-                      <span className="field-type-icon">{type.icon}</span>
-                      <span className="field-type-label">{type.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div className="admin-modal-body space-y-4">
               <div className="admin-form-group">
                 <label className="admin-form-label admin-form-label-required">Field Name</label>
-                <input type="text" className="admin-form-input" placeholder="e.g., Story Points" />
+                <input
+                  type="text"
+                  className="admin-form-input"
+                  placeholder="e.g., Story Points"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                />
               </div>
               <div className="admin-form-group">
                 <label className="admin-form-label">Description</label>
                 <textarea
                   className="admin-form-textarea"
                   placeholder="Describe what this field is used for"
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
                 />
               </div>
               <div className="admin-form-group">
-                <label className="admin-form-label">Field Context</label>
-                <select className="admin-form-select">
-                  <option value="global">Global (All Issues)</option>
-                  <option value="project">Specific Project(s)</option>
-                  <option value="issuetype">Specific Issue Type(s)</option>
+                <label className="admin-form-label">Type</label>
+                <select
+                  className="admin-form-select"
+                  value={newType}
+                  onChange={(e) => setNewType(e.target.value)}
+                >
+                  {fieldTypes.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.label}
+                    </option>
+                  ))}
                 </select>
-                <span className="admin-form-hint">
-                  Choose where this field will be available
-                </span>
               </div>
             </div>
             <div className="admin-modal-footer">
-              <button className="admin-btn-secondary" onClick={() => setShowCreateModal(false)}>
+              <button type="button" className="admin-btn-secondary" onClick={() => setShowCreateModal(false)}>
                 Cancel
               </button>
-              <button className="admin-btn-primary">Next</button>
+              <button
+                type="button"
+                className="admin-btn-primary"
+                disabled={createMutation.isPending}
+                onClick={handleCreate}
+              >
+                {createMutation.isPending ? 'Creating…' : 'Create'}
+              </button>
             </div>
           </div>
         </div>

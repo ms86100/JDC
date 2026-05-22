@@ -1,14 +1,32 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { issueApi, IssueResponse } from '../../../api/issueApi';
 import { commentApi } from '../../../api/commentApi';
-import { labelApi } from '../../../api/labelApi';
 import EditIssueModal from '../components/EditIssueModal';
+import CreateIssueModal from '../components/CreateIssueModal';
 import TransitionScreenForm, { type AvailableTransition } from '../components/TransitionScreenForm';
+import ActivityTab from '../components/ActivityTab';
+import WorklogsTab from '../components/WorklogsTab';
+import IssueLinksTab from '../components/IssueLinksTab';
+import LabelsTab from '../components/LabelsTab';
+import AttachmentsTab from '../components/AttachmentsTab';
+import IssueMigratedFieldsPanel from '../components/IssueMigratedFieldsPanel';
+import IssueMoveModal from '../components/IssueMoveModal';
+import IssueAdminMenu from '../components/IssueAdminMenu';
+import { useAuth } from '../../auth/context/AuthContext';
+import { rankForBottom, rankForTop } from '../utils/issueRank';
 import './IssueDetailPage.css';
+import '../styles/issues-layout.css';
 
-type TabType = 'details' | 'people' | 'activity' | 'comment' | 'work';
+type TabType =
+  | 'comment'
+  | 'activity'
+  | 'work'
+  | 'links'
+  | 'labels'
+  | 'attachments'
+  | 'details';
 
 /**
  * Full Issue Response - All Systems and Avionics Mandatory Fields
@@ -109,19 +127,25 @@ interface FullIssueResponse extends Omit<IssueResponse, 'watchers'> {
   customFields?: Record<string, any>;
 }
 
-const JDC_ISSUE_BASE = import.meta.env.VITE_JDC_ISSUE_URL || 'http://localhost:3000/issues';
+export interface IssueDetailPageProps {
+  issueIdOverride?: string;
+  embedded?: boolean;
+  onClose?: () => void;
+}
 
-export default function IssueDetailPage() {
-  const { issueId } = useParams<{ issueId: string }>();
+export default function IssueDetailPage(props?: IssueDetailPageProps) {
+  const outletContext = useOutletContext<{ embedded?: boolean }>() ?? {};
+  const embedded = props?.embedded ?? outletContext?.embedded ?? false;
+  const { issueId: routeIssueId } = useParams<{ issueId: string }>();
+  const issueId = props?.issueIdOverride ?? routeIssueId;
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
-  useEffect(() => {
-    if (issueId) {
-      window.location.replace(`${JDC_ISSUE_BASE}/${issueId}`);
-    }
-  }, [issueId]);
-  const [activeTab, setActiveTab] = useState<TabType>('details');
+  const [activeTab, setActiveTab] = useState<TabType>('comment');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCreateSubtask, setShowCreateSubtask] = useState(false);
+  const [showMoveModal, setShowMoveModal] = useState(false);
   const [showTransitionMenu, setShowTransitionMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -165,37 +189,135 @@ export default function IssueDetailPage() {
   const [transitionComment, setTransitionComment] = useState('');
   const [screenInput, setScreenInput] = useState<Record<string, unknown>>({});
   const [pendingTransition, setPendingTransition] = useState<AvailableTransition | null>(null);
+  const [transitionError, setTransitionError] = useState<string | null>(null);
+
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   const addCommentMutation = useMutation({
     mutationFn: (content: string) => commentApi.create({ issueId: issueId!, content }),
     onSuccess: () => {
+      setCommentError(null);
       queryClient.invalidateQueries({ queryKey: ['comments', issueId] });
       setNewComment('');
+    },
+    onError: (err: unknown) => {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      if (status === 401) {
+        setCommentError('Not signed in. Log in again so comments can be saved.');
+      } else {
+        setCommentError(msg || 'Failed to add comment. Is the comment service running?');
+      }
+    },
+  });
+
+  const isWatching = Boolean(
+    user?.userId && issue?.watchers?.includes(user.userId),
+  );
+  const hasVoted = (issue?.votes ?? 0) > 0;
+
+  const voteMutation = useMutation({
+    mutationFn: () => issueApi.vote(issueId!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issue', issueId] }),
+  });
+
+  const unvoteMutation = useMutation({
+    mutationFn: () => issueApi.unvote(issueId!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issue', issueId] }),
+  });
+
+  const watchMutation = useMutation({
+    mutationFn: () => issueApi.watch(issueId!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issue', issueId] }),
+  });
+
+  const unwatchMutation = useMutation({
+    mutationFn: () => issueApi.unwatch(issueId!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['issue', issueId] }),
+  });
+
+  const rankMutation = useMutation({
+    mutationFn: (rank: string) => issueApi.update(issueId!, { rank }),
+    onSuccess: () => {
+      setShowMoreMenu(false);
+      queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
+    },
+  });
+
+  const cloneMutation = useMutation({
+    mutationFn: () => issueApi.clone(issueId!, { projectId: issue?.projectId }),
+    onSuccess: (res) => {
+      setShowMoreMenu(false);
+      if (embedded && props?.onClose) {
+        window.location.assign(`/issues/${res.data.id}`);
+      } else {
+        navigate(`/issues/${res.data.id}`);
+      }
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => issueApi.delete(issueId!),
+    onSuccess: () => {
+      setShowMoreMenu(false);
+      if (embedded && props?.onClose) {
+        props.onClose();
+      } else {
+        navigate('/issues');
+      }
+    },
+  });
+
+  const moveMutation = useMutation({
+    mutationFn: (targetProjectId: string) => issueApi.move(issueId!, { projectId: targetProjectId }),
+    onSuccess: (res) => {
+      setShowMoveModal(false);
+      setShowMoreMenu(false);
+      queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
+      navigate(`/issues/${res.data.id}`);
     },
   });
 
   const transitionMutation = useMutation({
     mutationFn: (payload: {
       transitionId: string;
-      toStatusId: string;
       comment?: string;
       resolutionId?: string;
       screenInput?: Record<string, unknown>;
     }) =>
-      issueApi.transitionStatus(issueId!, issue!.projectId, {
+      issueApi.executeTransition({
+        issueId: issueId!,
+        projectId: issue!.projectId,
         transitionId: payload.transitionId,
-        statusId: payload.toStatusId,
         comment: payload.comment,
         resolutionId: payload.resolutionId,
         screenInput: payload.screenInput,
       }),
     onSuccess: () => {
+      setTransitionError(null);
       queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
       queryClient.invalidateQueries({ queryKey: ['issue-transitions', issueId] });
       setShowTransitionMenu(false);
       setPendingTransition(null);
       setTransitionComment('');
       setScreenInput({});
+    },
+    onError: (err: {
+      response?: { status?: number; data?: { message?: string; validationErrors?: Record<string, string> } };
+    }) => {
+      if (err?.response?.status === 409) {
+        setTransitionError('This issue was updated elsewhere. Refresh the page and try again.');
+        queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
+        queryClient.invalidateQueries({ queryKey: ['issue-transitions', issueId] });
+        return;
+      }
+      const fieldErrors = err?.response?.data?.validationErrors;
+      const parts: string[] = [];
+      if (err?.response?.data?.message) parts.push(err.response.data.message);
+      if (fieldErrors && typeof fieldErrors === 'object') {
+        parts.push(...Object.values(fieldErrors));
+      }
+      setTransitionError(parts.length > 0 ? parts.join(' ') : 'Transition failed');
     },
   });
 
@@ -207,7 +329,6 @@ export default function IssueDetailPage() {
       undefined;
     transitionMutation.mutate({
       transitionId: pendingTransition.id,
-      toStatusId: pendingTransition.toStatusId,
       comment: transitionComment || (screenInput.comment as string) || undefined,
       resolutionId,
       screenInput: Object.keys(screenInput).length > 0 ? screenInput : undefined,
@@ -219,7 +340,7 @@ export default function IssueDetailPage() {
     switch (status?.toLowerCase()) {
       case 'done': case 'resolved': case 'closed':
         return { background: '#dcfce7', color: '#166534' };
-      case 'in progress': case 'in_review': case 'in progress':
+      case 'in progress': case 'in_review':
         return { background: '#dbeafe', color: '#1e40af' };
       case 'blocked':
         return { background: '#fee2e2', color: '#991b1b' };
@@ -321,8 +442,8 @@ export default function IssueDetailPage() {
   const statusStyle = getStatusStyle(issue.status || '');
 
   return (
-    <div className="idc-issue-view">
-      {/* Breadcrumb */}
+    <div className={`idc-issue-view ${embedded ? 'idc-issue-view-embedded' : ''}`}>
+      {!embedded && (
       <div className="idc-breadcrumb">
         <Link to="/issues" className="idc-breadcrumb-project">Issues</Link>
         <span className="idc-breadcrumb-sep">/</span>
@@ -332,6 +453,7 @@ export default function IssueDetailPage() {
         <span className="idc-breadcrumb-sep">/</span>
         <span className="idc-breadcrumb-key">{issue.issueKey}</span>
       </div>
+      )}
 
       {/* Issue Header - Systems and Avionics Style */}
       <div className="idc-issue-header">
@@ -353,18 +475,161 @@ export default function IssueDetailPage() {
           {/* Actions */}
           <div className="idc-issue-actions">
             <button className="idc-action-btn" onClick={() => setShowEditModal(true)}>Edit</button>
+            <IssueAdminMenu projectId={issue?.projectId} issueKey={issue?.issueKey} />
             <div className="idc-dropdown-wrapper">
               <button className="idc-action-btn" onClick={() => setShowMoreMenu(!showMoreMenu)}>
                 More <span className="idc-dropdown-caret">▾</span>
               </button>
               {showMoreMenu && (
                 <div className="idc-dropdown-menu">
-                  <button className="idc-dropdown-item">Link issues</button>
-                  <button className="idc-dropdown-item">Create subtask</button>
-                  <button className="idc-dropdown-item">Clone issue</button>
-                  <button className="idc-dropdown-item">Move</button>
+                  <button
+                    type="button"
+                    className="idc-dropdown-item"
+                    disabled={isWatching ? unwatchMutation.isPending : watchMutation.isPending}
+                    onClick={() => {
+                      if (isWatching) unwatchMutation.mutate();
+                      else watchMutation.mutate();
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    {isWatching ? 'Stop watching' : 'Watch issue'}
+                  </button>
+                  <button
+                    type="button"
+                    className="idc-dropdown-item"
+                    disabled={hasVoted ? unvoteMutation.isPending : voteMutation.isPending}
+                    onClick={() => {
+                      if (hasVoted) unvoteMutation.mutate();
+                      else voteMutation.mutate();
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    {hasVoted ? 'Remove vote' : 'Vote for issue'}
+                  </button>
+                  <button
+                    type="button"
+                    className="idc-dropdown-item"
+                    disabled={rankMutation.isPending}
+                    onClick={() => rankMutation.mutate(rankForTop())}
+                  >
+                    Rank to top
+                  </button>
+                  <button
+                    type="button"
+                    className="idc-dropdown-item"
+                    disabled={rankMutation.isPending}
+                    onClick={() => rankMutation.mutate(rankForBottom())}
+                  >
+                    Rank to bottom
+                  </button>
+                  <button
+                    type="button"
+                    className="idc-dropdown-item"
+                    onClick={() => {
+                      setActiveTab('work');
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    Log work
+                  </button>
+                  <button
+                    type="button"
+                    className="idc-dropdown-item"
+                    onClick={() => {
+                      setActiveTab('links');
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    Link issues
+                  </button>
+                  <button
+                    type="button"
+                    className="idc-dropdown-item"
+                    onClick={() => {
+                      setShowCreateSubtask(true);
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    Create subtask
+                  </button>
+                  <button
+                    type="button"
+                    className="idc-dropdown-item"
+                    disabled={cloneMutation.isPending}
+                    onClick={() => cloneMutation.mutate()}
+                  >
+                    {cloneMutation.isPending ? 'Cloning…' : 'Clone issue'}
+                  </button>
+                  <button
+                    type="button"
+                    className="idc-dropdown-item"
+                    onClick={() => {
+                      setShowMoveModal(true);
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    Move
+                  </button>
+                  <button
+                    type="button"
+                    className="idc-dropdown-item"
+                    onClick={() => {
+                      const url = window.location.href;
+                      void navigator.clipboard?.writeText(url);
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    Share issue (copy link)
+                  </button>
+                  <button
+                    type="button"
+                    className="idc-dropdown-item"
+                    onClick={() => {
+                      window.open(`/api/issues/${issueId}`, '_blank', 'noopener');
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    Export (API view)
+                  </button>
+                  {issue?.projectId && (
+                    <button
+                      type="button"
+                      className="idc-dropdown-item"
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        navigate(
+                          `/projects/${issue.projectId}/board/active?issueId=${issueId}`,
+                        );
+                      }}
+                    >
+                      Find on board
+                    </button>
+                  )}
+                  {embedded && (
+                    <button
+                      type="button"
+                      className="idc-dropdown-item"
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        navigate(`/issues/${issueId}`);
+                      }}
+                    >
+                      Open in full view
+                    </button>
+                  )}
                   <div className="idc-dropdown-divider"></div>
-                  <button className="idc-dropdown-item idc-dropdown-danger">Delete</button>
+                  <button
+                    type="button"
+                    className="idc-dropdown-item idc-dropdown-danger"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => {
+                      if (window.confirm('Delete this issue permanently?')) {
+                        deleteMutation.mutate();
+                      }
+                    }}
+                  >
+                    Delete
+                  </button>
                 </div>
               )}
             </div>
@@ -422,6 +687,11 @@ export default function IssueDetailPage() {
                 </button>
               ))
             )}
+            {transitionError && (
+              <p className="idc-transition-error" role="alert" style={{ color: '#de350b', padding: '8px 12px', fontSize: 13 }}>
+                {transitionError}
+              </p>
+            )}
             {pendingTransition && (
               <TransitionScreenForm
                 transition={pendingTransition}
@@ -433,6 +703,7 @@ export default function IssueDetailPage() {
                 onCancel={() => {
                   setPendingTransition(null);
                   setScreenInput({});
+                  setTransitionError(null);
                 }}
                 isSubmitting={transitionMutation.isPending}
               />
@@ -475,27 +746,67 @@ export default function IssueDetailPage() {
             </div>
           )}
 
-          {/* Activity Tabs */}
-          <div className="idc-tabs">
+          {/* Activity Tabs — single panel, no nested borders */}
+          <div className="idc-tabs-panel">
+          <div className="idc-tabs" role="tablist" aria-label="Issue panels">
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'comment'}
               className={`idc-tab ${activeTab === 'comment' ? 'idc-tab-active' : ''}`}
               onClick={() => setActiveTab('comment')}
             >
               Comment
             </button>
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'activity'}
               className={`idc-tab ${activeTab === 'activity' ? 'idc-tab-active' : ''}`}
               onClick={() => setActiveTab('activity')}
             >
               Activity
             </button>
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'work'}
               className={`idc-tab ${activeTab === 'work' ? 'idc-tab-active' : ''}`}
               onClick={() => setActiveTab('work')}
             >
-              Work Log
+              Work log
             </button>
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'links'}
+              className={`idc-tab ${activeTab === 'links' ? 'idc-tab-active' : ''}`}
+              onClick={() => setActiveTab('links')}
+            >
+              Links
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'labels'}
+              className={`idc-tab ${activeTab === 'labels' ? 'idc-tab-active' : ''}`}
+              onClick={() => setActiveTab('labels')}
+            >
+              Labels
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'attachments'}
+              className={`idc-tab ${activeTab === 'attachments' ? 'idc-tab-active' : ''}`}
+              onClick={() => setActiveTab('attachments')}
+            >
+              Attachments
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'details'}
               className={`idc-tab ${activeTab === 'details' ? 'idc-tab-active' : ''}`}
               onClick={() => setActiveTab('details')}
             >
@@ -503,7 +814,7 @@ export default function IssueDetailPage() {
             </button>
           </div>
 
-          <div className="idc-tab-content">
+          <div className="idc-tab-content" role="tabpanel">
             {/* Comments Tab */}
             {activeTab === 'comment' && (
               <div className="idc-comment-section">
@@ -524,6 +835,11 @@ export default function IssueDetailPage() {
                   ))}
                 </div>
                 <div className="idc-comment-input">
+                  {commentError && (
+                    <p className="idc-comment-error" style={{ color: '#de350b', marginBottom: 8 }}>
+                      {commentError}
+                    </p>
+                  )}
                   <textarea
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
@@ -545,29 +861,47 @@ export default function IssueDetailPage() {
               </div>
             )}
 
-            {/* Activity Tab (Change History) */}
-            {activeTab === 'activity' && (
+            {/* Activity Tab (Change History + Transitions) */}
+            {activeTab === 'activity' && issueId && (
               <div className="idc-activity-section">
-                <p className="idc-no-content">No activity recorded yet.</p>
+                <ActivityTab issueId={issueId} />
               </div>
             )}
 
             {/* Work Log Tab */}
-            {activeTab === 'work' && (
+            {activeTab === 'work' && issueId && (
               <div className="idc-work-section">
-                <div className="idc-worklog-list">
-                  <div className="idc-worklog-summary">
-                    <span>Remaining Estimate: {formatTimeWithDays(issue.remainingEstimate)}</span>
-                    <span>Time Spent: {formatTimeWithDays(issue.timeSpent)}</span>
-                  </div>
-                </div>
-                <button className="idc-btn idc-btn-secondary">Log Work</button>
+                <WorklogsTab issueId={issueId} />
+              </div>
+            )}
+
+            {activeTab === 'links' && issueId && (
+              <div className="idc-links-section">
+                <IssueLinksTab issueId={issueId} />
+              </div>
+            )}
+
+            {activeTab === 'labels' && issueId && (
+              <div className="idc-labels-section">
+                <LabelsTab issueId={issueId} />
+              </div>
+            )}
+
+            {activeTab === 'attachments' && issueId && (
+              <div className="idc-attachments-section">
+                <AttachmentsTab issueId={issueId} />
               </div>
             )}
 
             {/* Details Tab - Field Mappings */}
             {activeTab === 'details' && (
               <div className="idc-details-section">
+                {issueId && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Imported custom fields (G-10)</h4>
+                    <IssueMigratedFieldsPanel issueId={issueId} />
+                  </div>
+                )}
                 <div className="idc-details-grid">
                   <div className="idc-detail-item">
                     <span className="idc-detail-label">Type</span>
@@ -611,6 +945,7 @@ export default function IssueDetailPage() {
                 </div>
               </div>
             )}
+          </div>
           </div>
 
           {/* Subtasks Section */}
@@ -667,7 +1002,14 @@ export default function IssueDetailPage() {
               <div className="idc-sidebar-value">
                 <span className="idc-vote-count">
                   {issue.voteCount || 0}
-                  <button className="idc-vote-btn">Vote for this issue</button>
+                  <button
+                    type="button"
+                    className="idc-vote-btn"
+                    onClick={() => voteMutation.mutate()}
+                    disabled={voteMutation.isPending}
+                  >
+                    {voteMutation.isPending ? 'Voting…' : 'Vote for this issue'}
+                  </button>
                 </span>
               </div>
             </div>
@@ -675,6 +1017,24 @@ export default function IssueDetailPage() {
               <span className="idc-sidebar-label">Watchers</span>
               <div className="idc-sidebar-value">
                 <span>{issue.watcherCount || 0}</span>
+                <button
+                  type="button"
+                  className="idc-vote-btn"
+                  style={{ marginLeft: 8 }}
+                  onClick={() => watchMutation.mutate()}
+                  disabled={watchMutation.isPending || unwatchMutation.isPending}
+                >
+                  Watch
+                </button>
+                <button
+                  type="button"
+                  className="idc-vote-btn"
+                  style={{ marginLeft: 4 }}
+                  onClick={() => unwatchMutation.mutate()}
+                  disabled={watchMutation.isPending || unwatchMutation.isPending}
+                >
+                  Unwatch
+                </button>
               </div>
             </div>
           </div>
@@ -796,7 +1156,7 @@ export default function IssueDetailPage() {
               <span className="idc-sidebar-label">Epic Link</span>
               <div className="idc-sidebar-value">
                 {issue.epicId ? (
-                  <Link to={`/issues/${issue.epicId}`} className="idc-epic-link">
+                  <Link to={`/epics/${issue.epicId}`} className="idc-epic-link">
                     <span className="idc-epic-icon" style={{ color: issue.epicColor }}>⚡</span>
                     <span>{issue.epicName}</span>
                   </Link>
@@ -910,6 +1270,29 @@ export default function IssueDetailPage() {
             queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
             setShowEditModal(false);
           }}
+        />
+      )}
+
+      {showCreateSubtask && issue && (
+        <CreateIssueModal
+          projectId={issue.projectId}
+          projectKey={issue.projectKey}
+          parentIssueId={issueId}
+          defaultTitle={`Subtask of ${issue.issueKey}`}
+          onClose={() => setShowCreateSubtask(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
+            setShowCreateSubtask(false);
+          }}
+        />
+      )}
+
+      {showMoveModal && issue && (
+        <IssueMoveModal
+          currentProjectId={issue.projectId}
+          onClose={() => setShowMoveModal(false)}
+          onMove={(targetProjectId) => moveMutation.mutate(targetProjectId)}
+          isPending={moveMutation.isPending}
         />
       )}
     </div>

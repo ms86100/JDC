@@ -28,6 +28,6 @@ public interface TestSetRepository extends JpaRepository<TestSet, UUID> {
     @Query("SELECT COUNT(t) FROM TestSet t WHERE t.folderId = :folderId AND t.archived = false")
     Long countByFolderId(@Param("folderId") UUID folderId);
 
-    @Query("SELECT ts FROM TestSet ts WHERE ts.projectId = :projectId AND ts.labels @> :label")
+    @Query(value = "SELECT * FROM jira_issue.test_sets ts WHERE ts.project_id = :projectId AND :label = ANY(ts.labels)", nativeQuery = true)
     List<TestSet> findByProjectIdAndLabel(@Param("projectId") UUID projectId, @Param("label") String label);
 }

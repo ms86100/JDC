@@ -162,12 +162,22 @@ export interface FieldMappingRule {
 export interface ImportOptions {
   targetProjectId?: string;
   importMode: 'CREATE_ONLY' | 'UPDATE_ONLY' | 'CREATE_UPDATE';
+  /** Jira DC: LIGHTWEIGHT vs External System Import (G-03) */
+  csvImportProfile?: 'LIGHTWEIGHT' | 'EXTERNAL';
+  attachmentColumn?: string;
+  attachmentsImportDir?: string;
   skipValidation?: boolean;
   fieldMappings?: FieldMappingRule[];
   onConflict?: 'SKIP' | 'OVERWRITE' | 'ERROR';
 }
 
-export type ImportType = 'csv' | 'jira-dc' | 'workflow-xml' | 'project-import' | 'project-export';
+export type ImportType =
+  | 'csv'
+  | 'issue-xml'
+  | 'jira-dc'
+  | 'workflow-xml'
+  | 'project-import'
+  | 'project-export';
 
 export interface MigrationState {
   step:

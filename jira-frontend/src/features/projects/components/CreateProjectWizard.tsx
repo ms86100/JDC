@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   projectApi,
   CreateProjectWizardRequest,
@@ -289,6 +289,28 @@ export default function CreateProjectWizard({ onClose }: { onClose?: () => void 
             />
           )}
         </div>
+
+        {wizardState.step === 1 && (
+          <div className="cpw-footer-links">
+            <Link to="/migration" className="cpw-footer-link" onClick={handleClose}>
+              Import data
+            </Link>
+            <span className="cpw-footer-sep">·</span>
+            <Link to="/migration?import=workflow-xml" className="cpw-footer-link">
+              Import shared configuration
+            </Link>
+            <span className="cpw-footer-sep">·</span>
+            <button
+              type="button"
+              className="cpw-footer-link cpw-footer-link-btn"
+              onClick={() => {
+                window.open('https://marketplace.atlassian.com/search?query=workflow', '_blank', 'noopener');
+              }}
+            >
+              Sample data &amp; marketplace
+            </button>
+          </div>
+        )}
 
         <footer className="cpw-footer">
           {wizardState.step > 1 && (

@@ -23,6 +23,7 @@ public class PlanItemResponse {
     private String parentKey;
     private String sortOrder;
     private LocalDate targetDate;
+    private LocalDate targetEndDate;
     private String assigneeId;
     private String assigneeName;
     private Integer storyPoints;

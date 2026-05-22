@@ -134,6 +134,8 @@ export interface JiraDcValidateResponse {
     resolution: string;
   }>;
   unknownCustomFields?: Array<{ fieldId: string; message: string }>;
+  acSignoffPreview?: Record<string, unknown>;
+  backupZipDetected?: boolean;
 }
 
 export interface ImportResultResponse {
@@ -175,10 +177,20 @@ export interface CsvTemplateResponse {
   }>;
 }
 
-const migrationUserHeaders = () => ({
-  'X-User-Id': localStorage.getItem('userId') || '00000000-0000-0000-0000-000000000001',
-  'X-Migration-Role': localStorage.getItem('migrationRole') || 'MIGRATION_OPERATOR',
-});
+const migrationUserHeaders = (opts?: { targetProjectId?: string }) => {
+  const headers: Record<string, string> = {
+    'X-User-Id': localStorage.getItem('userId') || '00000000-0000-0000-0000-000000000001',
+    'X-Migration-Role': localStorage.getItem('migrationRole') || 'MIGRATION_OPERATOR',
+  };
+  const token = localStorage.getItem('accessToken');
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  if (opts?.targetProjectId) {
+    headers['X-Target-Project-Id'] = opts.targetProjectId;
+  }
+  return headers;
+};
 
 export const migrationApi = {
   // CSV Import
@@ -198,7 +210,10 @@ export const migrationApi = {
       formData.append('options', JSON.stringify(options));
     }
     return apiClient.post<MigrationJobResponse>('/api/migration/import/csv', formData, {
-      headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...migrationUserHeaders({ targetProjectId }),
+      },
     });
   },
 
@@ -246,7 +261,10 @@ export const migrationApi = {
       formData.append('options', JSON.stringify(params.options));
     }
     return apiClient.post<MigrationJobResponse>('/api/migration/import/jira-dc', formData, {
-      headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...migrationUserHeaders({ targetProjectId: params.targetProjectId }),
+      },
     });
   },
 
@@ -507,9 +525,48 @@ export const migrationApi = {
   downloadTemplate: (templateId: string) =>
     apiClient.get(`/api/migration/templates/${templateId}/download`, { responseType: 'blob' }),
 
-  // Field Mappings
-  getMappings: () => apiClient.get('/api/migration/mappings'),
-  createMapping: (mapping: any) => apiClient.post('/api/migration/mappings', mapping),
+  // Field Mappings (saved templates)
+  getMappings: (mappingType?: string) =>
+    apiClient.get<Array<Record<string, unknown>>>('/api/migration/mappings', {
+      params: mappingType ? { mappingType } : undefined,
+      headers: migrationUserHeaders(),
+    }),
+  getMapping: (mappingId: string) =>
+    apiClient.get<Record<string, unknown>>(`/api/migration/mappings/${mappingId}`, {
+      headers: migrationUserHeaders(),
+    }),
+  createMapping: (mapping: Record<string, unknown>) =>
+    apiClient.post<Record<string, unknown>>('/api/migration/mappings', mapping, {
+      headers: migrationUserHeaders(),
+    }),
+  deleteMapping: (mappingId: string) =>
+    apiClient.delete(`/api/migration/mappings/${mappingId}`, { headers: migrationUserHeaders() }),
+
+  getConfigImportSummary: (jobId: string) =>
+    apiClient.get<Record<string, unknown>>(`/api/migration/jobs/${jobId}/config-import-summary`, {
+      headers: migrationUserHeaders(),
+    }),
+
+  // Global DLQ
+  listGlobalDlq: (page = 0, size = 20) =>
+    apiClient.get<{ content: Array<Record<string, unknown>>; totalElements: number }>('/api/migration/dlq', {
+      params: { page, size },
+      headers: migrationUserHeaders(),
+    }),
+  getGlobalDlqStats: () =>
+    apiClient.get<Record<string, unknown>>('/api/migration/dlq/statistics', {
+      headers: migrationUserHeaders(),
+    }),
+  retryGlobalDlq: (id: string) =>
+    apiClient.post<Record<string, unknown>>(`/api/migration/dlq/retry/${id}`, null, {
+      headers: migrationUserHeaders(),
+    }),
+  retryAllGlobalDlq: () =>
+    apiClient.post<Record<string, unknown>>('/api/migration/dlq/retry/all', null, {
+      headers: migrationUserHeaders(),
+    }),
+  purgeGlobalDlq: () =>
+    apiClient.delete<Record<string, unknown>>('/api/migration/dlq/purge', { headers: migrationUserHeaders() }),
 
   // Validation
   validateCsv: (file: File, entityType: string) => {
@@ -545,8 +602,20 @@ export interface WizardSessionResponse {
   totalRows?: number;
   validationResult?: Record<string, unknown>;
   fieldMappings?: Record<string, unknown>[];
+  userMappings?: Array<Record<string, unknown>>;
   previewRows?: string[][];
   sessionData?: Record<string, unknown>;
+}
+
+export interface WizardUserMappingRow {
+  id?: string;
+  sourceIdentifier: string;
+  sourceType?: string;
+  targetUserId?: string;
+  targetUsername?: string;
+  targetEmail?: string;
+  mappingType?: string;
+  confidenceScore?: number;
 }
 
 export interface WizardUploadResponse {
@@ -562,6 +631,42 @@ export interface WizardUploadResponse {
   errorMessage?: string;
 }
 
+export interface WizardDiscoveredFieldInfo {
+  sourceKey: string;
+  normalizedKey: string;
+  category: string;
+  suggestedType: string;
+  suggestedRegion: string;
+  isKnown: boolean;
+  requiresProvisioning: boolean;
+}
+
+export interface WizardFieldDiscoveryResponse {
+  discoveredFields: WizardDiscoveredFieldInfo[];
+  standardFieldCount: number;
+  agileFieldCount: number;
+  pluginFieldCount: number;
+  unknownFieldCount: number;
+  missingFieldKeys?: string[];
+}
+
+export interface WizardFieldProvisioningResponse {
+  provisionedFields?: Array<{ fieldKey: string; displayName?: string }>;
+  existingFields?: Array<{ fieldKey: string; displayName?: string }>;
+  failedFields?: string[];
+  fieldKeyMapping: Record<string, string>;
+  totalProvisioned: number;
+  totalExisting: number;
+  totalFailed: number;
+}
+
+export const migrationSettingsApi = {
+  getSettings: () =>
+    apiClient.get<Record<string, unknown>>('/api/migration/settings', {
+      headers: migrationUserHeaders(),
+    }),
+};
+
 export const migrationWizardApi = {
   createSession: (body: { importType: string; targetProjectId?: string; options?: Record<string, unknown> }) =>
     apiClient.post<WizardSessionResponse>('/api/migration/wizard/sessions', body, {
@@ -575,9 +680,19 @@ export const migrationWizardApi = {
 
   updateSession: (
     sessionId: string,
-    body: { step?: string; targetProjectId?: string; importOptions?: Record<string, unknown> }
+    body: {
+      step?: string;
+      targetProjectId?: string;
+      importOptions?: Record<string, unknown>;
+      userMappings?: Array<Record<string, unknown>>;
+    }
   ) =>
     apiClient.patch<WizardSessionResponse>(`/api/migration/wizard/sessions/${sessionId}`, body, {
+      headers: migrationUserHeaders(),
+    }),
+
+  getUserMappings: (sessionId: string) =>
+    apiClient.get<WizardUserMappingRow[]>(`/api/migration/wizard/sessions/${sessionId}/user-mappings`, {
       headers: migrationUserHeaders(),
     }),
 
@@ -634,6 +749,20 @@ export const migrationWizardApi = {
     apiClient.patch<WizardSessionResponse>(
       `/api/migration/wizard/sessions/${sessionId}/field-mappings`,
       mappings,
+      { headers: migrationUserHeaders() }
+    ),
+
+  discoverSessionFields: (sessionId: string) =>
+    apiClient.post<WizardFieldDiscoveryResponse>(
+      `/api/migration/wizard/sessions/${sessionId}/fields/discover`,
+      null,
+      { headers: migrationUserHeaders() }
+    ),
+
+  provisionMissingSessionFields: (sessionId: string) =>
+    apiClient.post<WizardFieldProvisioningResponse>(
+      `/api/migration/wizard/sessions/${sessionId}/fields/provision-missing`,
+      null,
       { headers: migrationUserHeaders() }
     ),
 

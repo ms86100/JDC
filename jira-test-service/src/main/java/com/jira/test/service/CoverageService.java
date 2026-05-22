@@ -5,6 +5,8 @@ import com.jira.test.entity.*;
 import com.jira.test.event.CoverageRecalculatedEvent;
 import com.jira.test.event.EventPublisherService;
 import com.jira.test.repository.*;
+import lombok.Builder;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -407,16 +409,16 @@ public class CoverageService {
     @Transactional(readOnly = true)
     public CoverageTrendResponse getCoverageTrends(UUID projectId, int days) {
         List<CoverageDriftRecord> driftRecords = coverageDriftRecordRepository.findAll().stream()
-                .filter(r -> isInDateRange(r.getAnalysisTimestamp(), days))
+                .filter(r -> isInDateRange(r.getDetectedAt(), days))
                 .toList();
 
         List<CoverageTrendResponse.TrendDataPoint> trendPoints = new ArrayList<>();
         Map<LocalDateTime, List<CoverageDriftRecord>> byDate = driftRecords.stream()
-                .collect(Collectors.groupingBy(r -> r.getAnalysisTimestamp().toLocalDate().atStartOfDay()));
+                .collect(Collectors.groupingBy(r -> r.getDetectedAt().toLocalDate().atStartOfDay()));
 
         byDate.forEach((date, records) -> {
             BigDecimal avgCoverage = records.stream()
-                    .map(CoverageDriftRecord::getCurrentCoverageScore)
+                    .map(CoverageDriftRecord::getCurrentCoverage)
                     .reduce(BigDecimal.ZERO, BigDecimal::add)
                     .divide(BigDecimal.valueOf(records.size()), 2, RoundingMode.HALF_UP);
 
@@ -564,8 +566,8 @@ public class CoverageService {
                 BigDecimal.valueOf(coveredTests * 100.0 / totalTests).setScale(2, RoundingMode.HALF_UP) :
                 BigDecimal.ZERO;
 
-        List<CoverageAlert> alerts = getAlerts(projectId).stream()
-                .map(a -> CoverageAlert.builder()
+        List<ProjectCoverageResponse.CoverageAlert> alerts = getAlerts(projectId).stream()
+                .map(a -> ProjectCoverageResponse.CoverageAlert.builder()
                         .alertType("THRESHOLD")
                         .severity(a.getAlertLevel().name())
                         .message(a.getMessage())
@@ -638,11 +640,11 @@ public class CoverageService {
                 .filter(c -> "PARTIAL".equals(c.getStatus()))
                 .count();
 
-        BigDecimal overallCoverage = matrix.stream()
+        BigDecimal overallCoverage = BigDecimal.valueOf(matrix.stream()
                 .flatMap(List::stream)
                 .mapToDouble(c -> c.getCoverage().doubleValue())
                 .average()
-                .orElse(0.0);
+                .orElse(0.0)).setScale(2, RoundingMode.HALF_UP);
 
         return CoverageMatrixResponse.builder()
                 .projectId(projectId)
@@ -650,7 +652,7 @@ public class CoverageService {
                 .testSetNames(testSetNames)
                 .matrix(matrix)
                 .summary(CoverageMatrixResponse.MatrixSummary.builder()
-                        .overallCoverage(BigDecimal.valueOf(overallCoverage).setScale(2, RoundingMode.HALF_UP))
+                        .overallCoverage(overallCoverage)
                         .totalRequirements(requirementKeys.size())
                         .totalTestSets(testSets.size())
                         .fullyCoveredRequirements(fullyCovered)
@@ -702,8 +704,8 @@ public class CoverageService {
                 int priorityScore = calculateTestPriority(test, linksByRequirement);
                 prioritizedTests.add(CoverageSuggestionResponse.PrioritizedTest.builder()
                         .testId(test.getId())
-                        .testKey(test.getKey())
-                        .requirementKey(test.getKey())
+                        .testKey(test.getName())
+                        .requirementKey(test.getName())
                         .priorityScore(priorityScore)
                         .reason("Test not yet executed - contributes to coverage gaps")
                         .build());
@@ -725,7 +727,7 @@ public class CoverageService {
                         .highPriorityCount(highPriority)
                         .mediumPriorityCount(mediumPriority)
                         .lowPriorityCount(lowPriority)
-                        .potentialCoverageGain(BigDecimal.valueOf(suggestions.stream().mapToInt(CoverageSuggestionResponse.CoverageSuggestion::getEstimatedImpact).sum())))
+                        .potentialCoverageGain(BigDecimal.valueOf(suggestions.stream().mapToInt(CoverageSuggestionResponse.CoverageSuggestion::getEstimatedImpact).sum()))
                         .build())
                 .build();
     }
@@ -946,9 +948,9 @@ public class CoverageService {
                 .filter(t -> !executionRepository.findByTestId(t.getId()).isEmpty())
                 .count();
 
-        Map<TestIssue.TestType, Integer> byType = tests.stream()
+        Map<String, Integer> byType = tests.stream()
                 .filter(t -> t.getTestType() != null)
-                .collect(Collectors.groupingBy(TestIssue.TestType, Collectors.collectingAndThen(
+                .collect(Collectors.groupingBy(TestIssue::getTestType, Collectors.collectingAndThen(
                         Collectors.counting(), Long::intValue)));
 
         Map<String, Object> coverageSnapshot = new HashMap<>();

@@ -20,8 +20,8 @@ export const labelApi = {
   getAll: (issueId: string) =>
     apiClient.get<LabelResponse[]>(`/api/issues/${issueId}/labels`),
 
-  search: (issueId: string, query: string) =>
-    apiClient.get<LabelResponse[]>(`/api/issues/${issueId}/labels/search`, { params: { query } }),
+  search: (_issueId: string, query: string) =>
+    apiClient.get<LabelResponse[]>(`/api/issues/${_issueId}/labels/search`, { params: { query } }),
 
   remove: (issueId: string, labelName: string) =>
     apiClient.delete(`/api/issues/${issueId}/labels/${encodeURIComponent(labelName)}`),

@@ -8,8 +8,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-@Entity
-@Table(name = "board_configs", schema = "jira_sprint")
+/** @deprecated Legacy duplicate of {@link com.jira.board.entity.BoardConfig}; not JPA-mapped. */
+@Deprecated
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class BoardConfig {
 

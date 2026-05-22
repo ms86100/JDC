@@ -63,6 +63,23 @@ Runtime files (logs, PIDs, local Postgres data) go under `platform-runtime/` —
 - `.env`, credentials, crash dumps (`hs_err_pid*.log`)
 - `.claude/` — local agent tooling
 
+## Migration E2E (optional live CI — MG-P1-7)
+
+Local live API test (migration-service on **8094**, frontend dev server):
+
+```bash
+cd jira-frontend
+MIGRATION_E2E_API=1 MIGRATION_E2E_LIVE=1 npm run test:e2e:migration-live
+```
+
+GitHub Actions: set repository variable **`MIGRATION_E2E_API=1`** to enable `.github/workflows/migration-e2e-live.yml`.
+
+| Variable | Purpose |
+|----------|---------|
+| `MIGRATION_E2E_API=1` | Hit real migration validate/import APIs (not mocks) |
+| `MIGRATION_E2E_FULL=1` | Full import + parity panel (needs full stack + `MIGRATION_E2E_PROJECT_ID`) |
+| `MIGRATION_REQUIRE_JWT=true` | Migration service rejects requests without valid Bearer JWT |
+
 ## Troubleshooting
 
 | Problem | Fix |

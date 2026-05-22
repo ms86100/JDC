@@ -60,6 +60,18 @@ public class ClusterHealthMonitor {
     @Transactional(readOnly = true)
     public ClusterHealth getClusterHealth() {
         try {
+            if (!clusterConfig.isEnabled()) {
+                return ClusterHealth.builder()
+                        .status(ClusterHealth.HealthStatus.HEALTHY)
+                        .activeNodes(1)
+                        .totalNodes(1)
+                        .unhealthyNodes(List.of())
+                        .warnings(List.of("Cluster coordination disabled (standalone mode)"))
+                        .timestamp(System.currentTimeMillis())
+                        .availabilityPercentage(100.0)
+                        .build();
+            }
+
             List<String> warnings = new ArrayList<>();
             List<String> unhealthyNodes = new ArrayList<>();
 

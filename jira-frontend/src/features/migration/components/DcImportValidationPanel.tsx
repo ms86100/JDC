@@ -4,6 +4,7 @@ import type { DcImportOptions } from './DcImportOptionsPanel';
 import { DcImportInsightsPanel } from './DcImportInsightsPanel';
 import DcImportConflictPanel from './DcImportConflictPanel';
 import DcImportUnknownFieldsPanel from './DcImportUnknownFieldsPanel';
+import DcImportAcSignoffPanel from './DcImportAcSignoffPanel';
 
 interface Props {
   xmlOrZipFile: File | null;
@@ -99,6 +100,18 @@ export default function DcImportValidationPanel({
             </p>
           </div>
 
+          <div className="text-sm bg-blue-50 border border-blue-200 rounded p-3" data-testid="dc-bundle-parity-checklist">
+            <p className="font-medium text-blue-900">Attachment bundle parity (G-06)</p>
+            <ul className="mt-2 list-disc list-inside text-blue-800 space-y-1">
+              <li>ZIP or folder should contain <code>data/attachments/</code> (Jira DC layout).</li>
+              <li>Upload bundle in Configure step or set server path in DC options.</li>
+              <li>
+                Status: {result.attachmentsRootResolved ? 'Root resolved — ready for import' : 'Upload bundle and re-validate'}
+              </li>
+              <li>For CSV-only attachments use External Import profile with URL or FILE: column (Migration → Import settings).</li>
+            </ul>
+          </div>
+
           {(result.errors?.length ?? 0) > 0 && (
             <div>
               <p className="text-xs font-semibold text-red-800 mb-1">Validation errors</p>
@@ -129,6 +142,15 @@ export default function DcImportValidationPanel({
             }}
             relationshipEdges={result.relationshipEdges}
           />
+
+          {result.acSignoffPreview ? (
+            <DcImportAcSignoffPanel jobId={null} embeddedSignoff={result.acSignoffPreview} />
+          ) : (
+            <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded p-3">
+              AC sign-off preview not returned — start <strong>jira-migration-service</strong> on port 8094 and
+              validate again to load the Enterprise AC table.
+            </p>
+          )}
         </>
       )}
     </div>

@@ -12,8 +12,8 @@ const JOB_STATUS_MAP: Record<string, { status: LozengeStatus; label: string }> =
   PAUSED: { status: 'blocked', label: 'Paused' },
   COMPLETED: { status: 'done', label: 'Completed' },
   FAILED: { status: 'blocked', label: 'Failed' },
-  CANCELLED: { status: 'blocked', label: 'Cancelled' },
-  ROLLED_BACK: { status: 'blocked', label: 'Rolled back' },
+  CANCELLED: { status: 'todo', label: 'Cancelled' },
+  ROLLED_BACK: { status: 'todo', label: 'Rolled back' },
 };
 
 export function jobStatusLozenge(jobStatus: string): { status: LozengeStatus; label: string } {

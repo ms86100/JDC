@@ -7,8 +7,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
-@Table(name = "board_columns")
+/** @deprecated Legacy duplicate of {@link com.jira.board.entity.BoardColumn}; not JPA-mapped. */
+@Deprecated
 @Getter
 @Setter
 @NoArgsConstructor

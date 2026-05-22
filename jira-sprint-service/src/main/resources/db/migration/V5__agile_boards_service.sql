@@ -104,25 +104,7 @@ INSERT INTO jira_sprint.quick_filter_presets (id, name, jql_query, icon, is_syst
     ('00000000-0000-0001-0001-000000000007', 'Blocked', 'status = "Blocked"', '🚧', TRUE, 7)
 ON CONFLICT (id) DO NOTHING;
 
--- ============================================
--- SEED DATA: Default Scrum Board Columns
--- ============================================
-INSERT INTO jira_sprint.board_columns (id, board_id, name, sequence, status_category, is_done, max_issues, color) VALUES
-    ('00000000-0000-0002-0001-000000000001', '00000000-0000-0002-0001-000000000000', 'Backlog', 0, 'TODO', FALSE, NULL, '#6c757d'),
-    ('00000000-0000-0002-0001-000000000002', '00000000-0000-0002-0001-000000000000', 'To Do', 1, 'TODO', FALSE, NULL, '#6c757d'),
-    ('00000000-0000-0002-0001-000000000003', '00000000-0000-0002-0001-000000000000', 'In Progress', 2, 'IN_PROGRESS', FALSE, 5, '#0066ff'),
-    ('00000000-0000-0002-0001-000000000004', '00000000-0000-0002-0001-000000000000', 'In Review', 3, 'IN_REVIEW', FALSE, 3, '#ff9200'),
-    ('00000000-0000-0002-0001-000000000005', '00000000-0000-0002-0001-000000000000', 'Done', 4, 'DONE', TRUE, NULL, '#28a745')
-ON CONFLICT (id) DO NOTHING;
-
--- ============================================
--- SEED DATA: Default Kanban Board Columns
--- ============================================
-INSERT INTO jira_sprint.board_columns (id, board_id, name, sequence, status_category, is_done, max_issues, color) VALUES
-    ('00000000-0000-0002-0002-000000000001', '00000000-0000-0002-0002-000000000000', 'To Do', 0, 'TODO', FALSE, NULL, '#6c757d'),
-    ('00000000-0000-0002-0002-000000000002', '00000000-0000-0002-0002-000000000000', 'In Progress', 1, 'IN_PROGRESS', FALSE, 10, '#0066ff'),
-    ('00000000-0000-0002-0002-000000000003', '00000000-0000-0002-0002-000000000000', 'Done', 2, 'DONE', TRUE, NULL, '#28a745')
-ON CONFLICT (id) DO NOTHING;
+-- Board columns are created per-board in BoardService.createDefaultColumns() when a board is provisioned.
 
 -- ============================================
 -- INDEXES FOR PERFORMANCE

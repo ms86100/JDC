@@ -52,6 +52,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/api/workflows",
             "/api/workflows/schemes",
             "/api/workflow-schemes",
+            "/api/comments",
+            "/api/comments/**",
             "/actuator",
             "/swagger-ui",
             "/swagger-ui.html",

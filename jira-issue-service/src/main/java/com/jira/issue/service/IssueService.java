@@ -38,6 +38,8 @@ public class IssueService {
     private final IssueLinkRepository issueLinkRepository;
     private final IssueLinkTypeRepository issueLinkTypeRepository;
     private final WorkflowTransitionClient workflowTransitionClient;
+    private final LabelService labelService;
+    private final LabelRepository labelRepository;
 
     @Value("${workflow.service.url}")
     private String workflowServiceUrl;
@@ -114,9 +116,28 @@ public class IssueService {
                 .resolutionId(request.getResolutionId())
                 // Due date
                 .dueDate(request.getDueDate())
+                // Labels and components
+                .labels(request.getLabels())
+                .componentIds(request.getComponentIds())
                 .build();
 
         issue = issueRepository.save(issue);
+
+        if (request.getLabels() != null) {
+            for (String label : request.getLabels()) {
+                if (label != null && !label.isBlank()) {
+                    try {
+                        labelService.addLabel(LabelRequest.builder()
+                                .issueId(issue.getId())
+                                .name(label)
+                                .build());
+                    } catch (IllegalArgumentException ignored) {
+                        // label already exists on issue
+                    }
+                }
+            }
+        }
+
         log.info("Issue created successfully: {}", issueKey);
         return mapToIssueResponse(issue);
     }
@@ -300,6 +321,67 @@ public class IssueService {
         return mapToIssueResponse(issue);
     }
 
+    @Transactional(readOnly = true)
+    public IssueResponse getIssueByKey(String issueKey) {
+        Issue issue = issueRepository.findByIssueKey(issueKey)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue", "issueKey", issueKey));
+        return mapToIssueResponse(issue);
+    }
+
+    @Transactional
+    public IssueResponse addVote(UUID issueId, UUID userId) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", issueId));
+        if (!voteRepository.existsByIssueIdAndUserId(issueId, userId)) {
+            voteRepository.save(Vote.builder().issueId(issueId).userId(userId).build());
+            issue.incrementVoteCount();
+            issueRepository.save(issue);
+        }
+        return mapToIssueResponse(issue);
+    }
+
+    @Transactional
+    public IssueResponse removeVote(UUID issueId, UUID userId) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", issueId));
+        if (voteRepository.existsByIssueIdAndUserId(issueId, userId)) {
+            voteRepository.deleteByIssueIdAndUserId(issueId, userId);
+            issue.decrementVoteCount();
+            if (issue.getVoteCount() != null && issue.getVoteCount() < 0) {
+                issue.setVoteCount(0);
+            }
+            issueRepository.save(issue);
+        }
+        return mapToIssueResponse(issue);
+    }
+
+    @Transactional
+    public IssueResponse addWatcher(UUID issueId, UUID userId) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", issueId));
+        if (!watcherRepository.existsByIssueIdAndUserId(issueId, userId)) {
+            watcherRepository.save(Watcher.builder().issueId(issueId).userId(userId).build());
+            issue.incrementWatcherCount();
+            issueRepository.save(issue);
+        }
+        return mapToIssueResponse(issue);
+    }
+
+    @Transactional
+    public IssueResponse removeWatcher(UUID issueId, UUID userId) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", issueId));
+        if (watcherRepository.existsByIssueIdAndUserId(issueId, userId)) {
+            watcherRepository.deleteByIssueIdAndUserId(issueId, userId);
+            issue.decrementWatcherCount();
+            if (issue.getWatcherCount() != null && issue.getWatcherCount() < 0) {
+                issue.setWatcherCount(0);
+            }
+            issueRepository.save(issue);
+        }
+        return mapToIssueResponse(issue);
+    }
+
     @Transactional
     public IssueResponse updateIssue(UUID issueId, UpdateIssueRequest request) {
         log.info("Updating issue: {}", issueId);
@@ -324,6 +406,9 @@ public class IssueService {
         }
         if (request.getDescription() != null) {
             issue.setDescription(request.getDescription());
+        }
+        if (request.getEnvironment() != null) {
+            issue.setEnvironment(request.getEnvironment());
         }
         if (request.getAssigneeId() != null) {
             issue.setAssigneeId(request.getAssigneeId());
@@ -369,6 +454,17 @@ public class IssueService {
 
         // Due date
         if (request.getDueDate() != null) issue.setDueDate(request.getDueDate());
+
+        // Labels and components
+        if (request.getLabels() != null) issue.setLabels(request.getLabels());
+        if (request.getComponentIds() != null) issue.setComponentIds(request.getComponentIds());
+
+        // Status (direct update without workflow — used by edit forms)
+        if (request.getStatusId() != null) {
+            IssueStatus status = issueStatusRepository.findById(request.getStatusId())
+                    .orElseThrow(() -> new ResourceNotFoundException("IssueStatus", "id", request.getStatusId()));
+            issue.setStatus(status);
+        }
 
         issue = issueRepository.save(issue);
         log.info("Issue updated successfully: {}", issueId);
@@ -496,6 +592,45 @@ public class IssueService {
         log.info("Issue deleted successfully: {}", issueId);
     }
 
+    @Transactional
+    public IssueResponse cloneIssue(UUID sourceIssueId, UUID targetProjectId, UUID userId) {
+        Issue source = issueRepository.findById(sourceIssueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", sourceIssueId));
+        UUID projectId = targetProjectId != null ? targetProjectId : source.getProjectId();
+        UUID actor = userId != null ? userId : source.getReporterId();
+
+        CreateIssueRequest request = CreateIssueRequest.builder()
+                .projectId(projectId)
+                .title("CLONE - " + source.getTitle())
+                .description(source.getDescription())
+                .issueTypeId(source.getIssueType() != null ? source.getIssueType().getId() : null)
+                .priorityId(source.getPriority() != null ? source.getPriority().getId() : null)
+                .assigneeId(source.getAssigneeId())
+                .parentIssueId(source.getParentIssueId())
+                .epicId(source.getEpicId())
+                .storyPoints(source.getStoryPoints())
+                .originalEstimate(source.getOriginalEstimate())
+                .remainingEstimate(source.getRemainingEstimate())
+                .dueDate(source.getDueDate())
+                .build();
+        return createIssue(request, actor);
+    }
+
+    @Transactional
+    public IssueResponse moveIssue(UUID issueId, UUID targetProjectId) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", issueId));
+        String projectKey = getProjectKey(targetProjectId);
+        if (projectKey == null) {
+            throw new ResourceNotFoundException("Project", "id", targetProjectId);
+        }
+        issue.setProjectId(targetProjectId);
+        issue.setIssueKey(generateIssueKey(projectKey));
+        issue = issueRepository.save(issue);
+        log.info("Issue {} moved to project {}", issueId, targetProjectId);
+        return mapToIssueResponse(issue);
+    }
+
     private boolean validateTransition(UUID projectId, UUID fromStatusId, UUID toStatusId) {
         try {
             String url = String.format("%s/api/workflows/project/%s/validate-transition?fromStatus=%s&toStatus=%s",
@@ -524,7 +659,7 @@ public class IssueService {
         // Use synchronized block to prevent race conditions in key generation
         // The database query uses SELECT FOR UPDATE to lock the row during read-modify-write
         synchronized (this) {
-            Integer maxNumber = issueRepository.findMaxIssueNumberByProjectKeyForUpdate(normalizedKey)
+            Integer maxNumber = issueRepository.findMaxIssueNumberByProjectKey(normalizedKey)
                     .orElse(0);
 
             int nextNumber = (maxNumber != null ? maxNumber : 0) + 1;
@@ -616,6 +751,18 @@ public class IssueService {
                 componentRepository.findById(componentId).ifPresent(c -> componentNames.add(c.getName()));
             }
             builder.componentNames(componentNames.isEmpty() ? null : componentNames.toArray(new String[0]));
+        }
+
+        // Load labels from label table
+        List<Label> issueLabels = labelRepository.findByIssueId(issue.getId());
+        if (!issueLabels.isEmpty()) {
+            builder.labels(issueLabels.stream().map(Label::getName).toArray(String[]::new));
+        } else if (issue.getLabels() != null && issue.getLabels().length > 0) {
+            builder.labels(issue.getLabels());
+        }
+
+        if (issue.getComponentIds() != null && issue.getComponentIds().length > 0) {
+            builder.componentIds(issue.getComponentIds());
         }
 
         // Load linked issues

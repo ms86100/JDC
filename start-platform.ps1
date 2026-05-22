@@ -8,7 +8,8 @@ param(
 )
 
 $ErrorActionPreference = "SilentlyContinue"
-$ProjectRoot = Split-Path -Parent $PSScriptRoot
+# Script lives in jira-platform/ — repo root is the script directory (not its parent).
+$ProjectRoot = $PSScriptRoot
 $RuntimeDir = Join-Path $ProjectRoot "platform-runtime"
 $LogDir = Join-Path $RuntimeDir "logs"
 $PidDir = Join-Path $RuntimeDir "pids"
@@ -39,9 +40,9 @@ function Get-Services {
 }
 
 function Save-ServicePid {
-    param([string]$ServiceName, [int]$Pid)
+    param([string]$ServiceName, [int]$ProcessId)
     $pidFile = Join-Path $PidDir "$ServiceName.pid"
-    Set-Content -Path $pidFile -Value $Pid -NoNewline
+    Set-Content -Path $pidFile -Value $ProcessId -NoNewline
 }
 
 function Clear-ServicePid {
@@ -58,9 +59,9 @@ function Get-ServicePid {
 }
 
 function Test-ProcessRunning {
-    param([int]$Pid)
-    if ($Pid -eq 0 -or $Pid -eq $null) { return $false }
-    try { $process = Get-Process -Id $Pid -ErrorAction SilentlyContinue; return $null -ne $process } catch { return $false }
+    param([int]$ProcessId)
+    if ($ProcessId -eq 0 -or $ProcessId -eq $null) { return $false }
+    try { $process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue; return $null -ne $process } catch { return $false }
 }
 
 function Write-Log {
@@ -90,27 +91,66 @@ function Find-JavaPath {
     return "java.exe"
 }
 
+function Get-ServiceModuleDir {
+    param([object]$Service, [string]$ProjectRoot)
+    if ($Service.name -eq "gateway") {
+        return Join-Path $ProjectRoot "jira-gateway"
+    }
+    $short = $Service.name -replace "-service$", ""
+    return Join-Path $ProjectRoot "jira-$short-service"
+}
+
 function Find-JarPath {
     param([object]$Service, [string]$ProjectRoot)
-    $serviceNameShort = $Service.name -replace "-service", ""
-    $jarDir = Join-Path $ProjectRoot "jira-$serviceNameShort-service\target"
+
+    if ($Service.jarName) {
+        $explicit = Join-Path (Get-ServiceModuleDir -Service $Service -ProjectRoot $ProjectRoot) "target\$($Service.jarName)"
+        if (Test-Path $explicit) { return $explicit }
+    }
+
+    $jarDir = Join-Path (Get-ServiceModuleDir -Service $Service -ProjectRoot $ProjectRoot) "target"
     if (-not (Test-Path $jarDir)) { return $null }
 
-    $jars = Get-ChildItem -Path $jarDir -Filter "*.jar" -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch "original" }
+    $jars = Get-ChildItem -Path $jarDir -Filter "*.jar" -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -notmatch "original|classes" } |
+        Sort-Object Length -Descending
     if ($jars) { return $jars[0].FullName }
     return $null
+}
+
+function Set-ServiceProcessEnvironment {
+    param([object]$Service)
+    $saved = @{}
+    if (-not $Service.environment) { return $saved }
+    foreach ($key in $Service.environment.PSObject.Properties.Name) {
+        $saved[$key] = [Environment]::GetEnvironmentVariable($key, "Process")
+        [Environment]::SetEnvironmentVariable($key, [string]$Service.environment.$key, "Process")
+    }
+    return $saved
+}
+
+function Restore-ServiceProcessEnvironment {
+    param([hashtable]$Saved)
+    foreach ($key in $Saved.Keys) {
+        if ($null -eq $Saved[$key]) {
+            [Environment]::SetEnvironmentVariable($key, $null, "Process")
+        } else {
+            [Environment]::SetEnvironmentVariable($key, $Saved[$key], "Process")
+        }
+    }
 }
 
 function Start-ServiceFast {
     param([object]$Service, [string]$ProjectRoot)
 
     $existingPid = Get-ServicePid -ServiceName $Service.name
-    if ($existingPid -and (Test-ProcessRunning -Pid $existingPid)) {
+    if ($existingPid -and (Test-ProcessRunning -ProcessId $existingPid)) {
         Write-Host "[SKIP] $($Service.displayName) already running" -ForegroundColor Gray
         return $true
     }
 
     $logFile = Join-Path $LogDir "$($Service.name).log"
+    $errFile = Join-Path $LogDir "$($Service.name).err.log"
 
     try {
         if ($Service.type -eq "backend" -or $Service.type -eq "gateway") {
@@ -118,40 +158,36 @@ function Start-ServiceFast {
             $jarPath = Find-JarPath -Service $Service -ProjectRoot $ProjectRoot
 
             if (-not $jarPath) {
-                Write-Host "[ERROR] JAR not found for $($Service.name)" -ForegroundColor Red
+                $moduleDir = Get-ServiceModuleDir -Service $Service -ProjectRoot $ProjectRoot
+                $moduleName = Split-Path -Leaf $moduleDir
+                Write-Host "[ERROR] JAR not found for $($Service.name) (build: mvn -pl $moduleName package -DskipTests)" -ForegroundColor Red
                 return $false
             }
 
             $heapSize = if ($Service.memory) { $Service.memory } else { "256m" }
+            $argList = @("-Xms$heapSize", "-Xmx$heapSize", "-jar", $jarPath, "--server.port=$($Service.port)")
 
-            $args = @("-Xms$heapSize", "-Xmx$heapSize", "-jar", $jarPath, "--server.port=$($Service.port)")
-
-            $envVars = @{}
-            if ($Service.environment) {
-                foreach ($key in $Service.environment.PSObject.Properties.Name) {
-                    $envVars[$key] = [string]$Service.environment.$key
-                }
+            $envBackup = Set-ServiceProcessEnvironment -Service $Service
+            try {
+                # Start-Process: PowerShell cannot use Process.OutputDataReceived += (that is C# syntax).
+                $proc = Start-Process -FilePath $javaPath `
+                    -ArgumentList $argList `
+                    -WorkingDirectory $ProjectRoot `
+                    -WindowStyle Hidden `
+                    -RedirectStandardOutput $logFile `
+                    -RedirectStandardError $errFile `
+                    -PassThru
+            } finally {
+                Restore-ServiceProcessEnvironment -Saved $envBackup
             }
 
-            $psi = New-Object System.Diagnostics.ProcessStartInfo
-            $psi.FileName = $javaPath
-            $psi.Arguments = $args -join " "
-            $psi.WorkingDirectory = $ProjectRoot
-            $psi.UseShellExecute = $false
-            $psi.RedirectStandardOutput = $true
-            $psi.RedirectStandardError = $true
-            $psi.CreateNoWindow = $true
+            if (-not $proc -or $proc.HasExited) {
+                Write-Host "[ERROR] $($Service.name) exited immediately - see $logFile" -ForegroundColor Red
+                return $false
+            }
 
-            foreach ($key in $envVars.Keys) { $psi.EnvironmentVariables[$key] = $envVars[$key] }
-
-            $process = [System.Diagnostics.Process]::Start($psi)
-            $process.OutputDataReceived += { if ($EventArgs.Data) { Add-Content -Path $logFile -Value "[$((Get-Date).ToString('HH:mm:ss'))] $($EventArgs.Data)" -Encoding UTF8 } }
-            $process.ErrorDataReceived += { if ($EventArgs.Data) { Add-Content -Path $logFile -Value "[$((Get-Date).ToString('HH:mm:ss'))] ERROR: $($EventArgs.Data)" -Encoding UTF8 } }
-            $process.BeginOutputReadLine()
-            $process.BeginErrorReadLine()
-
-            Save-ServicePid -ServiceName $Service.name -Pid $process.Id
-            Write-Host "[START] $($Service.displayName) (PID: $($process.Id))" -ForegroundColor Green
+            Save-ServicePid -ServiceName $Service.name -ProcessId $proc.Id
+            Write-Host "[START] $($Service.displayName) (PID: $($proc.Id))" -ForegroundColor Green
             return $true
 
         } elseif ($Service.type -eq "frontend") {
@@ -161,30 +197,27 @@ function Start-ServiceFast {
                 return $false
             }
 
-            $psi = New-Object System.Diagnostics.ProcessStartInfo
-            $psi.FileName = "npm.cmd"
-            $psi.Arguments = "run dev"
-            $psi.WorkingDirectory = $frontendDir
-            $psi.UseShellExecute = $false
-            $psi.RedirectStandardOutput = $true
-            $psi.RedirectStandardError = $true
-            $psi.CreateNoWindow = $true
-            $psi.EnvironmentVariables["FORCE_COLOR"] = "1"
-
-            if ($Service.environment) {
-                foreach ($key in $Service.environment.PSObject.Properties.Name) {
-                    $psi.EnvironmentVariables[$key] = [string]$Service.environment.$key
-                }
+            $envBackup = Set-ServiceProcessEnvironment -Service $Service
+            [Environment]::SetEnvironmentVariable("FORCE_COLOR", "1", "Process")
+            try {
+                $proc = Start-Process -FilePath "npm.cmd" `
+                    -ArgumentList @("run", "dev") `
+                    -WorkingDirectory $frontendDir `
+                    -WindowStyle Hidden `
+                    -RedirectStandardOutput $logFile `
+                    -RedirectStandardError $errFile `
+                    -PassThru
+            } finally {
+                Restore-ServiceProcessEnvironment -Saved $envBackup
             }
 
-            $process = [System.Diagnostics.Process]::Start($psi)
-            $process.OutputDataReceived += { if ($EventArgs.Data) { Add-Content -Path $logFile -Value "[$((Get-Date).ToString('HH:mm:ss'))] $($EventArgs.Data)" -Encoding UTF8 } }
-            $process.ErrorDataReceived += { if ($EventArgs.Data) { Add-Content -Path $logFile -Value "[$((Get-Date).ToString('HH:mm:ss'))] ERROR: $($EventArgs.Data)" -Encoding UTF8 } }
-            $process.BeginOutputReadLine()
-            $process.BeginErrorReadLine()
+            if (-not $proc -or $proc.HasExited) {
+                Write-Host "[ERROR] frontend exited immediately - see $logFile" -ForegroundColor Red
+                return $false
+            }
 
-            Save-ServicePid -ServiceName $Service.name -Pid $process.Id
-            Write-Host "[START] $($Service.displayName) (PID: $($process.Id))" -ForegroundColor Green
+            Save-ServicePid -ServiceName $Service.name -ProcessId $proc.Id
+            Write-Host "[START] $($Service.displayName) (PID: $($proc.Id))" -ForegroundColor Green
             return $true
         }
         return $false
@@ -226,6 +259,33 @@ function Wait-ForServicesReady {
     return $allReady
 }
 
+function Open-PlatformBrowsers {
+    param(
+        [int]$GatewayPort = 8080,
+        [int]$FrontendPort = 3000,
+        [int]$TimeoutSeconds = 90
+    )
+
+    Write-Host "Waiting for gateway (:$GatewayPort) and frontend (:$FrontendPort)..." -ForegroundColor Cyan
+    $ready = Wait-ForServicesReady -Ports @($GatewayPort, $FrontendPort) -TimeoutSeconds $TimeoutSeconds
+    if (-not $ready) {
+        Write-Host "[WARN] Ports not fully ready yet - opening browser anyway" -ForegroundColor Yellow
+    }
+
+    $urls = @(
+        "http://localhost:$FrontendPort",
+        "http://localhost:$GatewayPort"
+    )
+    foreach ($url in $urls) {
+        try {
+            Start-Process $url
+            Write-Host "  Opened $url" -ForegroundColor Gray
+        } catch {
+            Write-Host "  Could not open $url" -ForegroundColor Yellow
+        }
+    }
+}
+
 # ============================================================
 # MAIN STARTUP - PARALLEL FAST START
 # ============================================================
@@ -256,50 +316,47 @@ function Start-PlatformFast {
     Write-Host "Starting services in parallel..." -ForegroundColor Yellow
     Write-Host ""
 
-    # WAVE 1: Start all backends simultaneously
+    # WAVE 1: Start all backend services
     Write-Host "--- WAVE 1: Starting backend services ---" -ForegroundColor Magenta
-    $jobs = @()
+    $started = 0
     foreach ($service in $backends) {
-        $jobs += Start-Job -ScriptBlock {
-            param($svc, $projRoot)
-            & $PSScriptRoot\start-platform.ps1 -StartService $svc.name
-        } -ArgumentList $service, $ProjectRoot
+        if (Start-ServiceFast -Service $service -ProjectRoot $ProjectRoot) { $started++ }
     }
-
-    # Start backends one by one quickly (parallel is complex in batch)
-    foreach ($service in $backends) {
-        Start-ServiceFast -Service $service -ProjectRoot $ProjectRoot
+    if ($started -lt $backends.Count) {
+        Write-Host "[WARN] $($backends.Count - $started) backend(s) failed - run: mvn package -DskipTests" -ForegroundColor Yellow
     }
 
     Write-Host ""
     Write-Host "--- WAVE 2: Starting gateway ---" -ForegroundColor Magenta
     Start-Sleep -Seconds 3  # Brief wait for auth service
     if ($gateway) {
-        Start-ServiceFast -Service $gateway -ProjectRoot $ProjectRoot
+        [void](Start-ServiceFast -Service $gateway -ProjectRoot $ProjectRoot)
     }
 
     Write-Host ""
     Write-Host "--- WAVE 3: Starting frontend ---" -ForegroundColor Magenta
     Start-Sleep -Seconds 3  # Brief wait for gateway
     if ($frontend) {
-        Start-ServiceFast -Service $frontend -ProjectRoot $ProjectRoot
+        [void](Start-ServiceFast -Service $frontend -ProjectRoot $ProjectRoot)
     }
 
     # Save status
     $status = @{ started = (Get-Date).ToString("HH:mm:ss"); status = "running" }
     Set-Content -Path $StatusFile -Value ($status | ConvertTo-Json) -NoNewline
 
+    $gatewayPort = if ($gateway) { [int]$gateway.port } else { 8080 }
+    $frontendPort = if ($frontend) { [int]$frontend.port } else { 3000 }
+
     Write-Host ""
     Write-Host "==============================================================" -ForegroundColor Green
     Write-Host "  All services started!" -ForegroundColor Green
-    Write-Host "  Access: http://localhost:8080" -ForegroundColor Green
+    Write-Host "  Frontend: http://localhost:$frontendPort" -ForegroundColor Green
+    Write-Host "  Gateway:  http://localhost:$gatewayPort" -ForegroundColor Green
     Write-Host "  Logs: platform-runtime\logs\" -ForegroundColor Gray
     Write-Host "==============================================================" -ForegroundColor Green
     Write-Host ""
 
-    # Open browser
-    Start-Sleep -Seconds 3
-    try { Start-Process "http://localhost:8080" } catch {}
+    Open-PlatformBrowsers -GatewayPort $gatewayPort -FrontendPort $frontendPort
 }
 
 function Stop-PlatformFast {
@@ -337,8 +394,8 @@ function Show-StatusFast {
     Write-Host ""
 
     foreach ($service in $services) {
-        $pid = Get-ServicePid -ServiceName $service.name
-        $running = Test-ProcessRunning -Pid $pid
+        $serviceProcessId = Get-ServicePid -ServiceName $service.name
+        $running = Test-ProcessRunning -ProcessId $serviceProcessId
         $status = if ($running) { "RUNNING" } else { "STOPPED" }
         $color = if ($running) { "Green" } else { "Red" }
         Write-Host "  $($service.displayName.PadRight(25))" -NoNewline

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ADMIN_CATEGORIES } from '../../../components/layout/adminCategories';
+import { enableWebsudo } from '../../../components/layout/WebsudoBanner';
 import './AdminDashboardPage.css';
 
 const systemStats = {
@@ -68,6 +69,25 @@ export default function AdminDashboardPage() {
             Data Center administration.
           </p>
         </div>
+      </div>
+
+      <div className="admin-dashboard-websudo jdc-card" style={{ marginBottom: 20, padding: 16 }}>
+        <h3 style={{ marginTop: 0, fontSize: 14 }}>Temporary administrator access (websudo)</h3>
+        <p className="jdc-muted" style={{ margin: '0 0 12px', fontSize: 13 }}>
+          Jira Data Center shows a yellow banner while you operate with elevated privileges. Enable for 60
+          minutes to preview the websudo banner in the application shell.
+        </p>
+        <button
+          type="button"
+          className="jdc-btn jdc-btn-secondary"
+          onClick={() => {
+            enableWebsudo(60);
+            window.dispatchEvent(new Event('sa-websudo-change'));
+            window.location.href = '/dashboard';
+          }}
+        >
+          Enable websudo (60 min)
+        </button>
       </div>
 
       <div className="admin-overview">

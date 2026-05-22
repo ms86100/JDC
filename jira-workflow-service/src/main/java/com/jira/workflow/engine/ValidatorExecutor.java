@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,18 +19,16 @@ import java.util.UUID;
 @Slf4j
 public class ValidatorExecutor {
 
-    private static final Set<String> SUPPORTED_TYPES = Set.of(
+    private static final Set<String> SUPPORTED_TYPES = Set.copyOf(new LinkedHashSet<>(List.of(
             "REQUIRED_FIELD",
             WorkflowValidator.TYPE_FIELD_REQUIRED,
             "RESOLUTION_REQUIRED",
-            "COMMENT_REQUIRED",
             WorkflowValidator.TYPE_COMMENT_REQUIRED,
-            "REGEX",
             WorkflowValidator.TYPE_REGEX,
             "PARENT_STATUS",
             "ATTACHMENT_REQUIRED",
             WorkflowValidator.TYPE_ATTACHMENT_COUNT
-    );
+    )));
 
     private final WorkflowValidatorRepository workflowValidatorRepository;
     private final TransitionScreenService transitionScreenService;

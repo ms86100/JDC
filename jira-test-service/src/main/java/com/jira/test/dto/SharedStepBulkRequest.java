@@ -13,6 +13,8 @@ public class SharedStepBulkRequest {
 
     private List<UUID> sharedStepIds;
 
+    private List<UUID> testIds;
+
     private String operation; // UPDATE, DELETE, ARCHIVE, TAG, MIGRATE, EXPORT
 
     // Update operation fields

@@ -26,6 +26,33 @@ public final class JiraDcAcSignoffEvaluator {
             boolean signoffReady) {
     }
 
+    /**
+     * Pre-import AC preview from validate-upload response (no job yet).
+     */
+    public static Map<String, Object> evaluatePreImport(Map<String, Object> validateResult, Map<String, Object> options) {
+        Map<String, Object> pseudoMeta = new LinkedHashMap<>();
+        if (validateResult != null) {
+            pseudoMeta.put("format", validateResult.get("format"));
+            if (Boolean.TRUE.equals(validateResult.get("backupZipDetected"))) {
+                pseudoMeta.put("backupZipDetected", true);
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Long> byType = validateResult.get("entitiesByType") instanceof Map<?, ?> m
+                    ? (Map<String, Long>) m : Map.of();
+            pseudoMeta.put("processedByType", byType);
+            int unknown = validateResult.get("unknownCustomFields") instanceof List<?> l ? l.size() : 0;
+            if (unknown > 0) {
+                pseudoMeta.put("unknownCustomFieldsResolved", false);
+            }
+        }
+        Map<String, Object> opts = options != null ? options : Map.of();
+        if (Boolean.TRUE.equals(validateResult != null ? validateResult.get("backupZipDetected") : null)) {
+            opts = new LinkedHashMap<>(opts);
+            opts.put("backupZip", true);
+        }
+        return evaluate(pseudoMeta, opts, "PREVIEW", 0, 0);
+    }
+
     public static Map<String, Object> evaluate(
             Map<String, Object> resultMetadata,
             Map<String, Object> jobOptions,
@@ -50,7 +77,7 @@ public final class JiraDcAcSignoffEvaluator {
         items.add(ac4(meta));
         items.add(ac5(opts, meta));
         items.add(ac6(meta));
-        items.add(ac7(jobStatus, failedEntities));
+        items.add(ac7(meta, jobStatus, failedEntities));
         items.add(ac8());
         items.add(ac9(jobStatus, failedEntities));
         items.add(ac10(meta));
@@ -158,10 +185,18 @@ public final class JiraDcAcSignoffEvaluator {
                 false);
     }
 
-    private static AcSignoffItem ac7(String jobStatus, int failed) {
-        boolean partial = "COMPLETED".equals(jobStatus) && failed == 0;
+    private static AcSignoffItem ac7(Map<String, Object> meta, String jobStatus, int failed) {
+        boolean proven = Boolean.TRUE.equals(meta.get("rollbackProven"));
+        if (proven) {
+            return new AcSignoffItem("AC-7", "Rollback proven", STATUS_PASS,
+                    "rollbackProven=true after successful rollback on this job", true);
+        }
+        if ("PREVIEW".equals(jobStatus)) {
+            return new AcSignoffItem("AC-7", "Rollback proven", STATUS_NOT_RUN,
+                    "Run import then rollback drill to record rollbackProven on job metadata", false);
+        }
         return new AcSignoffItem("AC-7", "Rollback proven", STATUS_FAIL,
-                "Rollback API exists; formal rollback drill not recorded on this job",
+                "Rollback API exists; invoke rollback on a completed job to prove AC-7",
                 false);
     }
 

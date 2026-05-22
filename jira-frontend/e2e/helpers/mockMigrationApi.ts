@@ -9,6 +9,15 @@ const dcValidateOk = {
   warningCount: 0,
   entitiesByType: { Issue: 10, Comment: 2 },
   relationshipEdges: [{ from: 'TST-1', to: 'TST-2', type: 'blocks' }],
+  acSignoffPreview: {
+    criteria: [
+      { id: 'AC-1', title: 'Import DC 9.x backup ZIP from UI', status: 'PARTIAL', evidence: 'E2E mock', signoffReady: false },
+      { id: 'AC-2', title: '10k issues < SLA', status: 'NOT_RUN', evidence: 'E2E mock', signoffReady: false },
+    ],
+    signoffReadyCount: 0,
+    formalSignoffComplete: false,
+    overallStatus: 'PARTIAL',
+  },
   conflicts: [] as Array<{
     code: string;
     message: string;

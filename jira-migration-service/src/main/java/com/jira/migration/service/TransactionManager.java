@@ -115,9 +115,17 @@ public class TransactionManager {
         List<ProjectMapping> mappings = projectMappingRepository.findByJobId(jobId);
         projectMappingRepository.deleteAll(mappings);
 
-        // Update job status
+        // Update job status + AC-7 evidence
         job.setJobStatus("ROLLED_BACK");
         job.setCompletedAt(java.time.LocalDateTime.now());
+        if (failedCount == 0) {
+            Map<String, Object> meta = job.getResultMetadata() != null
+                    ? new java.util.HashMap<>(job.getResultMetadata()) : new java.util.HashMap<>();
+            meta.put("rollbackProven", true);
+            meta.put("rollbackProvenAt", java.time.Instant.now().toString());
+            meta.put("rollbackRolledBackCount", rolledBackCount);
+            job.setResultMetadata(meta);
+        }
         migrationJobRepository.save(job);
 
         // Log audit

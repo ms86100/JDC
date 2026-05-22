@@ -11,6 +11,8 @@ import DcImportJobOperationsPanel from './DcImportJobOperationsPanel';
 import DcImportParityReportPanel from './DcImportParityReportPanel';
 import DcImportSlaProofPanel from './DcImportSlaProofPanel';
 import DcImportAcSignoffPanel from './DcImportAcSignoffPanel';
+import ConfigImportSummaryPanel from './ConfigImportSummaryPanel';
+import { isJiraDcIssueImport } from '../utils/importTypeHelpers';
 
 interface Props {
   jobId: string;
@@ -21,7 +23,7 @@ interface Props {
 }
 
 export default function MigrationJobDetailPanel({ jobId, onClose, importType, resultMetadata }: Props) {
-  const isDc = importType === 'jira-dc';
+  const isDc = isJiraDcIssueImport(importType ?? undefined);
   const queryClient = useQueryClient();
   const [retrying, setRetrying] = useState<string | null>(null);
 
@@ -89,6 +91,7 @@ export default function MigrationJobDetailPanel({ jobId, onClose, importType, re
           </button>
         </div>
         <div className="p-6 space-y-6">
+          <ConfigImportSummaryPanel jobId={jobId} />
           <MigrationVerificationPanel jobId={jobId} />
           <MigrationReindexPanel jobId={jobId} />
           <ImportedIssuesPanel jobId={jobId} />
@@ -139,7 +142,25 @@ export default function MigrationJobDetailPanel({ jobId, onClose, importType, re
           )}
 
           <div className="border rounded-lg p-4">
-            <h4 className="font-semibold mb-2">Live logs</h4>
+            <div className="flex justify-between items-center mb-2">
+              <h4 className="font-semibold">Live logs</h4>
+              <button
+                type="button"
+                className="text-xs px-2 py-1 border rounded hover:bg-gray-50"
+                onClick={async () => {
+                  const res = await migrationApi.downloadJobLogs(jobId);
+                  const blob = new Blob([res.data], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `migration-logs-${jobId}.txt`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Download logs (.txt)
+              </button>
+            </div>
             <div className="max-h-40 overflow-y-auto font-mono text-xs bg-gray-900 text-green-400 p-3 rounded">
               {(logs || []).map((l, i) => (
                 <div key={i}>

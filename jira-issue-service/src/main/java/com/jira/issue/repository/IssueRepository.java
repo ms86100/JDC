@@ -30,7 +30,7 @@ public interface IssueRepository extends JpaRepository<Issue, UUID>, JpaSpecific
      * Uses pessimistic locking to prevent race conditions in issue key generation.
      */
     @Query(value = "SELECT MAX(CAST(SUBSTRING(issue_key, LENGTH(:projectKey) + 2) AS integer)) " +
-           "FROM jira_issue WHERE issue_key LIKE CONCAT(:projectKey, '-%') FOR UPDATE",
+           "FROM jira_issue.issues WHERE issue_key LIKE CONCAT(:projectKey, '-%') FOR UPDATE",
            nativeQuery = true)
     Optional<Integer> findMaxIssueNumberByProjectKeyForUpdate(@Param("projectKey") String projectKey);
 
@@ -59,4 +59,7 @@ public interface IssueRepository extends JpaRepository<Issue, UUID>, JpaSpecific
 
     @Query("SELECT i FROM Issue i WHERE i.projectId = :projectId AND i.issueType.name = :typeName")
     List<Issue> findByProjectIdAndIssueTypeName(@Param("projectId") UUID projectId, @Param("typeName") String typeName);
+
+    @Query("SELECT i FROM Issue i WHERE i.projectId = :projectId ORDER BY i.rank ASC NULLS LAST, i.updatedAt DESC")
+    List<Issue> findByProjectIdForRanking(@Param("projectId") UUID projectId);
 }

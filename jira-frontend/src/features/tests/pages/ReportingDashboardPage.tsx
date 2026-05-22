@@ -33,6 +33,12 @@ import combinedApi, {
   TestExecutionResponse,
   TraceabilityMatrixResponse,
 } from '../../../api/testApi';
+import {
+  issueTestOpsApi,
+  DefectDensityReport,
+  SprintQualityReport,
+  AutomationCoverageReport,
+} from '../../../api/issueTestOpsApi';
 
 interface ReportingDashboardPageProps {
   projectId?: string;
@@ -112,6 +118,33 @@ const ReportingDashboardPage: React.FC<ReportingDashboardPageProps> = ({ project
   const { data: traceabilityMatrix } = useQuery<TraceabilityMatrixResponse[], Error>({
     queryKey: ['traceability-matrix', projectId],
     queryFn: () => combinedApi.getTraceabilityMatrix(projectId || ''),
+    enabled: !!projectId,
+  });
+
+  const { data: defectDensity } = useQuery<DefectDensityReport, Error>({
+    queryKey: ['defect-density', projectId],
+    queryFn: async () => {
+      const res = await issueTestOpsApi.getDefectDensity(projectId || '');
+      return res.data;
+    },
+    enabled: !!projectId,
+  });
+
+  const { data: sprintQuality } = useQuery<SprintQualityReport, Error>({
+    queryKey: ['sprint-quality', projectId],
+    queryFn: async () => {
+      const res = await issueTestOpsApi.getSprintQuality(projectId || '');
+      return res.data;
+    },
+    enabled: !!projectId,
+  });
+
+  const { data: automationCoverage } = useQuery<AutomationCoverageReport, Error>({
+    queryKey: ['automation-coverage', projectId],
+    queryFn: async () => {
+      const res = await issueTestOpsApi.getAutomationCoverage(projectId || '');
+      return res.data;
+    },
     enabled: !!projectId,
   });
 
@@ -548,6 +581,70 @@ const ReportingDashboardPage: React.FC<ReportingDashboardPageProps> = ({ project
           </div>
         </div>
       </div>
+
+      {projectId && (defectDensity || sprintQuality || automationCoverage) && (
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-white border rounded-lg p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Defect density</h3>
+            {defectDensity ? (
+              <dl className="text-sm space-y-1">
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Total defects</dt>
+                  <dd className="font-medium">{defectDensity.totalDefects ?? '—'}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Per story point</dt>
+                  <dd className="font-medium">{defectDensity.defectsPerStoryPoint ?? '—'}</dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="text-xs text-gray-400">No data</p>
+            )}
+          </div>
+          <div className="bg-white border rounded-lg p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Sprint quality</h3>
+            {sprintQuality ? (
+              <dl className="text-sm space-y-1">
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Pass rate</dt>
+                  <dd className="font-medium">
+                    {sprintQuality.passRate != null
+                      ? `${Number(sprintQuality.passRate).toFixed(1)}%`
+                      : '—'}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Tests run</dt>
+                  <dd className="font-medium">{sprintQuality.totalTests ?? '—'}</dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="text-xs text-gray-400">No data</p>
+            )}
+          </div>
+          <div className="bg-white border rounded-lg p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Automation coverage</h3>
+            {automationCoverage ? (
+              <dl className="text-sm space-y-1">
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Automated</dt>
+                  <dd className="font-medium">{automationCoverage.automatedTests ?? '—'}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Coverage</dt>
+                  <dd className="font-medium">
+                    {automationCoverage.automationPercent != null
+                      ? `${Number(automationCoverage.automationPercent).toFixed(0)}%`
+                      : '—'}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="text-xs text-gray-400">No data</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-3 gap-6">

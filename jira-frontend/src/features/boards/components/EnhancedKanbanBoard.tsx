@@ -1,32 +1,81 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import boardApi, { BoardColumn, BoardIssue, AgileBoard, QuickFilter, SwimlaneConfig, BoardConfig, BoardDataResponse } from '../../../api/boardApi';
-import { issueApi, IssueResponse } from '../../../api/issueApi';
+import boardApi, { BoardColumn, BoardIssue, QuickFilter } from '../../../api/boardApi';
+import { issueApi } from '../../../api/issueApi';
+import { sprintApi, SprintResponse } from '../../../api/sprintApi';
+import { pickDefaultBoard } from '../../../components/workspace/boardLinks';
 import KanbanColumn from './KanbanColumn';
 import BoardHeader from './BoardHeader';
 import QuickFilterBar from './QuickFilterBar';
 import SwimlaneView from './SwimlaneView';
 import BoardConfigPanel from './BoardConfigPanel';
-import IssueCard from './IssueCard';
 import CreateIssueModal from '../../issues/components/CreateIssueModal';
-import SprintSelector from './SprintSelector';
+import ScrumBoardToolbar from './ScrumBoardToolbar';
+import IssueDetailPage from '../../issues/pages/IssueDetailPage';
+import BoardEpicsPanel from './BoardEpicsPanel';
+import BoardTransitionModal from './BoardTransitionModal';
+import KanbanWorkspaceToolbar, { type KanbanStatusBanner } from './KanbanWorkspaceToolbar';
+import KanbanFilterStrip from './KanbanFilterStrip';
+import type { ProjectResponse } from '../../../api/projectApi';
+import type { AgileBoard } from '../../../api/boardApi';
+import '../styles/kanban-board.css';
+import {
+  KANBAN_DC_COLUMNS,
+  issueMatchesColumn,
+  targetStatusForColumn,
+} from '../utils/boardColumnUtils';
+import { sortIssuesByRank } from '../utils/boardRankUtils';
+import {
+  executeBoardDrop,
+  executeStandaloneDrop,
+  findTransitionForColumn,
+  type PendingBoardTransition,
+} from '../utils/boardDropHandler';
+import { applyBoardQuickFilter } from '../utils/boardQuickFilters';
+import { fetchBoardIssuesWithFallback } from '../utils/fetchProjectBoardIssues';
+import { useAuth } from '../../auth/context/AuthContext';
 
 interface EnhancedKanbanBoardProps {
   projectId?: string;
   initialBoardId?: string;
+  /** Active sprint board: filter issues to sprint + show Complete sprint header */
+  scrumActiveSprintMode?: boolean;
+  lockActiveSprintId?: string | null;
+  /** Open issue in right drawer instead of full-page navigate */
+  useIssueDrawer?: boolean;
+  /** Jira DC classic Kanban columns, quick filters, and swimlanes */
+  kanbanClassicMode?: boolean;
+  /** Unified /kanban chrome (single header + filter strip) */
+  unifiedWorkspace?: boolean;
+  workspaceContext?: {
+    projects: ProjectResponse[];
+    projectId: string;
+    onProjectChange: (id: string) => void;
+    boards?: AgileBoard[];
+    boardId?: string;
+    onBoardChange?: (id: string) => void;
+    statusBanner?: KanbanStatusBanner | null;
+    onRetryBoard?: () => void;
+  };
 }
 
 type SwimlanField = 'none' | 'epic' | 'assignee' | 'priority' | 'labels' | 'sprint';
 type CardLayout = 'FULL' | 'COMPACT' | 'MINI';
 type ViewMode = 'board' | 'swimlane';
 
+/** Jira DC board quick filter labels (JQL unchanged). */
 const DEFAULT_QUICK_FILTERS: QuickFilter[] = [
-  { id: 'qf-assigned-me', name: 'Assigned to Me', jql: 'assignee = currentUser()' },
-  { id: 'qf-reporter-me', name: 'Reported by Me', jql: 'reporter = currentUser()' },
+  { id: 'qf-assigned-me', name: 'Only My Issues', jql: 'assignee = currentUser()' },
+  { id: 'qf-reporter-me', name: 'Reported by me', jql: 'reporter = currentUser()' },
   { id: 'qf-recently-updated', name: 'Recently Updated', jql: 'updated >= -1d' },
   { id: 'qf-no-assignee', name: 'Unassigned', jql: 'assignee is empty' },
-  { id: 'qf-has-due-date', name: 'Has Due Date', jql: 'duedate is not empty' },
+  { id: 'qf-has-due-date', name: 'Issues with due date', jql: 'duedate is not empty' },
+];
+
+const CLASSIC_QUICK_FILTERS: QuickFilter[] = [
+  { id: 'qf-assigned-me', name: 'Only My Issues', jql: 'assignee = currentUser()' },
+  { id: 'qf-recently-updated', name: 'Recently Updated', jql: 'updated >= -1d' },
 ];
 
 const DEFAULT_COLUMNS: BoardColumn[] = [
@@ -37,13 +86,31 @@ const DEFAULT_COLUMNS: BoardColumn[] = [
   { id: 'col-done', name: 'Done', sequence: 4, statusCategory: 'DONE', isDone: true, currentIssues: 0, color: '#28a745', isCollapsible: true, isHidden: false },
 ];
 
-export default function EnhancedKanbanBoard({ projectId, initialBoardId }: EnhancedKanbanBoardProps) {
+export default function EnhancedKanbanBoard({
+  projectId,
+  initialBoardId,
+  scrumActiveSprintMode = false,
+  lockActiveSprintId = null,
+  useIssueDrawer = false,
+  kanbanClassicMode = false,
+  unifiedWorkspace = false,
+  workspaceContext,
+}: EnhancedKanbanBoardProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
 
   // Board state
   const [boardId, setBoardId] = useState<string | null>(initialBoardId || searchParams.get('boardId'));
+  const [drawerIssueId, setDrawerIssueId] = useState<string | null>(
+    () => searchParams.get('issueId'),
+  );
+
+  useEffect(() => {
+    const id = searchParams.get('issueId');
+    if (id && useIssueDrawer) setDrawerIssueId(id);
+  }, [searchParams, useIssueDrawer]);
   const [boardType, setBoardType] = useState<'SCRUM' | 'KANBAN' | 'BADGE'>('SCRUM');
   const [activeSprintId, setActiveSprintId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('board');
@@ -52,7 +119,9 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
   const [columns, setColumns] = useState<BoardColumn[]>(DEFAULT_COLUMNS);
 
   // Filter state
-  const [quickFilters, setQuickFilters] = useState<QuickFilter[]>(DEFAULT_QUICK_FILTERS);
+  const [quickFilters, setQuickFilters] = useState<QuickFilter[]>(
+    kanbanClassicMode ? CLASSIC_QUICK_FILTERS : DEFAULT_QUICK_FILTERS,
+  );
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -82,8 +151,83 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
   // Card colors
   const [cardColorField, setCardColorField] = useState<'none' | 'priority' | 'type' | 'labels' | 'epic'>('priority');
 
+  const [showEpicsPanel, setShowEpicsPanel] = useState(
+    kanbanClassicMode && !unifiedWorkspace,
+  );
+  const [epicsPanelCollapsed, setEpicsPanelCollapsed] = useState(unifiedWorkspace);
+  const [selectedEpicId, setSelectedEpicId] = useState<string | null>(null);
+  const [pendingTransition, setPendingTransition] = useState<PendingBoardTransition | null>(null);
+  const [transitionComment, setTransitionComment] = useState('');
+  const [transitionScreenInput, setTransitionScreenInput] = useState<Record<string, unknown>>({});
+  const [boardError, setBoardError] = useState<string | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+
+  useQuery({
+    queryKey: ['project-boards-pick', projectId],
+    queryFn: () => boardApi.getBoardsByProject(projectId!),
+    enabled: !!projectId && !boardId,
+  });
+
+  useEffect(() => {
+    if (boardId || !projectId) return;
+    boardApi.getBoardsByProject(projectId).then((boards) => {
+      const picked = pickDefaultBoard(boards);
+      if (picked) setBoardId(picked.id);
+    });
+  }, [projectId, boardId]);
+
+  const { data: projectSprints = [] } = useQuery({
+    queryKey: ['sprints', projectId],
+    queryFn: () => sprintApi.getAll(projectId),
+    enabled: !!projectId,
+  });
+
+  const activeSprint = useMemo((): SprintResponse | null => {
+    if (lockActiveSprintId) {
+      return projectSprints.find((s) => s.id === lockActiveSprintId) ?? null;
+    }
+    return projectSprints.find((s) => s.status === 'ACTIVE') ?? null;
+  }, [projectSprints, lockActiveSprintId]);
+
   // Fetch board data
-  const { data: boardData, isLoading: boardLoading, error: boardError, refetch: refetchBoard } = useQuery({
+  const { data: boardConfig } = useQuery({
+    queryKey: ['board-config', boardId],
+    queryFn: () => boardApi.getBoardConfig(boardId!),
+    enabled: !!boardId,
+  });
+
+  useEffect(() => {
+    if (!boardConfig) return;
+    if (boardConfig.swimlane?.field) {
+      setSwimlaneField(boardConfig.swimlane.field as SwimlanField);
+    }
+    if (boardConfig.cardColors?.field) {
+      setCardColorField(boardConfig.cardColors.field);
+    }
+    if (boardConfig.workVsCapacity != null) {
+      setShowWorkVsCapacity(boardConfig.workVsCapacity);
+    }
+    if (boardConfig.swimlane?.collapsedSwimlanes?.length) {
+      setCollapsedSwimlanes(new Set(boardConfig.swimlane.collapsedSwimlanes));
+    }
+  }, [boardConfig]);
+
+  const saveConfigMutation = useMutation({
+    mutationFn: () =>
+      boardApi.updateBoardConfig(boardId!, {
+        swimlane: {
+          enabled: swimlaneField !== 'none',
+          field: swimlaneField,
+          collapsedSwimlanes: Array.from(collapsedSwimlanes),
+        },
+        workVsCapacity: showWorkVsCapacity,
+        cardColors: { enabled: cardColorField !== 'none', field: cardColorField },
+        quickFilters,
+      } as Parameters<typeof boardApi.updateBoardConfig>[1]),
+  });
+
+  const { data: boardData, isLoading: boardLoading, error: boardLoadError, refetch: refetchBoard } = useQuery({
     queryKey: ['board-data', boardId],
     queryFn: async () => {
       if (boardId) {
@@ -94,38 +238,84 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
     enabled: !!boardId,
   });
 
-  // Fetch issues from board API or issue API
-  const { data: issues, isLoading: issuesLoading, refetch: refetchIssues } = useQuery({
-    queryKey: ['board-issues', boardId, activeQuickFilter, searchQuery],
-    queryFn: async () => {
-      if (boardId) {
-        const jql = activeQuickFilter
-          ? quickFilters.find(f => f.id === activeQuickFilter)?.jql
-          : undefined;
-        return boardApi.getBoardIssues(boardId, jql);
+  useEffect(() => {
+    if (kanbanClassicMode) {
+      setBoardType('KANBAN');
+    }
+  }, [kanbanClassicMode]);
+
+  useEffect(() => {
+    if (boardData?.board) {
+      setBoardType(boardData.board.boardType);
+      if (kanbanClassicMode) {
+        setColumns(
+          boardData.columns?.length && boardData.board.boardType === 'KANBAN'
+            ? boardData.columns
+            : KANBAN_DC_COLUMNS,
+        );
+      } else if (boardData.columns?.length) {
+        setColumns(boardData.columns);
       }
-      // Fallback to issue API
-      const params: Record<string, string> = {};
-      if (projectId) params['projectId'] = projectId;
-      if (searchQuery) params['search'] = searchQuery;
-      const response = await issueApi.getAll(params);
-      return (response.data || []) as BoardIssue[];
+    } else if (kanbanClassicMode && !boardLoading) {
+      setColumns(KANBAN_DC_COLUMNS);
+      setBoardType('KANBAN');
+    }
+    if (scrumActiveSprintMode) {
+      const sid = lockActiveSprintId ?? boardData?.activeSprint?.id ?? activeSprint?.id ?? null;
+      if (sid) setActiveSprintId(sid);
+    } else if (boardData?.activeSprint?.id) {
+      setActiveSprintId(boardData.activeSprint.id);
+    }
+  }, [boardData, boardLoading, kanbanClassicMode, scrumActiveSprintMode, lockActiveSprintId, activeSprint?.id]);
+
+  // Fetch issues from board API with issue-service fallback; quick filters applied client-side
+  const { data: issuesRaw, isLoading: issuesLoading, refetch: refetchIssues } = useQuery({
+    queryKey: ['board-issues', boardId, projectId, activeQuickFilter],
+    queryFn: async () => {
+      let list = await fetchBoardIssuesWithFallback(boardId, projectId);
+      if (activeQuickFilter) {
+        list = applyBoardQuickFilter(list, activeQuickFilter, user?.userId);
+      }
+      return list;
     },
+    enabled: !!boardId || !!projectId,
   });
 
-  // Transition mutation
-  const transitionMutation = useMutation({
+  const issues = useMemo(() => {
+    if (!issuesRaw) return [];
+    let list = issuesRaw;
+    if (scrumActiveSprintMode && activeSprintId) {
+      list = list.filter((i) => i.sprintId === activeSprintId);
+    }
+    if (selectedEpicId === '__none__') {
+      list = list.filter((i) => !i.epicId);
+    } else if (selectedEpicId) {
+      list = list.filter((i) => i.epicId === selectedEpicId);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(
+        (i) =>
+          i.title?.toLowerCase().includes(q) ||
+          i.issueKey?.toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [issuesRaw, scrumActiveSprintMode, activeSprintId, selectedEpicId, searchQuery]);
+
+  const moveMutation = useMutation({
     mutationFn: ({
+      bid,
       issueId,
-      statusId,
-      pid,
+      status,
     }: {
+      bid: string;
       issueId: string;
-      statusId: string;
-      pid: string;
-    }) => issueApi.transitionStatus(issueId, pid, { statusId }),
+      status: string;
+    }) => boardApi.moveIssue(bid, issueId, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board-issues'] });
+      queryClient.invalidateQueries({ queryKey: ['board-data'] });
     },
   });
 
@@ -135,15 +325,6 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
       boardApi.reorderIssue(boardId, issueId, index, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board-issues'] });
-    },
-  });
-
-  // Quick filter mutation (for custom quick filters)
-  const quickFilterMutation = useMutation({
-    mutationFn: ({ boardId, quickFilterId }: { boardId: string; quickFilterId: string }) =>
-      boardApi.applyQuickFilter(boardId, quickFilterId),
-    onSuccess: (data) => {
-      console.log('Quick filter applied:', data.length, 'issues');
     },
   });
 
@@ -168,39 +349,150 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
     setDragOverSwimlane(null);
   }, []);
 
-  // Handle drop
-  const handleDrop = useCallback((e: React.DragEvent, column: BoardColumn, targetSwimlane?: string) => {
-    e.preventDefault();
-    setDragOverColumn(null);
-    setDragOverSwimlane(null);
-
-    if (!draggedIssue) return;
-
-    const issueStatus = column.statusCategory === 'TODO' ? 'To Do'
-      : column.statusCategory === 'IN_PROGRESS' ? (column.name === 'In Review' ? 'In Review' : 'In Progress')
-      : column.statusCategory === 'DONE' ? 'Done' : column.name;
-
-    if (draggedIssue.status !== issueStatus) {
+  const applyDrop = useCallback(
+    async (
+      column: BoardColumn,
+      dropIndex: number,
+      transitionOverride?: PendingBoardTransition['transition'],
+      screenPayload?: { comment?: string; screenInput?: Record<string, unknown> },
+    ) => {
+      if (!draggedIssue) return;
       const pid = projectId || draggedIssue.projectId;
-      if (pid) {
-        transitionMutation.mutate({
-          issueId: draggedIssue.id,
-          statusId: issueStatus,
-          pid,
-        });
-      }
-    }
+      if (!pid) return;
 
-    // Update local state optimistically
-    if (issues) {
-      const updatedIssues = issues.map(i =>
-        i.id === draggedIssue.id ? { ...i, status: issueStatus } : i
+      const columnIssues = sortIssuesByRank(
+        issues.filter((i) => issueMatchesColumn(i, column)),
       );
-      queryClient.setQueryData(['board-issues', boardId, activeQuickFilter, searchQuery], updatedIssues);
-    }
 
-    setDraggedIssue(null);
-  }, [draggedIssue, issues, boardId, activeQuickFilter, searchQuery, transitionMutation, queryClient]);
+      try {
+        setBoardError(null);
+        if (boardId) {
+          await executeBoardDrop(
+            boardId,
+            pid,
+            draggedIssue,
+            column,
+            columnIssues,
+            dropIndex,
+            boardApi,
+            transitionOverride,
+            screenPayload,
+          );
+        } else {
+          await executeStandaloneDrop(
+            pid,
+            draggedIssue,
+            column,
+            transitionOverride,
+            screenPayload,
+          );
+        }
+        await queryClient.invalidateQueries({ queryKey: ['board-issues'] });
+        await queryClient.invalidateQueries({ queryKey: ['board-data'] });
+      } catch (err) {
+        setBoardError(err instanceof Error ? err.message : 'Failed to move issue');
+      } finally {
+        setDraggedIssue(null);
+        setDragOverColumn(null);
+        setDragOverSwimlane(null);
+        setDragOverIndex(null);
+        setDragOverColumnId(null);
+      }
+    },
+    [draggedIssue, boardId, projectId, issues, queryClient],
+  );
+
+  const handleDrop = useCallback(
+    async (e: React.DragEvent, column: BoardColumn, targetSwimlane?: string) => {
+      e.preventDefault();
+      if (!draggedIssue) return;
+
+      if (
+        column.maxIssues &&
+        column.maxIssues > 0 &&
+        !issueMatchesColumn(draggedIssue, column)
+      ) {
+        const colIssues = issues.filter((i) => issueMatchesColumn(i, column));
+        if (colIssues.length >= column.maxIssues) {
+          setBoardError(`WIP limit exceeded for ${column.name} (${column.maxIssues})`);
+          setDraggedIssue(null);
+          return;
+        }
+      }
+
+      const dropIndex = sortIssuesByRank(
+        issues.filter((i) => issueMatchesColumn(i, column)),
+      ).length;
+      const pid = projectId || draggedIssue.projectId;
+      const targetStatus = targetStatusForColumn(column);
+      const statusChanged =
+        (draggedIssue.status ?? '').toLowerCase() !== targetStatus.toLowerCase();
+
+      if (statusChanged && pid) {
+        const { transition } = await findTransitionForColumn(draggedIssue, pid, column);
+        if (transition?.hasScreen) {
+          setPendingTransition({
+            issue: draggedIssue,
+            column,
+            targetStatus,
+            transition,
+            dropIndex,
+            swimlaneKey: targetSwimlane,
+          });
+          return;
+        }
+        await applyDrop(column, dropIndex, transition);
+        return;
+      }
+
+      await applyDrop(column, dropIndex);
+    },
+    [draggedIssue, issues, projectId, applyDrop],
+  );
+
+  const handleDropAtIndex = useCallback(
+    async (e: React.DragEvent, column: BoardColumn, index: number) => {
+      e.preventDefault();
+      if (!draggedIssue) return;
+
+      if (
+        column.maxIssues &&
+        column.maxIssues > 0 &&
+        !issueMatchesColumn(draggedIssue, column)
+      ) {
+        const colIssues = issues.filter((i) => issueMatchesColumn(i, column));
+        if (colIssues.length >= column.maxIssues) {
+          setBoardError(`WIP limit exceeded for ${column.name} (${column.maxIssues})`);
+          setDraggedIssue(null);
+          return;
+        }
+      }
+
+      const pid = projectId || draggedIssue.projectId;
+      const targetStatus = targetStatusForColumn(column);
+      const statusChanged =
+        (draggedIssue.status ?? '').toLowerCase() !== targetStatus.toLowerCase();
+
+      if (statusChanged && pid) {
+        const { transition } = await findTransitionForColumn(draggedIssue, pid, column);
+        if (transition?.hasScreen) {
+          setPendingTransition({
+            issue: draggedIssue,
+            column,
+            targetStatus,
+            transition,
+            dropIndex: index,
+          });
+          return;
+        }
+        await applyDrop(column, index, transition);
+        return;
+      }
+
+      await applyDrop(column, index);
+    },
+    [draggedIssue, issues, projectId, applyDrop],
+  );
 
   // Handle drag end
   const handleDragEnd = useCallback(() => {
@@ -213,17 +505,8 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
   const getIssuesByColumn = useCallback((column: BoardColumn, swimlaneKey?: string) => {
     if (!issues) return [];
 
-    let filteredIssues = issues.filter(issue => {
-      // Map status category to actual status
-      const statusMatch = column.statusCategory === 'TODO'
-        ? issue.status === 'To Do' || issue.status === 'Backlog'
-        : column.statusCategory === 'IN_PROGRESS'
-        ? issue.status === 'In Progress' || issue.status === 'In Review'
-        : column.statusCategory === 'DONE'
-        ? issue.status === 'Done' || issue.status === 'Closed'
-        : true;
-
-      if (!statusMatch) return false;
+    let filteredIssues = issues.filter((issue) => {
+      if (!issueMatchesColumn(issue, column)) return false;
 
       // Apply swimlane filter
       if (swimlaneKey && swimlaneField !== 'none') {
@@ -252,7 +535,7 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
       );
     }
 
-    return filteredIssues;
+    return sortIssuesByRank(filteredIssues);
   }, [issues, searchQuery, swimlaneField]);
 
   // Get unique swimlane values
@@ -291,13 +574,10 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
     });
   }, [issues, swimlaneField]);
 
-  // Handle quick filter selection
+  // Handle quick filter selection (client-side via query key)
   const handleQuickFilter = useCallback((filterId: string | null) => {
     setActiveQuickFilter(filterId);
-    if (filterId && boardId) {
-      quickFilterMutation.mutate({ boardId, quickFilterId: filterId });
-    }
-  }, [boardId, quickFilterMutation]);
+  }, []);
 
   // Handle swimlane toggle
   const handleSwimlaneToggle = useCallback((swimlaneKey: string) => {
@@ -313,16 +593,28 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
   }, []);
 
   // Handle column configuration change
-  const handleColumnConfigChange = useCallback((columnId: string, config: Partial<BoardColumn>) => {
-    setColumns(prev => prev.map(col =>
-      col.id === columnId ? { ...col, ...config } : col
-    ));
-  }, []);
+  const handleColumnConfigChange = useCallback(
+    (columnId: string, config: Partial<BoardColumn>) => {
+      setColumns((prev) =>
+        prev.map((col) => (col.id === columnId ? { ...col, ...config } : col)),
+      );
+      if (boardId) {
+        boardApi.updateColumn(boardId, columnId, config).catch(() => {
+          /* local state still updated */
+        });
+      }
+    },
+    [boardId],
+  );
 
   // Handle card click
   const handleCardClick = useCallback((issue: BoardIssue) => {
-    navigate(`/issues/${issue.id}`);
-  }, [navigate]);
+    if (useIssueDrawer) {
+      setDrawerIssueId(issue.id);
+    } else {
+      navigate(`/issues/${issue.id}`);
+    }
+  }, [navigate, useIssueDrawer]);
 
   // Handle create issue
   const handleCreateIssue = useCallback((columnStatus: string) => {
@@ -384,16 +676,7 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
 
   // Get column issue counts
   const getColumnCounts = useCallback((column: BoardColumn): { total: number; bySwimlane: Map<string, number> } => {
-    const columnIssues = issues?.filter(issue => {
-      const statusMatch = column.statusCategory === 'TODO'
-        ? issue.status === 'To Do' || issue.status === 'Backlog'
-        : column.statusCategory === 'IN_PROGRESS'
-        ? issue.status === 'In Progress' || issue.status === 'In Review'
-        : column.statusCategory === 'DONE'
-        ? issue.status === 'Done' || issue.status === 'Closed'
-        : true;
-      return statusMatch;
-    }) || [];
+    const columnIssues = issues?.filter((issue) => issueMatchesColumn(issue, column)) || [];
 
     return { total: columnIssues.length, bySwimlane: new Map() };
   }, [issues]);
@@ -403,8 +686,8 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
     setViewMode(prev => prev === 'board' ? 'swimlane' : 'board');
   }, []);
 
-  // Loading state
-  if (boardLoading) {
+  // Loading state (only when a persisted board id is set)
+  if (boardId && boardLoading) {
     return (
       <div className="ab-board-loading">
         <div className="ab-loading-spinner">
@@ -415,8 +698,19 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
     );
   }
 
+  if (issuesLoading && !issuesRaw?.length && kanbanClassicMode) {
+    return (
+      <div className="ab-board-loading">
+        <div className="ab-loading-spinner">
+          <div className="ab-spinner-lg"></div>
+          <p>Loading issues...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Error state
-  if (boardError) {
+  if (boardId && boardLoadError) {
     return (
       <div className="ab-board-error">
         <div className="ab-error-content">
@@ -434,46 +728,122 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
   const swimlanes = getSwimlaneKeys();
   const showSwimlanes = swimlaneField !== 'none' && swimlanes.length > 0;
 
-  return (
-    <div className="ab-enhanced-kanban-board">
-      {/* Board Header */}
-      <BoardHeader
-        boardType={boardType}
-        boardName={boardData?.board?.name || (boardType === 'SCRUM' ? 'Scrum Board' : 'Kanban Board')}
-        cardLayout={cardLayout}
-        onCardLayoutChange={setCardLayout}
-        onOpenConfig={() => setShowConfigPanel(true)}
-        viewMode={viewMode}
-        onToggleView={toggleSwimlaneView}
-        activeSprintId={activeSprintId}
-        onSprintChange={setActiveSprintId}
-      />
+  const useUnifiedChrome = unifiedWorkspace && !!workspaceContext;
 
-      {/* Quick Filters */}
-      <QuickFilterBar
-        quickFilters={quickFilters}
-        activeFilter={activeQuickFilter}
-        onFilterChange={handleQuickFilter}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      />
+  const boardInner = (
+    <div className="sa-board-with-epics">
+      {showEpicsPanel && projectId && (
+        <BoardEpicsPanel
+          projectId={projectId}
+          issues={issuesRaw ?? []}
+          selectedEpicId={selectedEpicId}
+          onSelectEpic={setSelectedEpicId}
+          collapsed={epicsPanelCollapsed}
+          onToggleCollapsed={() => setEpicsPanelCollapsed((c) => !c)}
+        />
+      )}
+      <div className="sa-board-main">
+    <div
+      className={`ab-enhanced-kanban-board${useUnifiedChrome ? ' ab-enhanced-kanban-board--workspace' : ''}`}
+      style={{ flex: 1, minHeight: 0 }}
+    >
+      {useUnifiedChrome && workspaceContext && (
+        <>
+          <KanbanWorkspaceToolbar
+            projects={workspaceContext.projects}
+            projectId={workspaceContext.projectId}
+            onProjectChange={workspaceContext.onProjectChange}
+            boards={workspaceContext.boards}
+            boardId={workspaceContext.boardId}
+            onBoardChange={workspaceContext.onBoardChange}
+            issueCount={issues?.length ?? 0}
+            statusBanner={workspaceContext.statusBanner}
+            onCreateIssue={() => setShowCreateModal(true)}
+            onOpenConfig={() => setShowConfigPanel(true)}
+            showEpicsPanel={showEpicsPanel}
+            onToggleEpics={() => setShowEpicsPanel((v) => !v)}
+            cardLayout={cardLayout}
+            onCardLayoutChange={setCardLayout}
+          />
+          <KanbanFilterStrip
+            quickFilters={quickFilters}
+            activeFilter={activeQuickFilter}
+            onFilterChange={handleQuickFilter}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            swimlaneField={swimlaneField}
+            onSwimlaneChange={setSwimlaneField}
+            viewMode={viewMode}
+            onToggleView={toggleSwimlaneView}
+          />
+        </>
+      )}
 
-      {/* Swimlane Toggle */}
-      {boardType === 'SCRUM' && (
-        <div className="ab-swimlane-controls">
-          <label className="ab-swimlane-label">Swimlanes:</label>
-          <select
-            value={swimlaneField}
-            onChange={(e) => setSwimlaneField(e.target.value as SwimlanField)}
-            className="ab-select ab-select-sm"
-          >
-            <option value="none">None</option>
-            <option value="epic">Epic</option>
-            <option value="assignee">Assignee</option>
-            <option value="priority">Priority</option>
-            <option value="labels">Labels</option>
-          </select>
-        </div>
+      {scrumActiveSprintMode && projectId && (
+        <ScrumBoardToolbar
+          sprint={activeSprint}
+          projectId={projectId}
+          issueCount={issues?.length ?? 0}
+          onSprintComplete={() => setDrawerIssueId(null)}
+        />
+      )}
+
+      {!useUnifiedChrome && !scrumActiveSprintMode && (
+        <BoardHeader
+          boardType={kanbanClassicMode ? 'KANBAN' : boardType}
+          boardName={
+            boardData?.board?.name ||
+            (kanbanClassicMode ? 'Kanban board' : boardType === 'SCRUM' ? 'Scrum Board' : 'Kanban Board')
+          }
+          cardLayout={cardLayout}
+          onCardLayoutChange={setCardLayout}
+          onOpenConfig={() => setShowConfigPanel(true)}
+          viewMode={viewMode}
+          onToggleView={toggleSwimlaneView}
+          activeSprintId={activeSprintId}
+          onSprintChange={setActiveSprintId}
+        />
+      )}
+
+      {!useUnifiedChrome && (
+        <>
+          <QuickFilterBar
+            quickFilters={quickFilters}
+            activeFilter={activeQuickFilter}
+            onFilterChange={handleQuickFilter}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
+          <div className="ab-swimlane-controls">
+            {(boardType === 'SCRUM' || kanbanClassicMode) && (
+              <>
+                <label className="ab-swimlane-label">Swimlanes:</label>
+                <select
+                  value={swimlaneField}
+                  onChange={(e) => setSwimlaneField(e.target.value as SwimlanField)}
+                  className="ab-select ab-select-sm"
+                >
+                  <option value="none">None</option>
+                  <option value="epic">Epic</option>
+                  <option value="assignee">Assignee</option>
+                  <option value="priority">Priority</option>
+                  <option value="labels">Labels</option>
+                </select>
+              </>
+            )}
+            <div className="ab-board-toolbar-toggles">
+              {projectId && (
+                <button
+                  type="button"
+                  className={`ab-board-toggle-btn${showEpicsPanel ? ' is-active' : ''}`}
+                  onClick={() => setShowEpicsPanel((v) => !v)}
+                >
+                  Epics
+                </button>
+              )}
+            </div>
+          </div>
+        </>
       )}
 
       {/* Main Board Area */}
@@ -506,6 +876,12 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
               const columnIssues = getIssuesByColumn(column);
               const wipStatus = getWipStatus(column, columnIssues.length);
               const isOver = dragOverColumn === column.id;
+              const wipBlocked =
+                !!column.maxIssues &&
+                column.maxIssues > 0 &&
+                columnIssues.length >= column.maxIssues &&
+                draggedIssue != null &&
+                !issueMatchesColumn(draggedIssue, column);
 
               return (
                 <KanbanColumn
@@ -514,9 +890,16 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
                   issues={columnIssues}
                   isOver={isOver}
                   wipStatus={wipStatus}
+                  wipBlocked={wipBlocked}
                   onDragOver={(e) => handleDragOver(e, column.id)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, column)}
+                  onDropAtIndex={(e, index) => handleDropAtIndex(e, column, index)}
+                  dragOverIndex={dragOverColumnId === column.id ? dragOverIndex : null}
+                  onDragOverIndex={(index) => {
+                    setDragOverColumnId(column.id);
+                    setDragOverIndex(index);
+                  }}
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                   onCardClick={handleCardClick}
@@ -526,6 +909,16 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
                   draggedIssue={draggedIssue}
                   showWorkVsCapacity={showWorkVsCapacity}
                   boardCapacity={boardCapacity}
+                  releaseLink={
+                    column.isDone && projectId
+                      ? { label: 'Release…', href: `/projects/${projectId}/releases` }
+                      : undefined
+                  }
+                  olderIssuesLink={
+                    column.isDone && projectId
+                      ? `/search?jql=${encodeURIComponent(`project = ${projectId} AND status = Done ORDER BY updated DESC`)}`
+                      : undefined
+                  }
                 />
               );
             })}
@@ -542,7 +935,10 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
           cardColorField={cardColorField}
           showWorkVsCapacity={showWorkVsCapacity}
           quickFilters={quickFilters}
-          onClose={() => setShowConfigPanel(false)}
+          onClose={() => {
+            setShowConfigPanel(false);
+            if (boardId) saveConfigMutation.mutate();
+          }}
           onColumnConfigChange={handleColumnConfigChange}
           onBoardTypeChange={setBoardType}
           onSwimlaneFieldChange={setSwimlaneField}
@@ -555,9 +951,52 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
       {/* Create Issue Modal */}
       {showCreateModal && (
         <CreateIssueModal
+          projectId={projectId}
           onClose={() => setShowCreateModal(false)}
-          onSuccess={() => setShowCreateModal(false)}
+          onSuccess={() => {
+            setShowCreateModal(false);
+            refetchIssues();
+          }}
         />
+      )}
+
+      {pendingTransition && (
+        <BoardTransitionModal
+          transition={pendingTransition.transition}
+          comment={transitionComment}
+          screenInput={transitionScreenInput}
+          isSubmitting={moveMutation.isPending}
+          onCommentChange={setTransitionComment}
+          onScreenInputChange={setTransitionScreenInput}
+          onCancel={() => {
+            setPendingTransition(null);
+            setDraggedIssue(null);
+          }}
+          onConfirm={async () => {
+            await applyDrop(
+              pendingTransition.column,
+              pendingTransition.dropIndex,
+              pendingTransition.transition,
+              { comment: transitionComment, screenInput: transitionScreenInput },
+            );
+            setPendingTransition(null);
+            setTransitionComment('');
+            setTransitionScreenInput({});
+          }}
+        />
+      )}
+
+      {boardError && (
+        <div className="ab-board-toast-error" role="alert">
+          {boardError}
+          <button
+            type="button"
+            style={{ marginLeft: 12, border: 'none', background: 'transparent', cursor: 'pointer' }}
+            onClick={() => setBoardError(null)}
+          >
+            ×
+          </button>
+        </div>
       )}
 
       <style>{`
@@ -622,14 +1061,23 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
 
         .ab-board-container {
           flex: 1;
-          overflow: auto;
-          padding: var(--ab-spacing-md);
+          min-height: 0;
+          overflow-x: auto;
+          overflow-y: hidden;
+          padding: 12px 16px 16px;
         }
 
         .ab-board-columns {
           display: flex;
-          gap: var(--ab-spacing-md);
-          min-height: 100%;
+          align-items: stretch;
+          gap: 12px;
+          height: 100%;
+          min-height: min(100%, 480px);
+        }
+
+        .ab-enhanced-kanban-board--workspace .ab-kanban-column {
+          flex: 0 0 280px;
+          max-width: 300px;
         }
 
         .ab-select-sm {
@@ -641,5 +1089,37 @@ export default function EnhancedKanbanBoard({ projectId, initialBoardId }: Enhan
         }
       `}</style>
     </div>
+      </div>
+    </div>
   );
+
+  if (useIssueDrawer) {
+    return (
+      <div className="jdc-board-with-drawer" style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+        {boardInner}
+        {drawerIssueId && (
+          <aside className="jdc-issue-detail-pane" aria-label="Issue detail">
+            <div className="jdc-issue-detail-pane-header">
+              <span style={{ fontWeight: 600, fontSize: 13 }}>Issue detail</span>
+              <button
+                type="button"
+                className="jdc-issue-detail-pane-close"
+                aria-label="Close issue panel"
+                onClick={() => setDrawerIssueId(null)}
+              >
+                ×
+              </button>
+            </div>
+            <IssueDetailPage
+              issueIdOverride={drawerIssueId}
+              embedded
+              onClose={() => setDrawerIssueId(null)}
+            />
+          </aside>
+        )}
+      </div>
+    );
+  }
+
+  return boardInner;
 }

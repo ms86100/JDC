@@ -17,6 +17,7 @@ export function useScrumProjectData(
     },
     enabled: !!activeSprint?.id,
     staleTime: 60000,
+    retry: 1,
   });
 
   const velocityQuery = useQuery({
@@ -27,6 +28,7 @@ export function useScrumProjectData(
     },
     enabled: !!projectId,
     staleTime: 60000,
+    retry: 1,
   });
 
   const scrumBoard = boards.find((b) => b.boardType === 'SCRUM') ?? boards[0];
@@ -35,7 +37,9 @@ export function useScrumProjectData(
     burndown: burndownQuery.data,
     velocity: velocityQuery.data,
     scrumBoard,
-    isLoading: burndownQuery.isLoading || velocityQuery.isLoading,
+    isLoading:
+      (burndownQuery.isPending && !!activeSprint?.id && !burndownQuery.data)
+      || (velocityQuery.isPending && !velocityQuery.data),
   };
 }
 

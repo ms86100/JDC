@@ -7,7 +7,6 @@
  * they are accepted here for backward compatibility and ignored by AppShell.
  */
 import React from 'react';
-import AppShell from './layout/AppShell';
 
 interface JiraGlobalLayoutProps {
   children: React.ReactNode;
@@ -18,6 +17,7 @@ interface JiraGlobalLayoutProps {
   activeSection?: string;
 }
 
+/** Legacy wrapper — routes already render inside AppShell; do not nest another shell. */
 export default function JiraGlobalLayout({ children }: JiraGlobalLayoutProps) {
-  return <AppShell mode="workspace">{children}</AppShell>;
+  return <>{children}</>;
 }

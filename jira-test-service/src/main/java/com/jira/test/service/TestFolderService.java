@@ -14,6 +14,10 @@ import com.jira.test.repository.TestIssueRepository;
 import com.jira.test.repository.TestExecutionRepository;
 import com.jira.test.repository.TestFolderAccessRepository;
 import com.jira.test.repository.TestFolderTemplateRepository;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -277,8 +281,9 @@ public class TestFolderService {
         UUID currentId = folderId;
 
         while (currentId != null) {
-            TestFolder folder = folderRepository.findById(currentId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Folder", "id", currentId));
+            final UUID lookupId = currentId;
+            TestFolder folder = folderRepository.findById(lookupId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Folder", "id", lookupId));
             breadcrumb.add(0, mapToFolderResponse(folder));
             currentId = folder.getParentId();
         }
@@ -315,9 +320,10 @@ public class TestFolderService {
         folder.setName(newName);
 
         // Update path
-        if (folder.getParentId() != null) {
-            TestFolder parent = folderRepository.findById(folder.getParentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Parent folder", "id", folder.getParentId()));
+        UUID parentId = folder.getParentId();
+        if (parentId != null) {
+            TestFolder parent = folderRepository.findById(parentId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent folder", "id", parentId));
             folder.setPath(parent.getPath() + "/" + newName);
         } else {
             folder.setPath("/" + newName);
@@ -728,7 +734,10 @@ public class TestFolderService {
 
         if (request.getQuery() != null && !request.getQuery().isEmpty()) {
             // Use repository search method
-            folders = folderRepository.searchByName(request.getProjectId(), request.getQuery(), pageable);
+            String q = request.getQuery().toLowerCase();
+            folders = folderRepository.findByProjectIdOrderBySortOrderAsc(request.getProjectId()).stream()
+                    .filter(f -> f.getName() != null && f.getName().toLowerCase().contains(q))
+                    .collect(Collectors.toList());
         } else if (request.getParentId() != null) {
             folders = folderRepository.findByParentIdOrderBySortOrderAsc(request.getParentId());
         } else if (request.getFolderType() != null) {
@@ -794,8 +803,10 @@ public class TestFolderService {
                 .collect(Collectors.toList());
 
         // Get recently modified folders
-        List<TestFolder> recentModified = folderRepository
-                .findRecentlyModified(projectId, PageRequest.of(0, maxResults));
+        List<TestFolder> recentModified = folderRepository.findByProjectIdOrderBySortOrderAsc(projectId).stream()
+                .sorted(Comparator.comparing(TestFolder::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .limit(maxResults)
+                .collect(Collectors.toList());
 
         List<FolderAccessRecord> recentlyModifiedRecords = recentModified.stream()
                 .map(folder -> FolderAccessRecord.builder()
@@ -1096,46 +1107,5 @@ public class TestFolderService {
             return (UUID) auth.getDetails();
         }
         return null;
-    }
-
-    // ==================== Nested DTO Classes ====================
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    static class FolderAccessEntry {
-        private UUID id;
-        private String name;
-        private String email;
-        private String type;
-        private String permissionLevel;
-        private LocalDateTime grantedAt;
-        private UUID grantedBy;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    static class FolderAccessRecord {
-        private UUID folderId;
-        private String folderName;
-        private UUID projectId;
-        private String path;
-        private LocalDateTime accessedAt;
-        private LocalDateTime modifiedAt;
-        private UUID accessedBy;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    static class FolderOperationResult {
-        private UUID folderId;
-        private String folderName;
-        private Boolean success;
-        private String message;
     }
 }

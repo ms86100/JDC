@@ -452,7 +452,7 @@ public class PluginValidator {
             }
 
             result.setCompatible(true);
-            result.setNotes("Major versions match, plugin should be compatible");
+            result.addNote("Major versions match, plugin should be compatible");
 
         } catch (Exception e) {
             result.setCompatible(false);

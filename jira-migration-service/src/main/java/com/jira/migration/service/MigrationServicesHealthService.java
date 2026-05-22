@@ -2,14 +2,15 @@ package com.jira.migration.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 
+/**
+ * Probes downstream platform microservices used by Migration Center imports.
+ * URLs align with launcher.py / jira-gateway application-local.yml ports.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -17,33 +18,29 @@ public class MigrationServicesHealthService {
 
     private final RestTemplate restTemplate;
 
-    @Value("${services.projectServiceUrl:http://localhost:8081}")
-    private String projectServiceUrl;
-
-    @Value("${services.issueServiceUrl:http://localhost:8082}")
-    private String issueServiceUrl;
-
-    @Value("${services.workflowServiceUrl:http://localhost:8085}")
-    private String workflowServiceUrl;
-
-    @Value("${services.fieldServiceUrl:http://localhost:8086}")
-    private String fieldServiceUrl;
-
-    @Value("${services.userServiceUrl:http://localhost:8083}")
-    private String userServiceUrl;
-
-    @Value("${services.adminServiceUrl:http://localhost:8093}")
-    private String adminServiceUrl;
+    private static final List<ServiceProbe> PLATFORM_SERVICES = List.of(
+            new ServiceProbe("gateway", "http://localhost:8080"),
+            new ServiceProbe("auth", "http://localhost:8081"),
+            new ServiceProbe("user", "http://localhost:8082"),
+            new ServiceProbe("project", "http://localhost:8083"),
+            new ServiceProbe("issue", "http://localhost:8084"),
+            new ServiceProbe("workflow", "http://localhost:8085"),
+            new ServiceProbe("comment", "http://localhost:8086"),
+            new ServiceProbe("notification", "http://localhost:8087"),
+            new ServiceProbe("search", "http://localhost:8088"),
+            new ServiceProbe("audit", "http://localhost:8089"),
+            new ServiceProbe("attachment", "http://localhost:8090"),
+            new ServiceProbe("sprint", "http://localhost:8091"),
+            new ServiceProbe("plan", "http://localhost:8092"),
+            new ServiceProbe("admin", "http://localhost:8093"),
+            new ServiceProbe("migration", "http://localhost:8094"),
+            new ServiceProbe("test", "http://localhost:8095")
+    );
 
     public Map<String, Object> checkAll() {
-        List<Map<String, Object>> services = List.of(
-                probe("project-service", projectServiceUrl, "/actuator/health"),
-                probe("issue-service", issueServiceUrl, "/actuator/health"),
-                probe("workflow-service", workflowServiceUrl, "/actuator/health"),
-                probe("field-service", fieldServiceUrl, "/actuator/health"),
-                probe("user-service", userServiceUrl, "/actuator/health"),
-                probe("admin-service", adminServiceUrl, "/actuator/health")
-        );
+        List<Map<String, Object>> services = PLATFORM_SERVICES.stream()
+                .map(p -> probe(p.name() + "-service", p.baseUrl(), "/actuator/health"))
+                .toList();
         long up = services.stream().filter(s -> "UP".equals(s.get("status"))).count();
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("overallStatus", up == services.size() ? "UP" : up > 0 ? "DEGRADED" : "DOWN");
@@ -60,7 +57,7 @@ public class MigrationServicesHealthService {
         row.put("baseUrl", baseUrl);
         String url = baseUrl.replaceAll("/$", "") + path;
         try {
-            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, null, Map.class);
+            var response = restTemplate.exchange(url, org.springframework.http.HttpMethod.GET, null, Map.class);
             String status = response.getStatusCode().is2xxSuccessful() ? "UP" : "DOWN";
             row.put("status", status);
             row.put("httpStatus", response.getStatusCode().value());
@@ -77,4 +74,6 @@ public class MigrationServicesHealthService {
         }
         return row;
     }
+
+    private record ServiceProbe(String name, String baseUrl) {}
 }

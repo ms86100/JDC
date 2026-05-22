@@ -27,6 +27,10 @@ public class ImportSpreadsheetParser {
         if (isExcelFile(fileName)) {
             return excelParser.parseBytes(content, 1);
         }
-        return csvParser.parseContent(new String(content, StandardCharsets.UTF_8), 1);
+        String text = new String(content, StandardCharsets.UTF_8);
+        if (!text.isEmpty() && text.charAt(0) == '\uFEFF') {
+            text = text.substring(1);
+        }
+        return csvParser.parseContent(text, 1);
     }
 }

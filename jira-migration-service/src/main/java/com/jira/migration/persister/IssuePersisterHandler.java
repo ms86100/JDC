@@ -27,6 +27,7 @@ public class IssuePersisterHandler {
 
     private final ProjectMappingRepository projectMappingRepository;
     private final EntityStatusRepository entityStatusRepository;
+    private final CustomFieldPersisterHandler customFieldPersisterHandler;
     private IssueServiceClient issueServiceClient;
     private IssueLinkServiceClient issueLinkServiceClient;
     private MigrationWorkflowStatusApplier migrationWorkflowStatusApplier;
@@ -36,9 +37,11 @@ public class IssuePersisterHandler {
 
     public IssuePersisterHandler(
             ProjectMappingRepository projectMappingRepository,
-            EntityStatusRepository entityStatusRepository) {
+            EntityStatusRepository entityStatusRepository,
+            CustomFieldPersisterHandler customFieldPersisterHandler) {
         this.projectMappingRepository = projectMappingRepository;
         this.entityStatusRepository = entityStatusRepository;
+        this.customFieldPersisterHandler = customFieldPersisterHandler;
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -131,7 +134,16 @@ public class IssuePersisterHandler {
                 addLabels(issueId, labels);
             }
 
-            // 8. Update entity status
+            // 8. Persist custom field values to migration field store
+            Object customFields = issueData.getOrDefault("customFields", issueData.get("custom_fields"));
+            if (customFields instanceof Map<?, ?> cfMap) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> values = (Map<String, Object>) cfMap;
+                customFieldPersisterHandler.persistCustomFieldValues(
+                        UUID.fromString(issueId), values, jobId);
+            }
+
+            // 9. Update entity status
             updateEntityStatus(jobId, issueKey, issueId, "ISSUE", true);
 
             result.setSuccess(true);

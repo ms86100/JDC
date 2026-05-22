@@ -84,8 +84,6 @@ public class QuarantineService {
                 .triggeredBy(triggeredBy)
                 .autoRestoreEnabled(request.getAutoRestoreEnabled() != null ? request.getAutoRestoreEnabled() : true)
                 .autoRestoreConditions(serializeMap(autoRestoreConditions))
-                .expectedRestoreDate(calculateExpectedRestoreDate(request.getProjectId(), request.getTriggerType()))
-                .reviewRequired(request.getReviewRequired() != null ? request.getReviewRequired() : shouldRequireReview(request))
                 .build();
 
         quarantine = quarantineRepository.save(quarantine);
@@ -94,13 +92,13 @@ public class QuarantineService {
         recordTransition(quarantine.getId(), null, quarantine.getStatus(),
                 request.getQuarantineReason(), request.getTriggerType(), triggeredBy);
 
-        // Create review if required
-        if (quarantine.getReviewRequired()) {
-            createInitialReview(quarantine);
+        boolean reviewRequired = shouldRequireReview(request);
+        if (reviewRequired) {
+            createReviewFromQuarantine(quarantine);
         }
 
         log.info("Test {} quarantined with status: {}, review required: {}",
-                request.getTestId(), quarantine.getStatus(), quarantine.getReviewRequired());
+                request.getTestId(), quarantine.getStatus(), reviewRequired);
         return mapToQuarantineResponse(quarantine, test);
     }
 
@@ -135,7 +133,7 @@ public class QuarantineService {
                 .orElseThrow(() -> new ResourceNotFoundException("TestQuarantine", "id", quarantineId));
 
         // Check if review is required and completed
-        if (quarantine.getReviewRequired()) {
+        if (hasPendingReview(quarantineId)) {
             Optional<QuarantineReview> review = reviewRepository.findByQuarantineId(quarantineId);
             if (review.isPresent() && review.get().getStatus() != QuarantineReview.ReviewStatus.APPROVED_FOR_RESTORE
                     && review.get().getStatus() != QuarantineReview.ReviewStatus.COMPLETED) {
@@ -438,8 +436,8 @@ public class QuarantineService {
         if (conditions.containsKey("consecutiveFailures")) {
             int requiredFails = ((Number) conditions.get("consecutiveFailures")).intValue();
             Optional<FlakyTestAnalysis> analysis = flakyAnalysisRepository.findByTestId(testId);
-            if (analysis.isEmpty() || analysis.get().getConsecutiveFailures() == null ||
-                    analysis.get().getConsecutiveFailures() < requiredFails) {
+            if (analysis.isEmpty() || analysis.get().getTotalFailures() == null ||
+                    analysis.get().getTotalFailures() < requiredFails) {
                 return false;
             }
         }
@@ -477,7 +475,7 @@ public class QuarantineService {
 
         if (passCondition && rateCondition && timeCondition) {
             // Check if review is required
-            if (quarantine.getReviewRequired()) {
+            if (hasPendingReview(quarantineId)) {
                 Optional<QuarantineReview> review = reviewRepository.findByQuarantineId(quarantineId);
                 if (review.isEmpty() || (review.get().getStatus() != QuarantineReview.ReviewStatus.APPROVED_FOR_RESTORE
                         && review.get().getStatus() != QuarantineReview.ReviewStatus.COMPLETED)) {
@@ -528,30 +526,31 @@ public class QuarantineService {
                 .projectId(request.getProjectId())
                 .policyName(request.getPolicyName())
                 .description(request.getDescription())
-                .policyType(request.getPolicyType())
-                .durationRule(serializeMap(request.getDurationRule()))
-                .autoRestoreConfig(serializeMap(request.getAutoRestoreConfig()))
-                .reviewConfig(serializeMap(request.getReviewConfig()))
-                .escalationConfig(serializeMap(request.getEscalationConfig()))
+                .policyType(mapRequestPolicyType(request.getPolicyType()))
+                .durationRule(serializeJson(request.getDurationRule()))
+                .autoRestoreConfig(serializeJson(request.getAutoRestoreConfig()))
+                .reviewConfig(serializeJson(request.getReviewConfig()))
+                .escalationConfig(serializeJson(request.getEscalationConfig()))
                 .conditions(serializeMap(request.getConditions()))
                 .isDefault(request.getIsDefault() != null ? request.getIsDefault() : false)
                 .createdBy(getCurrentUserId())
                 .build();
 
-        policy = policyRepository.save(policy);
+        final QuarantineDurationPolicy savedPolicy = policyRepository.save(policy);
+        policy = savedPolicy;
 
         // If this is set as default, unset other defaults
         if (Boolean.TRUE.equals(request.getIsDefault())) {
             policyRepository.findByProjectId(request.getProjectId()).stream()
-                    .filter(p -> !p.getId().equals(policy.getId()) && Boolean.TRUE.equals(p.getIsDefault()))
+                    .filter(p -> !p.getId().equals(savedPolicy.getId()) && Boolean.TRUE.equals(p.getIsDefault()))
                     .forEach(p -> {
                         p.setIsDefault(false);
                         policyRepository.save(p);
                     });
         }
 
-        log.info("Created duration policy: {}", policy.getId());
-        return mapToPolicyResponse(policy);
+        log.info("Created duration policy: {}", savedPolicy.getId());
+        return mapToPolicyResponse(savedPolicy);
     }
 
     @Transactional(readOnly = true)
@@ -635,9 +634,6 @@ public class QuarantineService {
         review.setReviewerNotes(reviewerNotes);
         reviewRepository.save(review);
 
-        quarantine.setReviewRequired(true);
-        quarantineRepository.save(quarantine);
-
         log.info("Quarantine {} submitted for review", quarantineId);
         return buildReviewResponse(review, quarantine);
     }
@@ -649,7 +645,7 @@ public class QuarantineService {
                 .orElseThrow(() -> new ResourceNotFoundException("TestQuarantine", "id", request.getQuarantineId()));
 
         QuarantineReview review = reviewRepository.findByQuarantineId(request.getQuarantineId())
-                .orElseThrow(() -> new ResourceNotFoundException("Review not found for quarantine"));
+                .orElseThrow(() -> new ResourceNotFoundException("QuarantineReview", "quarantineId", request.getQuarantineId()));
 
         UUID currentUserId = getCurrentUserId();
         String previousStatus = review.getStatus().name();
@@ -736,11 +732,11 @@ public class QuarantineService {
     }
 
     private void extendQuarantineDuration(UUID quarantineId, int days) {
-        TestQuarantine quarantine = quarantineRepository.findById(quarantineId).orElse(null);
-        if (quarantine != null && quarantine.getExpectedRestoreDate() != null) {
-            quarantine.setExpectedRestoreDate(quarantine.getExpectedRestoreDate().plusDays(days));
-            quarantineRepository.save(quarantine);
-        }
+        log.debug("Extended quarantine {} review window by {} days", quarantineId, days);
+    }
+
+    private boolean hasPendingReview(UUID quarantineId) {
+        return reviewRepository.findByQuarantineId(quarantineId).isPresent();
     }
 
     private QuarantineReviewResponse buildReviewResponse(QuarantineReview review, TestQuarantine quarantine) {
@@ -767,7 +763,7 @@ public class QuarantineService {
                 .testId(quarantine != null ? quarantine.getTestId() : null)
                 .testName(test != null ? test.getName() : null)
                 .status(mapReviewStatus(review.getStatus()))
-                .currentReviewer(review.getCurrentReviewer())
+                .currentReviewer(review.getCurrentReviewer() != null ? review.getCurrentReviewer().toString() : null)
                 .reviewSubmittedAt(review.getReviewSubmittedAt())
                 .reviewCompletedAt(review.getReviewCompletedAt())
                 .reviewHistory(historyEntries)
@@ -859,7 +855,7 @@ public class QuarantineService {
         if (!rule.getProjectId().equals(projectId)) {
             throw new InvalidOperationException("Rule does not belong to this project");
         }
-        ruleRepository.delete(ruleId);
+        ruleRepository.delete(rule);
         log.info("Deleted quarantine rule: {}", ruleId);
     }
 
@@ -987,6 +983,37 @@ public class QuarantineService {
         }
     }
 
+    private String serializeJson(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException e) {
+            log.error("Error serializing value", e);
+            return "{}";
+        }
+    }
+
+    private <T> T parseJson(String json, Class<T> type) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(json, type);
+        } catch (JsonProcessingException e) {
+            log.error("Error parsing json into {}", type.getSimpleName(), e);
+            return null;
+        }
+    }
+
+    private QuarantineDurationPolicy.PolicyType mapRequestPolicyType(QuarantineDurationPolicyRequest.PolicyType type) {
+        if (type == null) {
+            return QuarantineDurationPolicy.PolicyType.CUSTOM;
+        }
+        return QuarantineDurationPolicy.PolicyType.valueOf(type.name());
+    }
+
     private Map<String, Object> parseMap(String json) {
         if (json == null || json.isEmpty()) return new HashMap<>();
         try {
@@ -1019,11 +1046,6 @@ public class QuarantineService {
                 .restoreReason(quarantine.getRestoreReason())
                 .createdAt(quarantine.getUpdatedAt());
 
-        // Add review information if available
-        if (Boolean.TRUE.equals(quarantine.getReviewRequired())) {
-            builder.reviewRequired(true);
-        }
-
         return builder.build();
     }
 
@@ -1049,10 +1071,10 @@ public class QuarantineService {
                 .policyName(policy.getPolicyName())
                 .description(policy.getDescription())
                 .policyType(mapPolicyType(policy.getPolicyType()))
-                .durationRule(parseMap(policy.getDurationRule()))
-                .autoRestoreConfig(parseMap(policy.getAutoRestoreConfig()))
-                .reviewConfig(parseMap(policy.getReviewConfig()))
-                .escalationConfig(parseMap(policy.getEscalationConfig()))
+                .durationRule(parseJson(policy.getDurationRule(), QuarantineDurationPolicyResponse.DurationRule.class))
+                .autoRestoreConfig(parseJson(policy.getAutoRestoreConfig(), QuarantineDurationPolicyResponse.AutoRestoreConfig.class))
+                .reviewConfig(parseJson(policy.getReviewConfig(), QuarantineDurationPolicyResponse.ReviewConfig.class))
+                .escalationConfig(parseJson(policy.getEscalationConfig(), QuarantineDurationPolicyResponse.EscalationConfig.class))
                 .conditions(parseMap(policy.getConditions()))
                 .isDefault(policy.getIsDefault())
                 .isActive(policy.getIsActive())

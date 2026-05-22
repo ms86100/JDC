@@ -1,6 +1,7 @@
 package com.jira.test.repository;
 
 import com.jira.test.entity.TestFolder;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -35,4 +36,10 @@ public interface TestFolderRepository extends JpaRepository<TestFolder, UUID> {
 
     @Query("SELECT COUNT(t) FROM TestFolder t WHERE t.parentId = :parentId")
     long countChildren(@Param("parentId") UUID parentId);
+
+    @Query("SELECT f FROM TestFolder f WHERE f.projectId = :projectId AND LOWER(f.name) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<TestFolder> searchByName(@Param("projectId") UUID projectId, @Param("query") String query, Pageable pageable);
+
+    @Query("SELECT f FROM TestFolder f WHERE f.projectId = :projectId ORDER BY f.updatedAt DESC")
+    List<TestFolder> findRecentlyModified(@Param("projectId") UUID projectId, Pageable pageable);
 }

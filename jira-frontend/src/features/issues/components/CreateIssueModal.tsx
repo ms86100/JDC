@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { projectApi, ProjectResponse } from '../../../api/projectApi';
+import { versionApi } from '../../../api/versionApi';
+import { componentApi } from '../../../api/componentApi';
 import { issueApi, CreateIssueRequest, IssueType, IssuePriority } from '../../../api/issueApi';
 import apiClient from '../../../api/axiosClient';
 import './CreateIssueModal.css';
@@ -10,6 +12,8 @@ interface CreateIssueModalProps {
   onSuccess?: () => void;
   projectId?: string;
   projectKey?: string;
+  parentIssueId?: string;
+  defaultTitle?: string;
 }
 
 interface LinkedIssue {
@@ -26,10 +30,17 @@ const ISSUE_LINK_TYPES = [
   { value: 'is_cloned_by', label: 'Is cloned by' },
 ];
 
-export default function CreateIssueModal({ onClose, onSuccess, projectId: propProjectId, projectKey: propProjectKey }: CreateIssueModalProps) {
+export default function CreateIssueModal({
+  onClose,
+  onSuccess,
+  projectId: propProjectId,
+  projectKey: propProjectKey,
+  parentIssueId: propParentIssueId,
+  defaultTitle,
+}: CreateIssueModalProps) {
   const [form, setForm] = useState<CreateIssueRequest & { linkedIssues: LinkedIssue[] }>({
     projectId: propProjectId || '',
-    title: '',
+    title: defaultTitle || '',
     description: '',
     issueTypeId: '',
     priorityId: '',
@@ -37,7 +48,8 @@ export default function CreateIssueModal({ onClose, onSuccess, projectId: propPr
     reporterId: '',
     sprintId: '',
     epicId: '',
-    parentId: '',
+    parentIssueId: propParentIssueId || undefined,
+    parentId: propParentIssueId || '',
     dueDate: '',
     storyPoints: undefined,
     originalEstimateSeconds: undefined,
@@ -106,31 +118,35 @@ export default function CreateIssueModal({ onClose, onSuccess, projectId: propPr
 
   // Versions
   const { data: versions = [] } = useQuery({
-    queryKey: ['versions', form.projectId],
-    queryFn: async () => {
-      if (!form.projectId) return [];
-      const response = await projectApi.getVersions(form.projectId);
-      return response.data || [];
-    },
+    queryKey: ['project-versions', form.projectId],
+    queryFn: () => (form.projectId ? versionApi.getByProject(form.projectId) : []),
     enabled: !!form.projectId,
   });
 
-  // Components
   const { data: components = [] } = useQuery({
-    queryKey: ['components', form.projectId],
-    queryFn: async () => {
-      if (!form.projectId) return [];
-      const response = await projectApi.getComponents(form.projectId);
-      return response.data || [];
-    },
+    queryKey: ['project-components', form.projectId],
+    queryFn: () => (form.projectId ? componentApi.getByProject(form.projectId) : []),
     enabled: !!form.projectId,
   });
 
   // Create Mutation
   const createMutation = useMutation({
-    mutationFn: async (data: CreateIssueRequest & { linkedIssues: LinkedIssue[] }) => {
-      const { linkedIssues, ...issueData } = data;
-      const response = await issueApi.create(issueData as CreateIssueRequest);
+    mutationFn: async (data: CreateIssueRequest & { linkedIssues: LinkedIssue[]; parentId?: string }) => {
+      const { linkedIssues, parentId, ...issueData } = data;
+      const payload: CreateIssueRequest = {
+        ...(issueData as CreateIssueRequest),
+        parentIssueId: issueData.parentIssueId || parentId || propParentIssueId || undefined,
+      };
+      const response = await issueApi.create(payload);
+      const issueId = response.data?.id;
+      if (issueId) {
+        const { syncIssueVersionComponentLinks } = await import('../../../lib/syncIssueVersionComponentLinks');
+        await syncIssueVersionComponentLinks(issueId, {
+          fixVersionIds: payload.fixVersionIds,
+          affectsVersionIds: payload.affectsVersionIds,
+          componentIds: payload.componentIds,
+        });
+      }
 
       // If linked issues exist, add them after issue creation
       if (linkedIssues && linkedIssues.length > 0 && response.data?.id) {

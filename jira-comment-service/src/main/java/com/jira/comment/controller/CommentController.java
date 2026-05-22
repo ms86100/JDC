@@ -28,9 +28,10 @@ public class CommentController {
     @PostMapping
     public ResponseEntity<CommentResponse> createComment(
             @Valid @RequestBody CreateCommentRequest request,
-            @RequestHeader("X-User-Id") UUID userId) {
-        log.info("POST /comments - Creating comment for issue: {} by user: {}", request.getIssueId(), userId);
-        CommentResponse response = commentService.createComment(request, userId);
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+        UUID actor = userId != null ? userId : UUID.fromString("00000000-0000-0000-0000-000000000001");
+        log.info("POST /comments - Creating comment for issue: {} by user: {}", request.getIssueId(), actor);
+        CommentResponse response = commentService.createComment(request, actor);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

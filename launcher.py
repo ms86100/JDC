@@ -266,12 +266,16 @@ def _get_defaults():
             "health_timeout": 180,
             "health_poll_interval": 2,
             "max_parallel": 3,
+            "require_postgres": True,
             "protected_ports": [5432],
             "shutdown_timeout": 15,
             "log_dir": "logs",
             "cleanup_on_start": True,
             "max_restart_attempts": 3,
             "restart_cooldown_seconds": 30,
+            "monitor_interval_seconds": 20,
+            "monitor_health_timeout": 45,
+            "monitor_health_fail_threshold": 3,
             "java_opts": "-Xms128m -Xmx384m -XX:+UseG1GC",
             "maven_flags": "-Dmaven.test.skip=true -q",
             "maven_parallel": True,
@@ -300,30 +304,69 @@ def resolve_executable(name):
     return name
 
 
-def check_port(port):
-    """Return True if port is open on localhost."""
+def check_port(port, host="127.0.0.1"):
+    """Return True if TCP port is open on host (prefer 127.0.0.1 over localhost on Windows)."""
     import socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(2)
     try:
-        r = s.connect_ex(("localhost", port))
-        return r == 0
+        return s.connect_ex((host, int(port))) == 0
     except Exception:
         return False
     finally:
         s.close()
 
-def check_health(port, path="/actuator/health", timeout=5, paths=None):
-    """Return True if service responds with 2xx on a health endpoint."""
-    candidates = paths if paths else [path]
-    if path and path not in candidates:
-        candidates = [path] + list(candidates)
-    for candidate in candidates:
+
+def verify_postgres_ready(db_cfg=None):
+    """True when PostgreSQL accepts TCP on 127.0.0.1:5432."""
+    port = 5432
+    if db_cfg:
         try:
-            url = f"http://localhost:{port}{candidate}"
+            port = int(db_cfg.get("port", 5432))
+        except (TypeError, ValueError):
+            port = 5432
+    return check_port(port, host="127.0.0.1")
+
+DEFAULT_HEALTH_PATHS = [
+    "/actuator/health/liveness",
+    "/actuator/health/readiness",
+    "/actuator/health",
+]
+
+
+def _health_response_ok(status_code, body_bytes):
+    """Accept 2xx or Spring aggregate 503 when body reports UP."""
+    if 200 <= status_code < 300:
+        return True
+    if status_code == 503 and body_bytes:
+        try:
+            text = body_bytes.decode("utf-8", errors="replace").lower()
+            if '"status":"up"' in text.replace(" ", "") or '"status": "up"' in text:
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def check_health(port, path="/actuator/health", timeout=15, paths=None):
+    """Return True if service responds on a health endpoint (liveness preferred)."""
+    candidates = list(paths) if paths else list(DEFAULT_HEALTH_PATHS)
+    if path and path not in candidates:
+        candidates = [path] + candidates
+    seen = set()
+    ordered = []
+    for c in candidates:
+        if c not in seen:
+            seen.add(c)
+            ordered.append(c)
+    for candidate in ordered:
+        try:
+            url = f"http://127.0.0.1:{port}{candidate}"
             req = urllib.request.Request(url)
             req.add_header("User-Agent", "JiraPlatformLauncher/1.0")
             resp = urllib.request.urlopen(req, timeout=timeout)
-            if 200 <= resp.status < 300:
+            body = resp.read(8192)
+            if _health_response_ok(resp.status, body):
                 return True
         except Exception:
             continue
@@ -432,20 +475,29 @@ def get_process_command_line(pid):
         return ""
 
 
-def process_owns_port(proc, port, jar_marker=None):
+def process_owns_port(proc, port, jar_marker=None, retries=3):
     """True if proc (or its children) owns the listening port, or runs the expected JAR."""
     if proc is None:
         return False
-    owner = get_pid_on_port(port)
-    if owner is None:
-        return False
-    tree = get_process_tree_pids(proc.pid)
-    if owner in tree:
+    for attempt in range(max(1, retries)):
+        owner = get_pid_on_port(port)
+        if owner is not None:
+            tree = get_process_tree_pids(proc.pid)
+            if owner in tree:
+                return True
+            if jar_marker:
+                cmd = get_process_command_line(owner)
+                if jar_marker in cmd.replace("\\", "/"):
+                    return True
+        if attempt < retries - 1:
+            time.sleep(0.4)
+    # Windows: Get-NetTCPConnection can fail under load while the JVM is still up.
+    if proc.poll() is None and check_port(port):
+        if jar_marker:
+            cmd = get_process_command_line(proc.pid)
+            if jar_marker in cmd.replace("\\", "/"):
+                return True
         return True
-    if jar_marker:
-        cmd = get_process_command_line(owner)
-        if jar_marker in cmd.replace("\\", "/"):
-            return True
     return False
 
 
@@ -463,11 +515,14 @@ def wait_for_port_free(port, timeout=15, poll_interval=0.5):
     return not check_port(port)
 
 
-def check_health_for_process(port, proc, path="/actuator/health", timeout=5, paths=None, jar_marker=None):
+def check_health_for_process(port, proc, path="/actuator/health", timeout=30, paths=None, jar_marker=None):
     """Health check that also verifies our process owns the listening port."""
     if proc is not None and proc.poll() is not None:
         return False
-    if not check_health(port, path=path, timeout=timeout, paths=paths):
+    health_paths = paths or DEFAULT_HEALTH_PATHS
+    if path and path not in health_paths:
+        health_paths = [path] + list(health_paths)
+    if not check_health(port, path=path, timeout=timeout, paths=health_paths):
         return False
     if proc is None:
         return True
@@ -491,7 +546,7 @@ def wait_for_health(port, path="/actuator/health", timeout=90, poll_interval=2, 
         if proc is not None and proc.poll() is not None:
             return False, round(time.time() - start, 1)
         if check_health_for_process(
-            port, proc, path=path, timeout=5, paths=health_paths, jar_marker=jar_marker
+            port, proc, path=path, timeout=min(timeout, 45), paths=health_paths, jar_marker=jar_marker
         ):
             elapsed = time.time() - start
             return True, round(elapsed, 1)
@@ -583,6 +638,32 @@ def jar_is_runnable(jar_path):
         return False
 
 
+def jar_is_stale(jar_path, dir_name):
+    """True when source or pom is newer than the built JAR (launcher skips Maven otherwise)."""
+    if not jar_path.exists():
+        return True
+    try:
+        jar_mtime = jar_path.stat().st_mtime
+    except OSError:
+        return True
+    service_dir = BASE_DIR / dir_name
+    pom = service_dir / "pom.xml"
+    if pom.is_file() and pom.stat().st_mtime > jar_mtime:
+        return True
+    src_root = service_dir / "src"
+    if not src_root.is_dir():
+        return False
+    watch_suffixes = {".java", ".xml", ".yml", ".yaml", ".properties", ".sql"}
+    for path in src_root.rglob("*"):
+        if path.is_file() and path.suffix.lower() in watch_suffixes:
+            try:
+                if path.stat().st_mtime > jar_mtime:
+                    return True
+            except OSError:
+                continue
+    return False
+
+
 def build_service(dir_path, jar_name, maven_flags="-Dmaven.test.skip=true -q", force_rebuild=False):
     """Build a service's JAR using Maven. Returns True on success."""
     service_dir = BASE_DIR / dir_path
@@ -669,7 +750,7 @@ def get_windows_postgres_service_name():
 
 def start_postgres_local_windows(log_path=None):
     """Start local PostgreSQL via pg_ctl or Windows service. Returns True if port 5432 opens."""
-    if check_port(5432):
+    if verify_postgres_ready():
         return True
 
     pg_ctl, data_dir = find_windows_postgres()
@@ -696,8 +777,8 @@ def start_postgres_local_windows(log_path=None):
             if log_path:
                 args.extend(["-l", str(log_path)])
             subprocess.run(args, capture_output=True, text=True, timeout=60)
-            ok, _ = wait_for_port(5432, 30)
-            if ok:
+            ok, _ = wait_for_port(5432, 45)
+            if ok and verify_postgres_ready():
                 return True
         except Exception as e:
             if log_file:
@@ -714,8 +795,8 @@ def start_postgres_local_windows(log_path=None):
                 text=True,
                 timeout=30,
             )
-            ok, _ = wait_for_port(5432, 30)
-            if ok:
+            ok, _ = wait_for_port(5432, 45)
+            if ok and verify_postgres_ready():
                 return True
         except Exception as e:
             if log_file:
@@ -723,7 +804,7 @@ def start_postgres_local_windows(log_path=None):
 
     if log_file:
         log_file.close()
-    return check_port(5432)
+    return verify_postgres_ready()
 
 
 def start_postgres_docker(db_cfg, logs_dir):
@@ -941,6 +1022,7 @@ class ServiceManager:
         self.skip_build = False
         self.only_services = None  # set of service names to start
         self._restart_counts = {}
+        self._health_fail_counts = {}
         try:
             self._max_restart_attempts = int(self.startup_cfg.get("max_restart_attempts", 3))
         except (TypeError, ValueError):
@@ -949,6 +1031,18 @@ class ServiceManager:
             self._restart_cooldown = int(self.startup_cfg.get("restart_cooldown_seconds", 30))
         except (TypeError, ValueError):
             self._restart_cooldown = 30
+        try:
+            self._monitor_interval = int(self.startup_cfg.get("monitor_interval_seconds", 20))
+        except (TypeError, ValueError):
+            self._monitor_interval = 20
+        try:
+            self._monitor_health_timeout = int(self.startup_cfg.get("monitor_health_timeout", 45))
+        except (TypeError, ValueError):
+            self._monitor_health_timeout = 45
+        try:
+            self._health_fail_threshold = int(self.startup_cfg.get("monitor_health_fail_threshold", 3))
+        except (TypeError, ValueError):
+            self._health_fail_threshold = 3
 
         LOGS_DIR.mkdir(exist_ok=True)
 
@@ -1002,8 +1096,13 @@ class ServiceManager:
 
         self.cleanup_ports()
 
-        # ---- PostgreSQL ----
+        # ---- PostgreSQL (required for all JVM services) ----
         if not self.start_postgres():
+            if self.startup_cfg.get("require_postgres", True):
+                log("  FATAL: PostgreSQL is not running on 127.0.0.1:5432 — aborting startup", color="red")
+                log("    Fix: start Docker Desktop, or run (Admin): Start-Service postgresql-x64-17", color="gray")
+                log("    Or: pg_ctl start -D \"C:\\Program Files\\PostgreSQL\\17\\data\"", color="gray")
+                sys.exit(1)
             log("  PostgreSQL unavailable — services may fail to start", color="yellow")
 
         # ---- Build missing JARs ----
@@ -1202,12 +1301,15 @@ class ServiceManager:
         time.sleep(1)
 
     def start_postgres(self):
-        if check_port(5432):
-            log("  PostgreSQL already on :5432", color="green")
+        if verify_postgres_ready(self.db_cfg):
+            log("  PostgreSQL already on 127.0.0.1:5432", color="green")
             return True
 
         ok = False
-        if is_docker_running():
+        # Prefer local install when Docker daemon is down (common on Windows dev machines)
+        if find_windows_postgres()[0] and not is_docker_running():
+            ok = start_postgres_local_windows(str(LOGS_DIR / "postgres-local.log"))
+        elif is_docker_running():
             ok = start_postgres_docker(self.db_cfg, LOGS_DIR)
         elif find_windows_postgres()[0]:
             ok = start_postgres_local_windows(str(LOGS_DIR / "postgres-local.log"))
@@ -1216,9 +1318,12 @@ class ServiceManager:
             log("    Install PostgreSQL or start Docker Desktop, then re-run launcher.py", color="gray")
             return False
 
-        if ok:
-            log("  PostgreSQL ready on :5432", color="green")
+        if ok and verify_postgres_ready(self.db_cfg):
+            log("  PostgreSQL ready on 127.0.0.1:5432", color="green")
             return True
+        if ok:
+            log("  PostgreSQL port probe failed after start attempt", color="red")
+            return False
 
         log("  PostgreSQL failed to start — see logs/postgres.log or logs/postgres-local.log", color="red")
         if sys.platform == "win32" and get_windows_postgres_service_name():
@@ -1250,13 +1355,24 @@ class ServiceManager:
                 if name not in startable:
                     continue
             jar_path = BASE_DIR / dir_name / "target" / jar
-            if jar_is_runnable(jar_path) and not self.force_rebuild:
+            if (
+                jar_is_runnable(jar_path)
+                and not self.force_rebuild
+                and not jar_is_stale(jar_path, dir_name)
+            ):
                 continue
             to_build.append((name, dir_name, jar))
 
         if not to_build:
             log("  All JARs up to date", color="green")
             return
+
+        stale = [
+            n for n, d, j in to_build
+            if jar_is_runnable(BASE_DIR / d / "target" / j) and not self.force_rebuild
+        ]
+        if stale:
+            log(f"  Rebuilding {len(stale)} stale JAR(s): {', '.join(stale)}", color="yellow")
 
         if self.maven_parallel and len(to_build) > 1:
             from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -1325,7 +1441,7 @@ class ServiceManager:
                 pass
         self.running.pop(name, None)
 
-    def _start_service(self, name):
+    def _start_service(self, name, append_log=False):
         cfg = self.services_cfg[name]
         jar_name = cfg.get("jar")
         dir_name = cfg.get("dir")
@@ -1369,7 +1485,15 @@ class ServiceManager:
                 self.failed.add(name)
                 return None
 
-        log_file = open(str(LOGS_DIR / f"{name}.log"), "w")
+        log_path = LOGS_DIR / f"{name}.log"
+        if append_log and log_path.exists() and log_path.stat().st_size > 0:
+            log_file = open(str(log_path), "a", encoding="utf-8")
+            log_file.write(
+                f"\n{'=' * 70}\n  RESTART {time.strftime('%Y-%m-%d %H:%M:%S')}\n{'=' * 70}\n"
+            )
+            log_file.flush()
+        else:
+            log_file = open(str(log_path), "w", encoding="utf-8")
         env = self._build_env(name)
 
         env_list = []
@@ -1381,6 +1505,8 @@ class ServiceManager:
             f"--server.port={port}",
             "--spring.profiles.active=local",
             "--management.health.mail.enabled=false",
+            "--management.health.diskspace.enabled=false",
+            "--management.endpoint.health.probes.enabled=true",
         ]
 
         proc = subprocess.Popen(
@@ -1488,9 +1614,15 @@ class ServiceManager:
         """Watch for crashes and restart critical services."""
         log("")
         log("  Monitoring services (Ctrl+C to stop)...", color="gray")
+        log(
+            f"  Health: liveness probe, {self._monitor_health_timeout}s timeout, "
+            f"{self._health_fail_threshold} strikes before marking unhealthy",
+            color="gray",
+            dim=True,
+        )
         check_count = 0
         while True:
-            time.sleep(20)
+            time.sleep(self._monitor_interval)
             check_count += 1
 
             # Check if any process died
@@ -1503,6 +1635,7 @@ class ServiceManager:
                 exit_code = data["proc"].poll()
                 attempts = self._restart_counts.get(name, 0) + 1
                 self._restart_counts[name] = attempts
+                self._health_fail_counts.pop(name, None)
 
                 log(f"  [!] {name} died (exit {exit_code})", color="yellow")
                 self._log_tail(name)
@@ -1525,7 +1658,7 @@ class ServiceManager:
                         self._restart_counts[name] = 0
                         log(f"  [R] {name} restarted", color="green")
                     continue
-                p = self._start_service(name)
+                p = self._start_service(name, append_log=True)
                 if p:
                     port = self.services_cfg.get(name, {}).get("port", 0)
                     jar_marker = self.services_cfg.get(name, {}).get("jar", "")
@@ -1541,19 +1674,51 @@ class ServiceManager:
                         log(f"  [!] {name} health check failed after restart — see logs/{name}.log", color="red")
                         self._log_tail(name)
 
-            # Periodic health check (every JVM service we started)
+            # Periodic health check — only marks unhealthy after repeated failures (process stays running)
             if check_count % 3 == 0:
-                for name in list(self.healthy):
-                    if name in ("frontend", "postgres"):
-                        continue
+                jvm_services = [
+                    n for n, d in self.running.items()
+                    if n not in ("frontend", "postgres") and d.get("proc") is not None
+                ]
+                for name in jvm_services:
                     data = self.running.get(name)
+                    if not data or data["proc"].poll() is not None:
+                        continue
                     port = self.services_cfg.get(name, {}).get("port")
-                    proc = data["proc"] if data else None
+                    proc = data["proc"]
                     jar_marker = self.services_cfg.get(name, {}).get("jar", "")
-                    if port and not check_health_for_process(
-                        port, proc, path=self.health_path, jar_marker=jar_marker
-                    ):
-                        log(f"  [!] {name} not responding — marking unhealthy", color="yellow")
+                    health_path = self.services_cfg.get(name, {}).get("health", self.health_path)
+                    if not port:
+                        continue
+                    time.sleep(0.25)
+                    ok = check_health_for_process(
+                        port,
+                        proc,
+                        path=health_path,
+                        timeout=self._monitor_health_timeout,
+                        jar_marker=jar_marker,
+                    )
+                    if ok:
+                        self._health_fail_counts.pop(name, None)
+                        if name not in self.healthy and name not in self.failed:
+                            self.healthy.add(name)
+                            log(f"  [+] {name} responding again", color="green")
+                        continue
+                    fails = self._health_fail_counts.get(name, 0) + 1
+                    self._health_fail_counts[name] = fails
+                    if fails < self._health_fail_threshold:
+                        log(
+                            f"  [?] {name} slow health ({fails}/{self._health_fail_threshold}) — still running",
+                            color="gray",
+                            dim=True,
+                        )
+                        continue
+                    if name in self.healthy:
+                        log(
+                            f"  [!] {name} not responding after {fails} checks — marking unhealthy "
+                            f"(process still running; see logs/{name}.log)",
+                            color="yellow",
+                        )
                         self.healthy.discard(name)
 
     def stop(self):

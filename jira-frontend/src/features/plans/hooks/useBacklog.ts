@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { planApi } from '../../../api/planApi';
+import { appNotify } from '../../../lib/appNotify';
 
 export const useBacklog = (planId: string) => {
   return useQuery({
@@ -21,7 +22,7 @@ export const useAddItemToBacklog = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to add item to backlog:', error);
-      alert(error.message || 'Failed to add item to backlog');
+      appNotify.error(error.message || 'Failed to add item to backlog');
     },
   });
 };
@@ -36,7 +37,7 @@ export const useUpdateBacklogItem = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to update backlog item:', error);
-      alert(error.message || 'Failed to update backlog item');
+      appNotify.error(error.message || 'Failed to update backlog item');
     },
   });
 };
@@ -52,7 +53,7 @@ export const useRemoveItemFromBacklog = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to remove item from backlog:', error);
-      alert(error.message || 'Failed to remove item from backlog');
+      appNotify.error(error.message || 'Failed to remove item from backlog');
     },
   });
 };
@@ -67,7 +68,7 @@ export const useReorderBacklog = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to reorder backlog:', error);
-      alert(error.message || 'Failed to reorder backlog');
+      appNotify.error(error.message || 'Failed to reorder backlog');
     },
   });
 };

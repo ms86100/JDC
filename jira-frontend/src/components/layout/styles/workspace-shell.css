@@ -1,0 +1,325 @@
+/**
+ * Workspace navigation — Airbus / Jira DC flyout (mirrors admin-shell.css).
+ */
+
+.sa-workspace-nav {
+  --sa-ws-rail-width: 220px;
+  --sa-ws-flyout-width: 280px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100%;
+  z-index: 20;
+  width: var(--sa-ws-rail-width);
+  transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sa-workspace-nav--collapsed {
+  --sa-ws-rail-width: 56px;
+}
+
+.sa-workspace-nav--flyout-open {
+  width: calc(var(--sa-ws-rail-width) + var(--sa-ws-flyout-width));
+}
+
+.sa-workspace-nav-rail {
+  position: relative;
+  width: var(--sa-ws-rail-width);
+  flex: 1;
+  min-height: 0;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0 8px;
+  background: linear-gradient(180deg, #00205b 0%, #003366 55%, #002a5c 100%);
+  border-right: 1px solid #001a47;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-shadow: 4px 0 24px rgba(0, 32, 91, 0.18);
+}
+
+.sa-workspace-nav--collapsed .sa-workspace-nav-rail {
+  padding: 12px 0;
+}
+
+.sa-workspace-nav-section-title {
+  padding: 8px 16px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.sa-workspace-nav--collapsed .sa-workspace-nav-section-title {
+  display: none;
+}
+
+.sa-workspace-category-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px 10px 16px;
+  margin: 0;
+  border: none;
+  border-left: 3px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--ab-font-family, var(--sa-font-sans, system-ui, sans-serif));
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.82);
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.sa-workspace-nav--collapsed .sa-workspace-category-btn {
+  justify-content: center;
+  padding: 10px 8px;
+}
+
+.sa-workspace-category-btn:hover,
+.sa-workspace-category-btn.is-hovered {
+  background: rgba(255, 255, 255, 0.14);
+  border-left-color: #66a3ff;
+  color: #fff;
+}
+
+.sa-workspace-category-btn.has-active-child,
+.sa-workspace-category-btn.is-route-section {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.sa-workspace-category-btn.has-active-child:not(.is-hovered) {
+  border-left-color: rgba(102, 163, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sa-workspace-category-icon {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #cce0ff;
+}
+
+.sa-workspace-category-label {
+  flex: 1;
+  line-height: 1.35;
+}
+
+.sa-workspace-nav--collapsed .sa-workspace-category-label,
+.sa-workspace-nav--collapsed .sa-workspace-category-chevron {
+  display: none;
+}
+
+.sa-workspace-category-chevron {
+  font-size: 14px;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.15s, transform 0.15s;
+  color: #99c2ff;
+}
+
+.sa-workspace-category-btn:hover .sa-workspace-category-chevron,
+.sa-workspace-category-btn.is-hovered .sa-workspace-category-chevron {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.sa-workspace-nav-hint {
+  margin: auto 10px 8px;
+  padding: 10px 10px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.45);
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-style: italic;
+}
+
+.sa-workspace-nav--collapsed .sa-workspace-nav-hint {
+  display: none;
+}
+
+.sa-workspace-nav-flyout {
+  position: absolute;
+  left: var(--sa-ws-rail-width);
+  top: 0;
+  width: var(--sa-ws-flyout-width);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--ab-white, #fff);
+  border-right: 1px solid #dfe1e6;
+  box-shadow: 8px 0 32px rgba(0, 32, 91, 0.14), 0 0 0 1px rgba(0, 82, 204, 0.06);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-12px);
+  pointer-events: none;
+  transition:
+    opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0.22s;
+}
+
+.sa-workspace-nav-flyout.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.sa-workspace-nav-flyout-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 20px 16px;
+  background: linear-gradient(135deg, #e6f0ff 0%, #fff 60%);
+  border-bottom: 1px solid #ebecf0;
+  flex-shrink: 0;
+}
+
+.sa-workspace-nav-flyout-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #00205b, #0052cc);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 82, 204, 0.25);
+}
+
+.sa-workspace-nav-flyout-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #00205b;
+}
+
+.sa-workspace-nav-flyout-sub {
+  font-size: 12px;
+  color: #5e6c84;
+  margin-top: 2px;
+}
+
+.sa-workspace-nav-items-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0 16px;
+}
+
+.sa-workspace-nav-items-list li {
+  margin: 0;
+}
+
+.sa-workspace-nav-link {
+  display: block;
+  padding: 10px 20px;
+  margin: 2px 8px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #42526e;
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.sa-workspace-nav-link:hover {
+  background: #f4f5f7;
+  color: #0052cc;
+  transform: translateX(2px);
+  text-decoration: none;
+}
+
+.sa-workspace-nav-link.is-active {
+  background: linear-gradient(90deg, #e6f0ff 0%, #f0f6ff 100%);
+  border-left-color: #00205b;
+  color: #00205b;
+  font-weight: 600;
+}
+
+.sa-workspace-nav-link-desc {
+  display: block;
+  font-size: 11px;
+  color: #97a0af;
+  margin-top: 2px;
+  font-weight: 400;
+}
+
+.sa-workspace-nav-link.is-active .sa-workspace-nav-link-desc {
+  color: #5e6c84;
+}
+
+/* Context block (project/program) above Work categories */
+.sa-workspace-context {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.sa-workspace-context .sa-context-nav-heading {
+  padding: 4px 14px 8px;
+}
+
+.sa-workspace-context .sa-context-entity-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  padding: 0 14px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sa-workspace-context .sa-context-entity-sub {
+  display: block;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 0 14px 8px;
+}
+
+.sa-workspace-context .sa-context-link {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.sa-workspace-context .sa-context-link[style*='brand'] {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+}
+
+.sa-workspace-sidebar-collapse {
+  margin-top: auto;
+  padding: var(--sa-space-2) 10px 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.sa-workspace-sidebar-collapse button {
+  width: 100%;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--sa-radius-sm);
+  cursor: pointer;
+  font-family: var(--sa-font-sans);
+  font-size: var(--sa-fs-sm);
+}
+
+.sa-workspace-sidebar-collapse button:hover {
+  background: rgba(255, 255, 255, 0.16);
+}

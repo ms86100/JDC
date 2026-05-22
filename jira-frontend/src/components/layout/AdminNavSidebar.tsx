@@ -13,7 +13,7 @@ function categoryForPath(pathname: string): string {
       return cat.key;
     }
   }
-  if (pathname === '/admin' || pathname === '/admin/') return 'system';
+  if (pathname === '/admin' || pathname === '/admin/' || pathname === '/admin/overview') return 'issues';
   return ADMIN_CATEGORIES[0].key;
 }
 

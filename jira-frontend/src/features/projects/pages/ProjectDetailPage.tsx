@@ -19,8 +19,10 @@ import { useProjectWorkspaceData } from '../../../components/workspace/useWorksp
 import { defaultBoardPath } from '../../../components/workspace/boardLinks';
 import { recordRecentView } from '../../../components/workspace/recentViews';
 import { formatShortDate } from '../../../components/workspace/metrics';
-import '../../../components/workspace/workspace-dashboard.css';
+import { resolveProjectTemplate } from '../../../lib/projectTemplate';
+import ProjectLoadError from '../components/ProjectLoadError';
 import '../styles/ProjectDetailPage.css';
+import '../styles/project-overview.css';
 
 type DetailTab = 'overview' | 'issues' | 'activity';
 
@@ -38,15 +40,17 @@ export default function ProjectDetailPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [tab, setTab] = useState<DetailTab>('overview');
 
-  const { data: project, isLoading: projectLoading } = useQuery<ProjectResponse>({
+  const { data: project, isPending: projectLoading, isError: projectError, refetch } = useQuery<ProjectResponse>({
     queryKey: ['project', projectId],
     queryFn: async () => {
       const response = await projectApi.getById(projectId!);
       return response.data;
     },
+    enabled: !!projectId,
+    retry: 1,
   });
 
-  const { issues, metrics, sprints, activeSprint, boards, isLoading: wsLoading } =
+  const { issues, metrics, sprints, activeSprint, boards, isLoading: wsLoading, isError: wsError } =
     useProjectWorkspaceData(projectId);
 
   useEffect(() => {
@@ -64,6 +68,17 @@ export default function ProjectDetailPage() {
     return <div className="ab-loading"><div className="ab-spinner" /></div>;
   }
 
+  if (projectError) {
+    return (
+      <div className="ws-page sa-project-subpage">
+        <ProjectLoadError
+          title="Project could not be loaded"
+          onRetry={() => refetch()}
+        />
+      </div>
+    );
+  }
+
   if (!project) {
     return (
       <div className="ws-page ws-page-empty">
@@ -73,12 +88,15 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const templateInfo = TEMPLATE_NAV[project.template ?? ''] ?? { label: project.template ?? 'Standard', emphasis: 'Issues and delivery tracking' };
+  const resolvedTemplate = resolveProjectTemplate(project);
+  const templateInfo = TEMPLATE_NAV[resolvedTemplate ?? ''] ?? { label: project.category ?? resolvedTemplate ?? 'Standard', emphasis: 'Issues and delivery tracking' };
   const inProgressSprints = sprints.filter((s) => s.status === 'ACTIVE').length;
   const boardHref = defaultBoardPath(boards);
 
+  const projectBase = `/projects/${projectId}`;
+
   return (
-    <div className="ws-page ab-project-detail">
+    <div className="ws-page sa-project-overview ab-project-detail">
       <WorkspaceHeader
         breadcrumbs={
           <>
@@ -121,7 +139,11 @@ export default function ProjectDetailPage() {
         }
         actions={
           <>
-            <button type="button" className="ab-btn ab-btn-secondary" onClick={() => navigate(`/projects/${projectId}/settings`)}>
+            <button
+              type="button"
+              className="ab-btn ab-btn-secondary"
+              onClick={() => navigate(`${projectBase}/settings/summary`)}
+            >
               Settings
             </button>
             <button type="button" className="ab-btn ab-btn-primary" onClick={() => setShowCreateModal(true)}>
@@ -141,10 +163,14 @@ export default function ProjectDetailPage() {
 
       <ContextActionBar>
         <Link to={boardHref}>Board</Link>
-        <Link to="/issues">Backlog</Link>
-        <Link to="/sprints">Sprints ({inProgressSprints} active)</Link>
-        <Link to="/workflows">Workflows</Link>
-        <button type="button" onClick={() => navigate(`/projects/${projectId}/settings`)}>Project settings</button>
+        <Link to={`${projectBase}/backlog`}>Backlog</Link>
+        <Link to={`${projectBase}/issues`}>Issues</Link>
+        <Link to={`${projectBase}/reports`}>Reports</Link>
+        <Link to={`${projectBase}/releases`}>Releases</Link>
+        {inProgressSprints > 0 && (
+          <Link to={`${projectBase}/board/active`}>Active sprint ({inProgressSprints})</Link>
+        )}
+        <Link to={`${projectBase}/settings/summary`}>Project settings</Link>
       </ContextActionBar>
 
       <PortfolioSummary>
@@ -156,6 +182,12 @@ export default function ProjectDetailPage() {
         <KpiCard label="Boards" value={boards.length} hint={`${boards.filter((b) => b.isDefault).length} default`} />
       </PortfolioSummary>
 
+      {wsError && (
+        <ProjectLoadError
+          title="Some project metrics could not be loaded"
+          message="Issues or sprints may be unavailable. Overview still shows project details below."
+        />
+      )}
       {wsLoading ? (
         <div className="ab-loading"><div className="ab-spinner" /></div>
       ) : tab === 'overview' ? (
@@ -196,7 +228,11 @@ export default function ProjectDetailPage() {
                 <RisksBlockers issues={issues} />
               </SectionPanel>
 
-              <SectionPanel title="Recent activity" subtitle="Latest issue updates" action={<Link to="/issues">View all</Link>}>
+              <SectionPanel
+                title="Recent activity"
+                subtitle="Latest issue updates"
+                action={<Link to={`${projectBase}/issues`}>View all</Link>}
+              >
                 <ActivityFeed issues={issues} limit={8} />
               </SectionPanel>
             </div>

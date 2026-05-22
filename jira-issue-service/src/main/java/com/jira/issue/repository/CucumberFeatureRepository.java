@@ -14,5 +14,5 @@ public interface CucumberFeatureRepository extends JpaRepository<CucumberFeature
 
     Optional<CucumberFeature> findByFeatureFile(String featureFile);
 
-    Optional<CucumberFeature> findByFeatureNameAndProjectId(String featureName, UUID projectId);
+    Optional<CucumberFeature> findByFeatureName(String featureName);
 }

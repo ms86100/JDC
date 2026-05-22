@@ -127,7 +127,7 @@ public class ImportWizardSessionService {
         return toDto(session);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {IllegalStateException.class, IllegalArgumentException.class})
     public WizardUploadResultDto uploadFile(UUID sessionId, MultipartFile file, String importTypeOverride, UUID userId) {
         WizardSession session = requireSession(sessionId);
         String importType = importTypeOverride != null ? normalizeImportType(importTypeOverride) : session.getImportType();
@@ -169,13 +169,19 @@ public class ImportWizardSessionService {
                     .success(true);
 
             String fileName = file.getOriginalFilename();
-            if ("JIRA_DC".equals(importType) || (fileName != null && fileName.toLowerCase().endsWith(".xml"))) {
+            if ("JIRA_DC".equals(importType) || "ISSUE_XML".equals(importType)
+                    || (fileName != null && fileName.toLowerCase().endsWith(".xml"))) {
                 parseJiraDcIntoSession(session, content, result);
             } else {
                 parseSpreadsheetIntoSession(session, content, fileName, result);
             }
 
-            session.advanceStep("TARGET_PROJECT");
+            try {
+                session.advanceStep("TARGET_PROJECT");
+            } catch (Exception stepEx) {
+                log.warn("Wizard session {} could not advance to TARGET_PROJECT: {}", sessionId, stepEx.getMessage());
+                session.setCurrentStep("UPLOAD");
+            }
             upload.setParseStatus("PARSED");
             fileUploadRepository.save(upload);
             wizardSessionRepository.save(session);
@@ -183,13 +189,18 @@ public class ImportWizardSessionService {
             return result.build();
         } catch (Exception e) {
             log.error("Wizard upload failed for session {}", sessionId, e);
-            session.setErrorMessage(e.getMessage());
-            wizardSessionRepository.save(session);
+            String message = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            session.setErrorMessage(message);
+            try {
+                wizardSessionRepository.save(session);
+            } catch (Exception saveEx) {
+                log.warn("Could not persist wizard session error for {}: {}", sessionId, saveEx.getMessage());
+            }
             return WizardUploadResultDto.builder()
                     .sessionId(sessionId)
                     .fileName(file.getOriginalFilename())
                     .success(false)
-                    .errorMessage(e.getMessage())
+                    .errorMessage(message)
                     .build();
         }
     }
@@ -197,13 +208,13 @@ public class ImportWizardSessionService {
     @Transactional
     public ValidationResult validateSession(UUID sessionId, String entityType) {
         WizardSession session = requireSession(sessionId);
-        if ("JIRA_DC".equals(session.getImportType())) {
+        if ("JIRA_DC".equals(session.getImportType()) || "ISSUE_XML".equals(session.getImportType())) {
             return validateJiraDcSession(sessionId, session);
         }
         byte[] content = requireFileContent(sessionId);
 
         CsvParser.CsvParseResult parsed = parseUploadedContent(sessionId, session);
-        List<Map<String, String>> rows = toRowMaps(parsed);
+        List<Map<String, String>> rows = toRowMaps(parsed, session);
         String resolvedType = entityType != null ? entityType : session.getDetectedEntityType();
         if (resolvedType == null) {
             resolvedType = detectEntityType(parsed.getHeaders());
@@ -223,7 +234,7 @@ public class ImportWizardSessionService {
                 "totalRows", rows.size(),
                 "entityType", resolvedType
         ));
-        session.advanceStep("MAP_FIELDS");
+        session.advanceStep("VALIDATE");
         wizardSessionRepository.save(session);
 
         return result;
@@ -352,7 +363,7 @@ public class ImportWizardSessionService {
         byte[] fileContent = upload.getFileContent();
         String fileName = upload.getFileName();
 
-        if ("JIRA_DC".equals(session.getImportType())) {
+        if ("JIRA_DC".equals(session.getImportType()) || "ISSUE_XML".equals(session.getImportType())) {
             importJobProcessor.processJiraDcImport(job.getId(), fileContent, fileName, options, userId);
         } else {
             importJobProcessor.processSpreadsheetImport(job.getId(), fileContent, fileName, null, options, userId);
@@ -458,11 +469,31 @@ public class ImportWizardSessionService {
                     }
                 }
             }
+            List<ValidationResult.ValidationWarning> warnings = new ArrayList<>();
+            if (apiResult.get("warnings") instanceof List<?> warnList) {
+                for (Object o : warnList) {
+                    if (o instanceof Map<?, ?> m) {
+                        warnings.add(ValidationResult.ValidationWarning.builder()
+                                .row(0)
+                                .field(String.valueOf(m.get("field")))
+                                .warningCode(String.valueOf(m.get("code")))
+                                .message(String.valueOf(m.get("message")))
+                                .build());
+                    }
+                }
+            }
             ValidationResult result = ValidationResult.builder()
                     .valid(valid)
                     .errors(errors)
-                    .warnings(List.of())
+                    .warnings(warnings)
                     .build();
+
+            dryRunValidationService.persistValidationResult(
+                    session.getMigrationJobId(),
+                    sessionId,
+                    "JIRA_DC",
+                    result,
+                    true);
 
             session.setValidationResult(Map.of(
                     "valid", valid,
@@ -504,22 +535,88 @@ public class ImportWizardSessionService {
         }
     }
 
-    private List<Map<String, String>> toRowMaps(CsvParser.CsvParseResult parsed) {
+    private List<Map<String, String>> toRowMaps(CsvParser.CsvParseResult parsed, WizardSession session) {
+        Map<String, String> mappedTargets = buildMappedTargetKeys(session);
         List<Map<String, String>> rows = new ArrayList<>();
         for (String[] row : parsed.getDataRows()) {
             Map<String, String> map = new HashMap<>();
             for (int i = 0; i < parsed.getHeaders().length && i < row.length; i++) {
-                map.put(parsed.getHeaders()[i].trim().toLowerCase(Locale.ROOT), row[i]);
+                String header = parsed.getHeaders()[i];
+                String normalizedKey = normalizeHeaderKey(header);
+                String value = row[i];
+                putRowValue(map, normalizedKey, value);
+                String mappedTarget = mappedTargets.get(normalizedKey);
+                if (mappedTarget != null && !mappedTarget.isBlank()) {
+                    putRowValue(map, mappedTarget, value);
+                }
             }
             rows.add(map);
         }
         return rows;
     }
 
+    /** Do not let a later empty mapped column overwrite a non-empty canonical value (e.g. Epic Name → summary). */
+    private static void putRowValue(Map<String, String> map, String key, String value) {
+        if (key == null || key.isBlank()) {
+            return;
+        }
+        String v = value != null ? value : "";
+        String existing = map.get(key);
+        if (existing == null || existing.isBlank()) {
+            map.put(key, v);
+        } else if (!v.isBlank()) {
+            map.put(key, v);
+        }
+    }
+
+    /** "Issue Type" / "Project Key" → issue_type / project_key for ValidationEngine row lookups. */
+    private static String normalizeHeaderKey(String header) {
+        return header.trim()
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[\\s-]+", "_")
+                .replaceAll("[^a-z0-9_]", "");
+    }
+
+    /** Map UI target field keys (issuetype, project) to validation row keys (issue_type, project_key). */
+    private static String canonicalTargetKey(String targetField) {
+        String key = normalizeHeaderKey(targetField);
+        return switch (key) {
+            case "issuetype", "type" -> "issue_type";
+            case "project", "proj" -> "project_key";
+            case "issuekey", "key" -> "issue_key";
+            default -> key;
+        };
+    }
+
+    private Map<String, String> buildMappedTargetKeys(WizardSession session) {
+        if (session.getFieldMappings() == null) {
+            return Map.of();
+        }
+        Map<String, String> lookup = new HashMap<>();
+        for (Map<String, Object> mapping : session.getFieldMappings()) {
+            Object source = mapping.get("sourceColumn");
+            if (source == null) {
+                source = mapping.get("sourceField");
+            }
+            Object target = mapping.get("targetField");
+            if (source == null || target == null) {
+                continue;
+            }
+            Boolean mapped = mapping.get("mapped") instanceof Boolean b ? b : Boolean.TRUE;
+            if (!mapped) {
+                continue;
+            }
+            lookup.put(
+                    normalizeHeaderKey(String.valueOf(source)),
+                    canonicalTargetKey(String.valueOf(target)));
+        }
+        return lookup;
+    }
+
     private String detectEntityType(String[] headers) {
         Set<String> headerSet = new HashSet<>();
         for (String h : headers) {
-            headerSet.add(h.trim().toLowerCase(Locale.ROOT));
+            headerSet.add(normalizeHeaderKey(h));
         }
         if (headerSet.contains("project_key") && !headerSet.contains("issue_key")) return "PROJECT";
         if (headerSet.contains("issue_key") || headerSet.contains("summary")) return "ISSUE";
@@ -535,16 +632,27 @@ public class ImportWizardSessionService {
         if (file.getSize() > maxBytes) {
             throw new IllegalArgumentException("File exceeds maximum size of 500MB");
         }
-        String name = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
-        if (!name.endsWith(".csv") && !name.endsWith(".xml") && !name.endsWith(".xlsx")
-                && !name.endsWith(".zip")) {
+        String name = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase(Locale.ROOT) : "";
+        boolean csv = name.endsWith(".csv");
+        boolean xml = name.endsWith(".xml");
+        boolean xlsx = name.endsWith(".xlsx");
+        boolean zip = name.endsWith(".zip");
+        if (!csv && !xml && !xlsx && !zip) {
             throw new IllegalArgumentException("Supported formats: CSV, XLSX (Excel), XML/ZIP (Jira DC)");
         }
         String mime = file.getContentType();
         if (mime != null && !mime.isBlank()) {
-            boolean ok = mime.contains("csv") || mime.contains("spreadsheet")
-                    || mime.contains("excel") || mime.contains("xml") || mime.equals("application/octet-stream");
-            if (!ok) {
+            String lower = mime.toLowerCase(Locale.ROOT);
+            boolean ok = lower.contains("csv")
+                    || lower.contains("spreadsheet")
+                    || lower.contains("excel")
+                    || lower.contains("xml")
+                    || lower.contains("zip")
+                    || lower.equals("application/octet-stream")
+                    || lower.equals("text/plain")
+                    || lower.equals("application/vnd.ms-excel")
+                    || lower.startsWith("text/");
+            if (!ok && !(csv || xlsx || xml || zip)) {
                 throw new IllegalArgumentException("Unsupported MIME type: " + mime);
             }
         }
@@ -554,6 +662,7 @@ public class ImportWizardSessionService {
         if (type == null) return "CSV";
         return switch (type.toLowerCase(Locale.ROOT)) {
             case "csv" -> "CSV";
+            case "issue-xml", "issue_xml", "issuexml" -> "ISSUE_XML";
             case "jira-dc", "jira_dc", "jiradc" -> "JIRA_DC";
             case "project", "project-import", "project_import" -> "PROJECT";
             default -> type.toUpperCase(Locale.ROOT);

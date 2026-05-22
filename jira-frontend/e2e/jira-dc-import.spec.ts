@@ -50,6 +50,9 @@ test.describe('Jira DC import wizard', () => {
     await expect(page.getByTestId('dc-import-validation-panel')).toContainText(/valid|Blockers|Warnings/i, {
       timeout: 30000,
     });
+    if (process.env.MIGRATION_E2E_API === '1') {
+      await expect(page.getByTestId('dc-import-ac-signoff-panel')).toBeVisible({ timeout: 10000 });
+    }
   });
 
   test('full import completes with parity panel when live stack enabled', async ({ page }) => {

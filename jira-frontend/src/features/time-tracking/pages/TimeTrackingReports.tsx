@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { worklogApi, WorklogResponse } from '../../../api/worklogApi';
+import { worklogApi, WorklogResponse, secondsToMinutes } from '../../../api/worklogApi';
 import { projectApi } from '../../../api/projectApi';
 
 const formatDuration = (mins: number) => {
@@ -68,7 +68,7 @@ export default function TimeTrackingReports() {
     return Array.from(byUser.entries()).map(([userId, logs]) => ({
       userId,
       userName: logs[0]?.authorName || userId.split('-')[0],
-      totalMinutes: logs.reduce((sum, l) => sum + l.timeWorkedMinutes, 0),
+      totalMinutes: logs.reduce((sum, l) => sum + secondsToMinutes(l.timeSpentSeconds ?? 0), 0),
       issueCount: new Set(logs.map(l => l.issueId)).size,
       logs,
     }));
@@ -95,7 +95,7 @@ export default function TimeTrackingReports() {
 
     allWorklogs.forEach(log => {
       const dayIndex = new Date(log.startedAt).getDay();
-      byDay.set(dayIndex, (byDay.get(dayIndex) || 0) + log.timeWorkedMinutes);
+      byDay.set(dayIndex, (byDay.get(dayIndex) || 0) + secondsToMinutes(log.timeSpentSeconds ?? 0));
     });
 
     return days.map((day, index) => ({

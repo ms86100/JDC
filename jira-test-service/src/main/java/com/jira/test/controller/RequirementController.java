@@ -18,6 +18,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -331,22 +332,22 @@ public class RequirementController {
     }
 
     private Map<String, Object> formatVersionResponse(RequirementVersion version) {
-        return Map.of(
-                "id", version.getId(),
-                "requirementId", version.getRequirementId(),
-                "version", version.getVersion(),
-                "versionNumber", version.getVersionNumber() != null ? version.getVersionNumber() : 0,
-                "status", version.getStatus(),
-                "changeMagnitude", version.getChangeMagnitude(),
-                "content", version.getContent() != null ? version.getContent().substring(0, Math.min(200, version.getContent().length())) : "",
-                "contentLength", version.getContent() != null ? version.getContent().length() : 0,
-                "changelog", version.getChangelog() != null ? version.getChangelog() : "",
-                "createdAt", version.getCreatedAt(),
-                "publishedAt", version.getPublishedAt(),
-                "publishedBy", version.getPublishedBy() != null ? version.getPublishedBy() : UUID.zeros(),
-                "titleSnapshot", version.getTitleSnapshot() != null ? version.getTitleSnapshot() : "",
-                "previousVersionId", version.getPreviousVersionId() != null ? version.getPreviousVersionId() : UUID.zeros()
-        );
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", version.getId());
+        response.put("requirementId", version.getRequirementId());
+        response.put("version", version.getVersion());
+        response.put("versionNumber", version.getVersionNumber() != null ? version.getVersionNumber() : 0);
+        response.put("status", version.getStatus());
+        response.put("changeMagnitude", version.getChangeMagnitude());
+        response.put("content", version.getContent() != null ? version.getContent().substring(0, Math.min(200, version.getContent().length())) : "");
+        response.put("contentLength", version.getContent() != null ? version.getContent().length() : 0);
+        response.put("changelog", version.getChangelog() != null ? version.getChangelog() : "");
+        response.put("createdAt", version.getCreatedAt());
+        response.put("publishedAt", version.getPublishedAt());
+        response.put("publishedBy", version.getPublishedBy());
+        response.put("titleSnapshot", version.getTitleSnapshot() != null ? version.getTitleSnapshot() : "");
+        response.put("previousVersionId", version.getPreviousVersionId());
+        return response;
     }
 
     private Map<String, Object> formatDriftResponse(CoverageDriftRecord drift) {

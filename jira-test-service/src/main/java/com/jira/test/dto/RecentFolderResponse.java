@@ -20,17 +20,3 @@ public class RecentFolderResponse {
 
     private Integer maxResults;
 }
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-class FolderAccessRecord {
-    private UUID folderId;
-    private String folderName;
-    private UUID projectId;
-    private String path;
-    private LocalDateTime accessedAt;
-    private LocalDateTime modifiedAt;
-    private UUID accessedBy;
-}

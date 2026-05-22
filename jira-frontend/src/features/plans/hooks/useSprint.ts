@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../api/axiosClient';
+import { appNotify } from '../../../lib/appNotify';
 
 // Types
 export interface SprintResponse {
@@ -133,7 +134,7 @@ export const useCreateSprint = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to create sprint:', error);
-      alert(error.message || 'Failed to create sprint');
+      appNotify.error(error.message || 'Failed to create sprint');
     },
   });
 };
@@ -149,7 +150,7 @@ export const useUpdateSprint = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to update sprint:', error);
-      alert(error.message || 'Failed to update sprint');
+      appNotify.error(error.message || 'Failed to update sprint');
     },
   });
 };
@@ -166,7 +167,7 @@ export const useStartSprint = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to start sprint:', error);
-      alert(error.message || 'Failed to start sprint');
+      appNotify.error(error.message || 'Failed to start sprint');
     },
   });
 };
@@ -183,7 +184,7 @@ export const useCloseSprint = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to close sprint:', error);
-      alert(error.message || 'Failed to close sprint');
+      appNotify.error(error.message || 'Failed to close sprint');
     },
   });
 };
@@ -200,7 +201,7 @@ export const useAbandonSprint = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to abandon sprint:', error);
-      alert(error.message || 'Failed to abandon sprint');
+      appNotify.error(error.message || 'Failed to abandon sprint');
     },
   });
 };
@@ -226,7 +227,7 @@ export const useAddIssueToSprint = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to add issue to sprint:', error);
-      alert(error.message || 'Failed to add issue to sprint');
+      appNotify.error(error.message || 'Failed to add issue to sprint');
     },
   });
 };
@@ -243,7 +244,7 @@ export const useRemoveIssueFromSprint = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to remove issue from sprint:', error);
-      alert(error.message || 'Failed to remove issue from sprint');
+      appNotify.error(error.message || 'Failed to remove issue from sprint');
     },
   });
 };
@@ -260,7 +261,7 @@ export const useCompleteIssue = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to complete issue:', error);
-      alert(error.message || 'Failed to complete issue');
+      appNotify.error(error.message || 'Failed to complete issue');
     },
   });
 };
@@ -284,7 +285,7 @@ export const useTakeBurndownSnapshot = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to take burndown snapshot:', error);
-      alert(error.message || 'Failed to take burndown snapshot');
+      appNotify.error(error.message || 'Failed to take burndown snapshot');
     },
   });
 };
@@ -320,7 +321,7 @@ export const useUpdateIssueColumn = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to update issue column:', error);
-      alert(error.message || 'Failed to update issue column');
+      appNotify.error(error.message || 'Failed to update issue column');
     },
   });
 };
@@ -337,7 +338,7 @@ export const useRankIssueToTop = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to rank issue to top:', error);
-      alert(error.message || 'Failed to rank issue to top');
+      appNotify.error(error.message || 'Failed to rank issue to top');
     },
   });
 };
@@ -353,7 +354,7 @@ export const useRankIssueToBottom = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to rank issue to bottom:', error);
-      alert(error.message || 'Failed to rank issue to bottom');
+      appNotify.error(error.message || 'Failed to rank issue to bottom');
     },
   });
 };
@@ -370,7 +371,7 @@ export const useAssignIssueToMe = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to assign issue:', error);
-      alert(error.message || 'Failed to assign issue');
+      appNotify.error(error.message || 'Failed to assign issue');
     },
   });
 };
@@ -387,7 +388,7 @@ export const useCloneIssue = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to clone issue:', error);
-      alert(error.message || 'Failed to clone issue');
+      appNotify.error(error.message || 'Failed to clone issue');
     },
   });
 };
@@ -404,7 +405,7 @@ export const useCreateSubTask = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to create sub-task:', error);
-      alert(error.message || 'Failed to create sub-task');
+      appNotify.error(error.message || 'Failed to create sub-task');
     },
   });
 };
@@ -421,7 +422,7 @@ export const useArchiveIssue = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to archive issue:', error);
-      alert(error.message || 'Failed to archive issue');
+      appNotify.error(error.message || 'Failed to archive issue');
     },
   });
 };

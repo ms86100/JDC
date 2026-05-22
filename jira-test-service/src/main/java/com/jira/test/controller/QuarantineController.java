@@ -53,7 +53,7 @@ public class QuarantineController {
     @PreAuthorize("@projectSecurity.hasProjectAccess(authentication, #projectId)")
     @Operation(summary = "Get quarantined tests by status")
     public ResponseEntity<List<QuarantineResponse>> getByStatus(@PathVariable String status, @RequestParam UUID projectId) {
-        List<QuarantineResponse> quarantines = quarantineService.getQuarantinedTestsByStatus(status);
+        List<QuarantineResponse> quarantines = quarantineService.getQuarantinedTestsByStatus(status, projectId);
         return ResponseEntity.ok(quarantines);
     }
 
@@ -65,7 +65,7 @@ public class QuarantineController {
             @RequestParam String status,
             @RequestParam(required = false) String reason,
             @RequestParam UUID projectId) {
-        QuarantineResponse response = quarantineService.updateStatus(quarantineId, status, reason);
+        QuarantineResponse response = quarantineService.updateStatus(quarantineId, status, reason, projectId);
         return ResponseEntity.ok(response);
     }
 
@@ -122,7 +122,7 @@ public class QuarantineController {
     @PreAuthorize("@projectSecurity.isProjectAdmin(authentication, #projectId)")
     @Operation(summary = "Delete a quarantine rule")
     public ResponseEntity<Void> deleteRule(@PathVariable UUID ruleId, @RequestParam UUID projectId) {
-        quarantineService.deleteRule(ruleId);
+        quarantineService.deleteRule(ruleId, projectId);
         return ResponseEntity.noContent().build();
     }
 }

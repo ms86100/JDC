@@ -21,42 +21,42 @@ public class ProjectCoverageResponse {
     private Map<String, TestSetCoverage> byTestSet;
     private LocalDateTime lastUpdated;
     private List<CoverageAlert> alerts;
-}
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-class RequirementCoverage {
-    private String requirementKey;
-    private UUID requirementId;
-    private BigDecimal coverage;
-    private int totalTests;
-    private int coveredTests;
-    private int uncoveredTests;
-    private boolean meetsThreshold;
-}
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RequirementCoverage {
+        private String requirementKey;
+        private UUID requirementId;
+        private BigDecimal coverage;
+        private int totalTests;
+        private int coveredTests;
+        private int uncoveredTests;
+        private boolean meetsThreshold;
+    }
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-class TestSetCoverage {
-    private UUID testSetId;
-    private String testSetName;
-    private BigDecimal coverage;
-    private int totalTests;
-    private int coveredTests;
-}
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TestSetCoverage {
+        private UUID testSetId;
+        private String testSetName;
+        private BigDecimal coverage;
+        private int totalTests;
+        private int coveredTests;
+    }
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-class CoverageAlert {
-    private String alertType;
-    private String severity;
-    private String message;
-    private UUID relatedId;
-    private String requirementKey;
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CoverageAlert {
+        private String alertType;
+        private String severity;
+        private String message;
+        private UUID relatedId;
+        private String requirementKey;
+    }
 }

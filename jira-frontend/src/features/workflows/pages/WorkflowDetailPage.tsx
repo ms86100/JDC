@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { workflowApi, WorkflowTransitionDetail } from '../../../api/workflowApi';
 import { issueApi } from '../../../api/issueApi';
 import { TransitionConfigPanel } from '../components/TransitionConfigPanel';
+import WorkflowVersionHistoryPanel from '../components/WorkflowVersionHistoryPanel';
+import WorkflowStatusMigrationModal from '../components/WorkflowStatusMigrationModal';
 import './workflow-management.css';
 
 export default function WorkflowDetailPage() {
@@ -18,6 +20,7 @@ export default function WorkflowDetailPage() {
     toStatusId: '',
   });
   const [addStatusId, setAddStatusId] = useState('');
+  const [showStatusMigration, setShowStatusMigration] = useState(false);
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['workflow-detail', workflowId],
@@ -99,6 +102,9 @@ export default function WorkflowDetailPage() {
             }}
           >
             Clone
+          </button>
+          <button type="button" className="ab-btn ab-btn-secondary" onClick={() => setShowStatusMigration(true)}>
+            Status migration
           </button>
           <Link to={`/workflows/${workflowId}/designer`} className="ab-btn ab-btn-primary">
             Open designer
@@ -283,22 +289,8 @@ export default function WorkflowDetailPage() {
             </section>
           )}
 
-          {tab === 'versions' && (
-            <section className="wf-panel">
-              <h2>Version history</h2>
-              <ul className="wf-version-list">
-                {versions.length === 0 ? (
-                  <li className="wf-muted">No published versions yet.</li>
-                ) : (
-                  versions.map((v) => (
-                    <li key={v.id}>
-                      <strong>v{v.versionNumber}</strong> — {v.changeDescription}
-                      <span className="wf-muted"> ({v.changeType}) · {new Date(v.createdAt).toLocaleString()}</span>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </section>
+          {tab === 'versions' && workflowId && (
+            <WorkflowVersionHistoryPanel workflowId={workflowId} versions={versions} />
           )}
         </div>
 
@@ -306,6 +298,14 @@ export default function WorkflowDetailPage() {
           <TransitionConfigPanel
             transition={selectedTransition}
             onClose={() => setSelectedTransition(null)}
+          />
+        )}
+
+        {showStatusMigration && workflowId && (
+          <WorkflowStatusMigrationModal
+            workflowId={workflowId}
+            statuses={statuses}
+            onClose={() => setShowStatusMigration(false)}
           />
         )}
       </div>

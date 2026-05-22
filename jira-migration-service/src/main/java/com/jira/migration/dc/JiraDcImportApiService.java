@@ -65,6 +65,7 @@ public class JiraDcImportApiService {
             body.put("backupZipDetected", uploadedAsBackupZip || resolved.extractedBackup() != null);
             body.put("conflicts", buildConflicts(prep));
             body.put("unknownCustomFields", extractUnknownFields(prep));
+            body.put("acSignoffPreview", JiraDcAcSignoffEvaluator.evaluatePreImport(body, options != null ? options : Map.of()));
             return body;
         } finally {
             cleanup(resolved);

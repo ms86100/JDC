@@ -169,8 +169,25 @@ export const projectApi = {
   addMember: (id: string, userId: string, projectRoleName: string) =>
     apiClient.post(`/api/projects/${id}/members`, { userId, projectRoleName }),
   getMembers: (id: string) => apiClient.get<ProjectMemberResponse[]>(`/api/projects/${id}/members`),
-  getVersions: (projectId: string) => apiClient.get<Version[]>(`/api/versions?projectId=${projectId}`),
-  getComponents: (projectId: string) => apiClient.get<Component[]>(`/api/components?projectId=${projectId}`),
+  getVersions: async (projectId: string) => {
+    const { versionApi } = await import('./versionApi');
+    const data = await versionApi.getByProject(projectId);
+    return { data: data as Version[] };
+  },
+  getComponents: async (projectId: string) => {
+    const { componentApi } = await import('./componentApi');
+    const data = await componentApi.getByProject(projectId);
+    return {
+      data: data.map((c) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        leadId: c.leadUserId,
+        leadName: c.leadUserId,
+        projectId: c.projectId,
+      })) as Component[],
+    };
+  },
   getSprints: (projectId: string) => apiClient.get(`/api/sprints?projectId=${projectId}`),
 
   // Wizard endpoints
@@ -187,4 +204,28 @@ export const projectApi = {
     apiClient.get<{ projectKey: string; valid: boolean; available: boolean; message: string }>(
       `/api/projects/key/check/${key}`
     ),
+
+  /** Re-index all project issues in the search service (DC project maintenance). */
+  reindexSearch: async (projectId: string): Promise<{ indexed: number; total: number }> => {
+    const { issueApi } = await import('./issueApi');
+    const { searchApi } = await import('./serviceApi');
+    const res = await issueApi.getAll({ projectId });
+    const data = res.data;
+    const list = Array.isArray(data) ? data : (data?.content ?? []);
+    let indexed = 0;
+    for (const issue of list) {
+      try {
+        await searchApi.indexEntity({
+          entityType: 'ISSUE',
+          entityId: issue.id,
+          title: issue.title ?? issue.issueKey ?? issue.id,
+          content: issue.description ?? '',
+        });
+        indexed += 1;
+      } catch {
+        /* continue with remaining issues */
+      }
+    }
+    return { indexed, total: list.length };
+  },
 };

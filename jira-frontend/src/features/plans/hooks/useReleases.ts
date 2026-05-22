@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { planApi } from '../../../api/planApi';
+import { appNotify } from '../../../lib/appNotify';
 
 export const useReleases = (planId: string) => {
   return useQuery({
@@ -21,7 +22,7 @@ export const useCreateRelease = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to create release:', error);
-      alert(error.message || 'Failed to create release');
+      appNotify.error(error.message || 'Failed to create release');
     },
   });
 };
@@ -36,7 +37,7 @@ export const useUpdateRelease = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to update release:', error);
-      alert(error.message || 'Failed to update release');
+      appNotify.error(error.message || 'Failed to update release');
     },
   });
 };
@@ -51,7 +52,7 @@ export const useApproveRelease = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to approve release:', error);
-      alert(error.message || 'Failed to approve release');
+      appNotify.error(error.message || 'Failed to approve release');
     },
   });
 };
@@ -66,7 +67,7 @@ export const useReleaseVersion = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to release version:', error);
-      alert(error.message || 'Failed to release');
+      appNotify.error(error.message || 'Failed to release');
     },
   });
 };
@@ -82,7 +83,7 @@ export const useDeleteRelease = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to delete release:', error);
-      alert(error.message || 'Failed to delete release');
+      appNotify.error(error.message || 'Failed to delete release');
     },
   });
 };

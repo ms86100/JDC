@@ -103,6 +103,24 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <configuration>
+                    <url>jdbc:postgresql://localhost:5432/jira_platform</url>
+                    <user>jiraadmin</user>
+                    <password>UNIpay@123</password>
+                    <schemas>
+                        <schema>jira_workflow</schema>
+                    </schemas>
+                    <defaultSchema>jira_workflow</defaultSchema>
+                    <locations>
+                        <location>filesystem:src/main/resources/db/migration</location>
+                    </locations>
+                    <table>flyway_schema_history</table>
+                    <baselineOnMigrate>true</baselineOnMigrate>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>

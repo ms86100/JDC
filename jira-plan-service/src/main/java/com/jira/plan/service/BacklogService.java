@@ -63,6 +63,7 @@ public class BacklogService {
                 .parentId(request.getParentId())
                 .sortOrder(sortOrder)
                 .targetDate(request.getTargetDate())
+                .targetEndDate(request.getTargetEndDate())
                 .status(request.getStatus() != null ? request.getStatus() : "BACKLOG")
                 .build();
 
@@ -83,6 +84,9 @@ public class BacklogService {
         }
         if (request.getTargetDate() != null) {
             item.setTargetDate(request.getTargetDate());
+        }
+        if (request.getTargetEndDate() != null) {
+            item.setTargetEndDate(request.getTargetEndDate());
         }
         if (request.getStatus() != null) {
             item.setStatus(request.getStatus());
@@ -165,6 +169,7 @@ public class BacklogService {
                 .parentId(item.getParentId())
                 .sortOrder(item.getSortOrder())
                 .targetDate(item.getTargetDate())
+                .targetEndDate(item.getTargetEndDate())
                 .status(item.getStatus())
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())

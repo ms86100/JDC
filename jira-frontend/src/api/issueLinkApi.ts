@@ -13,14 +13,19 @@ export interface IssueLinkResponse {
 }
 
 export interface CreateIssueLinkRequest {
-  sourceIssueId: string;
+  sourceIssueId?: string;
   destinationIssueId: string;
+  targetIssueId?: string;
   linkType: string;
+  linkTypeName?: string;
 }
 
 export const issueLinkApi = {
-  create: (issueId: string, data: Omit<CreateIssueLinkRequest, 'sourceIssueId'>) =>
-    apiClient.post<IssueLinkResponse>(`/api/issues/${issueId}/links`, data),
+  create: (issueId: string, data: { destinationIssueId: string; linkType: string }) =>
+    apiClient.post<IssueLinkResponse>(`/api/issues/${issueId}/links`, {
+      targetIssueId: data.destinationIssueId,
+      linkTypeName: data.linkType,
+    }),
 
   getAll: (issueId: string) =>
     apiClient.get<IssueLinkResponse[]>(`/api/issues/${issueId}/links`),

@@ -13,4 +13,6 @@ public interface MigrationValidationResultRepository extends JpaRepository<Migra
     List<MigrationValidationResult> findByWizardSessionIdOrderByRowNumberAsc(UUID sessionId);
 
     void deleteByJobId(UUID jobId);
+
+    void deleteByWizardSessionId(UUID wizardSessionId);
 }

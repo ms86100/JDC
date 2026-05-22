@@ -131,7 +131,7 @@ public class PreconditionController {
     public ResponseEntity<List<Precondition>> searchPreconditions(
             @PathVariable UUID projectId,
             @RequestParam String query) {
-        return ResponseEntity.ok(preconditionService.searchPreconditions(projectId, query));
+        return ResponseEntity.ok(preconditionService.searchPreconditionsSimple(projectId, query));
     }
 
     @PostMapping("/{id}/duplicate")

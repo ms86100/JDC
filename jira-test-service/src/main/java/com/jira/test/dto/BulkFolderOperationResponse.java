@@ -18,14 +18,3 @@ public class BulkFolderOperationResponse {
 
     private List<FolderOperationResult> results;
 }
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-class FolderOperationResult {
-    private UUID folderId;
-    private String folderName;
-    private Boolean success;
-    private String message;
-}

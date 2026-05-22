@@ -107,8 +107,13 @@ export interface BoardDataResponse {
 const boardApi = {
   // Get all boards for a project
   getBoardsByProject: async (projectId: string): Promise<AgileBoard[]> => {
-    const response = await axiosClient.get(`${BASE_URL}/project/${projectId}`);
-    return response.data;
+    try {
+      const response = await axiosClient.get(`${BASE_URL}/project/${projectId}`);
+      const data = response.data;
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
   },
 
   // Get board by ID with full data
@@ -126,6 +131,11 @@ const boardApi = {
   // Update board configuration
   updateBoardConfig: async (boardId: string, config: Partial<BoardConfig>): Promise<BoardConfig> => {
     const response = await axiosClient.put(`${BASE_URL}/${boardId}/config`, config);
+    return response.data;
+  },
+
+  updateColumn: async (boardId: string, columnId: string, data: Partial<BoardColumn>): Promise<BoardColumn> => {
+    const response = await axiosClient.put(`${BASE_URL}/${boardId}/columns/${columnId}`, data);
     return response.data;
   },
 

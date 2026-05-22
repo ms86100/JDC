@@ -28,6 +28,8 @@ public class CreatePlanItemRequest {
 
     private LocalDate targetDate;
 
+    private LocalDate targetEndDate;
+
     private String status;
 
     private String statusCategory;

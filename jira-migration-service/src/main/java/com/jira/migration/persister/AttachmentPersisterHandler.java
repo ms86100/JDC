@@ -8,6 +8,7 @@ import com.jira.migration.service.clients.*;
 import com.jira.migration.service.clients.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +31,10 @@ public class AttachmentPersisterHandler {
     // Track created attachments for rollback
     private final List<String> createdAttachmentIds = new ArrayList<>();
 
-    private static final long MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB default
+    private static final long DEFAULT_MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB — Jira DC default
+
+    @Value("${migration.attachment.max-size-bytes:10485760}")
+    private long configuredMaxAttachmentSize;
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
             "jpg", "jpeg", "png", "gif", "bmp", "svg",
             "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
@@ -69,7 +73,9 @@ public class AttachmentPersisterHandler {
 
             // Validate file size
             long fileSize = fileContent != null ? fileContent.length : 0;
-            Long maxSize = (Long) attachmentData.getOrDefault("maxSizeBytes", MAX_ATTACHMENT_SIZE);
+            long maxSize = attachmentData.get("maxSizeBytes") instanceof Number n
+                    ? n.longValue()
+                    : configuredMaxAttachmentSize;
             if (fileSize > maxSize) {
                 throw new IllegalArgumentException(
                         "File size " + fileSize + " exceeds maximum allowed " + maxSize);
@@ -224,7 +230,7 @@ public class AttachmentPersisterHandler {
             errors.add("File name exceeds maximum length of 255 characters");
         }
 
-        long maxSize = (Long) options.getOrDefault("maxSizeBytes", MAX_ATTACHMENT_SIZE);
+        long maxSize = (Long) options.getOrDefault("maxSizeBytes", configuredMaxAttachmentSize);
         if (fileSize > maxSize) {
             errors.add("File size " + fileSize + " exceeds maximum " + maxSize);
         }

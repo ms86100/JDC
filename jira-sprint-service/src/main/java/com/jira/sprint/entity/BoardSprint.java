@@ -8,8 +8,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
-@Table(name = "board_sprints")
+/** @deprecated Legacy duplicate of {@link com.jira.board.entity.BoardSprint}; not JPA-mapped. */
+@Deprecated
 @Getter
 @Setter
 @NoArgsConstructor

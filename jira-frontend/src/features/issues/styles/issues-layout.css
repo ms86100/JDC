@@ -1,0 +1,184 @@
+/**
+ * Issues navigator + embedded issue detail — full-bleed layout.
+ * Loaded after IssueDetailPage.css so these rules win.
+ */
+
+/* ---- Shell chain: force 100% width to viewport ---- */
+.sa-main--split-view,
+.sa-main--split-view .sa-main-workspace,
+.sa-main--split-view .sa-main-workspace-inner,
+.sa-main--split-view .sa-main-workspace-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+}
+
+.sa-issues-page,
+.jdc-issue-navigator {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+}
+
+.jdc-issue-navigator {
+  display: flex;
+  align-items: stretch;
+}
+
+/* List: compact; detail takes all remaining width */
+.jdc-issue-list-pane {
+  width: clamp(260px, 18vw, 300px);
+  flex: 0 0 clamp(260px, 18vw, 300px);
+}
+
+.jdc-issue-detail-pane {
+  flex: 1 1 0%;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.jdc-issue-detail-pane > .idc-issue-view,
+.jdc-issue-detail-pane > .idc-issue-view-embedded {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+  align-self: stretch;
+}
+
+/* ---- Embedded issue detail ---- */
+.idc-issue-view.idc-issue-view-embedded {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.idc-issue-view-embedded .idc-issue-header {
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1100px) {
+  .jdc-issue-navigator {
+    flex-direction: column;
+  }
+
+  .jdc-issue-list-pane {
+    width: 100%;
+    flex: 0 0 auto;
+    max-height: 40vh;
+    border-right: none;
+    border-bottom: 1px solid var(--sa-n200, #e2e5ea);
+  }
+
+  .jdc-issue-detail-pane {
+    flex: 1 1 auto;
+    min-height: 50vh;
+  }
+}
+
+.idc-issue-view-embedded .idc-issue-body {
+  flex: 1 1 auto;
+  display: grid;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  box-sizing: border-box;
+  align-self: stretch;
+  /* Main column grows; sidebar fixed — Jira-style */
+  grid-template-columns: minmax(0, 1fr) 272px;
+  gap: 24px;
+  padding: 20px clamp(20px, 2.5vw, 48px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  align-items: start;
+}
+
+.idc-issue-view-embedded .idc-left-col {
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+}
+
+.idc-issue-view-embedded .idc-right-col {
+  min-width: 0;
+  width: 272px;
+  max-width: 272px;
+}
+
+/* Description breathing room */
+.idc-issue-view-embedded .idc-section .idc-description {
+  padding: 24px 28px;
+}
+
+.idc-issue-view-embedded .idc-description-text,
+.idc-issue-view-embedded .idc-description-placeholder {
+  padding: 2px 0;
+}
+
+/* Tabs: one clean panel, no horizontal squeeze scroll */
+.idc-issue-view-embedded .idc-tabs-panel {
+  width: 100%;
+  max-width: none;
+}
+
+.idc-issue-view-embedded .idc-tabs {
+  flex-wrap: wrap;
+  overflow-x: visible;
+  overflow-y: visible;
+  padding: 6px 8px 0;
+  gap: 2px;
+}
+
+.idc-issue-view-embedded .idc-tab {
+  height: 38px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+/* Details tab duplicates right sidebar — hide in split view */
+.idc-issue-view-embedded .idc-tabs .idc-tab:last-child {
+  display: none;
+}
+
+.idc-issue-view-embedded .idc-tab-content {
+  width: 100%;
+  max-width: none;
+  padding: 24px 28px;
+  box-sizing: border-box;
+}
+
+.idc-issue-view-embedded .idc-tabs-panel,
+.idc-issue-view-embedded .idc-section {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1400px) {
+  .idc-issue-view-embedded .idc-issue-body {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .idc-issue-view-embedded .idc-right-col {
+    width: 300px;
+    max-width: 300px;
+  }
+}

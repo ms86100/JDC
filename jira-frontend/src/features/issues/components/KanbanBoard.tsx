@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { issueApi, IssueResponse } from '../../../api/issueApi';
+import { transitionIssueToTargetStatus } from '../utils/boardWorkflowTransition';
 import { useNavigate } from 'react-router-dom';
 
 interface KanbanBoardProps {
@@ -51,7 +52,7 @@ export default function KanbanBoard({ projectId }: KanbanBoardProps) {
       issueId: string;
       statusId: string;
       pid: string;
-    }) => issueApi.transitionStatus(issueId, pid, { statusId }),
+    }) => transitionIssueToTargetStatus(issueId, pid, statusId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issues-kanban', projectId] });
     },

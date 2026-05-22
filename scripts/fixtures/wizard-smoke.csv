@@ -1,0 +1,4 @@
+Summary,Issue Type,Issue key,Priority,Status,Project key,Description
+Smoke test issue,Task,SMOKE-1,Medium,To Do,PROJ,First row
+Second issue,Story,SMOKE-2,High,In Progress,PROJ,Second row
+Third issue,Bug,SMOKE-3,Low,Done,PROJ,Third row

@@ -1,5 +1,7 @@
--- Sprint Service Database Schema
-CREATE TABLE IF NOT EXISTS sprints (
+-- Sprint Service Database Schema (schema: jira_sprint)
+CREATE SCHEMA IF NOT EXISTS jira_sprint;
+
+CREATE TABLE IF NOT EXISTS jira_sprint.sprints (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     goal TEXT,
@@ -12,15 +14,15 @@ CREATE TABLE IF NOT EXISTS sprints (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS sprint_issues (
+CREATE TABLE IF NOT EXISTS jira_sprint.sprint_issues (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sprint_id UUID NOT NULL REFERENCES sprints(id) ON DELETE CASCADE,
+    sprint_id UUID NOT NULL REFERENCES jira_sprint.sprints(id) ON DELETE CASCADE,
     issue_id UUID NOT NULL,
     order_index INTEGER DEFAULT 0,
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_sprints_project_id ON sprints(project_id);
-CREATE INDEX idx_sprints_status ON sprints(status);
-CREATE INDEX idx_sprint_issues_sprint_id ON sprint_issues(sprint_id);
-CREATE UNIQUE INDEX idx_sprint_issues_unique ON sprint_issues(sprint_id, issue_id);
+CREATE INDEX IF NOT EXISTS idx_sprints_project_id ON jira_sprint.sprints(project_id);
+CREATE INDEX IF NOT EXISTS idx_sprints_status ON jira_sprint.sprints(status);
+CREATE INDEX IF NOT EXISTS idx_sprint_issues_sprint_id ON jira_sprint.sprint_issues(sprint_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sprint_issues_unique ON jira_sprint.sprint_issues(sprint_id, issue_id);

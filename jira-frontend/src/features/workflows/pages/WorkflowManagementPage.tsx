@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { workflowApi, Workflow, WorkflowScheme } from '../../../api/workflowApi';
 import { issueApi } from '../../../api/issueApi';
+import WorkflowSchemeBulkAssignPanel from '../components/WorkflowSchemeBulkAssignPanel';
+import WorkflowDcTableView from '../components/WorkflowDcTableView';
 import './workflow-management.css';
 
 type HubTab = 'workflows' | 'schemes' | 'guide';
@@ -81,9 +83,17 @@ export default function WorkflowManagementPage() {
             Create, version, and publish workflows. Map them to issue types via workflow schemes — Jira Data Center style.
           </p>
         </div>
-        <button type="button" className="ab-btn ab-btn-primary" onClick={() => setShowCreate(true)}>
-          + Create workflow
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link to="/workflows/screens" className="ab-btn ab-btn-secondary">
+            Transition screens
+          </Link>
+          <Link to="/workflows/admin" className="ab-btn ab-btn-secondary">
+            Administration
+          </Link>
+          <button type="button" className="ab-btn ab-btn-primary" onClick={() => setShowCreate(true)}>
+            + Create workflow
+          </button>
+        </div>
       </header>
 
       <nav className="wf-tabs">
@@ -154,38 +164,34 @@ export default function WorkflowManagementPage() {
           {isLoading ? (
             <div className="ab-loading"><div className="ab-spinner" /></div>
           ) : (
-            <div className="wf-workflow-grid">
-              {filtered.map((w: Workflow) => (
-                <article key={w.id} className="wf-workflow-card">
-                  <div className="wf-workflow-card-top">
-                    <h3>{w.name}</h3>
-                    <div className="wf-badges">
-                      {w.isDraft && <span className="wf-badge wf-badge-draft">Draft</span>}
-                      {w.isActive && <span className="wf-badge wf-badge-active">Active</span>}
-                    </div>
-                  </div>
-                  <p className="wf-muted">{w.description || 'No description'}</p>
-                  <div className="wf-workflow-stats">
-                    <span>{w.statusCount ?? 0} statuses</span>
-                    <span>{w.transitionCount ?? 0} transitions</span>
-                  </div>
-                  <div className="wf-card-actions">
-                    <Link to={`/workflows/${w.id}/designer`} className="ab-btn ab-btn-primary ab-btn-sm">
-                      Designer
-                    </Link>
-                    <Link to={`/workflows/${w.id}`} className="ab-btn ab-btn-secondary ab-btn-sm">
-                      Configure
-                    </Link>
-                  </div>
-                </article>
-              ))}
-            </div>
+            <WorkflowDcTableView
+              workflows={filtered}
+              schemes={schemes}
+              search={search}
+              mode="workflows"
+            />
           )}
         </>
       )}
 
       {tab === 'schemes' && (
-        <div className="wf-schemes-layout">
+        <>
+          <div className="wf-toolbar" style={{ marginBottom: 12 }}>
+            <input
+              type="search"
+              className="ab-input wf-search"
+              placeholder="Search schemes…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <WorkflowDcTableView
+            workflows={workflows}
+            schemes={schemes}
+            search={search}
+            mode="schemes"
+          />
+        <div className="wf-schemes-layout" style={{ marginTop: 16 }}>
           <aside className="wf-schemes-list">
             <div className="wf-panel-toolbar">
               <h2>Schemes</h2>
@@ -234,20 +240,38 @@ export default function WorkflowManagementPage() {
                     <h2>{selectedScheme.name}</h2>
                     <p className="wf-muted">{selectedScheme.description}</p>
                   </div>
-                  {selectedScheme.isDraft && (
-                    <button
-                      type="button"
-                      className="ab-btn ab-btn-primary ab-btn-sm"
-                      onClick={() =>
-                        workflowApi.publishScheme(selectedScheme.id).then(async () => {
-                          const res = await workflowApi.getScheme(selectedScheme.id);
-                          setSelectedScheme(res.data);
-                        })
-                      }
-                    >
-                      Publish scheme
-                    </button>
-                  )}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {!selectedScheme.isDraft && (
+                      <button
+                        type="button"
+                        className="ab-btn ab-btn-secondary ab-btn-sm"
+                        onClick={() =>
+                          workflowApi.createSchemeDraft(selectedScheme.id).then(async () => {
+                            queryClient.invalidateQueries({ queryKey: ['workflow-schemes'] });
+                            const res = await workflowApi.getScheme(selectedScheme.id);
+                            setSelectedScheme(res.data);
+                          })
+                        }
+                      >
+                        Edit (create draft)
+                      </button>
+                    )}
+                    {selectedScheme.isDraft && (
+                      <button
+                        type="button"
+                        className="ab-btn ab-btn-primary ab-btn-sm"
+                        onClick={() =>
+                          workflowApi.publishScheme(selectedScheme.id).then(async () => {
+                            queryClient.invalidateQueries({ queryKey: ['workflow-schemes'] });
+                            const res = await workflowApi.getScheme(selectedScheme.id);
+                            setSelectedScheme(res.data);
+                          })
+                        }
+                      >
+                        Publish scheme
+                      </button>
+                    )}
+                  </div>
                 </header>
                 <p className="wf-muted wf-scheme-hint">
                   Map each issue type to a workflow. Projects assign this scheme to control how issues move through statuses.
@@ -313,12 +337,17 @@ export default function WorkflowManagementPage() {
                     ))}
                   </tbody>
                 </table>
+                <WorkflowSchemeBulkAssignPanel
+                  schemeId={selectedScheme.id}
+                  schemeName={selectedScheme.name}
+                />
               </>
             ) : (
               <p className="wf-muted">Select a scheme to edit issue type → workflow mappings.</p>
             )}
           </section>
         </div>
+        </>
       )}
 
       {tab === 'guide' && (

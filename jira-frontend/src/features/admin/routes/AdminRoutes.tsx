@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import JiraAdminLayout from '../components/JiraAdminLayout';
 import UserManagementPage from '../pages/UserManagementPage';
 import JiraUserBrowser from '../pages/JiraUserBrowser';
@@ -8,8 +8,11 @@ import JiraGroupsBrowser from '../pages/JiraGroupsBrowser';
 import JiraViewGroup from '../pages/JiraViewGroup';
 import BulkCreateWizard from '../pages/BulkCreateWizard';
 import IssueTypesPage from '../pages/IssueTypesPage';
+import IssueTypeSchemesPage from '../pages/IssueTypeSchemesPage';
 import PrioritiesPage from '../pages/PrioritiesPage';
 import StatusesPage from '../pages/StatusesPage';
+import ResolutionsPage from '../pages/ResolutionsPage';
+import FieldConfigurationPage from '../pages/FieldConfigurationPage';
 import WorkflowsPage from '../pages/WorkflowsPage';
 import WorkflowDesignerPage from '../../workflows/pages/WorkflowDesignerPage';
 import ScreensPage from '../pages/ScreensPage';
@@ -24,6 +27,12 @@ import AdminDashboardPage from '../pages/AdminDashboardPage';
 import SystemInfoPage from '../pages/SystemInfoPage';
 import ReportsPage from '../pages/ReportsPage';
 import InsightsPage from '../pages/InsightsPage';
+import RolesPage from '../pages/RolesPage';
+import SessionsPage from '../pages/SessionsPage';
+import PasswordPolicyPage from '../pages/PasswordPolicyPage';
+import ApplicationLinksPage from '../pages/ApplicationLinksPage';
+import EditUserPage from '../pages/EditUserPage';
+import GroupMembersPage from '../pages/GroupMembersPage';
 
 export default function AdminRoutes() {
   return (
@@ -48,8 +57,10 @@ export default function AdminRoutes() {
       {/* User Management - Systems and Avionics Style */}
       <Route path="users" element={<JiraUserBrowser />} />
       <Route path="users/create" element={<JiraCreateUser />} />
+      <Route path="users/edit/:userId" element={<EditUserPage />} />
       <Route path="groups" element={<JiraGroupsBrowser />} />
       <Route path="groups/view" element={<JiraViewGroup />} />
+      <Route path="groups/members/:groupId" element={<GroupMembersPage />} />
 
       {/* Bulk Operations */}
       <Route path="bulk-create/*" element={<BulkCreateWizard />} />
@@ -57,19 +68,19 @@ export default function AdminRoutes() {
 
       {/* Legacy User Management */}
       <Route path="user-management" element={<UserManagementPage />} />
-      <Route path="roles" element={<UserManagementPage />} />
+      <Route path="roles" element={<RolesPage />} />
       <Route path="permissions" element={<PermissionsPage />} />
       <Route path="directories" element={<UserManagementPage />} />
-      <Route path="password-policy" element={<UserManagementPage />} />
-      <Route path="sessions" element={<UserManagementPage />} />
+      <Route path="password-policy" element={<PasswordPolicyPage />} />
+      <Route path="sessions" element={<SessionsPage />} />
 
       {/* Issue Administration */}
       <Route path="issue-types" element={<IssueTypesPage />} />
-      <Route path="issue-type-schemes" element={<IssueTypesPage />} />
+      <Route path="issue-type-schemes" element={<IssueTypeSchemesPage />} />
       <Route path="priorities" element={<PrioritiesPage />} />
-      <Route path="resolutions" element={<IssueTypesPage />} />
+      <Route path="resolutions" element={<ResolutionsPage />} />
       <Route path="statuses" element={<StatusesPage />} />
-      <Route path="field-config" element={<IssueTypesPage />} />
+      <Route path="field-config" element={<FieldConfigurationPage />} />
 
       {/* Workflows & Screens */}
       <Route path="workflows" element={<WorkflowsPage />} />
@@ -105,9 +116,21 @@ export default function AdminRoutes() {
       <Route path="mail" element={<SystemSettingsPage />} />
       <Route path="auditing" element={<AuditLogsPage />} />
       <Route path="api" element={<SystemSettingsPage />} />
-      <Route path="webhooks" element={<WorkflowsPage />} />
+      <Route path="api/graphql" element={<Navigate to="/developer/graphql" replace />} />
+      <Route path="webhooks" element={<Navigate to="/tests/webhooks" replace />} />
+      <Route path="application-links" element={<ApplicationLinksPage />} />
+      <Route path="links" element={<Navigate to="/admin/application-links" replace />} />
+
+      {/* Test Management (admin menu → workspace routes) */}
+      <Route path="tests" element={<Navigate to="/tests" replace />} />
+      <Route path="tests/sets" element={<Navigate to="/tests?view=sets" replace />} />
+      <Route path="tests/plans" element={<Navigate to="/tests?view=plans" replace />} />
+      <Route path="tests/environments" element={<Navigate to="/tests/environment-matrix" replace />} />
+      <Route path="tests/import" element={<Navigate to="/tests/import" replace />} />
+      <Route path="tests/reports" element={<Navigate to="/tests/reporting" replace />} />
+      <Route path="tests/webhooks" element={<Navigate to="/tests/webhooks" replace />} />
+      <Route path="tests/ai" element={<Navigate to="/tests/ai" replace />} />
       <Route path="oauth" element={<SystemSettingsPage />} />
-      <Route path="links" element={<SystemSettingsPage />} />
       <Route path="dark-features" element={<SystemSettingsPage />} />
       </Routes>
     </JiraAdminLayout>

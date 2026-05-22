@@ -343,7 +343,7 @@ public class ScreenController {
 
     @PostMapping("/fields/validate")
     @Operation(summary = "Validate a field value using advanced validation")
-    public ResponseEntity<FieldValidationService.FieldValidationResponse> validateFieldValue(
+    public ResponseEntity<FieldValidationService.FieldValidationResponse> validateFieldValueAdvanced(
             @RequestParam UUID fieldId,
             @RequestParam(required = false) String value) {
         FieldValidationService.FieldValidationResponse response =
@@ -419,14 +419,6 @@ public class ScreenController {
                         .screenType(m.getScreenType().name())
                         .build())
                 .collect(Collectors.toList()));
-    }
-
-    @PutMapping("/screen-schemes/{schemeId}/default")
-    @PreAuthorize("@projectSecurity.canUpdateTests(authentication, #schemeId)")
-    @Operation(summary = "Set a screen scheme as default")
-    public ResponseEntity<ScreenSchemeResponse> setDefaultScheme(@PathVariable UUID schemeId) {
-        ScreenSchemeResponse scheme = screenSchemeService.setDefaultScheme(schemeId);
-        return ResponseEntity.ok(scheme);
     }
 
     @GetMapping("/screen-schemes/{schemeId}/usage")

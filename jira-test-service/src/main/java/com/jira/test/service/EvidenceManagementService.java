@@ -252,7 +252,7 @@ public class EvidenceManagementService {
 
         // Get existing custody chain
         EvidenceMetadata custody = metadataRepository.findByEvidenceIdAndMetadataKey(evidenceId, "chain_of_custody")
-                .orElse(null);
+                .stream().findFirst().orElse(null);
 
         List<ChainOfCustodyEvent> events = new ArrayList<>();
         if (custody != null && custody.getMetadataValue() != null) {
@@ -300,7 +300,7 @@ public class EvidenceManagementService {
                 .orElseThrow(() -> new ResourceNotFoundException("Evidence", "id", evidenceId));
 
         EvidenceMetadata custody = metadataRepository.findByEvidenceIdAndMetadataKey(evidenceId, "chain_of_custody")
-                .orElse(null);
+                .stream().findFirst().orElse(null);
 
         List<ChainOfCustodyEvent> events = new ArrayList<>();
         if (custody != null && custody.getMetadataValue() != null) {
@@ -455,7 +455,7 @@ public class EvidenceManagementService {
         // Created by facet
         Map<String, Long> creatorFacet = records.stream()
                 .filter(e -> e.getCreatedBy() != null)
-                .collect(Collectors.groupingBy(EvidenceRecord::getCreatedBy, Collectors.counting()));
+                .collect(Collectors.groupingBy(e -> String.valueOf(e.getCreatedBy()), Collectors.counting()));
         facets.put("createdBy", creatorFacet);
 
         return facets;
@@ -507,8 +507,7 @@ public class EvidenceManagementService {
         record.setClassificationLevel(request.getClassificationLevel());
         record = evidenceRepository.save(record);
 
-        addCustodyEvent(request.getEvidenceId(), "reclassified",
-                request.getReclassifiedBy() != null ? request.getReclassifiedBy() : "system",
+        addCustodyEvent(request.getEvidenceId(), "reclassified", "system",
                 "Classification changed from " + oldLevel + " to " + request.getClassificationLevel());
 
         log.info("Evidence {} classified as {}", request.getEvidenceId(), request.getClassificationLevel());
@@ -698,7 +697,7 @@ public class EvidenceManagementService {
         }
 
         // Get extracted metadata
-        List<EvidenceMetadata> metadataList = metadataRepository.findByEvidenceId(record.getId());
+        List<EvidenceMetadata> metadataList = metadataRepository.findByEvidenceIdOrderByCreatedAtAsc(record.getId());
         Map<String, String> metadata = metadataList.stream()
                 .filter(m -> m.getMetadataKey() != null && !m.getMetadataKey().startsWith("chain_of_custody"))
                 .collect(Collectors.toMap(EvidenceMetadata::getMetadataKey, EvidenceMetadata::getMetadataValue, (a, b) -> a));

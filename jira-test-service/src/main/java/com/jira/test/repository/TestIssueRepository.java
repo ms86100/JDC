@@ -34,4 +34,6 @@ public interface TestIssueRepository extends JpaRepository<TestIssue, UUID> {
     Optional<TestIssue> findByProjectIdAndName(UUID projectId, String name);
 
     List<TestIssue> findByFolderId(UUID folderId);
+
+    long countByProjectId(UUID projectId);
 }

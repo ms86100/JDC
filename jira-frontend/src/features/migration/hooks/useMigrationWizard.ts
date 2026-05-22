@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { migrationWizardApi } from '../../../api/serviceApi';
-import type { FieldMapping, ValidationResult } from '../types/migration';
+import type { FieldMapping } from '../types/migration';
+import type { ServerValidationPayload } from '../utils/mapWizardValidationResult';
 
 export interface WizardSession {
   sessionId: string;
@@ -27,6 +28,8 @@ function mapImportType(type: string): string {
   switch (type) {
     case 'csv':
       return 'CSV';
+    case 'issue-xml':
+      return 'ISSUE_XML';
     case 'jira-dc':
       return 'JIRA_DC';
     case 'project-import':
@@ -110,15 +113,25 @@ export function useMigrationWizard() {
   });
 
   const uploadFile = useMutation({
-    mutationFn: async ({ file, importType }: { file: File; importType?: string }) => {
-      if (!sessionId) throw new Error('Wizard session not created');
+    mutationFn: async ({
+      file,
+      importType,
+      sessionId: sessionIdOverride,
+    }: {
+      file: File;
+      importType?: string;
+      /** Pass when session was just created (hook state may not have updated yet). */
+      sessionId?: string;
+    }) => {
+      const sid = sessionIdOverride ?? sessionId;
+      if (!sid) throw new Error('Wizard session not created');
       uploadAbortRef.current?.abort();
       const controller = new AbortController();
       uploadAbortRef.current = controller;
       setUploadProgress(0);
       try {
         const res = await migrationWizardApi.uploadFileWithProgress(
-          sessionId,
+          sid,
           file,
           importType,
           (pct) => setUploadProgress(pct),
@@ -145,7 +158,7 @@ export function useMigrationWizard() {
     mutationFn: async (entityType?: string) => {
       if (!sessionId) throw new Error('Wizard session not created');
       const res = await migrationWizardApi.validateSession(sessionId, entityType);
-      return res.data as ValidationResult;
+      return res.data as ServerValidationPayload;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['migration-wizard-session', sessionId] });
@@ -168,6 +181,7 @@ export function useMigrationWizard() {
       step?: string;
       targetProjectId?: string;
       importOptions?: Record<string, unknown>;
+      userMappings?: Array<Record<string, unknown>>;
     }) => {
       if (!sessionId) throw new Error('Wizard session not created');
       const res = await migrationWizardApi.updateSession(sessionId, update);

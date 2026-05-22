@@ -54,6 +54,9 @@ public class PlanItem {
     @Column(name = "target_date")
     private LocalDate targetDate;
 
+    @Column(name = "target_end_date")
+    private LocalDate targetEndDate;
+
     @Column(name = "status", length = 50)
     private String status;
 

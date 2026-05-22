@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../api/axiosClient';
+import { appNotify } from '../../../lib/appNotify';
 
 // Types
 export interface BoardPermissionResponse {
@@ -96,7 +97,7 @@ export const useGrantBoardPermission = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to grant board permission:', error);
-      alert(error.message || 'Failed to grant board permission');
+      appNotify.error(error.message || 'Failed to grant board permission');
     },
   });
 };
@@ -111,7 +112,7 @@ export const useRevokeBoardPermission = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to revoke board permission:', error);
-      alert(error.message || 'Failed to revoke board permission');
+      appNotify.error(error.message || 'Failed to revoke board permission');
     },
   });
 };
@@ -164,7 +165,7 @@ export const useGrantProjectSprintPermission = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to grant project sprint permission:', error);
-      alert(error.message || 'Failed to grant project sprint permission');
+      appNotify.error(error.message || 'Failed to grant project sprint permission');
     },
   });
 };
@@ -179,7 +180,7 @@ export const useRevokeProjectSprintPermission = () => {
     },
     onError: (error: Error) => {
       console.error('Failed to revoke project sprint permission:', error);
-      alert(error.message || 'Failed to revoke project sprint permission');
+      appNotify.error(error.message || 'Failed to revoke project sprint permission');
     },
   });
 };

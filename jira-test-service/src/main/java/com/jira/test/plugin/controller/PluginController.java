@@ -225,7 +225,7 @@ public class PluginController {
                     .body(new PluginInstallResponse(false, "Plugin not found in marketplace", null));
         }
 
-        if (!marketplacePlugin.isCompatible()) {
+        if (!marketplacePlugin.compatible()) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(new PluginInstallResponse(false, "Plugin not compatible with current platform version", null));
         }
@@ -498,7 +498,7 @@ public class PluginController {
             hookTypeStats.add(new HookTypeStats(
                     type.getEventName(),
                     plugins.size(),
-                    plugins.stream()
+                    (int) plugins.stream()
                             .filter(PluginManifest::getEnabled)
                             .count()
             ));

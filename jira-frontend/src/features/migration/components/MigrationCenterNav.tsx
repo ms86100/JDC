@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type MigrationCenterView = 'wizard' | 'history' | 'health' | 'catalog';
+export type MigrationCenterView = 'wizard' | 'history' | 'health' | 'catalog' | 'dlq' | 'templates' | 'settings';
 
 interface Props {
   active: MigrationCenterView;
@@ -12,6 +12,9 @@ const TABS: { id: MigrationCenterView; label: string; description: string }[] = 
   { id: 'history', label: 'Job history', description: 'Audit, retry, rollback, reports' },
   { id: 'health', label: 'Platform health', description: 'Services, cluster, observability' },
   { id: 'catalog', label: 'Capability map', description: 'All features & where to find them' },
+  { id: 'dlq', label: 'Global DLQ', description: 'Dead-letter queue, retry, purge' },
+  { id: 'templates', label: 'Mapping templates', description: 'Saved field mapping CRUD' },
+  { id: 'settings', label: 'Import settings', description: 'Attachments, FILE: dir, API notes' },
 ];
 
 export default function MigrationCenterNav({ active, onChange }: Props) {

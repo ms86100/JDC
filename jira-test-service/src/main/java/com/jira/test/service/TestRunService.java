@@ -475,7 +475,7 @@ public class TestRunService {
     private TestRunTrendResponse.TrendSummary calculateTrendSummary(List<TestRunTrendResponse.TrendDataPoint> dataPoints) {
         if (dataPoints.isEmpty()) {
             return TestRunTrendResponse.TrendSummary.builder()
-                    .totalRuns(0L)
+                    .totalRuns(0)
                     .trendDirection("STABLE")
                     .build();
         }
@@ -502,10 +502,10 @@ public class TestRunService {
         return TestRunTrendResponse.TrendSummary.builder()
                 .averagePassRate(Math.round(avgPassRate * 100.0) / 100.0)
                 .averageDuration(Math.round(avgDuration * 100.0) / 100.0)
-                .totalRuns((long) dataPoints.size())
-                .passedRuns((long) passed)
-                .failedRuns((long) failed)
-                .flakyRuns((long) flaky)
+                .totalRuns(dataPoints.size())
+                .passedRuns(passed)
+                .failedRuns(failed)
+                .flakyRuns(flaky)
                 .flakinessScore(Math.round(flakinessScore * 100.0) / 100.0)
                 .trendDirection(trendDirection)
                 .trendSlope(Math.round(trendSlope * 100.0) / 100.0)
@@ -576,13 +576,13 @@ public class TestRunService {
         }
 
         double avg = durations.stream().mapToInt(Integer::intValue).average().orElse(0.0);
-        double min = durations.stream().mapToInt(Integer::intValue).min().orElse(0.0);
-        double max = durations.stream().mapToInt(Integer::intValue).max().orElse(0.0);
+        double min = durations.stream().mapToInt(Integer::intValue).min().orElse(0);
+        double max = durations.stream().mapToInt(Integer::intValue).max().orElse(0);
 
         return TestRunTrendResponse.DurationTrend.builder()
                 .averageDuration(Math.round(avg * 100.0) / 100.0)
-                .minDuration(min)
-                .maxDuration(max)
+                .minDuration((double) min)
+                .maxDuration((double) max)
                 .direction("STABLE")
                 .changePercent(0.0)
                 .build();

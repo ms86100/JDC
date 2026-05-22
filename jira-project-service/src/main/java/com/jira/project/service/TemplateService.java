@@ -46,7 +46,9 @@ public class TemplateService {
 
         List<ProjectTemplate> activeTemplates = projectTemplateRepository.findAll().stream()
                 .filter(ProjectTemplate::getIsActive)
-                .sorted(Comparator.comparing(ProjectTemplate::getSortOrder))
+                .sorted(Comparator.comparing(
+                        ProjectTemplate::getSortOrder,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
                 .collect(Collectors.toList());
 
         Map<UUID, List<TemplateCapabilityDto>> capabilitiesByTemplate = loadCapabilities(activeTemplates);
@@ -274,6 +276,10 @@ public class TemplateService {
     private ProjectTemplateResponse mapToTemplateResponse(ProjectTemplate template, List<TemplateCapabilityDto> capabilities) {
         ProjectType type = template.getType();
         TemplateCategory cat = template.getTemplateCategory();
+        if (type == null) {
+            throw new IllegalStateException(
+                    "Template " + template.getId() + " (" + template.getName() + ") has no project type");
+        }
 
         return ProjectTemplateResponse.builder()
                 .id(template.getId())

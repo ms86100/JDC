@@ -85,7 +85,11 @@ class ProjectServiceOptimisticLockTest {
                     .build();
 
             when(projectRepository.findById(projectId)).thenReturn(Optional.of(testProject));
-            when(projectRepository.save(any(Project.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(projectRepository.save(any(Project.class))).thenAnswer(inv -> {
+                Project p = inv.getArgument(0);
+                p.setVersion(p.getVersion() + 1);
+                return p;
+            });
 
             ProjectResponse response = projectService.updateProject(projectId, request);
 

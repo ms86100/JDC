@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { issueApi, IssueResponse } from '../../../api/issueApi';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { issueApi, IssueResponse, IssuePriority, securityLevelApi } from '../../../api/issueApi';
+import { versionApi } from '../../../api/versionApi';
+import { componentApi } from '../../../api/componentApi';
 import { labelApi, LabelResponse } from '../../../api/labelApi';
+import { commentApi } from '../../../api/commentApi';
+import { issueLinkApi } from '../../../api/issueLinkApi';
+import { resolveIssueByKey } from '../../../api/issueLookup';
+import apiClient from '../../../api/axiosClient';
 import ConfigureFieldsPopover from './ConfigureFieldsPopover';
 import './EditIssueModal.css';
 
@@ -51,12 +57,71 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
     new Set(DEFAULT_VISIBLE_FIELDS)
   );
   const issueId = (issue as { id: string }).id;
+  const issueData = issue as IssueResponse;
+  const projectId = issueData.projectId || '';
+
   const [form, setForm] = useState({
-    title: (issue as { title?: string }).title || '',
-    description: (issue as { description?: string }).description || '',
-    status: (issue as { status?: string }).status || 'To Do',
-    priority: (issue as { priority?: string }).priority || 'Medium',
-    issueType: (issue as { issueType?: string }).issueType || 'Task',
+    title: issueData.title || '',
+    description: issueData.description || '',
+    environment: issueData.environment || '',
+    priorityId: issueData.priorityId || '',
+    statusId: issueData.statusId || '',
+    issueTypeId: issueData.issueTypeId || '',
+    assigneeId: issueData.assigneeId || '',
+    dueDate: issueData.dueDate ? String(issueData.dueDate).split('T')[0] : '',
+    storyPoints: issueData.storyPoints,
+    epicId: issueData.epicId || '',
+    securityLevelId: issueData.securityLevelId || '',
+    componentIds: (issueData.componentIds as string[]) || [],
+    fixVersionIds: (issueData.fixVersionIds as string[]) || [],
+    affectsVersionIds: (issueData.affectsVersionIds as string[]) || [],
+    remainingEstimateMinutes: issueData.remainingEstimate
+      ? Math.round(issueData.remainingEstimate / 60)
+      : undefined,
+    timeSpentMinutes: issueData.timeSpent ? Math.round(issueData.timeSpent / 60) : undefined,
+  });
+  const [editComment, setEditComment] = useState('');
+  const [linkedIssueKey, setLinkedIssueKey] = useState('');
+  const [linkType, setLinkType] = useState('blocks');
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const { data: priorities = [] } = useQuery<IssuePriority[]>({
+    queryKey: ['priorities'],
+    queryFn: async () => {
+      const response = await issueApi.getPriorities();
+      return response.data;
+    },
+  });
+
+  const { data: projectUsers = [] } = useQuery({
+    queryKey: ['projectUsers', projectId],
+    queryFn: async () => {
+      const response = await apiClient.get<{ id: string; userName?: string; displayName?: string }[]>(
+        `/api/projects/${projectId}/members`
+      );
+      return response.data || [];
+    },
+    enabled: !!projectId,
+  });
+
+  const { data: versions = [] } = useQuery({
+    queryKey: ['project-versions', projectId],
+    queryFn: () => versionApi.getByProject(projectId),
+    enabled: !!projectId,
+  });
+
+  const { data: components = [] } = useQuery({
+    queryKey: ['project-components', projectId],
+    queryFn: () => componentApi.getByProject(projectId),
+    enabled: !!projectId,
+  });
+
+  const { data: securityLevels = [] } = useQuery({
+    queryKey: ['securityLevels'],
+    queryFn: async () => {
+      const response = await securityLevelApi.getAll();
+      return response.data || [];
+    },
   });
   const [newLabel, setNewLabel] = useState('');
   const [labels, setLabels] = useState<LabelResponse[]>([]);
@@ -66,11 +131,38 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
   }, [issueId]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: Partial<any>) => issueApi.update(issueId, data),
+    mutationFn: async (data: Record<string, unknown>) => {
+      await issueApi.update(issueId, data);
+      const { syncIssueVersionComponentLinks } = await import('../../../lib/syncIssueVersionComponentLinks');
+      await syncIssueVersionComponentLinks(issueId, {
+        fixVersionIds: data.fixVersionIds as string[] | undefined,
+        affectsVersionIds: data.affectsVersionIds as string[] | undefined,
+        componentIds: data.componentIds as string[] | undefined,
+      });
+      if (editComment.trim()) {
+        await commentApi.create({ issueId, content: editComment.trim() });
+      }
+      if (linkedIssueKey.trim()) {
+        const target = await resolveIssueByKey(linkedIssueKey.trim());
+        if (target) {
+          await issueLinkApi.create(issueId, {
+            destinationIssueId: target.id,
+            linkType,
+          });
+        }
+      }
+    },
     onSuccess: () => {
+      setSaveError(null);
       queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
       queryClient.invalidateQueries({ queryKey: ['issues'] });
+      queryClient.invalidateQueries({ queryKey: ['comments', issueId] });
+      queryClient.invalidateQueries({ queryKey: ['issue-links-outward', issueId] });
       onSuccess();
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setSaveError(msg || 'Failed to update issue. Check required fields and try again.');
     },
   });
 
@@ -90,8 +182,30 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateMutation.mutate(form);
+    setSaveError(null);
+    updateMutation.mutate({
+      title: form.title,
+      description: form.description,
+      environment: form.environment,
+      priorityId: form.priorityId || undefined,
+      statusId: form.statusId || undefined,
+      issueTypeId: form.issueTypeId || undefined,
+      assigneeId: form.assigneeId || undefined,
+      dueDate: form.dueDate || undefined,
+      storyPoints: form.storyPoints,
+      epicId: form.epicId || undefined,
+      securityLevelId: form.securityLevelId || undefined,
+      componentIds: form.componentIds,
+      fixVersionIds: form.fixVersionIds,
+      affectsVersionIds: form.affectsVersionIds,
+      remainingEstimateSeconds:
+        form.remainingEstimateMinutes != null ? form.remainingEstimateMinutes * 60 : undefined,
+      timeSpentSeconds: form.timeSpentMinutes != null ? form.timeSpentMinutes * 60 : undefined,
+    });
   };
+
+  const toggleId = (list: string[], id: string) =>
+    list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 
   const handleAddLabel = () => {
     if (newLabel.trim()) {
@@ -198,14 +312,13 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
                     <label className="ab-label">Priority</label>
                     <select
                       className="ab-select"
-                      value={form.priority}
-                      onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                      value={form.priorityId}
+                      onChange={(e) => setForm({ ...form, priorityId: e.target.value })}
                     >
-                      <option value="Highest">🔴 Highest</option>
-                      <option value="High">🟠 High</option>
-                      <option value="Medium">🟡 Medium</option>
-                      <option value="Low">🟢 Low</option>
-                      <option value="Lowest">⚪ Lowest</option>
+                      <option value="">Select priority</option>
+                      {priorities.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
                     </select>
                   </div>
                 )}
@@ -213,12 +326,18 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
                 {isFieldVisible('assignee') && (
                   <div className="ab-form-group">
                     <label className="ab-label">Assignee</label>
-                    <input
-                      type="text"
-                      className="ab-input"
-                      placeholder="Type to search..."
-                      readOnly
-                    />
+                    <select
+                      className="ab-select"
+                      value={form.assigneeId}
+                      onChange={(e) => setForm({ ...form, assigneeId: e.target.value })}
+                    >
+                      <option value="">Unassigned</option>
+                      {projectUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.displayName || u.userName || u.id}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
@@ -240,18 +359,39 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
                 {isFieldVisible('dueDate') && (
                   <div className="ab-form-group">
                     <label className="ab-label">Due Date</label>
-                    <input type="date" className="ab-input" />
+                    <input
+                      type="date"
+                      className="ab-input"
+                      value={form.dueDate}
+                      onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+                    />
                   </div>
                 )}
 
                 {isFieldVisible('labels') && (
                   <div className="ab-form-group">
                     <label className="ab-label">Labels</label>
-                    <input
-                      type="text"
-                      className="ab-input"
-                      placeholder="Start typing to get a list..."
-                    />
+                    <div className="ab-label-input-row">
+                      <input
+                        type="text"
+                        className="ab-input"
+                        value={newLabel}
+                        onChange={(e) => setNewLabel(e.target.value)}
+                        placeholder="Add label..."
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddLabel())}
+                      />
+                      <button type="button" className="ab-btn ab-btn-secondary ab-btn-sm" onClick={handleAddLabel}>
+                        Add
+                      </button>
+                    </div>
+                    <div className="ab-labels-list" style={{ marginTop: 8 }}>
+                      {labels.map((l) => (
+                        <span key={l.id} className="ab-label-tag">
+                          {l.name}
+                          <button type="button" onClick={() => removeLabelMutation.mutate(l.name)}>×</button>
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -268,49 +408,88 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
                 {isFieldVisible('epicLink') && (
                   <div className="ab-form-group">
                     <label className="ab-label">Epic Link</label>
-                    <select className="ab-select">
-                      <option value="">None</option>
-                    </select>
+                    <input
+                      type="text"
+                      className="ab-input"
+                      value={form.epicId}
+                      onChange={(e) => setForm({ ...form, epicId: e.target.value })}
+                      placeholder="Epic issue id or key"
+                    />
                   </div>
                 )}
 
                 {isFieldVisible('storyPoints') && (
                   <div className="ab-form-group">
                     <label className="ab-label">Story Points</label>
-                    <input type="number" className="ab-input" placeholder="-" />
+                    <input
+                      type="number"
+                      className="ab-input"
+                      placeholder="-"
+                      value={form.storyPoints ?? ''}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          storyPoints: e.target.value === '' ? undefined : Number(e.target.value),
+                        })
+                      }
+                    />
                   </div>
                 )}
 
                 {isFieldVisible('components') && (
                   <div className="ab-form-group">
                     <label className="ab-label">Component/s</label>
-                    <input
-                      type="text"
-                      className="ab-input"
-                      placeholder="Start typing to get a list..."
-                    />
+                    <select
+                      multiple
+                      className="ab-select"
+                      value={form.componentIds}
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.selectedOptions, (o) => o.value);
+                        setForm({ ...form, componentIds: selected });
+                      }}
+                    >
+                      {components.map((c: { id: string; name: string }) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
                 {isFieldVisible('affectsVersions') && (
                   <div className="ab-form-group">
                     <label className="ab-label">Affects Version/s</label>
-                    <input
-                      type="text"
-                      className="ab-input"
-                      placeholder="Start typing to get a list..."
-                    />
+                    <select
+                      multiple
+                      className="ab-select"
+                      value={form.affectsVersionIds}
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.selectedOptions, (o) => o.value);
+                        setForm({ ...form, affectsVersionIds: selected });
+                      }}
+                    >
+                      {versions.map((v: { id: string; name: string }) => (
+                        <option key={v.id} value={v.id}>{v.name}</option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
                 {isFieldVisible('fixVersions') && (
                   <div className="ab-form-group">
                     <label className="ab-label">Fix Version/s</label>
-                    <input
-                      type="text"
-                      className="ab-input"
-                      placeholder="Start typing to get a list..."
-                    />
+                    <select
+                      multiple
+                      className="ab-select"
+                      value={form.fixVersionIds}
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.selectedOptions, (o) => o.value);
+                        setForm({ ...form, fixVersionIds: selected });
+                      }}
+                    >
+                      {versions.map((v: { id: string; name: string }) => (
+                        <option key={v.id} value={v.id}>{v.name}</option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
@@ -318,29 +497,45 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
                   <div className="ab-form-group">
                     <label className="ab-label">Linked Issues</label>
                     <div className="ab-linked-issues-row">
-                      <select className="ab-select ab-select-sm" style={{ width: 140 }}>
-                        <option>blocks</option>
-                        <option>is blocked by</option>
-                        <option>relates to</option>
-                        <option>duplicates</option>
-                        <option>is duplicated by</option>
+                      <select
+                        className="ab-select ab-select-sm"
+                        style={{ width: 140 }}
+                        value={linkType}
+                        onChange={(e) => setLinkType(e.target.value)}
+                      >
+                        <option value="blocks">blocks</option>
+                        <option value="is blocked by">is blocked by</option>
+                        <option value="relates to">relates to</option>
+                        <option value="duplicates">duplicates</option>
+                        <option value="is duplicated by">is duplicated by</option>
                       </select>
                       <input
                         type="text"
                         className="ab-input"
                         placeholder="Issue key or name..."
                         style={{ flex: 1 }}
+                        value={linkedIssueKey}
+                        onChange={(e) => setLinkedIssueKey(e.target.value)}
                       />
-                      <button type="button" className="ab-btn ab-btn-secondary ab-btn-sm">Add</button>
                     </div>
+                    <p className="ab-hint" style={{ marginTop: 4, fontSize: 12 }}>
+                      Link is created when you click Update (with issue key filled in).
+                    </p>
                   </div>
                 )}
 
                 {isFieldVisible('securityLevel') && (
                   <div className="ab-form-group">
                     <label className="ab-label">Security Level</label>
-                    <select className="ab-select">
-                      <option>None</option>
+                    <select
+                      className="ab-select"
+                      value={form.securityLevelId}
+                      onChange={(e) => setForm({ ...form, securityLevelId: e.target.value })}
+                    >
+                      <option value="">None</option>
+                      {securityLevels.map((s: { id: string; name: string }) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
                     </select>
                   </div>
                 )}
@@ -350,12 +545,34 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
                     <label className="ab-label">Time Tracking</label>
                     <div className="ab-time-tracking-row">
                       <div className="ab-time-field">
-                        <label className="ab-time-label">Remaining Estimate</label>
-                        <input type="text" className="ab-input" placeholder="-" />
+                        <label className="ab-time-label">Remaining Estimate (minutes)</label>
+                        <input
+                          type="number"
+                          className="ab-input"
+                          value={form.remainingEstimateMinutes ?? ''}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              remainingEstimateMinutes:
+                                e.target.value === '' ? undefined : Number(e.target.value),
+                            })
+                          }
+                        />
                       </div>
                       <div className="ab-time-field">
-                        <label className="ab-time-label">Time Spent</label>
-                        <input type="text" className="ab-input" placeholder="-" />
+                        <label className="ab-time-label">Time Spent (minutes)</label>
+                        <input
+                          type="number"
+                          className="ab-input"
+                          value={form.timeSpentMinutes ?? ''}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              timeSpentMinutes:
+                                e.target.value === '' ? undefined : Number(e.target.value),
+                            })
+                          }
+                        />
                       </div>
                     </div>
                   </div>
@@ -379,6 +596,8 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
                       className="ab-textarea"
                       placeholder="Add environment details..."
                       rows={3}
+                      value={form.environment}
+                      onChange={(e) => setForm({ ...form, environment: e.target.value })}
                     />
                   </div>
                 )}
@@ -390,6 +609,8 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
                     className="ab-textarea"
                     placeholder="Add a comment..."
                     rows={4}
+                    value={editComment}
+                    onChange={(e) => setEditComment(e.target.value)}
                   />
                   <div className="ab-comment-visibility">
                     <span className="ab-visibility-label">Viewable by</span>
@@ -465,6 +686,11 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
           </div>
 
           <div className="ab-modal-footer">
+            {saveError && (
+              <p className="ab-save-error" style={{ color: '#de350b', flex: 1, margin: 0 }}>
+                {saveError}
+              </p>
+            )}
             <button type="button" className="ab-btn ab-btn-secondary" onClick={onClose}>
               Cancel
             </button>
