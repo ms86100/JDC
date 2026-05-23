@@ -118,7 +118,8 @@ export default function CustomFieldsPage() {
           <ul className="custom-fields-where-list">
             <li>
               <strong>After CSV / DC import:</strong> open an issue → <strong>Details</strong> tab →
-              section <strong>Imported custom fields</strong> (values from columns like Epic Name,
+              <strong>Custom fields</strong> in the right sidebar and under the issue{' '}
+              <strong>Details</strong> tab (values from columns like Epic Name,
               Story Points, Parent Link, Target start/end).
             </li>
             <li>

@@ -40,6 +40,7 @@ public class FieldController {
     private final CustomFieldOptionRepository customFieldOptionRepository;
     private final FieldTypeCompatibilityValidator fieldTypeCompatibilityValidator;
     private final FieldScreenConfigurationService fieldScreenConfigurationService;
+    private final FieldIssueContextResolver fieldIssueContextResolver;
 
     // ========================================================================
     // FIELD DEFINITION APIs
@@ -195,28 +196,14 @@ public class FieldController {
             @RequestBody CreateCustomFieldRequest request,
             @RequestHeader("X-User-Id") UUID userId) {
 
-        String fieldKey = "customfield_" + request.getName().toLowerCase()
-                .replace(" ", "_")
-                .replaceAll("[^a-z0-9_]", "");
+        FieldDefinition def = fieldProvisioningService.provisionCustomField(
+                request.getName(), request.getType(), userId);
+        UUID projectId = request.getProjectIds() != null && !request.getProjectIds().isEmpty()
+                ? request.getProjectIds().get(0) : null;
+        fieldScreenConfigurationService.ensureFieldVisibleOnScreen(def.getFieldKey(), projectId);
 
-        CustomFieldDefinition customField = CustomFieldDefinition.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .type(request.getType())
-                .searcherKey(request.getSearcherKey())
-                .rendererKey(request.getRendererKey())
-                .fieldKey(fieldKey)
-                .config(request.getConfig())
-                .defaultValues(request.getDefaultValues())
-                .enabled(true)
-                .searchable(true)
-                .navigable(true)
-                .createdBy(userId)
-                .build();
-
-        CustomFieldDefinition saved = customFieldDefinitionRepository.save(customField);
-        fieldDefinitionRepository.findByFieldKey(fieldKey).ifPresent(def ->
-                fieldScreenConfigurationService.ensureFieldVisibleOnScreen(def.getFieldKey(), null));
+        CustomFieldDefinition saved = customFieldDefinitionRepository.findByFieldKey(def.getFieldKey())
+                .orElseThrow();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(CustomFieldDefinitionResponse.fromEntity(saved));
     }
@@ -488,11 +475,24 @@ public class FieldController {
     // ========================================================================
 
     @GetMapping("/issues/{issueId}/values")
-    @Operation(summary = "Get all field values for an issue", description = "Returns all field values for a specific issue")
+    @Operation(summary = "Get all field values for an issue", description = "Returns all field values (supports UUID or issue key)")
     public ResponseEntity<IssueFieldValuesResponse> getIssueFieldValues(
-            @PathVariable UUID issueId) {
+            @PathVariable String issueId) {
 
-        FieldValueService.FieldValueResult result = fieldValueService.getAllFieldValues(issueId);
+        UUID resolvedId = fieldIssueContextResolver.resolve(issueId)
+                .map(FieldIssueContextResolver.IssueContext::issueId)
+                .orElseGet(() -> {
+                    try {
+                        return UUID.fromString(issueId);
+                    } catch (IllegalArgumentException e) {
+                        return null;
+                    }
+                });
+        if (resolvedId == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        FieldValueService.FieldValueResult result = fieldValueService.getAllFieldValues(resolvedId);
 
         Map<String, Object> standardFields = new HashMap<>();
         Map<String, Object> customFields = new HashMap<>();
@@ -517,8 +517,13 @@ public class FieldController {
                 })
                 .toList();
 
+        String issueKey = fieldIssueContextResolver.resolve(issueId)
+                .map(FieldIssueContextResolver.IssueContext::issueKey)
+                .orElse(null);
+
         return ResponseEntity.ok(IssueFieldValuesResponse.builder()
-                .issueId(issueId)
+                .issueId(resolvedId)
+                .issueKey(issueKey)
                 .standardFields(standardFields)
                 .customFields(customFields)
                 .allFieldValues(allValues)
@@ -534,7 +539,7 @@ public class FieldController {
             @RequestHeader("X-User-Id") UUID userId) {
 
         fieldValueService.setFieldValues(issueId, request.getValues(), userId);
-        return getIssueFieldValues(issueId);
+        return getIssueFieldValues(issueId.toString());
     }
 
     @PutMapping("/issues/{issueId}/values/{fieldKey}")

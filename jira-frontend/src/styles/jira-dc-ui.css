@@ -417,6 +417,97 @@
   background: #f4f5f7;
 }
 
+.jdc-gadget-config-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.jdc-gadget-config-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.jdc-gadget-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 30, 66, 0.45);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.jdc-gadget-modal {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 24px rgba(9, 30, 66, 0.25);
+}
+
+.jdc-cf-stat-block {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ebecf0;
+}
+
+.jdc-cf-stat-block h4 {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.jdc-cf-dist {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+
+.jdc-cf-dist li {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.jdc-cf-bar-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 28px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.jdc-cf-bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #5e6c84;
+}
+
+.jdc-cf-bar-track {
+  height: 8px;
+  background: #ebecf0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.jdc-cf-bar-fill {
+  height: 100%;
+  background: #0052cc;
+  border-radius: 4px;
+}
+
+.jdc-cf-bar-count {
+  text-align: right;
+  font-weight: 600;
+}
+
 /* Plan / roadmap */
 .jdc-plan-page {
   margin: 0;

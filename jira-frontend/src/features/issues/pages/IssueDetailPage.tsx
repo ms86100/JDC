@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { issueApi, IssueResponse } from '../../../api/issueApi';
 import { commentApi } from '../../../api/commentApi';
+import { fieldApi } from '../../../api/fieldApi';
 import EditIssueModal from '../components/EditIssueModal';
 import CreateIssueModal from '../components/CreateIssueModal';
 import TransitionScreenForm, { type AvailableTransition } from '../components/TransitionScreenForm';
@@ -11,13 +12,14 @@ import WorklogsTab from '../components/WorklogsTab';
 import IssueLinksTab from '../components/IssueLinksTab';
 import LabelsTab from '../components/LabelsTab';
 import AttachmentsTab from '../components/AttachmentsTab';
-import IssueMigratedFieldsPanel from '../components/IssueMigratedFieldsPanel';
+import IssueCustomFieldsPanel from '../components/IssueCustomFieldsPanel';
 import IssueMoveModal from '../components/IssueMoveModal';
 import IssueAdminMenu from '../components/IssueAdminMenu';
 import { useAuth } from '../../auth/context/AuthContext';
 import { rankForBottom, rankForTop } from '../utils/issueRank';
 import './IssueDetailPage.css';
 import '../styles/issues-layout.css';
+import '../components/IssueCustomFieldsPanel.css';
 
 type TabType =
   | 'comment'
@@ -158,6 +160,26 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
     },
     enabled: !!issueId,
   });
+
+  const resolvedIssueUuid = issue?.id ?? (issueId?.match(/^[0-9a-f-]{36}$/i) ? issueId : undefined);
+
+  const { data: visibleCustomFields } = useQuery({
+    queryKey: ['issue-visible-fields-count', resolvedIssueUuid, issue?.projectId, issue?.issueTypeId],
+    queryFn: () =>
+      fieldApi
+        .getVisibleIssueFields(resolvedIssueUuid!, {
+          screen: 'VIEW',
+          projectId: issue?.projectId,
+          issueTypeId: issue?.issueTypeId,
+        })
+        .then((r) => r.data),
+    enabled: !!resolvedIssueUuid,
+  });
+
+  const customFieldsWithValues =
+    visibleCustomFields?.fields?.filter(
+      (f) => f.value != null && String(f.value).trim() !== '',
+    ).length ?? 0;
 
   const { data: comments } = useQuery({
     queryKey: ['comments', issueId],
@@ -811,6 +833,11 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
               onClick={() => setActiveTab('details')}
             >
               Details
+              {customFieldsWithValues > 0 && (
+                <span className="icf-tab-badge" title="Custom fields with values">
+                  {customFieldsWithValues}
+                </span>
+              )}
             </button>
           </div>
 
@@ -896,10 +923,19 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
             {/* Details Tab - Field Mappings */}
             {activeTab === 'details' && (
               <div className="idc-details-section">
-                {issueId && (
-                  <div className="mb-6">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Imported custom fields (G-10)</h4>
-                    <IssueMigratedFieldsPanel issueId={issueId} />
+                {resolvedIssueUuid && (
+                  <div className="mb-6 idc-custom-fields-block">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Custom fields</h4>
+                    <p className="icf-hint mb-2">
+                      Migrated and admin-defined fields (Epic Name, Parent Link, Target dates, etc.)
+                    </p>
+                    <IssueCustomFieldsPanel
+                      issueId={resolvedIssueUuid}
+                      issueKey={issue?.issueKey}
+                      projectId={issue?.projectId}
+                      issueTypeId={issue?.issueTypeId}
+                      variant="inline"
+                    />
                   </div>
                 )}
                 <div className="idc-details-grid">
@@ -1097,6 +1133,34 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
               </div>
             </div>
           </div>
+
+          {resolvedIssueUuid && (
+            <div className="idc-sidebar-section">
+              <h4 className="idc-sidebar-section-title">
+                Custom fields
+                {customFieldsWithValues > 0 && (
+                  <span className="icf-tab-badge" style={{ marginLeft: 6 }}>
+                    {customFieldsWithValues}
+                  </span>
+                )}
+              </h4>
+              <IssueCustomFieldsPanel
+                issueId={resolvedIssueUuid}
+                issueKey={issue.issueKey}
+                projectId={issue.projectId}
+                issueTypeId={issue.issueTypeId}
+                variant="sidebar"
+              />
+              <button
+                type="button"
+                className="idc-link-btn"
+                style={{ marginTop: 8, fontSize: '0.75rem' }}
+                onClick={() => setActiveTab('details')}
+              >
+                View all in Details tab →
+              </button>
+            </div>
+          )}
 
           {/* TIME TRACKING Section */}
           <div className="idc-sidebar-section">

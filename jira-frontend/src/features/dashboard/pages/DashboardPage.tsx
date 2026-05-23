@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import IntroductionGadget from '../components/IntroductionGadget';
 import AssignedToMeGadget from '../components/AssignedToMeGadget';
 import ActivityStreamGadget from '../components/ActivityStreamGadget';
+import CustomFieldStatisticsGadget from '../components/CustomFieldStatisticsGadget';
+import CustomFieldChartGadget from '../components/CustomFieldChartGadget';
 import '../DashboardStyles.css';
 
 export default function DashboardPage() {
@@ -24,6 +26,8 @@ export default function DashboardPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <AssignedToMeGadget />
           <ActivityStreamGadget />
+          <CustomFieldStatisticsGadget />
+          <CustomFieldChartGadget />
         </div>
       </div>
       {showCreateSelector && (

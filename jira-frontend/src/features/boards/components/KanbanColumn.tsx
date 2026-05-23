@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { BoardColumn, BoardIssue } from '../../../api/boardApi';
-import IssueCard from './IssueCard';
+import IssueCard, { CardCustomFieldRow } from './IssueCard';
 
 type CardLayout = 'FULL' | 'COMPACT' | 'MINI';
 
@@ -29,6 +29,7 @@ interface KanbanColumnProps {
   /** Jira DC Done column — link to releases */
   releaseLink?: { label: string; href: string };
   olderIssuesLink?: string;
+  cardCustomFieldsByIssue?: Record<string, CardCustomFieldRow[]>;
 }
 
 export default function KanbanColumn({
@@ -54,6 +55,7 @@ export default function KanbanColumn({
   boardCapacity,
   releaseLink,
   olderIssuesLink,
+  cardCustomFieldsByIssue = {},
 }: KanbanColumnProps) {
   const isCollapsed = column.isHidden;
 
@@ -177,6 +179,7 @@ export default function KanbanColumn({
                 <IssueCard
                   issue={issue}
                   layout={cardLayout}
+                  customFields={cardCustomFieldsByIssue[issue.id] ?? []}
                   color={getCardColor(issue)}
                   isDragging={draggedIssue?.id === issue.id}
                   onDragStart={(e) => onDragStart(e, issue)}

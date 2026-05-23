@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { boardFieldApi } from '../../../api/fieldApi';
+import type { CardCustomFieldRow } from './IssueCard';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import boardApi, { BoardColumn, BoardIssue, QuickFilter } from '../../../api/boardApi';
 import { issueApi } from '../../../api/issueApi';
@@ -269,6 +271,17 @@ export default function EnhancedKanbanBoard({
   }, [boardData, boardLoading, kanbanClassicMode, scrumActiveSprintMode, lockActiveSprintId, activeSprint?.id]);
 
   // Fetch issues from board API with issue-service fallback; quick filters applied client-side
+  const { data: cardLayoutConfig } = useQuery({
+    queryKey: ['board-card-layout', boardId, projectId],
+    queryFn: () => boardFieldApi.getCardLayout(boardId!, projectId).then((r) => r.data),
+    enabled: !!boardId,
+  });
+
+  const cardFieldKeys = useMemo(
+    () => cardLayoutConfig?.selectedFields?.map((f) => f.fieldKey) ?? [],
+    [cardLayoutConfig],
+  );
+
   const { data: issuesRaw, isLoading: issuesLoading, refetch: refetchIssues } = useQuery({
     queryKey: ['board-issues', boardId, projectId, activeQuickFilter],
     queryFn: async () => {
@@ -280,6 +293,31 @@ export default function EnhancedKanbanBoard({
     },
     enabled: !!boardId || !!projectId,
   });
+
+  const { data: cardFieldBatch } = useQuery({
+    queryKey: ['board-card-values', boardId, cardFieldKeys, issuesRaw?.length],
+    queryFn: () =>
+      boardFieldApi
+        .batchIssueFieldValues({
+          issueIds: (issuesRaw ?? []).map((i) => i.id),
+          fieldKeys: cardFieldKeys,
+          projectId,
+        })
+        .then((r) => r.data),
+    enabled: !!boardId && cardFieldKeys.length > 0 && (issuesRaw?.length ?? 0) > 0,
+  });
+
+  const cardCustomFieldsByIssue = useMemo((): Record<string, CardCustomFieldRow[]> => {
+    const map: Record<string, CardCustomFieldRow[]> = {};
+    const byIssue = cardFieldBatch?.valuesByIssue ?? {};
+    for (const [issueId, fields] of Object.entries(byIssue)) {
+      map[issueId] = fields.map((f) => ({
+        displayName: f.displayName || f.fieldKey,
+        value: f.value,
+      }));
+    }
+    return map;
+  }, [cardFieldBatch]);
 
   const issues = useMemo(() => {
     if (!issuesRaw) return [];
@@ -868,6 +906,7 @@ export default function EnhancedKanbanBoard({
             draggedIssue={draggedIssue}
             dragOverColumn={dragOverColumn}
             swimlaneField={swimlaneField}
+            cardCustomFieldsByIssue={cardCustomFieldsByIssue}
           />
         ) : (
           /* Standard Board View */
@@ -919,6 +958,7 @@ export default function EnhancedKanbanBoard({
                       ? `/search?jql=${encodeURIComponent(`project = ${projectId} AND status = Done ORDER BY updated DESC`)}`
                       : undefined
                   }
+                  cardCustomFieldsByIssue={cardCustomFieldsByIssue}
                 />
               );
             })}
@@ -929,6 +969,8 @@ export default function EnhancedKanbanBoard({
       {/* Board Configuration Panel */}
       {showConfigPanel && (
         <BoardConfigPanel
+          boardId={boardId}
+          projectId={projectId}
           columns={columns}
           boardType={boardType}
           swimlaneField={swimlaneField}

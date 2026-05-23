@@ -3,9 +3,15 @@ import { BoardIssue } from '../../../api/boardApi';
 
 type CardLayout = 'FULL' | 'COMPACT' | 'MINI';
 
+export interface CardCustomFieldRow {
+  displayName: string;
+  value: unknown;
+}
+
 interface IssueCardProps {
   issue: BoardIssue;
   layout: CardLayout;
+  customFields?: CardCustomFieldRow[];
   color?: string;
   isDragging: boolean;
   onDragStart: (e: React.DragEvent) => void;
@@ -14,9 +20,16 @@ interface IssueCardProps {
   rank?: number;
 }
 
+function formatCfValue(value: unknown): string {
+  if (value == null) return '';
+  if (Array.isArray(value)) return value.join(', ');
+  return String(value);
+}
+
 export default function IssueCard({
   issue,
   layout,
+  customFields = [],
   color,
   isDragging,
   onDragStart,
@@ -178,6 +191,17 @@ export default function IssueCard({
           {issue.labels.length > 3 && (
             <span className="ab-label-more">+{issue.labels.length - 3}</span>
           )}
+        </div>
+      )}
+
+      {customFields.length > 0 && (
+        <div className="ab-card-custom-fields">
+          {customFields.map((cf) => (
+            <div key={cf.displayName} className="ab-card-cf-row">
+              <span className="ab-card-cf-label">{cf.displayName}</span>
+              <span className="ab-card-cf-value">{formatCfValue(cf.value)}</span>
+            </div>
+          ))}
         </div>
       )}
 
@@ -453,6 +477,36 @@ export default function IssueCard({
         .ab-due-date.soon {
           background: var(--ab-accent-100);
           color: var(--ab-accent-700);
+        }
+
+        .ab-card-custom-fields {
+          margin: var(--ab-spacing-xs) 0;
+          padding: var(--ab-spacing-xs) 0;
+          border-top: 1px dashed var(--ab-gray-200);
+          font-size: 10px;
+        }
+
+        .ab-card-cf-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 6px;
+          line-height: 1.3;
+          margin-bottom: 2px;
+        }
+
+        .ab-card-cf-label {
+          color: var(--ab-gray-500);
+          flex-shrink: 0;
+          max-width: 45%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .ab-card-cf-value {
+          color: var(--ab-gray-800);
+          text-align: right;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .ab-card-metadata {

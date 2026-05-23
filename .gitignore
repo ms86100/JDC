@@ -70,3 +70,4 @@ secrets.json
 # Environment files
 .env.local
 .env.production
+.aider*

@@ -92,10 +92,122 @@ export const fieldApi = {
   getIssueFieldValues: (issueId: string) =>
     apiClient.get<{
       issueId: string;
+      issueKey?: string;
       customFields?: Record<string, unknown>;
       standardFields?: Record<string, unknown>;
       allFieldValues?: Array<{ fieldKey: string; fieldDisplayName?: string; value: unknown }>;
-    }>(`/api/fields/issues/${issueId}/values`),
+    }>(`/api/fields/issues/${encodeURIComponent(issueId)}/values`),
+
+  getVisibleIssueFields: (
+    issueIdOrKey: string,
+    params?: { screen?: string; projectId?: string; issueTypeId?: string },
+  ) =>
+    apiClient.get<IssueVisibleFieldsDto>(
+      `/api/fields/issues/${encodeURIComponent(issueIdOrKey)}/visible`,
+      { params },
+    ),
+};
+
+export interface VisibleFieldDto {
+  fieldKey: string;
+  displayName: string;
+  fieldType?: string;
+  renderer?: string;
+  value: unknown;
+  required?: boolean;
+  readOnly?: boolean;
+  custom?: boolean;
+  displayOrder?: number;
+}
+
+export interface IssueVisibleFieldsDto {
+  issueId: string;
+  issueKey?: string;
+  projectId?: string;
+  issueTypeId?: string;
+  screenType?: string;
+  fields: VisibleFieldDto[];
+  totalCount: number;
+}
+
+export interface BoardCardLayoutDto {
+  boardId: string;
+  projectId?: string;
+  eligibleFields: Array<{
+    fieldKey: string;
+    displayName: string;
+    fieldType?: string;
+    custom?: boolean;
+  }>;
+  selectedFields: Array<{
+    fieldKey: string;
+    displayName: string;
+    displayOrder: number;
+    position?: string;
+    visible?: boolean;
+  }>;
+}
+
+export interface DashboardGadgetDto {
+  dashboardKey: string;
+  gadgetKey: string;
+  configuredFields: Array<{
+    fieldKey: string;
+    displayName: string;
+    chartType?: string;
+    displayOrder: number;
+    enabled?: boolean;
+  }>;
+  eligibleFields: Array<{
+    fieldKey: string;
+    displayName: string;
+    fieldType?: string;
+    supportsChart?: boolean;
+    supportsFilter?: boolean;
+  }>;
+  statistics?: Record<string, unknown>;
+}
+
+export const boardFieldApi = {
+  getCardLayout: (boardId: string, projectId?: string) =>
+    apiClient.get<BoardCardLayoutDto>(`/api/fields/boards/${boardId}/card-layout`, {
+      params: projectId ? { projectId } : undefined,
+    }),
+
+  saveCardLayout: (
+    boardId: string,
+    body: { projectId?: string; fields: Array<{ fieldKey: string; displayOrder?: number }> },
+  ) => apiClient.put<BoardCardLayoutDto>(`/api/fields/boards/${boardId}/card-layout`, body),
+
+  batchIssueFieldValues: (body: {
+    issueIds: string[];
+    fieldKeys: string[];
+    projectId?: string;
+  }) =>
+    apiClient.post<{ valuesByIssue: Record<string, VisibleFieldDto[]> }>(
+      '/api/fields/boards/issues/visible-batch',
+      body,
+    ),
+};
+
+export const dashboardFieldApi = {
+  listGadgets: () => apiClient.get<string[]>('/api/fields/dashboard/gadgets'),
+
+  getGadget: (gadgetKey: string, params?: { dashboardKey?: string; projectId?: string }) =>
+    apiClient.get<DashboardGadgetDto>(`/api/fields/dashboard/gadgets/${gadgetKey}`, { params }),
+
+  saveGadget: (
+    gadgetKey: string,
+    body: {
+      dashboardKey?: string;
+      gadgetKey?: string;
+      fields: Array<{ fieldKey: string; chartType?: string; displayOrder?: number }>;
+    },
+    projectId?: string,
+  ) =>
+    apiClient.put<DashboardGadgetDto>(`/api/fields/dashboard/gadgets/${gadgetKey}`, body, {
+      params: projectId ? { projectId } : undefined,
+    }),
 };
 
 export interface OptionMappingDto {

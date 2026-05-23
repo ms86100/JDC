@@ -139,7 +139,7 @@ public class IssueServiceClient extends BaseServiceClient {
     public Optional<IssueResponse> getIssueByKey(String issueKey) {
         log.debug("Fetching issue with key: {}", issueKey);
         try {
-            String endpoint = SERVICE_PATH + "/key/" + encodeValue(issueKey);
+            String endpoint = SERVICE_PATH + "/by-key/" + encodeValue(issueKey);
             IssueResponse response = executeGet(endpoint, IssueResponse.class);
             return Optional.ofNullable(response);
         } catch (Exception e) {

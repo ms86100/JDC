@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { BoardColumn, QuickFilter } from '../../../api/boardApi';
+import BoardCardLayoutPicker from './BoardCardLayoutPicker';
 
 type CardLayout = 'FULL' | 'COMPACT' | 'MINI';
 type SwimlanField = 'none' | 'epic' | 'assignee' | 'priority' | 'labels' | 'sprint';
 
 interface BoardConfigPanelProps {
+  boardId?: string;
+  projectId?: string;
   columns: BoardColumn[];
   boardType: 'SCRUM' | 'KANBAN' | 'BADGE';
   swimlaneField: SwimlanField;
@@ -21,6 +24,8 @@ interface BoardConfigPanelProps {
 }
 
 export default function BoardConfigPanel({
+  boardId,
+  projectId,
   columns,
   boardType,
   swimlaneField,
@@ -35,7 +40,7 @@ export default function BoardConfigPanel({
   onShowWorkVsCapacityChange,
   onQuickFiltersChange,
 }: BoardConfigPanelProps) {
-  const [activeTab, setActiveTab] = useState<'general' | 'columns' | 'swimlanes' | 'filters'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'columns' | 'swimlanes' | 'filters' | 'cardlayout'>('general');
   const [editingColumn, setEditingColumn] = useState<BoardColumn | null>(null);
   const [editedColumnName, setEditedColumnName] = useState('');
   const [editedWipLimit, setEditedWipLimit] = useState<string>('');
@@ -119,6 +124,14 @@ export default function BoardConfigPanel({
           >
             Quick Filters
           </button>
+          {boardId && (
+            <button
+              className={`ab-config-tab ${activeTab === 'cardlayout' ? 'active' : ''}`}
+              onClick={() => setActiveTab('cardlayout')}
+            >
+              Card fields
+            </button>
+          )}
         </div>
 
         {/* Content */}
@@ -335,6 +348,10 @@ export default function BoardConfigPanel({
                 Quick filters appear as one-click buttons above the board. JQL queries filter visible issues.
               </p>
             </div>
+          )}
+
+          {activeTab === 'cardlayout' && boardId && (
+            <BoardCardLayoutPicker boardId={boardId} projectId={projectId} />
           )}
         </div>
 

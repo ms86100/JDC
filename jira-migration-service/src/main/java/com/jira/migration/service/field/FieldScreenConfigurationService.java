@@ -24,7 +24,11 @@ public class FieldScreenConfigurationService {
     private final FieldDefinitionRepository fieldDefinitionRepository;
     private final CustomFieldDefinitionRepository customFieldDefinitionRepository;
     private final CustomFieldContextRepository customFieldContextRepository;
+    private final FieldVisibilityEngine fieldVisibilityEngine;
 
+    /**
+     * Registers field on VIEW/EDIT screens (Jira DC screen scheme) without forcing global visibility on all surfaces.
+     */
     @Transactional
     public int ensureFieldVisibleOnScreen(String fieldKey, UUID projectId) {
         Optional<FieldDefinition> opt = fieldDefinitionRepository.findByFieldKey(fieldKey);
@@ -34,11 +38,7 @@ public class FieldScreenConfigurationService {
         FieldDefinition def = opt.get();
         boolean changed = false;
         if (def.getScreenRegion() == null) {
-            def.setScreenRegion(FieldDefinition.ScreenRegion.SIDEBAR);
-            changed = true;
-        }
-        if (Boolean.TRUE.equals(def.getHidden())) {
-            def.setHidden(false);
+            def.setScreenRegion(FieldDefinition.ScreenRegion.SIDEBAR_DETAILS);
             changed = true;
         }
         if (Boolean.TRUE.equals(def.getDeprecated())) {
@@ -49,6 +49,7 @@ public class FieldScreenConfigurationService {
             fieldDefinitionRepository.save(def);
         }
         ensureCustomFieldContext(def.getFieldKey(), projectId);
+        fieldVisibilityEngine.addFieldToDefaultScreens(projectId, fieldKey);
         return 1;
     }
 

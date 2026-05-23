@@ -1,6 +1,7 @@
 import React from 'react';
 import { BoardColumn, BoardIssue } from '../../../api/boardApi';
 import KanbanColumn from './KanbanColumn';
+import { CardCustomFieldRow } from './IssueCard';
 
 type CardLayout = 'FULL' | 'COMPACT' | 'MINI';
 type SwimlanField = 'none' | 'epic' | 'assignee' | 'priority' | 'labels' | 'sprint';
@@ -23,6 +24,7 @@ interface SwimlaneViewProps {
   draggedIssue: BoardIssue | null;
   dragOverColumn: string | null;
   swimlaneField: SwimlanField;
+  cardCustomFieldsByIssue?: Record<string, CardCustomFieldRow[]>;
 }
 
 export default function SwimlaneView({
@@ -43,6 +45,7 @@ export default function SwimlaneView({
   draggedIssue,
   dragOverColumn,
   swimlaneField,
+  cardCustomFieldsByIssue = {},
 }: SwimlaneViewProps) {
   const getSwimlaneIcon = (field: SwimlanField) => {
     switch (field) {
@@ -145,6 +148,7 @@ export default function SwimlaneView({
                         draggedIssue={draggedIssue}
                         showWorkVsCapacity={false}
                         boardCapacity={{ capacity: 0, committed: 0 }}
+                        cardCustomFieldsByIssue={cardCustomFieldsByIssue}
                       />
                     );
                   })}
