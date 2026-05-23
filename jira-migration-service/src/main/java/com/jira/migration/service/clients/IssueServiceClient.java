@@ -6,6 +6,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,7 @@ public class IssueServiceClient extends BaseServiceClient {
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
             CircuitBreakerRegistry circuitBreakerRegistry,
-            IssueServicePayloadMapper payloadMapper,
+            @Lazy IssueServicePayloadMapper payloadMapper,
             @Value("${services.issueServiceUrl:http://localhost:8084}") String baseUrl) {
         super(restTemplate, objectMapper, circuitBreakerRegistry, SERVICE_NAME, baseUrl);
         this.payloadMapper = payloadMapper;

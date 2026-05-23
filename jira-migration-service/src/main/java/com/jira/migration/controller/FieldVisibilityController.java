@@ -21,6 +21,9 @@ import java.util.*;
 @Tag(name = "Field Visibility", description = "Jira DC-style custom field visibility resolution")
 public class FieldVisibilityController {
 
+    private static final java.util.regex.Pattern UUID_PATTERN = java.util.regex.Pattern.compile(
+            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+
     private final FieldVisibilityEngine fieldVisibilityEngine;
     private final FieldIssueContextResolver fieldIssueContextResolver;
     private final FieldSearchService fieldSearchService;
@@ -34,11 +37,24 @@ public class FieldVisibilityController {
             @RequestParam(required = false) UUID projectId,
             @RequestParam(required = false) UUID issueTypeId) {
 
-        return fieldIssueContextResolver.resolve(issueIdOrKey)
+        String trimmed = issueIdOrKey != null ? issueIdOrKey.trim() : "";
+        FieldScreenType screenType = parseScreen(screen);
+
+        if (UUID_PATTERN.matcher(trimmed).matches()) {
+            try {
+                UUID issueId = UUID.fromString(trimmed);
+                IssueVisibleFieldsResponse body = fieldVisibilityEngine.resolveVisibleFieldsForIssue(
+                        issueId, null, projectId, issueTypeId, screenType);
+                return ResponseEntity.ok(body);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().build();
+            }
+        }
+
+        return fieldIssueContextResolver.resolve(trimmed)
                 .map(ctx -> {
                     UUID pid = projectId != null ? projectId : ctx.projectId();
                     UUID tid = issueTypeId != null ? issueTypeId : ctx.issueTypeId();
-                    FieldScreenType screenType = parseScreen(screen);
                     IssueVisibleFieldsResponse body = fieldVisibilityEngine.resolveVisibleFieldsForIssue(
                             ctx.issueId(), ctx.issueKey(), pid, tid, screenType);
                     return ResponseEntity.ok(body);
