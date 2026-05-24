@@ -2745,10 +2745,10 @@ Enable users to create, track, manage, and resolve work items (issues) across pr
 | F1-US002 | View and Edit Issue | 20 | ✅ |
 | F1-US003 | Manage Issue Hierarchy | 20 | ⚠️ PARTIAL |
 | F1-US004 | Manage Issue Links | 20 | ⚠️ PARTIAL |
-| F1-US005 | Security Levels | 20 | ❌ MISSING |
-| F1-US006 | Votes and Watchers | 20 | ❌ MISSING |
-| F1-US007 | Clone and Copy Issues | 20 | ❌ MISSING |
-| F1-US008 | Move Issues | 20 | ❌ MISSING |
+| F1-US005 | Security Levels | 20 | ✅ IMPLEMENTED |
+| F1-US006 | Votes and Watchers | 20 | ✅ IMPLEMENTED |
+| F1-US007 | Clone and Copy Issues | 20 | ✅ IMPLEMENTED |
+| F1-US008 | Move Issues | 20 | ✅ IMPLEMENTED |
 | F1-US009 | Time Tracking | 20 | ❌ MISSING |
 | F1-US010 | Issue Search | 20 | ⚠️ PARTIAL |
 
@@ -6848,10 +6848,10 @@ WHERE i.issue_key = :issueKey;
 | F1-US002 | View and Edit Issue | 20 | ✅ IMPLEMENTED |
 | F1-US003 | Manage Issue Hierarchy | 20 | ⚠️ PARTIAL |
 | F1-US004 | Manage Issue Links | 20 | ⚠️ PARTIAL |
-| F1-US005 | Security Levels | 20 | ❌ MISSING |
-| F1-US006 | Votes and Watchers | 20 | ❌ MISSING |
-| F1-US007 | Clone and Copy Issues | 20 | ❌ MISSING |
-| F1-US008 | Move Issues | 20 | ❌ MISSING |
+| F1-US005 | Security Levels | 20 | ✅ IMPLEMENTED |
+| F1-US006 | Votes and Watchers | 20 | ✅ IMPLEMENTED |
+| F1-US007 | Clone and Copy Issues | 20 | ✅ IMPLEMENTED |
+| F1-US008 | Move Issues | 20 | ✅ IMPLEMENTED |
 | F1-US009 | Time Tracking | 20 | ❌ MISSING |
 | F1-US010 | Issue Search | 20 | ⚠️ PARTIAL |
 
