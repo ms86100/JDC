@@ -36,6 +36,10 @@
         <module>jira-plan-service</module>
         <module>jira-admin-service</module>
         <module>jira-test-service</module>
+        <module>jira-dashboard-service</module>
+        <module>jira-report-service</module>
+        <module>jira-document-service</module>
+        <module>jira-portal-service</module>
     </modules>
 
     <properties>
