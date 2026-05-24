@@ -13,8 +13,6 @@ import java.util.UUID;
 @Repository
 public interface LegalHoldRepository extends JpaRepository<LegalHold, UUID> {
 
-    List<LegalHold> findByStatus(String status);
-
     List<LegalHold> findByHoldType(String holdType);
 
     List<LegalHold> findByLegalMatterId(UUID legalMatterId);
