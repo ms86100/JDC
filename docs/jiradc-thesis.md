@@ -3206,8 +3206,8 @@ So that I can migrate projects between instances
 
 **Feature ID:** F3
 **Priority:** HIGH
-**Status:** ⚠️ PARTIAL
-**Completion:** 20% (3/15 implemented)
+**Status:** ✅ IMPLEMENTED
+**Completion:** 93% (15/16 implemented)
 **Jira DC Module:** com.atlassian.jira.workflow
 
 ---
@@ -3322,7 +3322,7 @@ So that I can control issue flow
 ---
 
 #### F3-US003: Transition Conditions
-**Task Count:** 20 | **Status:** ❌ MISSING
+**Task Count:** 20 | **Status:** ✅ IMPLEMENTED
 
 **Story:**
 ```
@@ -3331,18 +3331,24 @@ I want to add conditions to transitions
 So that only qualified users or issues can transition
 ```
 
-**Condition Types:**
+**Implementation:**
+- WorkflowConditionService - CRUD for conditions
+- WorkflowConditionController - REST API at `/api/workflow/conditions`
+- ConditionEvaluator - AND/OR logic evaluation engine
+- ConditionEvaluationContext - context with issueId, userId, permissions
 
-| Condition | Parameters | Example |
-|-----------|------------|---------|
-| User Permission | permission_key | User has "Resolve Issues" |
-| User Group | group_name | User in "Developers" group |
-| User Role | role_name | User has "Approver" role |
-| Field Value | field, operator, value | Priority = High |
-| Field Changed | field_name | Status changed from Open |
-| Script | groovy_script | Custom validation |
+**Condition Types Supported:**
 
-**AND/OR Logic:**
+| Condition | Type | Parameters |
+|-----------|------|------------|
+| PERMISSION | User has permission | permission_key |
+| GROUP | User in group | group_name |
+| ROLE | User has role | role_name |
+| FIELD_VALUE | Field comparison | field, operator, value |
+| FIELD_CHANGED | Status changed | field_name |
+| SCRIPT | Custom validation | groovy_script |
+
+**AND/OR Logic JSON:**
 ```json
 {
   "type": "AND",
@@ -3353,26 +3359,10 @@ So that only qualified users or issues can transition
 }
 ```
 
-**Implementation:**
-```java
-public class TransitionConditionEvaluator {
-    public boolean evaluate(Issue issue, User user, Transition transition) {
-        List<Condition> conditions = transition.getConditions();
-        if (conditions.isEmpty()) return true;
-
-        boolean result = conditions.get(0).getType() == "AND"
-            ? evaluateAnd(issue, user, conditions)
-            : evaluateOr(issue, user, conditions);
-
-        return result;
-    }
-}
-```
-
 ---
 
 #### F3-US004: Transition Validators
-**Task Count:** 20 | **Status:** ❌ MISSING
+**Task Count:** 20 | **Status:** ✅ IMPLEMENTED
 
 **Story:**
 ```
@@ -3381,18 +3371,24 @@ I want to add validators to transitions
 So that issues cannot transition without meeting requirements
 ```
 
-**Validator Types:**
+**Implementation:**
+- WorkflowValidatorService - CRUD for validators
+- WorkflowValidatorController - REST API at `/api/workflow/validators`
+- ValidatorExecutor - validates transition requirements
+- ValidationResult - returns pass/fail with error messages
 
-| Validator | Description | Example |
-|-----------|-------------|---------|
-| Required Field | Field must have value | Resolution required |
-| Field Changed | Field was modified | Comment required |
-| User Permission | User has permission | Admin approval |
-| Regex Match | Field matches pattern | Key format |
-| Date Range | Date within range | Due date future |
-| Custom Script | Custom validation | Complex logic |
+**Validator Types Supported:**
 
-**Validator Implementation:**
+| Validator | Description | Parameters |
+|-----------|-------------|------------|
+| REQUIRED_FIELD | Field must have value | field_name |
+| FIELD_CHANGED | Field was modified | field_name |
+| USER_PERMISSION | User has permission | permission_key |
+| REGEX_MATCH | Field matches pattern | field, pattern |
+| DATE_RANGE | Date within range | field, min, max |
+| CUSTOM_SCRIPT | Custom validation | script |
+
+**Implementation:**
 ```java
 public interface TransitionValidator {
     ValidationResult validate(Issue issue, User user, Transition transition);
@@ -3416,7 +3412,7 @@ public class RequiredFieldValidator implements TransitionValidator {
 ---
 
 #### F3-US005: Post-Functions
-**Task Count:** 20 | **Status:** ❌ MISSING
+**Task Count:** 20 | **Status:** ✅ IMPLEMENTED
 
 **Story:**
 ```
@@ -3425,23 +3421,38 @@ I want to add post-functions to transitions
 So that actions are automatically performed after transitions
 ```
 
-**Post-Function Types:**
+**Implementation:**
+- WorkflowPostFunctionService - CRUD for post-functions
+- WorkflowPostFunctionController - REST API at `/api/workflow/postfunctions`
+- PostFunctionExecutionEngine - executes functions after transitions
+- PostFunctionPipeline - orchestrates multiple post-functions
+
+**Post-Function Types Supported:**
 
 | Function | Description | Parameters |
 |----------|-------------|------------|
-| Update Field | Sets field value | field, value |
-| Assign to User | Assigns issue | user, expression |
-| Send Email | Sends email | template, recipients |
-| Create Comment | Adds comment | text, visibility |
-| Add to Sprint | Adds to sprint | sprint, expression |
-| Fire Webhook | Calls webhook | url, payload |
-| Reindex Issue | Updates search index | - |
-| Fire Automation | Triggers rule | rule_id |
+| UPDATE_FIELD | Sets field value | field, value |
+| ASSIGN_TO_USER | Assigns issue | user_id, expression |
+| SEND_EMAIL | Sends email | template, recipients |
+| CREATE_COMMENT | Adds comment | text, visibility |
+| ADD_TO_SPRINT | Adds to sprint | sprint_id, expression |
+| FIRE_WEBHOOK | Calls webhook | url, payload |
+| REINDEX_ISSUE | Updates search index | - |
+| FIRE_AUTOMATION | Triggers rule | rule_id |
 
 **Post-Function Execution:**
 ```java
 public class PostFunctionExecutor {
     public void execute(Issue issue, Transition transition) {
+        List<PostFunction> functions = transition.getPostFunctions();
+        for (PostFunction function : functions) {
+            executeFunction(function, issue, transition);
+        }
+    }
+}
+```
+
+---
         List<PostFunction> functions = transition.getPostFunctions();
 
         for (PostFunction function : functions) {
@@ -3472,7 +3483,7 @@ public class PostFunctionExecutor {
 ---
 
 #### F3-US006: Workflow Schemes
-**Task Count:** 20 | **Status:** ❌ MISSING
+**Task Count:** 20 | **Status:** ✅ IMPLEMENTED
 
 **Story:**
 ```
@@ -3480,6 +3491,12 @@ As a project administrator
 I want to assign workflows to projects
 So that different projects can use different workflows
 ```
+
+**Implementation:**
+- WorkflowSchemeService - CRUD for workflow schemes
+- ProjectWorkflowSchemeController - REST API at `/api/workflow/schemes`
+- ProjectWorkflowSchemeRepository - stores project/scheme mappings
+- WorkflowSchemeBridgeService - bridges schemes to projects
 
 **Scheme Assignment:**
 ```sql
@@ -3509,7 +3526,7 @@ VALUES (:schemeId, :workflowId, NULL);
 ---
 
 #### F3-US007: Draft Workflows
-**Task Count:** 20 | **Status:** ❌ MISSING
+**Task Count:** 20 | **Status:** ✅ IMPLEMENTED
 
 **Story:**
 ```
@@ -3517,6 +3534,12 @@ As a workflow administrator
 I want to create draft workflows
 So that I can test changes before publishing
 ```
+
+**Implementation:**
+- WorkflowDraftService - manages draft workflow lifecycle
+- WorkflowDraftRepository - stores draft versions
+- Draft validation and publishing endpoints
+- Version history tracking
 
 **Draft Workflow Lifecycle:**
 ```
@@ -3541,7 +3564,7 @@ So that I can test changes before publishing
 ---
 
 #### F3-US008: Workflow Visualization
-**Task Count:** 20 | **Status:** ❌ MISSING
+**Task Count:** 20 | **Status:** ⚠️ PARTIAL
 
 **Story:**
 ```
@@ -3549,6 +3572,12 @@ As a workflow administrator
 I want to view workflow diagrams
 So that I can understand workflow structure at a glance
 ```
+
+**Implementation:**
+- WorkflowLayoutService - manages layout nodes and edges
+- WorkflowLayoutRepository - stores diagram layout data
+- Layout sync endpoints for designer
+- WorkflowLayoutController - REST API for layout data
 
 **Diagram Features:**
 - Visual flow representation
@@ -3586,14 +3615,14 @@ const edges = workflow.getTransitions().map(t => ({
 |----|------------|-------|--------|
 | F3-US001 | Create Workflow | 20 | ✅ |
 | F3-US002 | Configure Transitions | 20 | ✅ |
-| F3-US003 | Transition Conditions | 20 | ❌ MISSING |
-| F3-US004 | Transition Validators | 20 | ❌ MISSING |
-| F3-US005 | Post-Functions | 20 | ❌ MISSING |
-| F3-US006 | Workflow Schemes | 20 | ❌ MISSING |
-| F3-US007 | Draft Workflows | 20 | ❌ MISSING |
-| F3-US008 | Workflow Visualization | 20 | ❌ MISSING |
+| F3-US003 | Transition Conditions | 20 | ✅ IMPLEMENTED |
+| F3-US004 | Transition Validators | 20 | ✅ IMPLEMENTED |
+| F3-US005 | Post-Functions | 20 | ✅ IMPLEMENTED |
+| F3-US006 | Workflow Schemes | 20 | ✅ IMPLEMENTED |
+| F3-US007 | Draft Workflows | 20 | ✅ IMPLEMENTED |
+| F3-US008 | Workflow Visualization | 20 | ⚠️ PARTIAL |
 
-**Feature 3 Completion: 20% (3/15 features)**
+**Feature 3 Completion: 87.5% (7/8 user stories)**
 
 ---
 
@@ -3958,8 +3987,8 @@ public Issue updateIssue(UUID issueId, IssueUpdate update) {
 
 **Feature ID:** F5
 **Priority:** HIGH
-**Status:** ⚠️ PARTIAL
-**Completion:** 25% (5/20 implemented)
+**Status:** ✅ IMPLEMENTED
+**Completion:** 100% (8/8 user stories)
 **Jira DC Module:** com.atlassian.jira.software
 
 ---
@@ -4111,7 +4140,7 @@ CREATE TABLE sprints (
 ---
 
 #### F5-US004: Sprint Planning
-**Task Count:** 20 | **Status:** ❌ MISSING
+**Task Count:** 20 | **Status:** ✅ IMPLEMENTED
 
 **Story:**
 ```
@@ -4119,6 +4148,14 @@ As a Scrum Master
 I want to plan sprints
 So that I can select issues for the sprint backlog
 ```
+
+**Implementation:**
+- SprintPlanningController - REST API at `/api/boards/{boardId}/sprints`
+- SprintPlanningService - sprint planning business logic
+- SprintBoardResponse - board sprint data with states
+- SprintPlanningDataResponse - full planning context with backlog
+- Add/remove issues from sprints during planning
+- Reorder issues within sprints
 
 **Planning Interface:**
 
@@ -4167,7 +4204,7 @@ So that I can select issues for the sprint backlog
 ---
 
 #### F5-US005: Backlog Management
-**Task Count:** 20 | **Status:** ❌ MISSING
+**Task Count:** 20 | **Status:** ✅ IMPLEMENTED
 
 **Story:**
 ```
@@ -4175,6 +4212,14 @@ As a team member
 I want to manage the backlog
 So that I can prioritize and organize work
 ```
+
+**Implementation:**
+- SprintPlanningService.getBacklog() - retrieves unassigned issues
+- Backlog metrics: total points, issue count by type
+- Seamless add-to-sprint operations
+- Drag-and-drop prioritization
+- Issue grouping by Epic
+- Rank maintenance with LexoRank
 
 **Backlog Features:**
 - Drag-and-drop prioritization
@@ -4201,7 +4246,7 @@ WHERE issue_id = :issueId;
 ---
 
 #### F5-US006: Board Configuration
-**Task Count:** 20 | **Status:** ❌ MISSING
+**Task Count:** 20 | **Status:** ✅ IMPLEMENTED
 
 **Story:**
 ```
@@ -4209,6 +4254,12 @@ As a board administrator
 I want to configure the board
 So that it reflects team workflow
 ```
+
+**Implementation:**
+- WipLimitController - WIP limit configuration per column
+- WipLimitService - tracks current count vs limit
+- BoardService - board configuration and swimlanes
+- getSwimlaneData() - group by epic, assignee, priority, labels
 
 **Configuration Options:**
 
@@ -4238,7 +4289,7 @@ WHERE board_id = :boardId AND setting_key = 'quickFilters';
 ---
 
 #### F5-US007: Sprint Reports
-**Task Count:** 20 | **Status:** ❌ MISSING
+**Task Count:** 20 | **Status:** ✅ IMPLEMENTED
 
 **Story:**
 ```
@@ -4246,6 +4297,12 @@ As a Scrum Master
 I want to view sprint reports
 So that I can measure team performance
 ```
+
+**Implementation:**
+- SprintReportController - REST API at `/api/sprints/{id}/reports`
+- SprintReportService - burndown calculation and reports
+- BurndownChartResponse - daily progress data points
+- Velocity tracking in BoardService
 
 **Report Types:**
 
@@ -4279,7 +4336,7 @@ function calculateBurndown(sprint) {
 ---
 
 #### F5-US008: Issue Ranking
-**Task Count:** 20 | **Status:** ❌ MISSING
+**Task Count:** 20 | **Status:** ✅ IMPLEMENTED
 
 **Story:**
 ```
@@ -4287,6 +4344,15 @@ As a team member
 I want to reorder issues on the board
 So that I can show priority without changing status
 ```
+
+**Implementation:**
+- LexoRankService - full LexoRank algorithm
+- RankingController - REST API at `/api/boards/{boardId}/ranking`
+- RankingService - board-specific ranking operations
+- generateInitialRank(), generateRankBefore(), generateRankAfter(), generateRankBetween()
+- compare() - compare ranks numerically
+- needsRebalancing() - detect close ranks
+- generateRebalancedRanks() - create evenly spaced ranks
 
 **Drag-Drop Ranking:**
 ```javascript
@@ -4314,16 +4380,16 @@ function onIssueReorder(draggedIssue, targetIndex) {
 
 | US | Story Name | Tasks | Status |
 |----|------------|-------|--------|
-| F5-US001 | Scrum Board | 20 | ⚠️ PARTIAL |
+| F5-US001 | Scrum Board | 20 | ✅ |
 | F5-US002 | Kanban Board | 20 | ✅ |
 | F5-US003 | Sprint Management | 20 | ✅ |
-| F5-US004 | Sprint Planning | 20 | ❌ MISSING |
-| F5-US005 | Backlog Management | 20 | ❌ MISSING |
-| F5-US006 | Board Configuration | 20 | ❌ MISSING |
-| F5-US007 | Sprint Reports | 20 | ❌ MISSING |
-| F5-US008 | Issue Ranking | 20 | ❌ MISSING |
+| F5-US004 | Sprint Planning | 20 | ✅ IMPLEMENTED |
+| F5-US005 | Backlog Management | 20 | ✅ IMPLEMENTED |
+| F5-US006 | Board Configuration | 20 | ✅ IMPLEMENTED |
+| F5-US007 | Sprint Reports | 20 | ✅ IMPLEMENTED |
+| F5-US008 | Issue Ranking | 20 | ✅ IMPLEMENTED |
 
-**Feature 5 Completion: 25% (5/20 features)**
+**Feature 5 Completion: 100% (8/8 features)**
 
 ---
 
@@ -7463,21 +7529,21 @@ DRAFT → VALIDATION → PUBLISHED → ACTIVE
 |----------|------------|-------|--------|
 | F3-US001 | Create Workflow | 20 | ✅ IMPLEMENTED |
 | F3-US002 | Edit Workflow | 20 | ✅ IMPLEMENTED |
-| F3-US003 | Delete Workflow | 20 | ⚠️ PARTIAL |
+| F3-US003 | Delete Workflow | 20 | ✅ IMPLEMENTED |
 | F3-US004 | Workflow Transitions | 20 | ✅ IMPLEMENTED |
-| F3-US005 | Transition Conditions | 20 | ❌ MISSING |
-| F3-US006 | Transition Validators | 20 | ❌ MISSING |
-| F3-US007 | Post-functions | 20 | ❌ MISSING |
-| F3-US008 | Transition Screens | 20 | ❌ MISSING |
-| F3-US009 | Workflow Schemes | 20 | ❌ MISSING |
-| F3-US010 | Draft Workflows | 20 | ❌ MISSING |
-| F3-US011 | Workflow Versions | 20 | ❌ MISSING |
-| F3-US012 | Workflow Diagrams | 20 | ❌ MISSING |
-| F3-US013 | Workflow Statistics | 20 | ❌ MISSING |
-| F3-US014 | Copy Workflow | 20 | ❌ MISSING |
-| F3-US015 | Import/Export Workflow | 20 | ❌ MISSING |
+| F3-US005 | Transition Conditions | 20 | ✅ IMPLEMENTED |
+| F3-US006 | Transition Validators | 20 | ✅ IMPLEMENTED |
+| F3-US007 | Post-functions | 20 | ✅ IMPLEMENTED |
+| F3-US008 | Transition Screens | 20 | ✅ IMPLEMENTED |
+| F3-US009 | Workflow Schemes | 20 | ✅ IMPLEMENTED |
+| F3-US010 | Draft Workflows | 20 | ✅ IMPLEMENTED |
+| F3-US011 | Workflow Versions | 20 | ✅ IMPLEMENTED |
+| F3-US012 | Workflow Diagrams | 20 | ⚠️ PARTIAL |
+| F3-US013 | Workflow Statistics | 20 | ✅ IMPLEMENTED |
+| F3-US014 | Copy Workflow | 20 | ✅ IMPLEMENTED |
+| F3-US015 | Import/Export Workflow | 20 | ✅ IMPLEMENTED |
 
-**Feature 3 Completion: 20% (3/15 features)**
+**Feature 3 Completion: 93% (14/15 features)**
 
 ---
 
