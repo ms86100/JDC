@@ -4,14 +4,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jira.workflow.engine.plugin.WorkflowPluginRegistry;
 import com.jira.workflow.entity.WorkflowCondition;
 import com.jira.workflow.repository.WorkflowConditionRepository;
-import lombok.RequiredArgsConstructor;
+import com.jira.workflow.service.ContextConverter;
+import com.jira.workflow.service.ConditionEvaluationContext;
+import com.jira.workflow.service.WorkflowConditionEvaluationService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+/**
+ * Evaluates workflow conditions for transitions.
+ * This class delegates to WorkflowConditionEvaluationService when available,
+ * providing a unified interface for condition evaluation.
+ */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class ConditionEvaluator {
 
@@ -19,13 +26,68 @@ public class ConditionEvaluator {
     private final WorkflowIntegrationClient integrationClient;
     private final WorkflowPluginRegistry pluginRegistry;
     private final ProjectPermissionClient projectPermissionClient;
+    private final WorkflowConditionEvaluationService evaluationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * Constructor for backward compatibility.
+     * @deprecated Use the constructor with WorkflowConditionEvaluationService instead.
+     */
+    @Deprecated
+    public ConditionEvaluator(
+            WorkflowConditionRepository workflowConditionRepository,
+            WorkflowIntegrationClient integrationClient,
+            WorkflowPluginRegistry pluginRegistry,
+            ProjectPermissionClient projectPermissionClient) {
+        this.workflowConditionRepository = workflowConditionRepository;
+        this.integrationClient = integrationClient;
+        this.pluginRegistry = pluginRegistry;
+        this.projectPermissionClient = projectPermissionClient;
+        this.evaluationService = null;
+    }
+
+    /**
+     * Full constructor with evaluation service.
+     */
+    @Autowired
+    public ConditionEvaluator(
+            WorkflowConditionRepository workflowConditionRepository,
+            WorkflowIntegrationClient integrationClient,
+            WorkflowPluginRegistry pluginRegistry,
+            ProjectPermissionClient projectPermissionClient,
+            WorkflowConditionEvaluationService evaluationService) {
+        this.workflowConditionRepository = workflowConditionRepository;
+        this.integrationClient = integrationClient;
+        this.pluginRegistry = pluginRegistry;
+        this.projectPermissionClient = projectPermissionClient;
+        this.evaluationService = evaluationService;
+    }
 
     public List<String> evaluateAll(UUID transitionId, WorkflowContext ctx) {
         List<WorkflowCondition> conditions = workflowConditionRepository.findByTransitionIdOrderBySequenceAsc(transitionId);
+
+        // Use the new evaluation service if available
+        if (evaluationService != null) {
+            ConditionEvaluationContext evalCtx = ContextConverter.toEvaluationContext(ctx);
+            boolean passed = evaluationService.evaluateConditions(conditions, evalCtx);
+            if (passed) {
+                return List.of();
+            }
+            List<String> errors = new ArrayList<>();
+            for (WorkflowCondition condition : conditions) {
+                boolean result = evaluationService.evaluateCondition(condition, evalCtx);
+                boolean pass = condition.getNegate() != null && condition.getNegate() ? !result : result;
+                if (!pass) {
+                    errors.add("Condition not met: " + condition.getConditionType());
+                }
+            }
+            return errors;
+        }
+
+        // Fallback to legacy evaluation
         List<String> errors = new ArrayList<>();
         for (WorkflowCondition condition : conditions) {
-            boolean result = evaluate(condition, ctx);
+            boolean result = evaluateLegacy(condition, ctx);
             boolean pass = condition.getNegate() != null && condition.getNegate() ? !result : result;
             if (!pass) {
                 errors.add("Condition not met: " + condition.getConditionType());
@@ -35,6 +97,21 @@ public class ConditionEvaluator {
     }
 
     public boolean evaluate(WorkflowCondition condition, WorkflowContext ctx) {
+        // Use the new evaluation service if available
+        if (evaluationService != null) {
+            ConditionEvaluationContext evalCtx = ContextConverter.toEvaluationContext(ctx);
+            return evaluationService.evaluateCondition(condition, evalCtx);
+        }
+        // Fallback to legacy evaluation
+        return evaluateLegacy(condition, ctx);
+    }
+
+    /**
+     * Legacy evaluation method for backward compatibility.
+     * @deprecated Use evaluate() with the new service instead.
+     */
+    @Deprecated
+    private boolean evaluateLegacy(WorkflowCondition condition, WorkflowContext ctx) {
         String type = condition.getConditionType();
         if (type == null) {
             return false;
@@ -74,9 +151,9 @@ public class ConditionEvaluator {
             return true;
         }
         if (andLogic) {
-            return children.stream().allMatch(c -> evaluate(c, ctx));
+            return children.stream().allMatch(c -> evaluateLegacy(c, ctx));
         }
-        return children.stream().anyMatch(c -> evaluate(c, ctx));
+        return children.stream().anyMatch(c -> evaluateLegacy(c, ctx));
     }
 
     private boolean evaluateChild(WorkflowCondition notCondition, WorkflowContext ctx) {
@@ -84,7 +161,7 @@ public class ConditionEvaluator {
         if (children.isEmpty()) {
             return true;
         }
-        return evaluate(children.get(0), ctx);
+        return evaluateLegacy(children.get(0), ctx);
     }
 
     @SuppressWarnings("unchecked")

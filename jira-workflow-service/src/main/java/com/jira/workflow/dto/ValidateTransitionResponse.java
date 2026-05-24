@@ -2,6 +2,7 @@ package com.jira.workflow.dto;
 
 import lombok.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -10,8 +11,11 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ValidateTransitionResponse {
 
+    private UUID transitionId;
     private UUID fromStatusId;
     private UUID toStatusId;
     private boolean valid;
     private String message;
+    private List<String> errors;
+    private List<String> warnings;
 }

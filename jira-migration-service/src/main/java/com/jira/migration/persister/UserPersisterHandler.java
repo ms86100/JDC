@@ -73,7 +73,7 @@ public class UserPersisterHandler {
 
         // Try to find existing user by email
         try {
-            UserResponse existingUser = userServiceClient.getUserByEmail(email);
+            UserResponse existingUser = userServiceClient.lookupUserByEmail(email).orElse(null);
             if (existingUser != null && existingUser.getId() != null) {
                 // Map to existing user
                 UserMapping mapping = persistUserMapping(
@@ -84,8 +84,8 @@ public class UserPersisterHandler {
                 );
                 return existingUser.getId();
             }
-        } catch (ServiceClientException e) {
-            log.debug("User not found by email {}: {}", email, e.getMessage());
+        } catch (Exception e) {
+            log.debug("User lookup failed for email {}: {}", email, e.getMessage());
         }
 
         try {
@@ -93,7 +93,7 @@ public class UserPersisterHandler {
             createPayload.put("email", email);
             createPayload.put("username", email.contains("@") ? email.substring(0, email.indexOf('@')) : email);
             createPayload.put("displayName", displayName != null ? displayName : email);
-            UserResponse created = userServiceClient.createUser(createPayload);
+            UserResponse created = userServiceClient.tryCreateUser(createPayload).orElse(null);
             if (created != null && created.getId() != null) {
                 persistUserMapping(jobId, email, "EMAIL",
                         UUID.fromString(created.getId()), created.getUsername(), "CREATE_NEW");
@@ -147,34 +147,28 @@ public class UserPersisterHandler {
 
         // Try email match
         if (sourceId.contains("@")) {
-            try {
-                UserResponse user = userServiceClient.getUserByEmail(sourceId);
-                if (user != null && user.getId() != null) {
-                    return persistUserMapping(
-                            jobId, sourceId, "EMAIL",
-                            UUID.fromString(user.getId()),
-                            user.getUsername(),
-                            "EMAIL_MATCH"
-                    );
-                }
-            } catch (ServiceClientException e) {
-                log.debug("Email match failed for {}: {}", sourceId, e.getMessage());
+            Optional<UserResponse> userOpt = userServiceClient.lookupUserByEmail(sourceId);
+            if (userOpt.isPresent() && userOpt.get().getId() != null) {
+                UserResponse user = userOpt.get();
+                return persistUserMapping(
+                        jobId, sourceId, "EMAIL",
+                        UUID.fromString(user.getId()),
+                        user.getUsername(),
+                        "EMAIL_MATCH"
+                );
             }
         }
 
         // Try username match
-        try {
-            UserResponse user = userServiceClient.getUserByUsername(sourceId);
-            if (user != null && user.getId() != null) {
-                return persistUserMapping(
-                        jobId, sourceId, "USERNAME",
-                        UUID.fromString(user.getId()),
-                        user.getUsername(),
-                        "EXACT_MATCH"
-                );
-            }
-        } catch (ServiceClientException e) {
-            log.debug("Username match failed for {}: {}", sourceId, e.getMessage());
+        Optional<UserResponse> userOpt = userServiceClient.lookupUserByUsername(sourceId);
+        if (userOpt.isPresent() && userOpt.get().getId() != null) {
+            UserResponse user = userOpt.get();
+            return persistUserMapping(
+                    jobId, sourceId, "USERNAME",
+                    UUID.fromString(user.getId()),
+                    user.getUsername(),
+                    "EXACT_MATCH"
+            );
         }
 
         // Create manual mapping (no match found)

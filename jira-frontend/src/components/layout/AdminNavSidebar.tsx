@@ -68,7 +68,6 @@ export const AdminNavSidebar: React.FC<{ pathname: string }> = ({ pathname }) =>
       onMouseLeave={scheduleCloseFlyout}
     >
       <nav className="dc-admin-nav-categories" aria-label="Configuration sections">
-        <div className="dc-admin-nav-categories-title">Administration</div>
         {ADMIN_CATEGORIES.map((cat) => {
           const isHovered = hoveredKey === cat.key;
           const hasActiveChild = cat.items.some((it) => isItemActive(pathname, it.path));

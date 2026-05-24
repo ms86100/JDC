@@ -16,6 +16,8 @@ export interface AvailableTransition {
   name: string;
   description?: string;
   toStatusId: string;
+  /** Resolved target status name from workflow / issue-service fallback */
+  toStatusName?: string;
   hasScreen?: boolean;
   screenFields?: TransitionScreenField[];
 }

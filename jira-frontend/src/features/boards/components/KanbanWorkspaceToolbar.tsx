@@ -24,11 +24,10 @@ interface KanbanWorkspaceToolbarProps {
   onToggleEpics?: () => void;
   cardLayout?: 'FULL' | 'COMPACT' | 'MINI';
   onCardLayoutChange?: (layout: 'FULL' | 'COMPACT' | 'MINI') => void;
+  jiraDcVariant?: boolean;
 }
 
-/**
- * Single DC-style chrome for /kanban — project context, filters, and primary actions in one band.
- */
+/** Jira DC board chrome — flat header: "Board" + actions only in workspace mode. */
 export default function KanbanWorkspaceToolbar({
   projects,
   projectId,
@@ -44,57 +43,62 @@ export default function KanbanWorkspaceToolbar({
   onToggleEpics,
   cardLayout = 'FULL',
   onCardLayoutChange,
+  jiraDcVariant = false,
 }: KanbanWorkspaceToolbarProps) {
   const project = projects.find((p) => p.id === projectId);
   const board = boards.find((b) => b.id === boardId);
 
   return (
-    <header className="sa-kanban-chrome" aria-label="Kanban board controls">
+    <header className={`sa-kanban-chrome${jiraDcVariant ? ' sa-kanban-chrome--dc' : ''}`} aria-label="Kanban board controls">
       <div className="sa-kanban-chrome-primary">
-        <div className="sa-kanban-chrome-context">
-          <label className="sa-kanban-chrome-field">
-            <span className="sa-kanban-chrome-field-label">Project</span>
-            <select
-              className="sa-kanban-chrome-select"
-              value={projectId}
-              onChange={(e) => onProjectChange(e.target.value)}
-              aria-label="Select project"
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.projectKey})
-                </option>
-              ))}
-            </select>
-          </label>
-          {boards.length > 1 && onBoardChange && (
+        {!jiraDcVariant && (
+          <div className="sa-kanban-chrome-context">
             <label className="sa-kanban-chrome-field">
-              <span className="sa-kanban-chrome-field-label">Board</span>
+              <span className="sa-kanban-chrome-field-label">Project</span>
               <select
                 className="sa-kanban-chrome-select"
-                value={boardId ?? ''}
-                onChange={(e) => onBoardChange(e.target.value)}
-                aria-label="Select board"
+                value={projectId}
+                onChange={(e) => onProjectChange(e.target.value)}
+                aria-label="Select project"
               >
-                {boards.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.projectKey})
                   </option>
                 ))}
               </select>
             </label>
-          )}
-        </div>
+            {boards.length > 1 && onBoardChange && (
+              <label className="sa-kanban-chrome-field">
+                <span className="sa-kanban-chrome-field-label">Board</span>
+                <select
+                  className="sa-kanban-chrome-select"
+                  value={boardId ?? ''}
+                  onChange={(e) => onBoardChange(e.target.value)}
+                  aria-label="Select board"
+                >
+                  {boards.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+        )}
 
         <div className="sa-kanban-chrome-title-block">
-          <span className="sa-kanban-chrome-badge">Kanban</span>
+          {!jiraDcVariant && <span className="sa-kanban-chrome-badge">Kanban</span>}
           <h1 className="sa-kanban-chrome-title">
-            {board?.name ?? `${project?.name ?? 'Project'} board`}
+            {jiraDcVariant ? 'Board' : (board?.name ?? `${project?.name ?? 'Project'} board`)}
           </h1>
-          {project?.projectKey && (
+          {!jiraDcVariant && project?.projectKey && (
             <span className="sa-kanban-chrome-subtitle">{project.projectKey}</span>
           )}
-          <span className="sa-kanban-chrome-meta">{issueCount} issues on board</span>
+          {!jiraDcVariant && (
+            <span className="sa-kanban-chrome-meta">{issueCount} issues on board</span>
+          )}
         </div>
 
         <div className="sa-kanban-chrome-actions">
@@ -108,7 +112,7 @@ export default function KanbanWorkspaceToolbar({
               Epics
             </button>
           )}
-          {onCardLayoutChange && (
+          {!jiraDcVariant && onCardLayoutChange && (
             <label className="sa-kanban-chrome-field sa-kanban-chrome-field--inline">
               <span className="sa-kanban-chrome-field-label">Cards</span>
               <select

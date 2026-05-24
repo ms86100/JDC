@@ -4,10 +4,58 @@
  */
 
 /* ── Top bar vs sidebar: visible separation ───────────────────────────── */
+/* Flex row from jira-dc-ui.css (header.sa-header); white admin theme here. */
 .sa-header--admin {
   position: relative;
   z-index: 30;
-  box-shadow: 0 1px 0 #dfe1e6, 0 2px 8px rgba(9, 30, 66, 0.06);
+  background: var(--sa-n0, #fff) !important;
+  border-bottom: 1px solid var(--sa-n200, #dfe1e6) !important;
+  box-shadow: 0 1px 0 #dfe1e6, 0 2px 8px rgba(9, 30, 66, 0.06) !important;
+  color: var(--sa-n900, #172b4d);
+}
+
+.sa-header--admin a,
+.sa-header--admin button {
+  color: inherit;
+}
+
+.sa-header--admin .sa-dc-header-brand {
+  border-right: 1px solid var(--sa-n200, #dfe1e6);
+}
+
+.sa-header--admin .sa-dc-header-brand-link {
+  color: var(--sa-n900, #172b4d) !important;
+}
+
+.sa-header--admin .sa-dc-nav-link {
+  color: var(--sa-n700, #42526e) !important;
+  background: transparent !important;
+}
+
+.sa-header--admin .sa-dc-nav-link:hover,
+.sa-header--admin .sa-dc-nav-link.active {
+  background: var(--sa-n100, #f4f5f7) !important;
+  color: var(--sa-n900, #172b4d) !important;
+}
+
+.sa-header--admin .sa-dc-icon-btn {
+  color: var(--sa-n700, #42526e) !important;
+}
+
+.sa-header--admin .sa-dc-user-avatar {
+  background: var(--ab-primary-600, #0052cc);
+  color: #fff;
+  border-color: var(--sa-n200, #dfe1e6);
+}
+
+.sa-admin-header-eyebrow {
+  margin-right: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sa-n600, #5e6c84);
+  white-space: nowrap;
 }
 
 .sa-admin-body-row {

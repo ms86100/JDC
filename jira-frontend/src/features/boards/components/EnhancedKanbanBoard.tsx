@@ -16,15 +16,25 @@ import CreateIssueModal from '../../issues/components/CreateIssueModal';
 import ScrumBoardToolbar from './ScrumBoardToolbar';
 import IssueDetailPage from '../../issues/pages/IssueDetailPage';
 import BoardEpicsPanel from './BoardEpicsPanel';
+import VersionPanel from './VersionPanel';
+import CardHoverPreview from './CardHoverPreview';
+import VelocityIndicator from './VelocityIndicator';
+import ContextMenu from './ContextMenu';
+import KeyboardShortcutsModal from './KeyboardShortcutsModal';
+import BulkActionsBar from './BulkActionsBar';
 import BoardTransitionModal from './BoardTransitionModal';
+import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import KanbanWorkspaceToolbar, { type KanbanStatusBanner } from './KanbanWorkspaceToolbar';
 import KanbanFilterStrip from './KanbanFilterStrip';
+import { useBoardWebSocket } from '../hooks/useBoardWebSocket';
 import type { ProjectResponse } from '../../../api/projectApi';
 import type { AgileBoard } from '../../../api/boardApi';
 import '../styles/kanban-board.css';
+import '../styles/jira-dc-kanban.css';
 import {
   KANBAN_DC_COLUMNS,
   issueMatchesColumn,
+  normalizeBoardStatus,
   targetStatusForColumn,
 } from '../utils/boardColumnUtils';
 import { sortIssuesByRank } from '../utils/boardRankUtils';
@@ -36,6 +46,7 @@ import {
 } from '../utils/boardDropHandler';
 import { applyBoardQuickFilter } from '../utils/boardQuickFilters';
 import { fetchBoardIssuesWithFallback } from '../utils/fetchProjectBoardIssues';
+import { readDraggedIssue, writeDragPayload } from '../utils/boardDragUtils';
 import { useAuth } from '../../auth/context/AuthContext';
 
 interface EnhancedKanbanBoardProps {
@@ -153,17 +164,36 @@ export default function EnhancedKanbanBoard({
   // Card colors
   const [cardColorField, setCardColorField] = useState<'none' | 'priority' | 'type' | 'labels' | 'epic'>('priority');
 
-  const [showEpicsPanel, setShowEpicsPanel] = useState(
-    kanbanClassicMode && !unifiedWorkspace,
-  );
-  const [epicsPanelCollapsed, setEpicsPanelCollapsed] = useState(unifiedWorkspace);
+  const [showEpicsPanel, setShowEpicsPanel] = useState(kanbanClassicMode);
+  const [epicsPanelCollapsed, setEpicsPanelCollapsed] = useState(false);
   const [selectedEpicId, setSelectedEpicId] = useState<string | null>(null);
+  const [activeAssigneeFilterId, setActiveAssigneeFilterId] = useState<string | null>(null);
+
+  // Version panel state
+  const [showVersionsPanel, setShowVersionsPanel] = useState(false);
+  const [versionsPanelCollapsed, setVersionsPanelCollapsed] = useState(true);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+
+  // Hover preview state
+  const [hoveredIssue, setHoveredIssue] = useState<BoardIssue | null>(null);
+  const [hoverPreviewAnchor, setHoverPreviewAnchor] = useState<React.RefObject<HTMLElement | null>>({ current: null });
+
   const [pendingTransition, setPendingTransition] = useState<PendingBoardTransition | null>(null);
   const [transitionComment, setTransitionComment] = useState('');
   const [transitionScreenInput, setTransitionScreenInput] = useState<Record<string, unknown>>({});
   const [boardError, setBoardError] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+
+  // Context menu state
+  const [contextMenuIssue, setContextMenuIssue] = useState<BoardIssue | null>(null);
+  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Keyboard shortcuts modal
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+
+  // Bulk selection state
+  const [selectedIssues, setSelectedIssues] = useState<Set<string>>(new Set());
 
   useQuery({
     queryKey: ['project-boards-pick', projectId],
@@ -181,8 +211,15 @@ export default function EnhancedKanbanBoard({
 
   const { data: projectSprints = [] } = useQuery({
     queryKey: ['sprints', projectId],
-    queryFn: () => sprintApi.getAll(projectId),
+    queryFn: async () => {
+      try {
+        return await sprintApi.getAll(projectId);
+      } catch {
+        return [];
+      }
+    },
     enabled: !!projectId,
+    retry: false,
   });
 
   const activeSprint = useMemo((): SprintResponse | null => {
@@ -330,6 +367,9 @@ export default function EnhancedKanbanBoard({
     } else if (selectedEpicId) {
       list = list.filter((i) => i.epicId === selectedEpicId);
     }
+    if (activeAssigneeFilterId) {
+      list = list.filter((i) => i.assigneeId === activeAssigneeFilterId);
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       list = list.filter(
@@ -339,7 +379,41 @@ export default function EnhancedKanbanBoard({
       );
     }
     return list;
-  }, [issuesRaw, scrumActiveSprintMode, activeSprintId, selectedEpicId, searchQuery]);
+  }, [issuesRaw, scrumActiveSprintMode, activeSprintId, selectedEpicId, activeAssigneeFilterId, searchQuery]);
+
+  useBoardWebSocket({
+    boardId: boardId ?? '',
+    enabled: false,
+  });
+
+  const assigneeQuickFilters = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const issue of issuesRaw ?? []) {
+      if (issue.assigneeId) {
+        map.set(issue.assigneeId, issue.assigneeName || issue.assigneeId);
+      }
+    }
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [issuesRaw]);
+
+  const epicFilterOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const issue of issuesRaw ?? []) {
+      if (issue.epicId && issue.epicName) {
+        map.set(issue.epicId, issue.epicName);
+      }
+    }
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [issuesRaw]);
+
+  const handleGroupByChange = useCallback((field: SwimlanField) => {
+    setSwimlaneField(field);
+    if (field !== 'none') {
+      setViewMode('swimlane');
+    } else {
+      setViewMode('board');
+    }
+  }, []);
 
   const moveMutation = useMutation({
     mutationFn: ({
@@ -369,8 +443,7 @@ export default function EnhancedKanbanBoard({
   // Handle drag start
   const handleDragStart = useCallback((e: React.DragEvent, issue: BoardIssue) => {
     setDraggedIssue(issue);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('application/json', JSON.stringify(issue));
+    writeDragPayload(e, issue);
   }, []);
 
   // Handle drag over column
@@ -389,14 +462,18 @@ export default function EnhancedKanbanBoard({
 
   const applyDrop = useCallback(
     async (
+      issue: BoardIssue,
       column: BoardColumn,
       dropIndex: number,
       transitionOverride?: PendingBoardTransition['transition'],
       screenPayload?: { comment?: string; screenInput?: Record<string, unknown> },
     ) => {
-      if (!draggedIssue) return;
-      const pid = projectId || draggedIssue.projectId;
-      if (!pid) return;
+      if (!issue?.id) return;
+      const pid = projectId || issue.projectId;
+      if (!pid) {
+        setBoardError('Cannot move issue: project context is missing.');
+        return;
+      }
 
       const columnIssues = sortIssuesByRank(
         issues.filter((i) => issueMatchesColumn(i, column)),
@@ -408,7 +485,7 @@ export default function EnhancedKanbanBoard({
           await executeBoardDrop(
             boardId,
             pid,
-            draggedIssue,
+            issue,
             column,
             columnIssues,
             dropIndex,
@@ -419,7 +496,7 @@ export default function EnhancedKanbanBoard({
         } else {
           await executeStandaloneDrop(
             pid,
-            draggedIssue,
+            issue,
             column,
             transitionOverride,
             screenPayload,
@@ -437,18 +514,24 @@ export default function EnhancedKanbanBoard({
         setDragOverColumnId(null);
       }
     },
-    [draggedIssue, boardId, projectId, issues, queryClient],
+    [boardId, projectId, issues, queryClient],
   );
 
   const handleDrop = useCallback(
     async (e: React.DragEvent, column: BoardColumn, targetSwimlane?: string) => {
       e.preventDefault();
-      if (!draggedIssue) return;
+      e.stopPropagation();
+      const issue = readDraggedIssue(e, draggedIssue);
+      console.log('[Kanban] handleDrop called:', column.name, 'issue:', issue?.id);
+      if (!issue) {
+        console.log('[Kanban] No issue found from drag event');
+        return;
+      }
 
       if (
         column.maxIssues &&
         column.maxIssues > 0 &&
-        !issueMatchesColumn(draggedIssue, column)
+        !issueMatchesColumn(issue, column)
       ) {
         const colIssues = issues.filter((i) => issueMatchesColumn(i, column));
         if (colIssues.length >= column.maxIssues) {
@@ -461,29 +544,35 @@ export default function EnhancedKanbanBoard({
       const dropIndex = sortIssuesByRank(
         issues.filter((i) => issueMatchesColumn(i, column)),
       ).length;
-      const pid = projectId || draggedIssue.projectId;
+      const pid = projectId || issue.projectId;
       const targetStatus = targetStatusForColumn(column);
-      const statusChanged =
-        (draggedIssue.status ?? '').toLowerCase() !== targetStatus.toLowerCase();
+      // Check if status changed by comparing normalized status strings
+      const currentNorm = normalizeBoardStatus(issue.status);
+      const targetNorm = normalizeBoardStatus(targetStatus);
+      const statusChanged = currentNorm !== targetNorm;
 
       if (statusChanged && pid) {
-        const { transition } = await findTransitionForColumn(draggedIssue, pid, column);
+        const { transition, targetStatus: resolvedStatus } = await findTransitionForColumn(
+          issue,
+          pid,
+          column,
+        );
         if (transition?.hasScreen) {
           setPendingTransition({
-            issue: draggedIssue,
+            issue,
             column,
-            targetStatus,
+            targetStatus: resolvedStatus,
             transition,
             dropIndex,
             swimlaneKey: targetSwimlane,
           });
           return;
         }
-        await applyDrop(column, dropIndex, transition);
+        await applyDrop(issue, column, dropIndex, transition);
         return;
       }
 
-      await applyDrop(column, dropIndex);
+      await applyDrop(issue, column, dropIndex);
     },
     [draggedIssue, issues, projectId, applyDrop],
   );
@@ -491,12 +580,14 @@ export default function EnhancedKanbanBoard({
   const handleDropAtIndex = useCallback(
     async (e: React.DragEvent, column: BoardColumn, index: number) => {
       e.preventDefault();
-      if (!draggedIssue) return;
+      e.stopPropagation();
+      const issue = readDraggedIssue(e, draggedIssue);
+      if (!issue) return;
 
       if (
         column.maxIssues &&
         column.maxIssues > 0 &&
-        !issueMatchesColumn(draggedIssue, column)
+        !issueMatchesColumn(issue, column)
       ) {
         const colIssues = issues.filter((i) => issueMatchesColumn(i, column));
         if (colIssues.length >= column.maxIssues) {
@@ -506,37 +597,47 @@ export default function EnhancedKanbanBoard({
         }
       }
 
-      const pid = projectId || draggedIssue.projectId;
+      const pid = projectId || issue.projectId;
       const targetStatus = targetStatusForColumn(column);
-      const statusChanged =
-        (draggedIssue.status ?? '').toLowerCase() !== targetStatus.toLowerCase();
+      // Check if status changed by comparing normalized status strings
+      const currentNorm = normalizeBoardStatus(issue.status);
+      const targetNorm = normalizeBoardStatus(targetStatus);
+      const statusChanged = currentNorm !== targetNorm;
 
       if (statusChanged && pid) {
-        const { transition } = await findTransitionForColumn(draggedIssue, pid, column);
+        const { transition, targetStatus: resolvedStatus } = await findTransitionForColumn(
+          issue,
+          pid,
+          column,
+        );
         if (transition?.hasScreen) {
           setPendingTransition({
-            issue: draggedIssue,
+            issue,
             column,
-            targetStatus,
+            targetStatus: resolvedStatus,
             transition,
             dropIndex: index,
           });
           return;
         }
-        await applyDrop(column, index, transition);
+        await applyDrop(issue, column, index, transition);
         return;
       }
 
-      await applyDrop(column, index);
+      await applyDrop(issue, column, index);
     },
     [draggedIssue, issues, projectId, applyDrop],
   );
 
-  // Handle drag end
+  // Handle drag end (defer clear so drop handler runs first in all browsers)
   const handleDragEnd = useCallback(() => {
-    setDraggedIssue(null);
-    setDragOverColumn(null);
-    setDragOverSwimlane(null);
+    requestAnimationFrame(() => {
+      setDraggedIssue(null);
+      setDragOverColumn(null);
+      setDragOverSwimlane(null);
+      setDragOverIndex(null);
+      setDragOverColumnId(null);
+    });
   }, []);
 
   // Get issues by column
@@ -653,6 +754,165 @@ export default function EnhancedKanbanBoard({
       navigate(`/issues/${issue.id}`);
     }
   }, [navigate, useIssueDrawer]);
+
+  // Handle context menu
+  const handleContextMenu = useCallback((e: React.MouseEvent, issue: BoardIssue) => {
+    e.preventDefault();
+    setContextMenuIssue(issue);
+    setContextMenuPosition({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  // Handle context menu action
+  const handleContextMenuAction = useCallback((action: string, issueId?: string) => {
+    switch (action) {
+      case 'open':
+        if (issueId) {
+          if (useIssueDrawer) {
+            setDrawerIssueId(issueId);
+          } else {
+            navigate(`/issues/${issueId}`);
+          }
+        }
+        break;
+      case 'edit':
+        if (issueId) {
+          setDrawerIssueId(issueId);
+        }
+        break;
+      case 'assign':
+        // Assign to current user
+        if (issueId && user?.userId) {
+          issueApi.update(issueId, { assigneeId: user.userId }).then(() => {
+            queryClient.invalidateQueries({ queryKey: ['board-issues'] });
+          });
+        }
+        break;
+      case 'status-todo':
+      case 'status-inprogress':
+      case 'status-review':
+      case 'status-done':
+        if (issueId) {
+          const statusMap: Record<string, string> = {
+            'status-todo': 'To Do',
+            'status-inprogress': 'In Progress',
+            'status-review': 'In Review',
+            'status-done': 'Done',
+          };
+          const newStatus = statusMap[action];
+          if (newStatus) {
+            // Find target column for this status
+            const targetColumn = columns.find(col => col.name === newStatus);
+            if (targetColumn && boardId) {
+              executeBoardDrop({
+                boardId,
+                issueId,
+                toColumnStatus: targetColumn.statusCategory || newStatus,
+                rank: undefined,
+              }).then(() => {
+                queryClient.invalidateQueries({ queryKey: ['board-issues'] });
+              });
+            }
+          }
+        }
+        break;
+      case 'priority-highest':
+      case 'priority-high':
+      case 'priority-medium':
+      case 'priority-low':
+      case 'priority-lowest':
+        if (issueId) {
+          const priorityMap: Record<string, string> = {
+            'priority-highest': 'Highest',
+            'priority-high': 'High',
+            'priority-medium': 'Medium',
+            'priority-low': 'Low',
+            'priority-lowest': 'Lowest',
+          };
+          const newPriority = priorityMap[action];
+          if (newPriority) {
+            issueApi.update(issueId, { priority: newPriority }).then(() => {
+              queryClient.invalidateQueries({ queryKey: ['board-issues'] });
+            });
+          }
+        }
+        break;
+      case 'copy':
+        if (issueId) {
+          navigator.clipboard.writeText(window.location.origin + `/issues/${issueId}`);
+        }
+        break;
+      case 'delete':
+        if (issueId && window.confirm('Are you sure you want to delete this issue?')) {
+          issueApi.delete(issueId).then(() => {
+            queryClient.invalidateQueries({ queryKey: ['board-issues'] });
+          });
+        }
+        break;
+    }
+  }, [navigate, useIssueDrawer, user, queryClient, columns, boardId]);
+
+  // Handle bulk selection
+  const handleBulkAction = useCallback((action: string) => {
+    const issueIds = Array.from(selectedIssues);
+    switch (action) {
+      case 'delete':
+        if (window.confirm(`Delete ${issueIds.length} issues?`)) {
+          issueIds.forEach(id => issueApi.delete(id).catch(() => {}));
+          setSelectedIssues(new Set());
+          queryClient.invalidateQueries({ queryKey: ['board-issues'] });
+        }
+        break;
+      case 'archive':
+        issueIds.forEach(id => issueApi.update(id, { archived: true }).catch(() => {}));
+        setSelectedIssues(new Set());
+        queryClient.invalidateQueries({ queryKey: ['board-issues'] });
+        break;
+    }
+  }, [selectedIssues, queryClient]);
+
+  // Handle keyboard navigation
+  const handleKeyboardOpen = useCallback((issueId: string) => {
+    if (useIssueDrawer) {
+      setDrawerIssueId(issueId);
+    } else {
+      navigate(`/issues/${issueId}`);
+    }
+  }, [navigate, useIssueDrawer]);
+
+  const keyboardNav = useKeyboardNavigation({
+    columns,
+    issues: issuesRaw ?? [],
+    onIssueSelect: (issueId) => setDrawerIssueId(issueId),
+    onIssueOpen: handleKeyboardOpen,
+    onDragStart: (issueId) => {
+      const issue = issuesRaw?.find(i => i.id === issueId);
+      if (issue) {
+        setDraggedIssue(issue);
+      }
+    },
+    onDragEnd: () => setDraggedIssue(null),
+    onEscape: () => {
+      setDrawerIssueId(null);
+      setHoveredIssue(null);
+      setContextMenuIssue(null);
+      setSelectedIssues(new Set());
+    },
+  });
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        const target = e.target as HTMLElement;
+        if (!['INPUT', 'TEXTAREA'].includes(target.tagName)) {
+          e.preventDefault();
+          setShowShortcutsModal(true);
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Handle create issue
   const handleCreateIssue = useCallback((columnStatus: string) => {
@@ -780,6 +1040,16 @@ export default function EnhancedKanbanBoard({
           onToggleCollapsed={() => setEpicsPanelCollapsed((c) => !c)}
         />
       )}
+      {showVersionsPanel && projectId && (
+        <VersionPanel
+          projectId={projectId}
+          issues={issuesRaw ?? []}
+          selectedVersionId={selectedVersionId}
+          onSelectVersion={setSelectedVersionId}
+          collapsed={versionsPanelCollapsed}
+          onToggleCollapsed={() => setVersionsPanelCollapsed((c) => !c)}
+        />
+      )}
       <div className="sa-board-main">
     <div
       className={`ab-enhanced-kanban-board${useUnifiedChrome ? ' ab-enhanced-kanban-board--workspace' : ''}`}
@@ -802,6 +1072,7 @@ export default function EnhancedKanbanBoard({
             onToggleEpics={() => setShowEpicsPanel((v) => !v)}
             cardLayout={cardLayout}
             onCardLayoutChange={setCardLayout}
+            jiraDcVariant
           />
           <KanbanFilterStrip
             quickFilters={quickFilters}
@@ -813,6 +1084,15 @@ export default function EnhancedKanbanBoard({
             onSwimlaneChange={setSwimlaneField}
             viewMode={viewMode}
             onToggleView={toggleSwimlaneView}
+            jiraDcLayout
+            assignees={assigneeQuickFilters}
+            activeAssigneeId={activeAssigneeFilterId}
+            onAssigneeFilterChange={setActiveAssigneeFilterId}
+            epicOptions={epicFilterOptions}
+            activeEpicId={selectedEpicId}
+            onEpicFilterChange={setSelectedEpicId}
+            groupBy={swimlaneField}
+            onGroupByChange={handleGroupByChange}
           />
         </>
       )}
@@ -840,6 +1120,8 @@ export default function EnhancedKanbanBoard({
           onToggleView={toggleSwimlaneView}
           activeSprintId={activeSprintId}
           onSprintChange={setActiveSprintId}
+          showVersionsPanel={showVersionsPanel}
+          onToggleVersions={() => setShowVersionsPanel((v) => !v)}
         />
       )}
 
@@ -942,6 +1224,8 @@ export default function EnhancedKanbanBoard({
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                   onCardClick={handleCardClick}
+                  onCardHover={setHoveredIssue}
+                  onCardContextMenu={handleContextMenu}
                   onCreateIssue={() => handleCreateIssue(column.statusCategory)}
                   getCardColor={getCardColor}
                   cardLayout={cardLayout}
@@ -959,6 +1243,7 @@ export default function EnhancedKanbanBoard({
                       : undefined
                   }
                   cardCustomFieldsByIssue={cardCustomFieldsByIssue}
+                  jiraDcLayout={useUnifiedChrome}
                 />
               );
             })}
@@ -1016,6 +1301,7 @@ export default function EnhancedKanbanBoard({
           }}
           onConfirm={async () => {
             await applyDrop(
+              pendingTransition.issue,
               pendingTransition.column,
               pendingTransition.dropIndex,
               pendingTransition.transition,
@@ -1159,9 +1445,59 @@ export default function EnhancedKanbanBoard({
             />
           </aside>
         )}
+        <CardHoverPreview
+          issue={hoveredIssue}
+          anchorRef={hoverPreviewAnchor}
+          onClose={() => setHoveredIssue(null)}
+          onOpenIssue={(id) => {
+            setHoveredIssue(null);
+            setDrawerIssueId(id);
+          }}
+        />
+        <ContextMenu
+          issue={contextMenuIssue}
+          position={contextMenuPosition}
+          onClose={() => setContextMenuIssue(null)}
+          onAction={handleContextMenuAction}
+        />
+        <BulkActionsBar
+          selectedIssues={(issuesRaw ?? []).filter(i => selectedIssues.has(i.id))}
+          onClearSelection={() => setSelectedIssues(new Set())}
+          onAction={handleBulkAction}
+        />
+        {showShortcutsModal && (
+          <KeyboardShortcutsModal onClose={() => setShowShortcutsModal(false)} />
+        )}
       </div>
     );
   }
 
-  return boardInner;
+  return (
+    <>
+      {boardInner}
+      <CardHoverPreview
+        issue={hoveredIssue}
+        anchorRef={hoverPreviewAnchor}
+        onClose={() => setHoveredIssue(null)}
+        onOpenIssue={(id) => {
+          setHoveredIssue(null);
+          setDrawerIssueId(id);
+        }}
+      />
+      <ContextMenu
+        issue={contextMenuIssue}
+        position={contextMenuPosition}
+        onClose={() => setContextMenuIssue(null)}
+        onAction={handleContextMenuAction}
+      />
+      <BulkActionsBar
+        selectedIssues={(issuesRaw ?? []).filter(i => selectedIssues.has(i.id))}
+        onClearSelection={() => setSelectedIssues(new Set())}
+        onAction={handleBulkAction}
+      />
+      {showShortcutsModal && (
+        <KeyboardShortcutsModal onClose={() => setShowShortcutsModal(false)} />
+      )}
+    </>
+  );
 }

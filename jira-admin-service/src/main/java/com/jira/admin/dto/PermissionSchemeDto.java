@@ -13,14 +13,5 @@ public class PermissionSchemeDto {
     private String description;
     private String scope;
     private Boolean isDefault;
-    private List<PermissionGrantDto> permissions;
-
-    @Data @Builder @NoArgsConstructor @AllArgsConstructor
-    public static class PermissionGrantDto {
-        private String permissionKey;
-        private String entityType;
-        private String entityId;
-        private String groupName;
-        private String userId;
-    }
+    private List<String> permissions;  // List of permission keys
 }

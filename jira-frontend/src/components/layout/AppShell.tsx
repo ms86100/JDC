@@ -152,7 +152,7 @@ export const AppShell: React.FC<AppShellProps> = ({ mode, children }) => {
 
   return (
     <div
-      className={isAdmin ? undefined : 'sa-shell-dc'}
+      className={isAdmin ? 'sa-shell-admin' : 'sa-shell-dc'}
       style={{
       display: 'flex', flexDirection: 'column', height: '100vh',
       background: 'var(--sa-n50)', color: 'var(--sa-n900)',
@@ -175,13 +175,7 @@ export const AppShell: React.FC<AppShellProps> = ({ mode, children }) => {
       <header
         role="banner"
         className={isAdmin ? 'sa-header sa-header--admin' : 'sa-header sa-header--dc'}
-        style={{
-          height: 48,
-          flexShrink: 0,
-          background: isAdmin ? 'var(--sa-n0)' : undefined,
-          borderBottom: isAdmin ? '1px solid var(--sa-n200)' : undefined,
-          boxShadow: isAdmin ? 'var(--sa-elev-1)' : undefined,
-        }}
+        style={{ height: 48, flexShrink: 0 }}
       >
         <div className="sa-dc-header-brand">
           <Link to="/dashboard" aria-label="Systems and Avionics — Home" className="sa-dc-header-brand-link">
@@ -239,6 +233,9 @@ export const AppShell: React.FC<AppShellProps> = ({ mode, children }) => {
         )}
 
         <div className="sa-dc-header-actions">
+        {isAdmin && (
+          <span className="sa-admin-header-eyebrow">Administration</span>
+        )}
         <IconBtn title="Notifications" className="sa-dc-icon-btn" onClick={() => navigate('/notifications')}>🔔</IconBtn>
         <IconBtn
           title="Help & capability map"
@@ -259,7 +256,14 @@ export const AppShell: React.FC<AppShellProps> = ({ mode, children }) => {
           <IconBtn title="Administration" className="sa-dc-icon-btn" onClick={() => navigate('/admin')}>⚙</IconBtn>
         )}
 
-        <div style={{ width: 1, height: 24, background: isAdmin ? 'var(--sa-n200)' : 'rgba(255,255,255,0.35)', margin: '0 4px' }} />
+        <div
+          style={{
+            width: 1,
+            height: 24,
+            background: isAdmin ? 'var(--sa-n200)' : 'rgba(255,255,255,0.35)',
+            margin: '0 4px',
+          }}
+        />
 
         <button type="button" onClick={logout} className="sa-dc-user-avatar"
                 title={`${user?.username ?? 'User'} — sign out`}>

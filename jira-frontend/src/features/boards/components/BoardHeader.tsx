@@ -13,6 +13,9 @@ interface BoardHeaderProps {
   onToggleView: () => void;
   activeSprintId: string | null;
   onSprintChange: (sprintId: string | null) => void;
+  showVersionsPanel?: boolean;
+  onToggleVersions?: () => void;
+  velocityData?: { completed: number; committed: number };
 }
 
 export default function BoardHeader({
@@ -25,6 +28,8 @@ export default function BoardHeader({
   onToggleView,
   activeSprintId,
   onSprintChange,
+  showVersionsPanel,
+  onToggleVersions,
 }: BoardHeaderProps) {
   return (
     <div className="ab-board-header">
@@ -46,6 +51,15 @@ export default function BoardHeader({
             <option value="sprint-2">Sprint 2</option>
             <option value="sprint-3">Sprint 3</option>
           </select>
+        )}
+        {onToggleVersions && (
+          <button
+            onClick={onToggleVersions}
+            className={`ab-btn ab-btn-ghost ${showVersionsPanel ? 'ab-btn-active' : ''}`}
+            title="Toggle Versions Panel"
+          >
+            Versions
+          </button>
         )}
       </div>
 

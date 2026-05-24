@@ -9,13 +9,12 @@ import com.jira.migration.service.MigrationWorkflowStatusApplier;
 import com.jira.migration.service.UserDirectoryMappingService;
 import com.jira.migration.service.clients.*;
 import com.jira.migration.service.clients.dto.*;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.*;
-
 import java.util.*;
 
 /**
@@ -73,6 +72,12 @@ public class IssuePersisterHandler {
     @Transactional(rollbackFor = Exception.class)
     public IssuePersisterResult persistIssue(Map<String, Object> issueData, UUID jobId) {
         IssuePersisterResult result = new IssuePersisterResult();
+        result.setRowNumber(extractRowNumber(issueData));
+        String sourceIssueKey = stringVal(issueData.get("issueKey"));
+        if (sourceIssueKey == null) {
+            sourceIssueKey = stringVal(issueData.get("issue_key"));
+        }
+        result.setSourceIssueKey(sourceIssueKey);
 
         try {
             // 1. Extract and validate project (handle both project_key and projectKey)
@@ -107,7 +112,10 @@ public class IssuePersisterHandler {
             // 5. Call real issue service
             IssueResponse response = createIssueWithRetry(request);
             String issueId = response.getId();
-            String issueKey = response.getKey();
+            String issueKey = resolveCreatedIssueKey(response, issueId);
+            if (issueKey == null || issueKey.isBlank()) {
+                log.warn("Created issue {} has no issueKey in response — UI target key may be missing", issueId);
+            }
 
             String sourceStatus = (String) issueData.getOrDefault("status", issueData.get("issue_status"));
             if (migrationWorkflowStatusApplier != null && sourceStatus != null && !sourceStatus.isBlank()) {
@@ -148,12 +156,12 @@ public class IssuePersisterHandler {
                         UUID.fromString(issueId), values, jobId);
             }
 
-            // 9. Update entity status
-            updateEntityStatus(jobId, issueKey, issueId, "ISSUE", true);
+            // 9. Update entity status (lookup by source CSV key, not target PXX-N)
+            String entitySourceKey = sourceIssueKey != null ? sourceIssueKey : issueKey;
+            updateEntityStatus(jobId, entitySourceKey, issueId, "ISSUE", true);
 
             result.setSuccess(true);
             result.setIssueId(UUID.fromString(issueId));
-            result.setSourceIssueKey((String) issueData.getOrDefault("issueKey", issueData.get("issue_key")));
             result.setIssueKey(issueKey);
 
             log.info("Persisted issue: {} ({}) with ID: {}", issueKey, issueType, issueId);
@@ -226,10 +234,42 @@ public class IssuePersisterHandler {
             data.put(targetKey, source);
             return;
         }
-        UUID target = userDirectoryMappingService.resolveToTargetUserId(source, jobId);
-        if (target != null) {
-            data.put(targetKey, target.toString());
+        try {
+            UUID target = userDirectoryMappingService.resolveToTargetUserId(source, jobId);
+            if (target != null) {
+                data.put(targetKey, target.toString());
+            } else {
+                // Do not pass Jira usernames as UUIDs to issue-service.
+                data.remove(sourceKey);
+                data.remove(targetKey);
+                log.info("Assignee/reporter '{}' not resolved — issue will import without {}", source, targetKey);
+            }
+        } catch (CallNotPermittedException e) {
+            data.remove(sourceKey);
+            data.remove(targetKey);
+            log.warn("User-service circuit open — continuing without {} for {}", targetKey, source);
+        } catch (Exception e) {
+            data.remove(sourceKey);
+            data.remove(targetKey);
+            log.warn("User resolution failed for {} — continuing without {}: {}", source, targetKey, e.getMessage());
         }
+    }
+
+    private String resolveCreatedIssueKey(IssueResponse response, String issueId) {
+        if (response.getKey() != null && !response.getKey().isBlank()) {
+            return response.getKey();
+        }
+        if (issueId != null) {
+            try {
+                IssueResponse fetched = issueServiceClient.getIssue(issueId);
+                if (fetched.getKey() != null && !fetched.getKey().isBlank()) {
+                    return fetched.getKey();
+                }
+            } catch (Exception e) {
+                log.debug("Could not fetch issue key for {}: {}", issueId, e.getMessage());
+            }
+        }
+        return null;
     }
 
     private Long parseDurationSeconds(Object... candidates) {
@@ -258,8 +298,8 @@ public class IssuePersisterHandler {
                 .description((String) data.getOrDefault("description", data.get("body")))
                 .status((String) data.getOrDefault("status", data.get("issue_status")))
                 .priority((String) data.getOrDefault("priority", data.get("issue_priority")))
-                .assigneeId((String) data.getOrDefault("assigneeId", data.get("assignee")))
-                .reporterId((String) data.getOrDefault("reporterId", data.get("reporter")))
+                .assigneeId((String) data.get("assigneeId"))
+                .reporterId((String) data.get("reporterId"))
                 .originalIssueKey((String) data.getOrDefault("originalIssueKey",
                         data.getOrDefault("issueKey", data.get("issue_key"))));
 
@@ -399,14 +439,36 @@ public class IssuePersisterHandler {
     }
 
     private String resolveIssueId(String issueKey, UUID jobId) {
-        // Use getIssue to resolve issue key - simplified implementation
+        if (issueKey == null || issueKey.isBlank()) {
+            return null;
+        }
         try {
-            IssueResponse issue = issueServiceClient.getIssue(issueKey);
-            return issue != null ? issue.getId() : null;
+            return issueServiceClient.getIssueByKey(issueKey)
+                    .map(IssueResponse::getId)
+                    .orElse(null);
         } catch (Exception e) {
             log.debug("Could not resolve issue ID for key {}: {}", issueKey, e.getMessage());
             return null;
         }
+    }
+
+    private static Integer extractRowNumber(Map<String, Object> issueData) {
+        Object row = issueData.get("rowNumber");
+        if (row instanceof Number n) {
+            return n.intValue();
+        }
+        if (row != null) {
+            try {
+                return Integer.parseInt(row.toString());
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static String stringVal(Object o) {
+        return o == null ? null : o.toString().trim();
     }
 
     private void updateEntityStatus(UUID jobId, String sourceKey, String targetId,
@@ -453,9 +515,10 @@ public class IssuePersisterHandler {
             } catch (Exception e) {
                 IssuePersisterResult failure = new IssuePersisterResult();
                 failure.setSuccess(false);
-                Object key = issue.get("issueKey");
-                if (key != null) {
-                    failure.setIssueKey(key.toString());
+                failure.setRowNumber(extractRowNumber(issue));
+                Object src = issue.getOrDefault("issueKey", issue.get("issue_key"));
+                if (src != null) {
+                    failure.setSourceIssueKey(src.toString());
                 }
                 failure.setErrorMessage(e.getMessage());
                 failureList.add(failure);
@@ -569,6 +632,7 @@ public class IssuePersisterHandler {
         private String sourceIssueKey;
         private String errorCode;
         private String errorMessage;
+        private Integer rowNumber;
 
         public boolean isSuccess() { return success; }
         public void setSuccess(boolean success) { this.success = success; }
@@ -582,6 +646,8 @@ public class IssuePersisterHandler {
         public void setErrorCode(String errorCode) { this.errorCode = errorCode; }
         public String getErrorMessage() { return errorMessage; }
         public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+        public Integer getRowNumber() { return rowNumber; }
+        public void setRowNumber(Integer rowNumber) { this.rowNumber = rowNumber; }
     }
 
     public static class BatchPersistResult {

@@ -1,6 +1,7 @@
 package com.jira.migration.service.clients;
 
 import com.jira.migration.service.clients.dto.UserResponse;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +35,7 @@ public class UserServiceClient extends BaseServiceClient {
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
             CircuitBreakerRegistry circuitBreakerRegistry,
-            @Value("${services.userServiceUrl:http://localhost:8083}") String baseUrl) {
+            @Value("${services.userServiceUrl:http://localhost:8082}") String baseUrl) {
         super(restTemplate, objectMapper, circuitBreakerRegistry, SERVICE_NAME, baseUrl);
     }
 
@@ -72,12 +73,26 @@ public class UserServiceClient extends BaseServiceClient {
         return executeGet(endpoint, UserResponse.class);
     }
 
+    /** Best-effort lookup; never throws when user-service is down or circuit is open. */
+    public Optional<UserResponse> lookupUserByEmail(String email) {
+        try {
+            return Optional.ofNullable(getUserByEmail(email));
+        } catch (ServiceClientException e) {
+            log.debug("User not found by email {}: {}", email, e.getMessage());
+            return Optional.empty();
+        } catch (CallNotPermittedException e) {
+            log.warn("userService circuit open — skipping email lookup for {}", email);
+            return Optional.empty();
+        }
+    }
+
     /**
      * Searches for users matching a query string.
      *
      * @param query the search query (username, name, or email)
      * @return list of matching users
      */
+    /** Best-effort search; never throws when user-service is down. */
     public List<UserResponse> searchUsers(String query) {
         log.debug("Searching users with query: {}", query);
 
@@ -100,8 +115,11 @@ public class UserServiceClient extends BaseServiceClient {
             return response.getBody() != null ? response.getBody() : Collections.emptyList();
         } catch (RestClientException e) {
             long elapsed = System.currentTimeMillis() - startTime;
-            log.error("Search users {} failed ({}ms): {}", url, elapsed, e.getMessage());
-            throw ServiceClientException.connectionError(serviceName, endpoint, e);
+            log.warn("Search users {} failed ({}ms): {}", url, elapsed, e.getMessage());
+            return Collections.emptyList();
+        } catch (Exception e) {
+            log.warn("Search users skipped for {}: {}", query, e.getMessage());
+            return Collections.emptyList();
         }
     }
 
@@ -150,6 +168,19 @@ public class UserServiceClient extends BaseServiceClient {
         return executeGet(endpoint, UserResponse.class);
     }
 
+    /** Best-effort lookup; never throws when user-service is down or circuit is open. */
+    public Optional<UserResponse> lookupUserByUsername(String username) {
+        try {
+            return Optional.ofNullable(getUserByUsername(username));
+        } catch (ServiceClientException e) {
+            log.debug("User not found by username {}: {}", username, e.getMessage());
+            return Optional.empty();
+        } catch (CallNotPermittedException e) {
+            log.warn("userService circuit open — skipping username lookup for {}", username);
+            return Optional.empty();
+        }
+    }
+
     /**
      * Finds a user by email, returning empty if not found.
      *
@@ -161,13 +192,21 @@ public class UserServiceClient extends BaseServiceClient {
         return executePost(SERVICE_PATH, userData, UserResponse.class);
     }
 
-    public Optional<UserResponse> findUserByEmail(String email) {
+    /** Best-effort create; returns empty when user-service is down or circuit is open. */
+    public Optional<UserResponse> tryCreateUser(Map<String, Object> userData) {
         try {
-            return Optional.ofNullable(getUserByEmail(email));
+            return Optional.ofNullable(createUser(userData));
         } catch (ServiceClientException e) {
-            log.debug("User not found with email {}: {}", email, e.getMessage());
+            log.warn("User create failed: {}", e.getMessage());
+            return Optional.empty();
+        } catch (CallNotPermittedException e) {
+            log.warn("userService circuit open — skipping user create");
             return Optional.empty();
         }
+    }
+
+    public Optional<UserResponse> findUserByEmail(String email) {
+        return lookupUserByEmail(email);
     }
 
     /**

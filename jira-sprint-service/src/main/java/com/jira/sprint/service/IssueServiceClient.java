@@ -291,7 +291,9 @@ public class IssueServiceClient {
     }
 
     private String normalize(String s) {
-        return s.toLowerCase().replaceAll("[\\s_-]+", "");
+        if (s == null) return "";
+        // Remove (legacy), (new), etc. for comparison
+        return s.toLowerCase().replace("(legacy)", "").replace("(new)", "").replaceAll("[\\s_\\-()]+", "");
     }
 
     private boolean isCompletedStatus(String status) {

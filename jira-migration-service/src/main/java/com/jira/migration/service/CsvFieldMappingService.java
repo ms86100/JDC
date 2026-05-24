@@ -21,7 +21,7 @@ public class CsvFieldMappingService {
             "issue_id", "created", "updated", "resolved", "votes", "watches", "time_spent", "remaining_estimate",
             "original_estimate", "comment", "comment_body", "comment_author", "author", "entity_type",
             "attachment_path", "attachment_url", "attachments", "attachment", "file_name", "filename",
-            "row_number", "parentissuekey", "issuetype", "projectkey", "projectname"
+            "row_number", "parentissuekey", "parent_issue_key", "issuetype", "projectkey", "projectname"
     );
 
     private static final Map<String, String> TARGET_ALIASES = Map.ofEntries(
@@ -172,8 +172,9 @@ public class CsvFieldMappingService {
         }
         issueData.put("issueKey", issueKey);
         issueData.put("rowNumber", rowNum);
-        if (rowData.containsKey("parent_key")) {
-            issueData.put("parentIssueKey", rowData.get("parent_key"));
+        String parentKey = firstNonBlank(rowData, "parent_key", "parentissuekey", "parent_issue_key", "parent");
+        if (parentKey != null) {
+            issueData.put("parentIssueKey", parentKey);
         }
         if (rowData.containsKey("epic_link")) {
             issueData.put("epicLink", rowData.get("epic_link"));
@@ -195,5 +196,15 @@ public class CsvFieldMappingService {
         return label.trim().toLowerCase(Locale.ROOT)
                 .replace(" ", "_")
                 .replaceAll("[^a-z0-9_]", "");
+    }
+
+    private static String firstNonBlank(Map<String, String> row, String... keys) {
+        for (String key : keys) {
+            String v = row.get(key);
+            if (v != null && !v.isBlank()) {
+                return v.trim();
+            }
+        }
+        return null;
     }
 }

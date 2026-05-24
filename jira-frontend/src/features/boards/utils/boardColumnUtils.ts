@@ -50,11 +50,23 @@ export const KANBAN_DC_COLUMNS: BoardColumn[] = [
 ];
 
 function norm(s: string): string {
-  return s.toLowerCase().replace(/[\s_-]+/g, '');
+  if (!s) return '';
+  // Remove (legacy), (new), etc. and normalize
+  return s.toLowerCase()
+    .replace(/\(legacy\)/gi, '')
+    .replace(/\(new\)/gi, '')
+    .replace(/[\s\(\)]+/g, ' ')
+    .trim()
+    .replace(/[\s_-]+/g, '');
+}
+
+export function normalizeBoardStatus(s: string | undefined | null): string {
+  if (!s) return '';
+  return norm(s);
 }
 
 const COLUMN_STATUS_ALIASES: Record<string, string[]> = {
-  backlog: ['backlog', 'open', 'new', 'draft', 'pending'],
+  backlog: ['backlog', 'open', 'new', 'draft', 'pending', 'defined'],
   selectedfordevelopment: ['todo', 'todevelopment', 'selectedfordevelopment', 'selected', 'ready', 'readyfordevelopment'],
   inprogress: ['inprogress', 'inreview', 'review', 'development', 'implementing'],
   done: ['done', 'closed', 'resolved', 'complete', 'completed', 'finished'],
@@ -98,13 +110,14 @@ export function targetStatusForColumn(column: BoardColumn): string {
   const key = columnKey(column);
   switch (key) {
     case 'backlog':
-      return 'Backlog';
+      return column.name || 'Backlog';
     case 'selectedfordevelopment':
       return 'To Do';
     case 'inprogress':
-      return column.name.toLowerCase().includes('review') ? 'In Review' : 'In Progress';
+      if (column.name.toLowerCase().includes('review')) return 'In Review';
+      return column.name || 'In Progress';
     case 'done':
-      return 'Done';
+      return column.name || 'Done';
     default:
       return column.name;
   }

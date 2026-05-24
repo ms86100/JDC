@@ -6,34 +6,39 @@ interface AttachmentsTabProps {
   issueId: string;
 }
 
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
+function formatFileSize(bytes?: number | null): string {
+  const size = bytes ?? 0;
+  if (size === 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  const i = Math.floor(Math.log(size) / Math.log(k));
+  return parseFloat((size / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-function getFileIcon(fileType: string): string {
-  if (fileType.startsWith('image/')) return '🖼️';
-  if (fileType.includes('pdf')) return '📄';
-  if (fileType.includes('word') || fileType.includes('document')) return '📝';
-  if (fileType.includes('excel') || fileType.includes('spreadsheet')) return '📊';
-  if (fileType.includes('powerpoint') || fileType.includes('presentation')) return '📽️';
-  if (fileType.includes('zip') || fileType.includes('archive')) return '📦';
-  if (fileType.includes('text/')) return '📃';
+function getFileIcon(fileType?: string | null): string {
+  const type = (fileType ?? '').toLowerCase();
+  if (!type) return '📎';
+  if (type.startsWith('image/')) return '🖼️';
+  if (type.includes('pdf')) return '📄';
+  if (type.includes('word') || type.includes('document')) return '📝';
+  if (type.includes('excel') || type.includes('spreadsheet')) return '📊';
+  if (type.includes('powerpoint') || type.includes('presentation')) return '📽️';
+  if (type.includes('zip') || type.includes('archive')) return '📦';
+  if (type.includes('text/')) return '📃';
   return '📎';
 }
 
-function getFileTypeLabel(fileType: string): string {
-  if (fileType.startsWith('image/')) return 'Image';
-  if (fileType.includes('pdf')) return 'PDF';
-  if (fileType.includes('word') || fileType.includes('document')) return 'Word';
-  if (fileType.includes('excel') || fileType.includes('spreadsheet')) return 'Excel';
-  if (fileType.includes('powerpoint') || fileType.includes('presentation')) return 'PPT';
-  if (fileType.includes('zip') || fileType.includes('archive')) return 'Archive';
-  if (fileType.includes('text/')) return 'Text';
-  return fileType.split('/')[1]?.toUpperCase() || 'FILE';
+function getFileTypeLabel(fileType?: string | null): string {
+  const type = (fileType ?? '').toLowerCase();
+  if (!type) return 'File';
+  if (type.startsWith('image/')) return 'Image';
+  if (type.includes('pdf')) return 'PDF';
+  if (type.includes('word') || type.includes('document')) return 'Word';
+  if (type.includes('excel') || type.includes('spreadsheet')) return 'Excel';
+  if (type.includes('powerpoint') || type.includes('presentation')) return 'PPT';
+  if (type.includes('zip') || type.includes('archive')) return 'Archive';
+  if (type.includes('text/')) return 'Text';
+  return type.split('/')[1]?.toUpperCase() || 'FILE';
 }
 
 export default function AttachmentsTab({ issueId }: AttachmentsTabProps) {
@@ -117,7 +122,7 @@ export default function AttachmentsTab({ issueId }: AttachmentsTabProps) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = attachment.fileName;
+      a.download = attachment.fileName || 'download';
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

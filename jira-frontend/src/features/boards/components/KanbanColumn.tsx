@@ -20,6 +20,8 @@ interface KanbanColumnProps {
   onDragStart: (e: React.DragEvent, issue: BoardIssue) => void;
   onDragEnd: () => void;
   onCardClick: (issue: BoardIssue) => void;
+  onCardHover?: (issue: BoardIssue | null) => void;
+  onCardContextMenu?: (e: React.MouseEvent, issue: BoardIssue) => void;
   onCreateIssue: () => void;
   getCardColor: (issue: BoardIssue) => string | undefined;
   cardLayout: CardLayout;
@@ -30,6 +32,10 @@ interface KanbanColumnProps {
   releaseLink?: { label: string; href: string };
   olderIssuesLink?: string;
   cardCustomFieldsByIssue?: Record<string, CardCustomFieldRow[]>;
+  jiraDcLayout?: boolean;
+  compactWhenEmpty?: boolean;
+  expandedEmpty?: boolean;
+  onExpandEmpty?: () => void;
 }
 
 export default function KanbanColumn({
@@ -47,6 +53,8 @@ export default function KanbanColumn({
   onDragStart,
   onDragEnd,
   onCardClick,
+  onCardHover,
+  onCardContextMenu,
   onCreateIssue,
   getCardColor,
   cardLayout,
@@ -56,11 +64,19 @@ export default function KanbanColumn({
   releaseLink,
   olderIssuesLink,
   cardCustomFieldsByIssue = {},
+  jiraDcLayout = false,
+  compactWhenEmpty = false,
+  expandedEmpty = false,
+  onExpandEmpty,
 }: KanbanColumnProps) {
   const isCollapsed = column.isHidden;
+  const isCompactEmpty = compactWhenEmpty && issues.length === 0 && !expandedEmpty;
 
   return (
-    <div className={`ab-kanban-column ${isOver ? 'ab-drag-over' : ''} ${isCollapsed ? 'ab-collapsed' : ''} ${wipBlocked ? 'ab-wip-exceeded' : ''}`}>
+    <div
+      className={`ab-kanban-column ${isOver ? 'ab-drag-over' : ''} ${isCollapsed ? 'ab-collapsed' : ''} ${wipBlocked ? 'ab-wip-exceeded' : ''}${isCompactEmpty ? ' ab-kanban-column--compact-empty' : ''}${draggedIssue ? ' is-dragging' : ''}`}
+      onClick={isCompactEmpty ? onExpandEmpty : undefined}
+    >
       {/* Column Header */}
       <div className="ab-column-header" onClick={() => {}}>
         <div className="ab-column-indicator" style={{ backgroundColor: column.color }} />
@@ -142,20 +158,30 @@ export default function KanbanColumn({
 
       {/* Column Content */}
       <div
-        className="ab-column-content"
-        onDragOver={onDragOver}
+        className={`ab-column-content${isOver ? ' ab-column-content--drop-target' : ''}`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          onDragOver(e);
+        }}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
       >
         {issues.length === 0 ? (
-          <div className="ab-column-empty">
-            <div className="ab-empty-state">
-              <span className="ab-empty-icon">📋</span>
-              <p>No issues</p>
-              <button className="ab-btn ab-btn-ghost" onClick={onCreateIssue}>
+          <div className={`ab-column-empty${jiraDcLayout ? ' ab-column-empty--dc' : ''}`}>
+            {jiraDcLayout ? (
+              <button type="button" className="ab-empty-create-link" onClick={onCreateIssue}>
                 + Create issue
               </button>
-            </div>
+            ) : (
+              <div className="ab-empty-state">
+                <span className="ab-empty-icon">📋</span>
+                <p>No issues</p>
+                <button className="ab-btn ab-btn-ghost" onClick={onCreateIssue}>
+                  + Create issue
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="ab-issue-list">
@@ -185,7 +211,11 @@ export default function KanbanColumn({
                   onDragStart={(e) => onDragStart(e, issue)}
                   onDragEnd={onDragEnd}
                   onClick={() => onCardClick(issue)}
+                  onMouseEnter={() => onCardHover?.(issue)}
+                  onMouseLeave={() => onCardHover?.(null)}
+                  onContextMenu={(e) => onCardContextMenu?.(e, issue)}
                   rank={index + 1}
+                  jiraDcLayout={jiraDcLayout}
                 />
               </React.Fragment>
             ))}
@@ -225,6 +255,7 @@ export default function KanbanColumn({
         </button>
       </div>
 
+      {!jiraDcLayout && (
       <style>{`
         .ab-kanban-column {
           display: flex;
@@ -479,6 +510,7 @@ export default function KanbanColumn({
           color: var(--ab-primary-600);
         }
       `}</style>
+      )}
     </div>
   );
 }

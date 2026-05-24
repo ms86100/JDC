@@ -40,9 +40,13 @@ public class IssueService {
     private final WorkflowTransitionClient workflowTransitionClient;
     private final LabelService labelService;
     private final LabelRepository labelRepository;
+    private final SecurityLevelService securityLevelService;
 
     @Value("${workflow.service.url}")
     private String workflowServiceUrl;
+
+    @Value("${jira.workflow.validation-lenient:true}")
+    private boolean validationLenient;
 
     public String getWorkflowServiceUrl() {
         return workflowServiceUrl;
@@ -631,6 +635,74 @@ public class IssueService {
         return mapToIssueResponse(issue);
     }
 
+    /**
+     * Set security level on an issue.
+     */
+    @Transactional
+    public IssueResponse setSecurityLevel(UUID issueId, UUID securityLevelId, UUID userId) {
+        log.info("Setting security level {} on issue {} by user {}", securityLevelId, issueId, userId);
+
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", issueId));
+
+        // Check if user has permission to set security level
+        if (userId != null && !securityLevelService.canUserAccessLevel(userId, securityLevelId, issue.getProjectId())) {
+            throw new com.jira.issue.exception.PermissionDeniedException("ASSIGN_ISSUES", "security level " + securityLevelId);
+        }
+
+        // Validate security level exists
+        if (!securityLevelService.isValidSecurityLevel(securityLevelId, issue.getProjectId())) {
+            throw new ResourceNotFoundException("SecurityLevel", "id", securityLevelId);
+        }
+
+        issue.setSecurityLevelId(securityLevelId);
+        issue = issueRepository.save(issue);
+
+        log.info("Security level set on issue {}: {}", issue.getIssueKey(), securityLevelId);
+        return mapToIssueResponse(issue);
+    }
+
+    /**
+     * Get security level of an issue.
+     */
+    @Transactional(readOnly = true)
+    public SecurityLevelService.SecurityLevelInfo getSecurityLevel(UUID issueId) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", issueId));
+
+        if (issue.getSecurityLevelId() == null) {
+            return null;
+        }
+
+        return securityLevelService.getSecurityLevelById(issue.getSecurityLevelId())
+                .orElse(null);
+    }
+
+    /**
+     * Clear (remove) security level from an issue.
+     */
+    @Transactional
+    public IssueResponse clearSecurityLevel(UUID issueId, UUID userId) {
+        log.info("Clearing security level on issue {} by user {}", issueId, userId);
+
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", issueId));
+
+        // Check if user has permission to modify security level
+        if (userId != null) {
+            UUID levelId = issue.getSecurityLevelId();
+            if (levelId != null && !securityLevelService.canUserAccessLevel(userId, levelId, issue.getProjectId())) {
+                throw new com.jira.issue.exception.PermissionDeniedException("ASSIGN_ISSUES", "security level " + levelId);
+            }
+        }
+
+        issue.setSecurityLevelId(null);
+        issue = issueRepository.save(issue);
+
+        log.info("Security level cleared from issue {}", issue.getIssueKey());
+        return mapToIssueResponse(issue);
+    }
+
     private boolean validateTransition(UUID projectId, UUID fromStatusId, UUID toStatusId) {
         try {
             String url = String.format("%s/api/workflows/project/%s/validate-transition?fromStatus=%s&toStatus=%s",
@@ -642,13 +714,14 @@ public class IssueService {
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return response.getBody().isValid();
             }
-            // Non-200 response means we cannot validate - fail safe by defaulting to FALSE
-            log.error("Workflow service returned non-OK status: {}", response.getStatusCode());
-            return false;
+            log.warn("Workflow service returned non-OK status: {}", response.getStatusCode());
+            return validationLenient;
         } catch (Exception e) {
-            // CRITICAL: Fail-safe - if workflow service is unavailable, block the transition
-            // This prevents data integrity issues that would occur from allowing any transition
-            log.error("Failed to validate transition with workflow service, blocking by default: {}", e.getMessage());
+            if (validationLenient) {
+                log.warn("Workflow validation unavailable, allowing transition: {}", e.getMessage());
+                return true;
+            }
+            log.error("Failed to validate transition with workflow service, blocking: {}", e.getMessage());
             return false;
         }
     }

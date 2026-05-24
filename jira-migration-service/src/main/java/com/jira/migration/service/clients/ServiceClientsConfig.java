@@ -1,6 +1,5 @@
 package com.jira.migration.service.clients;
 
-import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import lombok.Data;
@@ -74,7 +73,20 @@ public class ServiceClientsConfig {
                 .automaticTransitionFromOpenToHalfOpenEnabled(true)
                 .build();
 
-        return CircuitBreakerRegistry.of(defaultConfig);
+        // User lookups are optional during CSV import — only trip on real 5xx outages.
+        CircuitBreakerConfig userLookupConfig = CircuitBreakerConfig.from(defaultConfig)
+                .recordException(e -> {
+                    if (e instanceof ServiceClientException sce) {
+                        // 404/400 not-found and connection errors must not open the breaker.
+                        return sce.getStatusCode() >= 500;
+                    }
+                    return false;
+                })
+                .build();
+
+        CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(defaultConfig);
+        registry.circuitBreaker("userService", userLookupConfig);
+        return registry;
     }
 
     /**

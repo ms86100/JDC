@@ -36,4 +36,18 @@ public class WorkflowPluginRegistry {
         WorkflowConditionProvider p = conditions.get(key);
         return p != null && p.evaluate(context);
     }
+
+    /**
+     * Gets a validator provider by key.
+     */
+    public WorkflowValidatorProvider getValidatorProvider(String key) {
+        return validators.get(key);
+    }
+
+    /**
+     * Lists all registered validator keys.
+     */
+    public List<String> listValidatorKeys() {
+        return validators.keySet().stream().sorted().toList();
+    }
 }

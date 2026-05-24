@@ -1,5 +1,6 @@
 import React from 'react';
 import { BoardIssue } from '../../../api/boardApi';
+import JiraDcIssueCard from './JiraDcIssueCard';
 
 type CardLayout = 'FULL' | 'COMPACT' | 'MINI';
 
@@ -17,7 +18,11 @@ interface IssueCardProps {
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: () => void;
   onClick: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   rank?: number;
+  jiraDcLayout?: boolean;
 }
 
 function formatCfValue(value: unknown): string {
@@ -35,7 +40,11 @@ export default function IssueCard({
   onDragStart,
   onDragEnd,
   onClick,
+  onMouseEnter,
+  onMouseLeave,
+  onContextMenu,
   rank,
+  jiraDcLayout = false,
 }: IssueCardProps) {
   const getPriorityIcon = (priority: string | undefined) => {
     switch (priority?.toLowerCase()) {
@@ -111,6 +120,9 @@ export default function IssueCard({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         onClick={onClick}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        onContextMenu={onContextMenu}
         style={borderColor ? { borderLeftColor: borderColor } : undefined}
       >
         <span className="ab-card-key-mini">{issue.issueKey}</span>
@@ -127,6 +139,9 @@ export default function IssueCard({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         onClick={onClick}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        onContextMenu={onContextMenu}
         style={borderColor ? { borderLeftColor: borderColor } : undefined}
       >
         <div className="ab-card-compact-row">
@@ -150,6 +165,21 @@ export default function IssueCard({
   }
 
   // Full layout (default)
+  if (jiraDcLayout) {
+    return (
+      <JiraDcIssueCard
+        issue={issue}
+        isDragging={isDragging}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        onClick={onClick}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        onContextMenu={onContextMenu}
+      />
+    );
+  }
+
   return (
     <div
       className={`ab-issue-card ab-card-full ${isDragging ? 'ab-dragging' : ''}`}
@@ -157,7 +187,9 @@ export default function IssueCard({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
-      style={borderColor ? { borderLeftColor: borderColor } : undefined}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      onContextMenu={onContextMenu}
     >
       {/* Card Header */}
       <div className="ab-card-header">
@@ -180,7 +212,7 @@ export default function IssueCard({
       )}
 
       {/* Card Title */}
-      <div className="ab-card-title">{issue.title}</div>
+      <div className="ab-card-title">{issue.title || issue.issueKey}</div>
 
       {/* Labels */}
       {issue.labels && issue.labels.length > 0 && (
@@ -208,30 +240,33 @@ export default function IssueCard({
       {/* Card Footer */}
       <div className="ab-card-footer">
         <div className="ab-card-footer-left">
-          {issue.assigneeId ? (
-            <div className="ab-card-assignee" title={issue.assigneeName || issue.assigneeId}>
-              <span className="ab-avatar-xs">
-                {(issue.assigneeName || issue.assigneeId || 'U').charAt(0).toUpperCase()}
-              </span>
-              <span className="ab-assignee-name">
-                {issue.assigneeName || issue.assigneeId.split('-')[0]}
-              </span>
-            </div>
-          ) : (
-            <span className="ab-unassigned">Unassigned</span>
-          )}
+          <span className="ab-card-type-icon" title={issue.issueType}>
+            {getTypeIcon(issue.issueType)}
+          </span>
+          <span
+            className="ab-card-priority-dot"
+            style={{ backgroundColor: getPriorityColor(issue.priority) || '#dfe1e6' }}
+            title={issue.priority}
+          />
+          <span className="ab-card-key">{issue.issueKey}</span>
         </div>
-
         <div className="ab-card-footer-right">
-          {issue.storyPoints && (
-            <span className="ab-story-points-badge" title="Story Points">
-              {issue.storyPoints} SP
+          {issue.storyPoints != null && issue.storyPoints > 0 && (
+            <span className="ab-story-points-badge" title="Story points">
+              {issue.storyPoints}
             </span>
           )}
           {dueDate && (
             <span className={`ab-due-date ${dueDate.className}`} title={`Due: ${issue.dueDate}`}>
               {dueDate.text}
             </span>
+          )}
+          {issue.assigneeId ? (
+            <span className="ab-avatar-xs" title={issue.assigneeName || issue.assigneeId}>
+              {(issue.assigneeName || issue.assigneeId || 'U').charAt(0).toUpperCase()}
+            </span>
+          ) : (
+            <span className="ab-avatar-unassigned" title="Unassigned">?</span>
           )}
         </div>
       </div>
@@ -241,11 +276,6 @@ export default function IssueCard({
         {issue.sprintName && (
           <span className="ab-sprint-tag" title="Sprint">
             🏃 {issue.sprintName}
-          </span>
-        )}
-        {issue.rank && (
-          <span className="ab-rank-tag" title="Rank">
-            #{issue.rank.split('-')[0]}
           </span>
         )}
       </div>

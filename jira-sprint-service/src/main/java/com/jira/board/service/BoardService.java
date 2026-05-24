@@ -226,7 +226,8 @@ public class BoardService {
     }
 
     private String normalize(String s) {
-        return s.toLowerCase().replaceAll("[\\s_-]+", "");
+        if (s == null) return "";
+        return s.toLowerCase().replace("(legacy)", "").replace("(new)", "").replaceAll("[\\s_\\-()]+", "");
     }
 
     @Transactional(readOnly = true)

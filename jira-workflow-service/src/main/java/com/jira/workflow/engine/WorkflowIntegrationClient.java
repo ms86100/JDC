@@ -1,6 +1,8 @@
 package com.jira.workflow.engine;
 
+import com.jira.workflow.config.PatchCapableRestTemplate;
 import com.jira.workflow.dto.ExecuteTransitionRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -18,9 +20,14 @@ import java.util.UUID;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class WorkflowIntegrationClient {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final PatchCapableRestTemplate patchCapableRestTemplate;
+
+    private RestTemplate restTemplate() {
+        return patchCapableRestTemplate.get();
+    }
 
     @Value("${jira.services.issue-url:http://localhost:8084}")
     private String issueServiceUrl;
@@ -42,7 +49,7 @@ public class WorkflowIntegrationClient {
 
     public Map<String, Object> fetchIssue(UUID issueId) {
         try {
-            Map<?, ?> response = restTemplate.getForObject(issueServiceUrl + "/api/issues/" + issueId, Map.class);
+            Map<?, ?> response = restTemplate().getForObject(issueServiceUrl + "/api/issues/" + issueId, Map.class);
             return response != null ? castMap(response) : new HashMap<>();
         } catch (Exception e) {
             log.error("Failed to fetch issue {}: {}", issueId, e.getMessage());
@@ -53,7 +60,7 @@ public class WorkflowIntegrationClient {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> fetchIssueStatuses() {
         try {
-            List<?> response = restTemplate.getForObject(issueServiceUrl + "/api/issues/statuses", List.class);
+            List<?> response = restTemplate().getForObject(issueServiceUrl + "/api/issues/statuses", List.class);
             if (response == null) {
                 return List.of();
             }
@@ -75,7 +82,7 @@ public class WorkflowIntegrationClient {
             return new HashMap<>();
         }
         try {
-            Map<?, ?> response = restTemplate.getForObject(userServiceUrl + "/api/users/" + userId, Map.class);
+            Map<?, ?> response = restTemplate().getForObject(userServiceUrl + "/api/users/" + userId, Map.class);
             return response != null ? castMap(response) : new HashMap<>();
         } catch (Exception e) {
             log.warn("Failed to fetch user {}: {}", userId, e.getMessage());
@@ -86,7 +93,7 @@ public class WorkflowIntegrationClient {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> fetchLinkedIssuesForWorkflow(UUID issueId) {
         try {
-            List<?> response = restTemplate.getForObject(
+            List<?> response = restTemplate().getForObject(
                     issueServiceUrl + "/api/issues/" + issueId + "/links/workflow-context",
                     List.class);
             if (response == null) {
@@ -110,7 +117,7 @@ public class WorkflowIntegrationClient {
             return new HashMap<>();
         }
         try {
-            Map<?, ?> response = restTemplate.getForObject(projectServiceUrl + "/api/projects/" + projectId, Map.class);
+            Map<?, ?> response = restTemplate().getForObject(projectServiceUrl + "/api/projects/" + projectId, Map.class);
             return response != null ? castMap(response) : new HashMap<>();
         } catch (Exception e) {
             log.warn("Failed to fetch project {}: {}", projectId, e.getMessage());
@@ -123,7 +130,7 @@ public class WorkflowIntegrationClient {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-Workflow-Internal", "true");
         String url = issueServiceUrl + "/api/issues/" + issueId + "/workflow/internal";
-        restTemplate.exchange(url, HttpMethod.PATCH, new HttpEntity<>(body, headers), Map.class);
+        restTemplate().exchange(url, HttpMethod.PATCH, new HttpEntity<>(body, headers), Map.class);
     }
 
     public void updateIssueStatusInternal(UUID issueId, UUID projectId, UUID statusId, Map<String, Object> extra) {
@@ -144,7 +151,7 @@ public class WorkflowIntegrationClient {
 
     public int countAttachments(UUID issueId) {
         try {
-            List<?> response = restTemplate.getForObject(
+            List<?> response = restTemplate().getForObject(
                     attachmentServiceUrl + "/api/attachments/issue/" + issueId,
                     List.class);
             return response != null ? response.size() : 0;
@@ -181,7 +188,7 @@ public class WorkflowIntegrationClient {
             body.put("comment", comment);
             body.put("success", success);
             body.put("errorMessage", errorMessage);
-            restTemplate.postForObject(
+            restTemplate().postForObject(
                     issueServiceUrl + "/api/issues/" + issueId + "/transitions/history/internal",
                     new HttpEntity<>(body, headers),
                     Map.class);
@@ -197,7 +204,7 @@ public class WorkflowIntegrationClient {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            restTemplate.postForObject(url, new HttpEntity<>(payload, headers), Map.class);
+            restTemplate().postForObject(url, new HttpEntity<>(payload, headers), Map.class);
         } catch (Exception e) {
             log.warn("Webhook call failed for {}: {}", url, e.getMessage());
         }
@@ -214,7 +221,7 @@ public class WorkflowIntegrationClient {
                 headers.set("X-User-Id", userId.toString());
             }
             Map<String, Object> body = Map.of("issueId", issueId.toString(), "content", content);
-            restTemplate.postForObject(
+            restTemplate().postForObject(
                     commentServiceUrl + "/api/comments",
                     new HttpEntity<>(body, headers),
                     Map.class);
@@ -235,7 +242,7 @@ public class WorkflowIntegrationClient {
             body.put("authorId", authorId != null ? authorId.toString() : null);
             body.put("authorName", authorName);
             body.put("changes", changes);
-            restTemplate.postForObject(
+            restTemplate().postForObject(
                     issueServiceUrl + "/api/issues/" + issueId + "/history/internal",
                     new HttpEntity<>(body, headers),
                     Map.class);
@@ -253,7 +260,7 @@ public class WorkflowIntegrationClient {
             body.put("entityId", issueId.toString());
             body.put("title", title);
             body.put("content", content);
-            restTemplate.postForObject(
+            restTemplate().postForObject(
                     searchServiceUrl + "/api/search/index",
                     new HttpEntity<>(body, headers),
                     Map.class);
@@ -270,7 +277,7 @@ public class WorkflowIntegrationClient {
             body.put("sourceIssueId", sourceIssueId.toString());
             body.put("targetIssueId", targetIssueId.toString());
             body.put("linkTypeId", linkTypeId.toString());
-            restTemplate.postForObject(
+            restTemplate().postForObject(
                     issueServiceUrl + "/api/issues/links",
                     new HttpEntity<>(body, headers),
                     Map.class);
@@ -296,12 +303,48 @@ public class WorkflowIntegrationClient {
             if (ctx.getIssueData().get("reporterId") != null) {
                 body.put("reporterId", ctx.getIssueData().get("reporterId").toString());
             }
-            restTemplate.postForObject(
+            restTemplate().postForObject(
                     issueServiceUrl + "/api/issues",
                     new HttpEntity<>(body, headers),
                     Map.class);
         } catch (Exception e) {
             log.warn("Create subtask post-function failed: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Checks if a user has a specific permission in a project.
+     *
+     * @param userId     The user to check
+     * @param projectId  The project to check permission in
+     * @param permission The permission to check (e.g., "EDIT_ISSUES", "ASSIGN_ISSUES")
+     * @return true if the user has the permission
+     */
+    public boolean checkUserPermission(UUID userId, UUID projectId, String permission) {
+        if (userId == null || projectId == null || permission == null) {
+            return false;
+        }
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, Object> body = Map.of(
+                    "userId", userId.toString(),
+                    "projectId", projectId.toString(),
+                    "permission", permission);
+            Map<?, ?> response = restTemplate().postForObject(
+                    projectServiceUrl + "/api/projects/permissions/check",
+                    new HttpEntity<>(body, headers),
+                    Map.class);
+            if (response != null) {
+                Object result = response.get("hasPermission");
+                if (result instanceof Boolean b) {
+                    return b;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            log.warn("Permission check failed for user {} in project {}: {}", userId, projectId, e.getMessage());
+            return false;
         }
     }
 

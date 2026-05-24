@@ -143,7 +143,7 @@ public class SprintController {
         sprintService.deleteSprint(sprintId);
         HttpHeaders headers = new HttpHeaders();
         headers.add("Deprecation", "true");
-        headers.add(" Sunset", "2026-12-31");
+        headers.add("Sunset", "2026-12-31");
         headers.add("X-Suggested-Route", "/api/plans/sprints/" + sprintId);
         return ResponseEntity.noContent().headers(headers).build();
     }
@@ -175,7 +175,7 @@ public class SprintController {
     private <T> ResponseEntity<T> deprecatedResponse(T body, HttpStatus status) {
         HttpHeaders headers = new HttpHeaders();
         headers.add("Deprecation", "true");
-        headers.add(" Sunset", "2026-12-31");
+        headers.add("Sunset", "2026-12-31");
         headers.add("X-Suggested-Route", "Use jira-plan-service /api/plans/* endpoints");
         headers.add("Warning", DEPRECATION_WARNING);
         return new ResponseEntity<>(body, headers, status);
@@ -184,7 +184,7 @@ public class SprintController {
     private <T> ResponseEntity<List<T>> deprecatedListResponse(List<T> body) {
         HttpHeaders headers = new HttpHeaders();
         headers.add("Deprecation", "true");
-        headers.add(" Sunset", "2026-12-31");
+        headers.add("Sunset", "2026-12-31");
         headers.add("X-Suggested-Route", "Use jira-plan-service /api/plans/boards/* endpoints");
         headers.add("Warning", DEPRECATION_WARNING);
         return new ResponseEntity<>(body, headers, HttpStatus.OK);
@@ -193,7 +193,7 @@ public class SprintController {
     private ResponseEntity<Void> deprecationHeaderResponse(HttpStatus status) {
         HttpHeaders headers = new HttpHeaders();
         headers.add("Deprecation", "true");
-        headers.add(" Sunset", "2026-12-31");
+        headers.add("Sunset", "2026-12-31");
         headers.add("Warning", DEPRECATION_WARNING);
         return new ResponseEntity<>(headers, status);
     }

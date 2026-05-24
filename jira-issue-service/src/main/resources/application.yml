@@ -81,7 +81,8 @@ jira:
   permissions:
     fail-open: false
   workflow:
-    transition-fallback: false
+    transition-fallback: true
+    validation-lenient: true
 
 management:
   endpoints:

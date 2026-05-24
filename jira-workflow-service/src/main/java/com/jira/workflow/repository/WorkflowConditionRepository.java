@@ -9,6 +9,7 @@ import java.util.UUID;
 
 @Repository
 public interface WorkflowConditionRepository extends JpaRepository<WorkflowCondition, UUID> {
+    List<WorkflowCondition> findByTransitionId(UUID transitionId);
     List<WorkflowCondition> findByTransitionIdOrderBySequenceAsc(UUID transitionId);
     void deleteByTransitionId(UUID transitionId);
 }

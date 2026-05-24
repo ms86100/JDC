@@ -70,4 +70,42 @@ public class WorkflowStatusResolver {
         }
         return workflowStatusCatalog.resolveName(issueStatusId, catalog);
     }
+
+    /**
+     * Whether the issue's current status satisfies a transition's {@code from_status_id}.
+     * Matches exact IDs, equivalent display names (e.g. legacy vs canonical Backlog),
+     * or the same remapping used when listing available transitions.
+     */
+    public boolean statusesMatchForTransition(
+            UUID workflowId,
+            UUID issueStatusId,
+            UUID requiredFromStatusId,
+            Map<String, Object> issueData) {
+        if (requiredFromStatusId == null || issueStatusId == null) {
+            return false;
+        }
+        if (requiredFromStatusId.equals(issueStatusId)) {
+            return true;
+        }
+
+        Map<String, WorkflowStatusCatalog.StatusMeta> catalog = workflowStatusCatalog.loadCatalog();
+        String issueName = normalizeStatusName(resolveIssueStatusName(issueStatusId, issueData, catalog));
+        String requiredName = normalizeStatusName(workflowStatusCatalog.resolveName(requiredFromStatusId, catalog));
+        if (!issueName.isEmpty() && !requiredName.isEmpty() && issueName.equals(requiredName)) {
+            return true;
+        }
+
+        UUID resolvedForListing = resolveForTransitions(workflowId, issueStatusId, issueData);
+        return requiredFromStatusId.equals(resolvedForListing);
+    }
+
+    private String normalizeStatusName(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.toLowerCase()
+                .replace("(legacy)", "")
+                .replace("(new)", "")
+                .replaceAll("[\\s_\\-()]+", "");
+    }
 }

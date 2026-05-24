@@ -1,23 +1,27 @@
 /* Jira Data Center UI composition — structural parity with video_frames walkthrough */
 /* Colour tokens: airbus-dc-bridge.css (--ab-* → --jdc-*) */
 
-/* App shell DC mode */
-.sa-shell-dc header.sa-header--dc {
+/* App shell — shared top bar layout (workspace + administration) */
+header.sa-header {
   display: flex;
   align-items: center;
   gap: 0;
   padding: 0 12px 0 16px;
-  background: linear-gradient(90deg, var(--ab-primary-800, #002966) 0%, var(--jdc-header-bg) 32%, var(--ab-primary-600, #0052cc) 100%) !important;
-  border-bottom: none !important;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12) !important;
-  color: var(--jdc-header-text);
   overflow: visible;
   z-index: var(--sa-z-sticky, 100);
 }
 
-.sa-shell-dc header.sa-header--dc a,
-.sa-shell-dc header.sa-header--dc button,
-.sa-shell-dc header.sa-header--dc input {
+/* App shell DC mode — workspace theme (not administration) */
+.sa-shell-dc:not(.sa-shell-admin) header.sa-header--dc {
+  background: linear-gradient(90deg, var(--ab-primary-800, #002966) 0%, var(--jdc-header-bg) 32%, var(--ab-primary-600, #0052cc) 100%) !important;
+  border-bottom: none !important;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12) !important;
+  color: var(--jdc-header-text);
+}
+
+.sa-shell-dc:not(.sa-shell-admin) header.sa-header--dc a,
+.sa-shell-dc:not(.sa-shell-admin) header.sa-header--dc button,
+.sa-shell-dc:not(.sa-shell-admin) header.sa-header--dc input {
   color: inherit;
 }
 

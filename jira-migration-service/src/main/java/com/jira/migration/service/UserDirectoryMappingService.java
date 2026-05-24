@@ -44,32 +44,41 @@ public class UserDirectoryMappingService {
     }
 
     private UserMapping resolveOne(String sourceId, UUID jobId) {
-        UserMapping matched = userPersisterHandler.autoMatchUsers(List.of(sourceId), jobId).stream()
-                .findFirst()
-                .orElse(null);
-        if (matched != null && matched.getTargetUserId() != null) {
-            return matched;
-        }
-
         try {
-            List<UserResponse> searchHits = userServiceClient.searchUsers(sourceId);
-            if (!searchHits.isEmpty()) {
-                UserResponse user = searchHits.getFirst();
-                if (user.getId() != null) {
-                    return userPersisterHandler.persistUserMapping(
-                            jobId,
-                            sourceId,
-                            "SEARCH",
-                            UUID.fromString(user.getId()),
-                            user.getUsername(),
-                            "EXACT_MATCH"
-                    );
-                }
+            UserMapping matched = userPersisterHandler.autoMatchUsers(List.of(sourceId), jobId).stream()
+                    .findFirst()
+                    .orElse(null);
+            if (matched != null && matched.getTargetUserId() != null) {
+                return matched;
             }
-        } catch (Exception e) {
-            log.debug("User search failed for {}: {}", sourceId, e.getMessage());
-        }
 
-        return matched;
+            try {
+                List<UserResponse> searchHits = userServiceClient.searchUsers(sourceId);
+                if (!searchHits.isEmpty()) {
+                    UserResponse user = searchHits.getFirst();
+                    if (user.getId() != null) {
+                        return userPersisterHandler.persistUserMapping(
+                                jobId,
+                                sourceId,
+                                "SEARCH",
+                                UUID.fromString(user.getId()),
+                                user.getUsername(),
+                                "EXACT_MATCH"
+                        );
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("User search failed for {}: {}", sourceId, e.getMessage());
+            }
+
+            if (matched != null && matched.getTargetUserId() != null) {
+                return matched;
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("User resolution skipped for {} (import continues without assignee): {}",
+                    sourceId, e.getMessage());
+            return null;
+        }
     }
 }

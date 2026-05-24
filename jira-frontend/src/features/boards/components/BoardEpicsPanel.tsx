@@ -83,14 +83,24 @@ export default function BoardEpicsPanel({
           ‹
         </button>
       </div>
-      <input
-        type="search"
-        className="sa-board-epics-search"
-        placeholder="Search epics…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        aria-label="Search epics"
-      />
+
+      <div className="sa-board-epics-search-wrap">
+        <svg className="sa-board-epics-search-icon" width="14" height="14" viewBox="0 0 16 16" aria-hidden>
+          <path
+            fill="currentColor"
+            d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"
+          />
+        </svg>
+        <input
+          type="search"
+          className="sa-board-epics-search"
+          placeholder="Search epics…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search epics"
+        />
+      </div>
+
       <div className="sa-board-epics-list" role="list">
         <button
           type="button"
@@ -98,22 +108,22 @@ export default function BoardEpicsPanel({
           className={`sa-board-epic-item${selectedEpicId === null ? ' is-active' : ''}`}
           onClick={() => onSelectEpic(null)}
         >
-          <span className="sa-board-epic-dot" style={{ background: '#6b778c' }} />
+          <span className="sa-board-epic-dot" style={{ background: '#42526e' }} />
           <span className="sa-board-epic-name">All epics</span>
           <span className="sa-board-epic-count">{issues.length}</span>
         </button>
-        {noEpicCount > 0 && (
-          <button
-            type="button"
-            role="listitem"
-            className={`sa-board-epic-item${selectedEpicId === '__none__' ? ' is-active' : ''}`}
-            onClick={() => onSelectEpic('__none__')}
-          >
-            <span className="sa-board-epic-dot" style={{ background: '#97a0af' }} />
-            <span className="sa-board-epic-name">Issues without epic</span>
-            <span className="sa-board-epic-count">{noEpicCount}</span>
-          </button>
-        )}
+
+        <button
+          type="button"
+          role="listitem"
+          className={`sa-board-epic-item${selectedEpicId === '__none__' ? ' is-active' : ''}`}
+          onClick={() => onSelectEpic('__none__')}
+        >
+          <span className="sa-board-epic-dot" style={{ background: '#97a0af' }} />
+          <span className="sa-board-epic-name">Issues without epic</span>
+          <span className="sa-board-epic-count">{noEpicCount}</span>
+        </button>
+
         {isLoading ? (
           <p className="sa-board-epics-muted">Loading epics…</p>
         ) : (
@@ -137,6 +147,7 @@ export default function BoardEpicsPanel({
           ))
         )}
       </div>
+
       <Link to="/epics" className="sa-board-epics-link">
         View all epics
       </Link>

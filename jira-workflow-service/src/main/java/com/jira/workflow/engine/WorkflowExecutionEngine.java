@@ -318,7 +318,19 @@ public class WorkflowExecutionEngine {
 
     private TransitionExecutionResponse validateCurrentStatus(WorkflowContext ctx, long start) {
 
-        if (!ctx.getTransition().getFromStatusId().equals(ctx.getCurrentStatusId())) {
+        UUID requiredFrom = ctx.getTransition().getFromStatusId();
+
+        boolean ok = workflowStatusResolver.statusesMatchForTransition(
+
+                ctx.getWorkflow().getId(),
+
+                ctx.getCurrentStatusId(),
+
+                requiredFrom,
+
+                ctx.getIssueData());
+
+        if (!ok) {
 
             return fail("Invalid transition: issue is not in required source status", start, ctx.getIssueId(), ctx.getTransition().getId(), Map.of());
 

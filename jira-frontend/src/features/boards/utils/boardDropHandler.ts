@@ -1,6 +1,12 @@
 import type { BoardColumn, BoardIssue } from '../../../api/boardApi';
 import { issueApi } from '../../../api/issueApi';
 import { transitionIssueToTargetStatus } from '../../issues/utils/boardWorkflowTransition';
+import {
+  executeTransitionChecked,
+  loadStatusNameById,
+  normalizeWorkflowStatus,
+  resolveTransitionTargetName,
+} from '../../issues/utils/workflowExecuteUtils';
 import { targetStatusForColumn } from './boardColumnUtils';
 import { rankForIndex, sortIssuesByRank } from './boardRankUtils';
 import type { AvailableTransition } from '../../issues/components/TransitionScreenForm';
@@ -14,8 +20,48 @@ export interface PendingBoardTransition {
   swimlaneKey?: string;
 }
 
-function normalizeStatus(s: string): string {
-  return s.toLowerCase().replace(/[\s_-]+/g, '');
+function transitionMatchesColumn(
+  t: AvailableTransition,
+  normTarget: string,
+  normColumn: string,
+  statusById?: Map<string, string>,
+): boolean {
+  const toName = normalizeWorkflowStatus(t.toStatusName ?? '');
+  const name = normalizeWorkflowStatus(t.name ?? '');
+
+  const parsedTarget = normalizeWorkflowStatus(resolveTransitionTargetName(t, statusById));
+  if (parsedTarget) {
+    if (
+      parsedTarget === normTarget ||
+      normTarget.includes(parsedTarget) ||
+      parsedTarget.includes(normTarget)
+    ) {
+      return true;
+    }
+    if (
+      parsedTarget === normColumn ||
+      normColumn.includes(parsedTarget) ||
+      parsedTarget.includes(normColumn)
+    ) {
+      return true;
+    }
+  }
+
+  if (toName) {
+    if (toName === normTarget || normTarget.includes(toName) || toName.includes(normTarget)) {
+      return true;
+    }
+    if (toName === normColumn || normColumn.includes(toName) || toName.includes(normColumn)) {
+      return true;
+    }
+  }
+
+  return (
+    name.includes(normTarget) ||
+    normTarget.includes(name) ||
+    name.includes(normColumn) ||
+    normColumn.includes(name)
+  );
 }
 
 export async function findTransitionForColumn(
@@ -24,20 +70,26 @@ export async function findTransitionForColumn(
   column: BoardColumn,
 ): Promise<{ transition?: AvailableTransition; targetStatus: string }> {
   const targetStatus = targetStatusForColumn(column);
+  const normTarget = normalizeWorkflowStatus(targetStatus);
+  const normColumn = normalizeWorkflowStatus(column.name);
+
   try {
+    const statusById = await loadStatusNameById();
     const { data } = await issueApi.getAvailableTransitions(issue.id, projectId);
     const transitions = (data as { transitions?: AvailableTransition[] }).transitions ?? [];
-    const normTarget = normalizeStatus(targetStatus);
-    const match = transitions.find((t) => {
-      const name = normalizeStatus(t.name ?? '');
-      return name.includes(normTarget) || normTarget.includes(name);
-    });
+
+    const match = transitions.find((t) =>
+      transitionMatchesColumn(t, normTarget, normColumn, statusById),
+    );
+
     if (match) {
-      return { transition: match, targetStatus };
+      const resolved = resolveTransitionTargetName(match, statusById).trim() || targetStatus;
+      return { transition: match, targetStatus: resolved };
     }
-  } catch {
-    /* fallback below */
+  } catch (err) {
+    console.log('[findTransition] Error fetching transitions:', err);
   }
+
   return { targetStatus };
 }
 
@@ -60,22 +112,34 @@ export async function executeBoardDrop(
   const safeIndex = Math.max(0, Math.min(dropIndex, sorted.length));
   const rank = rankForIndex(safeIndex);
 
-  const statusChanged = normalizeStatus(issue.status ?? '') !== normalizeStatus(targetStatus);
+  const currentNormStatus = normalizeWorkflowStatus(issue.status ?? '');
+  const targetNormStatus = normalizeWorkflowStatus(targetStatus);
+  const statusChanged =
+    currentNormStatus !== targetNormStatus &&
+    !currentNormStatus.includes(targetNormStatus) &&
+    !targetNormStatus.includes(currentNormStatus);
 
   if (statusChanged) {
     if (transition?.id) {
-      await issueApi.executeTransition({
-        issueId: issue.id,
-        projectId,
-        transitionId: transition.id,
-        comment: screenPayload?.comment,
-        screenInput: screenPayload?.screenInput,
-      });
-    } else {
-      await transitionIssueToTargetStatus(issue.id, projectId, targetStatus);
+      try {
+        await executeTransitionChecked(issue.id, projectId, transition.id, screenPayload);
+        if (sorted.length > 0 || rank) {
+          await boardApi.reorderIssue(boardId, issue.id, safeIndex, targetStatus);
+        }
+        return;
+      } catch (err) {
+        console.log('[executeBoardDrop] Single transition failed, trying multi-step:', err);
+      }
     }
-    await boardApi.moveIssue(boardId, issue.id, targetStatus, rank);
-  } else {
+
+    await transitionIssueToTargetStatus(issue.id, projectId, targetStatus);
+    if (sorted.length > 0 || rank) {
+      await boardApi.reorderIssue(boardId, issue.id, safeIndex, targetStatus);
+    }
+    return;
+  }
+
+  if (sorted.length > 0) {
     await boardApi.reorderIssue(boardId, issue.id, safeIndex, targetStatus);
   }
 }
@@ -89,19 +153,18 @@ export async function executeStandaloneDrop(
   screenPayload?: { comment?: string; screenInput?: Record<string, unknown> },
 ): Promise<void> {
   const targetStatus = targetStatusForColumn(column);
-  const statusChanged = normalizeStatus(issue.status ?? '') !== normalizeStatus(targetStatus);
+  const statusChanged =
+    normalizeWorkflowStatus(issue.status ?? '') !== normalizeWorkflowStatus(targetStatus);
 
   if (!statusChanged) return;
 
   if (transition?.id) {
-    await issueApi.executeTransition({
-      issueId: issue.id,
-      projectId,
-      transitionId: transition.id,
-      comment: screenPayload?.comment,
-      screenInput: screenPayload?.screenInput,
-    });
-    return;
+    try {
+      await executeTransitionChecked(issue.id, projectId, transition.id, screenPayload);
+      return;
+    } catch {
+      /* multi-step fallback */
+    }
   }
 
   await transitionIssueToTargetStatus(issue.id, projectId, targetStatus);

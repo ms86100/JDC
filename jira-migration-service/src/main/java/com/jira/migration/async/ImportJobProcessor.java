@@ -1687,7 +1687,11 @@ public class ImportJobProcessor {
             addIfPresent(identifiers, row.get("reporter"));
         }
         if (!identifiers.isEmpty()) {
-            userDirectoryMappingService.resolveSourceUsers(identifiers, jobId);
+            try {
+                userDirectoryMappingService.resolveSourceUsers(identifiers, jobId);
+            } catch (Exception e) {
+                log.warn("Optional assignee/reporter pre-resolve skipped (import continues): {}", e.getMessage());
+            }
         }
     }
 
@@ -1730,14 +1734,17 @@ public class ImportJobProcessor {
                     jobId,
                     sourceKey,
                     success,
-                    null);
+                    success.getRowNumber());
         }
         for (IssuePersisterHandler.IssuePersisterResult failure : batchResult.getFailures()) {
+            String sourceKey = failure.getSourceIssueKey() != null
+                    ? failure.getSourceIssueKey()
+                    : (failure.getIssueKey() != null ? failure.getIssueKey() : "unknown");
             migrationIssueResultService.recordFailure(
                     jobId,
-                    failure.getIssueKey() != null ? failure.getIssueKey() : "unknown",
+                    sourceKey,
                     failure.getErrorMessage(),
-                    null);
+                    failure.getRowNumber());
         }
     }
 

@@ -7,3 +7,5 @@ spring:
 jira:
   permissions:
     fail-open: true
+  workflow:
+    transition-fallback: true

@@ -1,5 +1,6 @@
 package com.jira.migration.service.clients.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -19,6 +20,8 @@ public class IssueResponse {
     @EqualsAndHashCode.Include
     private String id;
 
+    /** issue-service serializes this as {@code issueKey}. */
+    @JsonProperty("issueKey")
     private String key;
     private String summary;
     private String description;
