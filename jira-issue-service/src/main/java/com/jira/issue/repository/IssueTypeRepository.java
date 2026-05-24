@@ -12,6 +12,8 @@ public interface IssueTypeRepository extends JpaRepository<IssueType, UUID> {
 
     Optional<IssueType> findByName(String name);
 
+    Optional<IssueType> findByNameIgnoreCase(String name);
+
     Optional<IssueType> findByIssueTypeKey(String issueTypeKey);
 
     boolean existsByIssueTypeKey(String issueTypeKey);

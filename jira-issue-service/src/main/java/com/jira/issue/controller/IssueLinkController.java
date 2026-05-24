@@ -1,24 +1,24 @@
 package com.jira.issue.controller;
 
-import com.jira.issue.dto.IssueLinkRequest;
-import com.jira.issue.dto.IssueLinkResponse;
-import com.jira.issue.dto.IssueLinkWorkflowContextResponse;
+import com.jira.issue.dto.*;
 import com.jira.issue.service.IssueLinkService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Issue Link Controller - REST endpoints for managing issue links and link types.
+ */
 @RestController
-@RequestMapping("/api/issues/{issueId}/links")
+@RequestMapping("/api/issues/links")
 @RequiredArgsConstructor
 @Tag(name = "Issue Links", description = "Issue linking management API")
 @CrossOrigin(origins = "*")
@@ -26,69 +26,139 @@ public class IssueLinkController {
 
     private final IssueLinkService issueLinkService;
 
-    @PostMapping
-    @Operation(summary = "Create link", description = "Link this issue to another issue")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Link created"),
-            @ApiResponse(responseCode = "404", description = "Issue not found")
-    })
-    public ResponseEntity<IssueLinkResponse> createLink(
-            @Parameter(description = "Source Issue ID") @PathVariable UUID issueId,
-            @Valid @RequestBody IssueLinkRequest request) {
-        request.setSourceIssueId(issueId);
-        return ResponseEntity.ok(issueLinkService.createIssueLink(request));
-    }
+    // ========== Link Type Endpoints ==========
 
-    @GetMapping("/workflow-context")
-    @Operation(summary = "Get links with status for workflow conditions")
-    public ResponseEntity<List<IssueLinkWorkflowContextResponse>> getLinksForWorkflow(
-            @PathVariable UUID issueId) {
-        return ResponseEntity.ok(issueLinkService.getLinksForWorkflow(issueId));
-    }
+    @PostMapping("/types")
+    @Operation(summary = "Create link type", description = "Creates a new issue link type")
+    public ResponseEntity<IssueLinkTypeResponse> createLinkType(
+            @Valid @RequestBody CreateLinkTypeRequest request) {
 
-    @GetMapping
-    @Operation(summary = "Get all links", description = "Get all links for an issue (inward and outward)")
-    public ResponseEntity<List<IssueLinkResponse>> getAllLinks(
-            @Parameter(description = "Issue ID") @PathVariable UUID issueId) {
-        return ResponseEntity.ok(issueLinkService.getLinksByIssue(issueId));
-    }
-
-    @GetMapping("/outward")
-    @Operation(summary = "Get outward links", description = "Get links where this issue is the source")
-    public ResponseEntity<List<IssueLinkResponse>> getOutwardLinks(
-            @Parameter(description = "Issue ID") @PathVariable UUID issueId) {
-        return ResponseEntity.ok(issueLinkService.getOutwardLinks(issueId));
-    }
-
-    @GetMapping("/inward")
-    @Operation(summary = "Get inward links", description = "Get links where this issue is the destination")
-    public ResponseEntity<List<IssueLinkResponse>> getInwardLinks(
-            @Parameter(description = "Issue ID") @PathVariable UUID issueId) {
-        return ResponseEntity.ok(issueLinkService.getInwardLinks(issueId));
+        IssueLinkTypeResponse response = issueLinkService.createLinkType(request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping("/types")
-    @Operation(summary = "Get link types", description = "Get all available issue link types")
-    public ResponseEntity<List<String>> getLinkTypes() {
-        return ResponseEntity.ok(issueLinkService.getAvailableLinkTypes());
+    @Operation(summary = "Get all link types", description = "Returns all issue link types")
+    public ResponseEntity<List<IssueLinkTypeResponse>> getAllLinkTypes(
+            @Parameter(description = "Include inactive types") @RequestParam(defaultValue = "false") boolean includeInactive) {
+
+        List<IssueLinkTypeResponse> types = includeInactive ?
+                issueLinkService.getAllLinkTypes() :
+                issueLinkService.getActiveLinkTypes();
+        return ResponseEntity.ok(types);
     }
 
-    // Standalone endpoint for getting all link types (not tied to a specific issue)
-    @GetMapping("/all-types")
-    @Operation(summary = "Get all link types", description = "Get all available issue link types without requiring an issue ID")
-    public ResponseEntity<List<String>> getAllLinkTypes() {
-        return ResponseEntity.ok(issueLinkService.getAvailableLinkTypes());
+    @GetMapping("/types/{linkTypeId}")
+    @Operation(summary = "Get link type by ID", description = "Returns a specific link type")
+    public ResponseEntity<IssueLinkTypeResponse> getLinkTypeById(
+            @Parameter(description = "Link type ID") @PathVariable UUID linkTypeId) {
+
+        return ResponseEntity.ok(issueLinkService.getLinkTypeById(linkTypeId));
+    }
+
+    @PutMapping("/types/{linkTypeId}")
+    @Operation(summary = "Update link type", description = "Updates a link type")
+    public ResponseEntity<IssueLinkTypeResponse> updateLinkType(
+            @Parameter(description = "Link type ID") @PathVariable UUID linkTypeId,
+            @Valid @RequestBody UpdateLinkTypeRequest request) {
+
+        return ResponseEntity.ok(issueLinkService.updateLinkType(linkTypeId, request));
+    }
+
+    @DeleteMapping("/types/{linkTypeId}")
+    @Operation(summary = "Delete link type", description = "Deletes or deactivates a link type")
+    public ResponseEntity<Void> deleteLinkType(
+            @Parameter(description = "Link type ID") @PathVariable UUID linkTypeId) {
+
+        issueLinkService.deleteLinkType(linkTypeId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/types/seed")
+    @Operation(summary = "Seed default link types", description = "Seeds the default Jira-style link types")
+    public ResponseEntity<Void> seedDefaultLinkTypes() {
+        issueLinkService.seedDefaultLinkTypes();
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    // ========== Issue Link Endpoints ==========
+
+    @PostMapping
+    @Operation(summary = "Create issue link", description = "Creates a link between two issues")
+    public ResponseEntity<IssueLinkResponse> createIssueLink(
+            @Valid @RequestBody IssueLinkRequest request,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+
+        // Ensure source issue is set (could come from path parameter in future)
+        if (request.getSourceIssueId() == null) {
+            throw new IllegalArgumentException("sourceIssueId is required");
+        }
+
+        IssueLinkResponse response = issueLinkService.createIssueLink(request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{linkId}")
+    @Operation(summary = "Get link by ID", description = "Returns a specific issue link")
+    public ResponseEntity<IssueLinkResponse> getLinkById(
+            @Parameter(description = "Link ID") @PathVariable UUID linkId) {
+
+        return ResponseEntity.ok(issueLinkService.getLinkById(linkId));
+    }
+
+    @GetMapping("/issue/{issueId}")
+    @Operation(summary = "Get all links for issue", description = "Returns all links (inward and outward) for an issue")
+    public ResponseEntity<List<IssueLinkResponse>> getLinksByIssue(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId) {
+
+        return ResponseEntity.ok(issueLinkService.getLinksByIssue(issueId));
+    }
+
+    @GetMapping("/issue/{issueId}/outward")
+    @Operation(summary = "Get outward links", description = "Returns outward links from an issue")
+    public ResponseEntity<List<IssueLinkResponse>> getOutwardLinks(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId) {
+
+        return ResponseEntity.ok(issueLinkService.getOutwardLinks(issueId));
+    }
+
+    @GetMapping("/issue/{issueId}/inward")
+    @Operation(summary = "Get inward links", description = "Returns inward links to an issue")
+    public ResponseEntity<List<IssueLinkResponse>> getInwardLinks(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId) {
+
+        return ResponseEntity.ok(issueLinkService.getInwardLinks(issueId));
+    }
+
+    @GetMapping("/issue/{issueId}/workflow")
+    @Operation(summary = "Get links for workflow", description = "Returns link context for workflow validation")
+    public ResponseEntity<List<IssueLinkWorkflowContextResponse>> getLinksForWorkflow(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId) {
+
+        return ResponseEntity.ok(issueLinkService.getLinksForWorkflow(issueId));
     }
 
     @DeleteMapping("/{linkId}")
-    @Operation(summary = "Delete link", description = "Delete an issue link")
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Link deleted"),
-            @ApiResponse(responseCode = "404", description = "Link not found")
-    })
-    public ResponseEntity<Void> deleteLink(
+    @Operation(summary = "Delete issue link", description = "Deletes an issue link")
+    public ResponseEntity<Void> deleteIssueLink(
             @Parameter(description = "Link ID") @PathVariable UUID linkId) {
+
         issueLinkService.deleteIssueLink(linkId);
         return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/issue/{issueId}")
+    @Operation(summary = "Delete all links for issue", description = "Deletes all links (inward and outward) for an issue")
+    public ResponseEntity<Integer> deleteLinksByIssue(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId) {
+
+        int count = issueLinkService.deleteLinksByIssue(issueId);
+        return ResponseEntity.ok(count);
+    }
+
+    @GetMapping("/types/names")
+    @Operation(summary = "Get link type names", description = "Returns list of active link type names")
+    public ResponseEntity<List<String>> getAvailableLinkTypes() {
+        return ResponseEntity.ok(issueLinkService.getAvailableLinkTypes());
     }
 }

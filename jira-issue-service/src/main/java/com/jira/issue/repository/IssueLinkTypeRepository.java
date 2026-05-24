@@ -4,6 +4,7 @@ import com.jira.issue.entity.IssueLinkType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,4 +13,6 @@ public interface IssueLinkTypeRepository extends JpaRepository<IssueLinkType, UU
     Optional<IssueLinkType> findByName(String name);
     Optional<IssueLinkType> findByNameIgnoreCase(String name);
     boolean existsByNameIgnoreCase(String name);
+    List<IssueLinkType> findByIsActiveTrue();
+    Optional<IssueLinkType> findByNameIgnoreCaseOrNameIgnoreCase(String name1, String name2);
 }
