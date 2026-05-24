@@ -185,6 +185,94 @@ public class FieldTypeRegistry {
         emailConfig.setFormatFunction(this::formatEmailValue);
         registerType(CustomField.FieldType.EMAIL, emailConfig);
 
+        // USER_PICKER type
+        FieldTypeConfig userPickerConfig = new FieldTypeConfig();
+        userPickerConfig.setType(CustomField.FieldType.USER_PICKER);
+        userPickerConfig.setDisplayName("User Picker (Single)");
+        userPickerConfig.setDescription("Single user selection");
+        userPickerConfig.setSupportsDefaultValue(true);
+        userPickerConfig.setEditorComponent("user-picker");
+        userPickerConfig.setDisplayComponent("user-display");
+        userPickerConfig.setValidationFunction(this::validateUuidReference);
+        userPickerConfig.setFormatFunction(this::formatUserReference);
+        registerType(CustomField.FieldType.USER_PICKER, userPickerConfig);
+
+        // USER_PICKER_MULTI type
+        FieldTypeConfig userPickerMultiConfig = new FieldTypeConfig();
+        userPickerMultiConfig.setType(CustomField.FieldType.USER_PICKER_MULTI);
+        userPickerMultiConfig.setDisplayName("User Picker (Multiple)");
+        userPickerMultiConfig.setDescription("Multiple user selection");
+        userPickerMultiConfig.setSupportsDefaultValue(true);
+        userPickerMultiConfig.setEditorComponent("user-picker-multi");
+        userPickerMultiConfig.setDisplayComponent("user-multi-display");
+        userPickerMultiConfig.setValidationFunction(this::validateUuidReference);
+        userPickerMultiConfig.setFormatFunction(this::formatMultiValue);
+        registerType(CustomField.FieldType.USER_PICKER_MULTI, userPickerMultiConfig);
+
+        // PROJECT_PICKER type
+        FieldTypeConfig projectPickerConfig = new FieldTypeConfig();
+        projectPickerConfig.setType(CustomField.FieldType.PROJECT_PICKER);
+        projectPickerConfig.setDisplayName("Project Picker");
+        projectPickerConfig.setDescription("Single project selection");
+        projectPickerConfig.setSupportsDefaultValue(true);
+        projectPickerConfig.setEditorComponent("project-picker");
+        projectPickerConfig.setDisplayComponent("project-display");
+        projectPickerConfig.setValidationFunction(this::validateUuidReference);
+        projectPickerConfig.setFormatFunction(this::formatTextValue);
+        registerType(CustomField.FieldType.PROJECT_PICKER, projectPickerConfig);
+
+        // VERSION_PICKER type
+        FieldTypeConfig versionPickerConfig = new FieldTypeConfig();
+        versionPickerConfig.setType(CustomField.FieldType.VERSION_PICKER);
+        versionPickerConfig.setDisplayName("Version Picker (Single)");
+        versionPickerConfig.setDescription("Single version selection");
+        versionPickerConfig.setSupportsDefaultValue(true);
+        versionPickerConfig.setEditorComponent("version-picker");
+        versionPickerConfig.setDisplayComponent("version-display");
+        versionPickerConfig.setValidationFunction(this::validateUuidReference);
+        versionPickerConfig.setFormatFunction(this::formatTextValue);
+        registerType(CustomField.FieldType.VERSION_PICKER, versionPickerConfig);
+
+        // VERSION_PICKER_MULTI type
+        FieldTypeConfig versionPickerMultiConfig = new FieldTypeConfig();
+        versionPickerMultiConfig.setType(CustomField.FieldType.VERSION_PICKER_MULTI);
+        versionPickerMultiConfig.setDisplayName("Version Picker (Multiple)");
+        versionPickerMultiConfig.setDescription("Multiple version selection");
+        versionPickerMultiConfig.setSupportsDefaultValue(true);
+        versionPickerMultiConfig.setEditorComponent("version-picker-multi");
+        versionPickerMultiConfig.setDisplayComponent("version-multi-display");
+        versionPickerMultiConfig.setValidationFunction(this::validateUuidReference);
+        versionPickerMultiConfig.setFormatFunction(this::formatMultiValue);
+        registerType(CustomField.FieldType.VERSION_PICKER_MULTI, versionPickerMultiConfig);
+
+        // LABELS type
+        FieldTypeConfig labelsConfig = new FieldTypeConfig();
+        labelsConfig.setType(CustomField.FieldType.LABELS);
+        labelsConfig.setDisplayName("Labels");
+        labelsConfig.setDescription("Tag-style labels");
+        labelsConfig.setDefaultMaxLength(255);
+        labelsConfig.setSupportsMinLength(false);
+        labelsConfig.setSupportsMaxLength(true);
+        labelsConfig.setSupportsDefaultValue(true);
+        labelsConfig.setEditorComponent("labels-input");
+        labelsConfig.setDisplayComponent("labels-display");
+        labelsConfig.setValidationFunction(this::validateLabels);
+        labelsConfig.setFormatFunction(this::formatLabelsValue);
+        registerType(CustomField.FieldType.LABELS, labelsConfig);
+
+        // CASCADING_SELECT type
+        FieldTypeConfig cascadingConfig = new FieldTypeConfig();
+        cascadingConfig.setType(CustomField.FieldType.CASCADING_SELECT);
+        cascadingConfig.setDisplayName("Cascading Select");
+        cascadingConfig.setDescription("Parent-child hierarchical options");
+        cascadingConfig.setSupportsOptions(true);
+        cascadingConfig.setSupportsDefaultValue(true);
+        cascadingConfig.setEditorComponent("cascading-select");
+        cascadingConfig.setDisplayComponent("cascading-display");
+        cascadingConfig.setValidationFunction(this::validateCascadingSelect);
+        cascadingConfig.setFormatFunction(this::formatCascadingValue);
+        registerType(CustomField.FieldType.CASCADING_SELECT, cascadingConfig);
+
         log.info("FieldTypeRegistry initialized with {} field types", typeRegistry.size());
     }
 
@@ -326,6 +414,47 @@ public class FieldTypeRegistry {
         return FieldValidationResult.error("Value must be a valid email address");
     }
 
+    private FieldValidationResult validateUuidReference(String value) {
+        if (value == null || value.isEmpty()) {
+            return FieldValidationResult.success("Value is valid");
+        }
+        try {
+            java.util.UUID.fromString(value);
+            return FieldValidationResult.success("Value is valid");
+        } catch (IllegalArgumentException e) {
+            return FieldValidationResult.error("Value must be a valid UUID");
+        }
+    }
+
+    private FieldValidationResult validateLabels(String value) {
+        if (value == null || value.isEmpty()) {
+            return FieldValidationResult.success("Value is valid");
+        }
+        if (value.length() > 255) {
+            return FieldValidationResult.error("Label exceeds maximum length of 255 characters");
+        }
+        return FieldValidationResult.success("Value is valid");
+    }
+
+    private FieldValidationResult validateCascadingSelect(String value) {
+        if (value == null || value.isEmpty()) {
+            return FieldValidationResult.success("Value is valid");
+        }
+        if (value.contains(";")) {
+            String[] parts = value.split(";");
+            if (parts.length == 2) {
+                try {
+                    java.util.UUID.fromString(parts[0].trim());
+                    java.util.UUID.fromString(parts[1].trim());
+                    return FieldValidationResult.success("Value is valid");
+                } catch (IllegalArgumentException e) {
+                    return FieldValidationResult.error("Cascading select values must be valid UUIDs separated by semicolon");
+                }
+            }
+        }
+        return FieldValidationResult.error("Cascading select must be in format: parentUUID;childUUID");
+    }
+
     // Format functions
     private String formatTextValue(String value) {
         return value != null ? value : "";
@@ -381,6 +510,31 @@ public class FieldTypeRegistry {
 
     private String formatEmailValue(String value) {
         return value != null ? value.toLowerCase() : "";
+    }
+
+    private String formatUserReference(String value) {
+        return value != null ? value : "";
+    }
+
+    private String formatMultiValue(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        return value.replace(",", ", ");
+    }
+
+    private String formatLabelsValue(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        return value;
+    }
+
+    private String formatCascadingValue(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        return value;
     }
 
     @Data

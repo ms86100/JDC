@@ -22,6 +22,8 @@ import java.util.stream.Collectors;
 public class CustomFieldService {
 
     private final CustomFieldRepository customFieldRepository;
+    private final CascadingOptionRepository cascadingOptionRepository;
+    private final LabelRepository labelRepository;
     private final ObjectMapper objectMapper;
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
@@ -45,7 +47,7 @@ public class CustomFieldService {
             fieldType = CustomField.FieldType.valueOf(fieldTypeStr.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ValidationException("Invalid field type: " + fieldTypeStr +
-                    ". Valid types are: TEXT, NUMBER, DATE, DATETIME, SELECT, MULTI_SELECT, CHECKBOX, RADIO, TEXTAREA, URL, EMAIL");
+                    ". Valid types are: TEXT, NUMBER, DATE, DATETIME, SELECT, MULTI_SELECT, CHECKBOX, RADIO, TEXTAREA, LABEL, URL, EMAIL, USER_PICKER, USER_PICKER_MULTI, PROJECT_PICKER, VERSION_PICKER, VERSION_PICKER_MULTI, LABELS, CASCADING_SELECT");
         }
 
         CustomField field = CustomField.builder()
@@ -453,6 +455,17 @@ public class CustomFieldService {
                 if (!valid) errorMessage = "Value must be one of the allowed options";
                 break;
 
+            case USER_PICKER:
+            case USER_PICKER_MULTI:
+            case PROJECT_PICKER:
+            case VERSION_PICKER:
+            case VERSION_PICKER_MULTI:
+            case LABELS:
+            case CASCADING_SELECT:
+                valid = validateReference(value);
+                if (!valid) errorMessage = "Value must be a valid UUID reference";
+                break;
+
             default:
                 valid = true;
         }
@@ -549,6 +562,18 @@ public class CustomFieldService {
         }
     }
 
+    private boolean validateReference(String value) {
+        if (value == null || value.isEmpty()) {
+            return true;
+        }
+        try {
+            UUID.fromString(value);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
     private CustomFieldResponse mapToResponse(CustomField field) {
         Object options = null;
         Object defaultValue = null;
@@ -591,5 +616,62 @@ public class CustomFieldService {
                 .createdAt(field.getCreatedAt())
                 .updatedAt(field.getUpdatedAt())
                 .build();
+    }
+
+    @Transactional
+    public void addCascadingOption(UUID fieldId, String parentValue, String childValue, String label) {
+        if (cascadingOptionRepository.existsByFieldIdAndParentValueAndChildValue(fieldId, parentValue, childValue)) {
+            throw new ValidationException("Option already exists for this field");
+        }
+        CascadingOption option = CascadingOption.builder()
+                .fieldId(fieldId)
+                .parentValue(parentValue)
+                .childValue(childValue)
+                .label(label)
+                .displayOrder(0)
+                .build();
+        cascadingOptionRepository.save(option);
+        log.info("Added cascading option for field {}: {} -> {}", fieldId, parentValue, childValue);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CascadingOption> getCascadingOptions(UUID fieldId, String parentValue) {
+        if (parentValue == null || parentValue.isEmpty()) {
+            return cascadingOptionRepository.findByFieldIdOrderByDisplayOrderAsc(fieldId);
+        }
+        return cascadingOptionRepository.findByFieldIdAndParentValueOrderByDisplayOrderAsc(fieldId, parentValue);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getParentOptions(UUID fieldId) {
+        return cascadingOptionRepository.findDistinctParentValuesByFieldId(fieldId);
+    }
+
+    @Transactional
+    public void addLabel(UUID issueId, UUID fieldId, String value) {
+        if (labelRepository.existsByIssueIdAndFieldIdAndValue(issueId, fieldId, value)) {
+            throw new ValidationException("Label already exists: " + value);
+        }
+        Label label = Label.builder()
+                .issueId(issueId)
+                .fieldId(fieldId)
+                .value(value)
+                .build();
+        labelRepository.save(label);
+        log.info("Added label '{}' to issue {} for field {}", value, issueId, fieldId);
+    }
+
+    @Transactional
+    public void removeLabel(UUID issueId, UUID fieldId, String value) {
+        labelRepository.deleteByIssueIdAndFieldIdAndValue(issueId, fieldId, value);
+        log.info("Removed label '{}' from issue {} for field {}", value, issueId, fieldId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getLabelsForIssue(UUID issueId, UUID fieldId) {
+        return labelRepository.findByIssueIdAndFieldId(issueId, fieldId)
+                .stream()
+                .map(Label::getValue)
+                .collect(Collectors.toList());
     }
 }
