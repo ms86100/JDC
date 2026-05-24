@@ -309,7 +309,12 @@ const CoveragePage: React.FC = () => {
     queryFn: async () => {
       const params = selectedProject !== 'all' ? { projectId: selectedProject } : {};
       const response = await apiClient.get('/api/coverage', { params });
-      return response.data as ProjectCoverage[];
+      let data = response.data;
+      // Handle single object vs array
+      if (data && !Array.isArray(data)) {
+        data = [data];
+      }
+      return (data || []) as ProjectCoverage[];
     },
   });
 
@@ -320,7 +325,7 @@ const CoveragePage: React.FC = () => {
       const response = await apiClient.get(`/api/coverage/${selectedProject}/trend`, {
         params: { range: timeRange },
       });
-      return response.data;
+      return response.data || [];
     },
     enabled: selectedProject !== 'all',
   });
@@ -331,7 +336,7 @@ const CoveragePage: React.FC = () => {
     queryFn: async () => {
       if (selectedProject === 'all') return [];
       const response = await apiClient.get(`/api/coverage/${selectedProject}/requirements`);
-      return response.data;
+      return response.data || [];
     },
     enabled: selectedProject !== 'all',
   });
@@ -341,7 +346,7 @@ const CoveragePage: React.FC = () => {
     queryKey: ['coverage-rules'],
     queryFn: async () => {
       const response = await apiClient.get('/api/coverage/rules');
-      return response.data as CoverageRule[];
+      return response.data || [];
     },
     enabled: showRules,
   });
@@ -351,7 +356,7 @@ const CoveragePage: React.FC = () => {
     queryKey: ['coverage-alerts'],
     queryFn: async () => {
       const response = await apiClient.get(`/api/coverage/${selectedProject}/alerts`);
-      return response.data as CoverageAlert[];
+      return response.data || [];
     },
     enabled: selectedProject !== 'all',
   });
@@ -362,7 +367,7 @@ const CoveragePage: React.FC = () => {
     queryFn: async () => {
       if (selectedProject === 'all') return [];
       const response = await apiClient.get(`/api/coverage/${selectedProject}/drift`);
-      return response.data as CoverageDrift[];
+      return response.data || [];
     },
     enabled: selectedProject !== 'all',
   });

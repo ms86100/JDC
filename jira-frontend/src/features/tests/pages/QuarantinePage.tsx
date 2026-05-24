@@ -327,14 +327,28 @@ export const QuarantinePage: React.FC<{ projectId?: string }> = ({ projectId: pr
   // Fetch dashboard data
   const { data: dashboard, isLoading: dashboardLoading } = useQuery({
     queryKey: ['quarantine-dashboard', propProjectId],
-    queryFn: () => advancedApi.quarantine.getDashboard(propProjectId || ''),
+    queryFn: async () => {
+      if (!propProjectId) return null;
+      try {
+        return await advancedApi.quarantine.getDashboard(propProjectId);
+      } catch {
+        return null;
+      }
+    },
     enabled: !!propProjectId,
   });
 
   // Fetch all quarantined tests
   const { data: quarantinedTests = [], isLoading, refetch } = useQuery({
     queryKey: ['quarantine-list', propProjectId],
-    queryFn: () => advancedApi.quarantine.list(propProjectId || ''),
+    queryFn: async () => {
+      if (!propProjectId) return [];
+      try {
+        return await advancedApi.quarantine.list(propProjectId);
+      } catch {
+        return [];
+      }
+    },
     enabled: !!propProjectId,
   });
 

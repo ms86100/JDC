@@ -105,38 +105,6 @@ public class IssueController {
         return ResponseEntity.ok(issues);
     }
 
-    @PostMapping("/{id}/vote")
-    @Operation(summary = "Vote for issue")
-    public ResponseEntity<IssueResponse> vote(
-            @PathVariable UUID id,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        return ResponseEntity.ok(issueService.addVote(id, resolveUserId(userId)));
-    }
-
-    @DeleteMapping("/{id}/vote")
-    @Operation(summary = "Remove vote")
-    public ResponseEntity<IssueResponse> unvote(
-            @PathVariable UUID id,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        return ResponseEntity.ok(issueService.removeVote(id, resolveUserId(userId)));
-    }
-
-    @PostMapping("/{id}/watch")
-    @Operation(summary = "Watch issue")
-    public ResponseEntity<IssueResponse> watch(
-            @PathVariable UUID id,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        return ResponseEntity.ok(issueService.addWatcher(id, resolveUserId(userId)));
-    }
-
-    @DeleteMapping("/{id}/watch")
-    @Operation(summary = "Stop watching issue")
-    public ResponseEntity<IssueResponse> unwatch(
-            @PathVariable UUID id,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        return ResponseEntity.ok(issueService.removeWatcher(id, resolveUserId(userId)));
-    }
-
     @GetMapping("/{id}")
     @Operation(summary = "Get issue by ID", description = "Returns issue details by ID")
     public ResponseEntity<IssueResponse> getIssue(
@@ -204,29 +172,6 @@ public class IssueController {
             @RequestParam UUID projectId,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         return ResponseEntity.ok(issueAvailableTransitionsService.getAvailableTransitions(id, projectId, userId));
-    }
-
-    @PostMapping("/{id}/clone")
-    @Operation(summary = "Clone issue")
-    public ResponseEntity<IssueResponse> cloneIssue(
-            @PathVariable UUID id,
-            @RequestBody(required = false) Map<String, UUID> body,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID targetProjectId = body != null ? body.get("projectId") : null;
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(issueService.cloneIssue(id, targetProjectId, resolveUserId(userId)));
-    }
-
-    @PostMapping("/{id}/move")
-    @Operation(summary = "Move issue to another project")
-    public ResponseEntity<IssueResponse> moveIssue(
-            @PathVariable UUID id,
-            @RequestBody Map<String, UUID> body) {
-        UUID targetProjectId = body.get("projectId");
-        if (targetProjectId == null) {
-            throw new IllegalArgumentException("projectId is required");
-        }
-        return ResponseEntity.ok(issueService.moveIssue(id, targetProjectId));
     }
 
     @DeleteMapping("/{id}")

@@ -21,6 +21,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/test-auth/**").permitAll() // Test endpoints for seeding data
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().authenticated()
             );

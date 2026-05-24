@@ -247,14 +247,24 @@ export const FlakyTestsPage: React.FC<{ projectId?: string }> = ({ projectId: pr
   // Fetch dashboard data
   const { data: dashboard, isLoading: dashboardLoading } = useQuery({
     queryKey: ['flaky-dashboard', propProjectId],
-    queryFn: () => advancedApi.flakyTests.getDashboard(propProjectId || ''),
+    queryFn: async () => {
+      if (!propProjectId) return null;
+      return advancedApi.flakyTests.getDashboard(propProjectId);
+    },
     enabled: !!propProjectId,
   });
 
   // Fetch all flaky tests
   const { data: flakyTests = [], isLoading, refetch } = useQuery({
-    queryKey: ['flaky-tests'],
-    queryFn: () => advancedApi.flakyTests.getAll(100),
+    queryKey: ['flaky-tests', propProjectId],
+    queryFn: async () => {
+      try {
+        return await advancedApi.flakyTests.getAll(100);
+      } catch {
+        return [];
+      }
+    },
+    enabled: true,
   });
 
   // Quarantine mutation

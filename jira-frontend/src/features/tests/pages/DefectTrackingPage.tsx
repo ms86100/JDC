@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axiosClient from '../../../api/axiosClient';
 import {
@@ -117,96 +117,71 @@ const SeverityConfig: Record<string, { label: string; color: string }> = {
   TRIVIAL: { label: 'Trivial', color: 'bg-blue-100 text-blue-800' },
 };
 
-// Mock data for demonstration
-const mockDefects: Defect[] = [
-  {
-    id: '1',
-    key: 'DEF-123',
-    summary: 'Login button not responding on Safari browser',
-    status: 'OPEN',
-    priority: 'HIGH',
-    severity: 'MAJOR',
-    assignee: { id: '1', displayName: 'John Doe' },
-    reporter: { id: '2', displayName: 'Jane Smith' },
-    testExecutionId: 'exec-1',
-    testIssueKey: 'TEST-456',
-    environment: 'Safari 16',
-    createdAt: '2024-01-15T10:30:00Z',
-    updatedAt: '2024-01-15T10:30:00Z',
-    labels: ['browser', 'safari', 'login'],
-  },
-  {
-    id: '2',
-    key: 'DEF-124',
-    summary: 'Payment validation fails for international cards',
-    status: 'IN_PROGRESS',
-    priority: 'CRITICAL',
-    severity: 'BLOCKER',
-    assignee: { id: '3', displayName: 'Bob Wilson' },
-    testExecutionId: 'exec-2',
-    testIssueKey: 'TEST-789',
-    environment: 'Production',
-    createdAt: '2024-01-14T09:00:00Z',
-    updatedAt: '2024-01-15T08:00:00Z',
-    labels: ['payment', 'international'],
-  },
-  {
-    id: '3',
-    key: 'DEF-125',
-    summary: 'Chart rendering issue in Firefox',
-    status: 'RESOLVED',
-    priority: 'MEDIUM',
-    severity: 'MINOR',
-    assignee: { id: '1', displayName: 'John Doe' },
-    testExecutionId: 'exec-3',
-    environment: 'Firefox 120',
-    createdAt: '2024-01-10T14:00:00Z',
-    updatedAt: '2024-01-12T16:00:00Z',
-  },
-  {
-    id: '4',
-    key: 'DEF-126',
-    summary: 'Export to PDF produces blank pages',
-    status: 'OPEN',
-    priority: 'HIGH',
-    severity: 'MAJOR',
-    testIssueKey: 'TEST-101',
-    environment: 'Chrome 119',
-    createdAt: '2024-01-13T11:00:00Z',
-    updatedAt: '2024-01-13T11:00:00Z',
-  },
-];
-
-// API Functions (mock for demo)
+// API Functions (wired to backend)
 const defectApi = {
-  getDefects: async (filters?: DefectFilters): Promise<Defect[]> => {
-    // In production, replace with actual API call
-    // return axiosClient.get('/api/defects', { params: filters }).then(r => r.data);
-    return mockDefects;
+  getDefects: async (projectId: string): Promise<Defect[]> => {
+    try {
+      const response = await axiosClient.get('/api/defects', { params: { projectId } });
+      return response.data.map((d: any) => ({
+        id: d.id,
+        key: d.defectKey,
+        summary: `Defect ${d.defectKey}`,
+        status: d.status || 'OPEN',
+        priority: 'MEDIUM',
+        severity: d.severity || 'MINOR',
+        testExecutionId: d.executionId,
+        createdAt: d.createdAt,
+        updatedAt: d.createdAt,
+      }));
+    } catch (error) {
+      console.error('Failed to fetch defects:', error);
+      return [];
+    }
   },
   getDefect: async (defectId: string): Promise<Defect> => {
-    return mockDefects.find(d => d.id === defectId) || mockDefects[0];
+    const response = await axiosClient.get(`/api/defects/${defectId}`);
+    const d = response.data;
+    return {
+      id: d.id,
+      key: d.defectKey,
+      summary: `Defect ${d.defectKey}`,
+      status: d.status || 'OPEN',
+      priority: 'MEDIUM',
+      severity: d.severity || 'MINOR',
+      testExecutionId: d.executionId,
+      createdAt: d.createdAt,
+      updatedAt: d.createdAt,
+    };
   },
   createDefect: async (data: CreateDefectRequest): Promise<Defect> => {
+    const response = await axiosClient.post('/api/defects', {
+      defectKey: data.testIssueKey ? `${data.testIssueKey}-DEF` : `DEF-${Date.now()}`,
+      executionId: data.testExecutionId,
+      severity: data.severity || 'MEDIUM',
+    }, { params: { projectId: data.projectId } });
+    const d = response.data;
     return {
-      id: Math.random().toString(36).substr(2, 9),
-      key: `DEF-${Math.floor(Math.random() * 1000) + 127}`,
+      id: d.id,
+      key: d.defectKey,
       summary: data.summary,
-      status: 'OPEN',
+      status: d.status || 'OPEN',
       priority: data.priority || 'MEDIUM',
-      severity: data.severity || 'MINOR',
-      testExecutionId: data.testExecutionId,
+      severity: d.severity || 'MINOR',
+      testExecutionId: d.executionId,
       testIssueKey: data.testIssueKey,
       environment: data.environment,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: d.createdAt,
+      updatedAt: d.createdAt,
     };
   },
   updateDefect: async (defectId: string, data: Partial<Defect>): Promise<Defect> => {
-    return { ...mockDefects[0], ...data };
+    if (data.status) {
+      await axiosClient.put(`/api/defects/${defectId}/status`, null, { params: { status: data.status } });
+    }
+    return mockDefects[0];
   },
   deleteDefect: async (defectId: string): Promise<void> => {
-    // Implementation
+    await axiosClient.delete(`/api/defects/${defectId}`);
   },
 };
 
@@ -240,6 +215,7 @@ const ConfirmDialog: React.FC<{
 
 export const DefectTrackingPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const { projectId } = useParams<{ projectId?: string }>();
   const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState<DefectFilters>(initialFilters);
   const [expandedDefect, setExpandedDefect] = useState<string | null>(null);
@@ -251,8 +227,9 @@ export const DefectTrackingPage: React.FC = () => {
 
   // Fetch defects
   const { data: defects = [], isLoading, refetch } = useQuery({
-    queryKey: ['defects', filters],
-    queryFn: () => defectApi.getDefects(filters),
+    queryKey: ['defects', projectId],
+    queryFn: () => defectApi.getDefects(projectId || 'default'),
+    enabled: true,
   });
 
   // Calculate stats

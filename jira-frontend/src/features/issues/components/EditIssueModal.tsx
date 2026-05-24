@@ -6,6 +6,7 @@ import { componentApi } from '../../../api/componentApi';
 import { labelApi, LabelResponse } from '../../../api/labelApi';
 import { commentApi } from '../../../api/commentApi';
 import { issueLinkApi } from '../../../api/issueLinkApi';
+import { sprintApi } from '../../../api/sprintApi';
 import { resolveIssueByKey } from '../../../api/issueLookup';
 import apiClient from '../../../api/axiosClient';
 import ConfigureFieldsPopover from './ConfigureFieldsPopover';
@@ -123,8 +124,15 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
       return response.data || [];
     },
   });
+
+  const { data: sprints = [] } = useQuery({
+    queryKey: ['sprints', projectId],
+    queryFn: () => sprintApi.getAll(projectId),
+    enabled: !!projectId,
+  });
   const [newLabel, setNewLabel] = useState('');
   const [labels, setLabels] = useState<LabelResponse[]>([]);
+  const [sprintId, setSprintId] = useState(issueData.sprintId || '');
 
   useEffect(() => {
     labelApi.getAll(issueId).then(res => setLabels(res.data || []));
@@ -132,6 +140,7 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
 
   const updateMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
+      const originalSprint = issueData.sprintId || '';
       await issueApi.update(issueId, data);
       const { syncIssueVersionComponentLinks } = await import('../../../lib/syncIssueVersionComponentLinks');
       await syncIssueVersionComponentLinks(issueId, {
@@ -139,6 +148,14 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
         affectsVersionIds: data.affectsVersionIds as string[] | undefined,
         componentIds: data.componentIds as string[] | undefined,
       });
+      // Handle sprint changes
+      const newSprint = sprintId || '';
+      if (originalSprint && originalSprint !== newSprint) {
+        await sprintApi.removeIssue(originalSprint, issueId);
+      }
+      if (newSprint && newSprint !== originalSprint) {
+        await sprintApi.addIssue(newSprint, issueId);
+      }
       if (editComment.trim()) {
         await commentApi.create({ issueId, content: editComment.trim() });
       }
@@ -398,9 +415,17 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
                 {isFieldVisible('sprint') && (
                   <div className="ab-form-group">
                     <label className="ab-label">Sprint</label>
-                    <select className="ab-select">
+                    <select
+                      className="ab-select"
+                      value={sprintId}
+                      onChange={(e) => setSprintId(e.target.value)}
+                    >
                       <option value="">Backlog</option>
-                      <option value="sprint1">PROJ Sprint 1</option>
+                      {(sprints as any[]).map((s: any) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.status})
+                        </option>
+                      ))}
                     </select>
                   </div>
                 )}

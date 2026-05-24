@@ -21,26 +21,26 @@ export interface CreateIssueLinkRequest {
 }
 
 export const issueLinkApi = {
+  // Backend: /api/issues/links (root-level, not nested under issueId)
   create: (issueId: string, data: { destinationIssueId: string; linkType: string }) =>
-    apiClient.post<IssueLinkResponse>(`/api/issues/${issueId}/links`, {
+    apiClient.post<IssueLinkResponse>('/api/issues/links', {
+      sourceIssueId: issueId,
       targetIssueId: data.destinationIssueId,
       linkTypeName: data.linkType,
     }),
 
   getAll: (issueId: string) =>
-    apiClient.get<IssueLinkResponse[]>(`/api/issues/${issueId}/links`),
+    apiClient.get<IssueLinkResponse[]>(`/api/issues/links/issue/${issueId}`),
 
   getOutward: (issueId: string) =>
-    apiClient.get<IssueLinkResponse[]>(`/api/issues/${issueId}/links/outward`),
+    apiClient.get<IssueLinkResponse[]>(`/api/issues/links/issue/${issueId}/outward`),
 
   getInward: (issueId: string) =>
-    apiClient.get<IssueLinkResponse[]>(`/api/issues/${issueId}/links/inward`),
+    apiClient.get<IssueLinkResponse[]>(`/api/issues/links/issue/${issueId}/inward`),
 
   delete: (issueId: string, linkId: string) =>
-    apiClient.delete(`/api/issues/${issueId}/links/${linkId}`),
+    apiClient.delete(`/api/issues/links/${linkId}`),
 
   getLinkTypes: (issueId?: string) =>
-    issueId
-      ? apiClient.get<string[]>(`/api/issues/${issueId}/links/types`)
-      : apiClient.get<string[]>('/api/issues/links/types'),
+    apiClient.get<string[]>('/api/issues/links/types/names'),
 };

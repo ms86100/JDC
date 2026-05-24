@@ -13,7 +13,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.UUID;
 
 @RestController
@@ -28,10 +31,10 @@ public class ImportController {
 
     @PostMapping(value = "/cucumber", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("@projectSecurity.canImportTests(authentication, #request.projectId)")
-    @Operation(summary = "Import tests from Cucumber/Gherkin feature file")
-    public ResponseEntity<CucumberImportResponse> importCucumberFeature(
+    @Operation(summary = "Import tests from Cucumber/Gherkin feature file (JSON with content)")
+    public ResponseEntity<CucumberImportResponse> importCucumberJson(
             @Valid @RequestBody CucumberImportRequest request) {
-        log.info("Received Cucumber import request for project: {}", request.getProjectId());
+        log.info("Received Cucumber import request (JSON) for project: {}", request.getProjectId());
 
         CucumberImportResponse response = cucumberImportService.importFeatureFile(
                 request.getProjectId(),
@@ -39,6 +42,36 @@ public class ImportController {
                 request.getFeatureFileName(),
                 request.getTags(),
                 request.getTestSetId());
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping(value = "/cucumber/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@projectSecurity.canImportTests(authentication, #projectId)")
+    @Operation(summary = "Import tests from Cucumber/Gherkin feature file (multipart upload)")
+    public ResponseEntity<CucumberImportResponse> importCucumberFile(
+            @RequestParam UUID projectId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false) String tags,
+            @RequestParam(required = false) UUID testSetId) {
+        log.info("Received Cucumber import request (multipart) for project: {}", projectId);
+
+        String content;
+        try {
+            content = new String(file.getBytes(), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.error("Failed to read file content", e);
+            return ResponseEntity.badRequest().build();
+        }
+
+        java.util.List<String> tagList = tags != null ? Arrays.asList(tags.split(",")) : null;
+
+        CucumberImportResponse response = cucumberImportService.importFeatureFile(
+                projectId,
+                content,
+                file.getOriginalFilename(),
+                tagList,
+                testSetId);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -52,10 +85,42 @@ public class ImportController {
 
     @PostMapping(value = "/junit", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("@projectSecurity.canImportTests(authentication, #request.projectId)")
-    @Operation(summary = "Import tests from JUnit XML results")
-    public ResponseEntity<JunitImportResponse> importJUnitResults(
+    @Operation(summary = "Import tests from JUnit XML results (JSON with content)")
+    public ResponseEntity<JunitImportResponse> importJUnitJson(
             @Valid @RequestBody JunitImportRequest request) {
-        log.info("Received JUnit import request for project: {}", request.getProjectId());
+        log.info("Received JUnit import request (JSON) for project: {}", request.getProjectId());
+
+        JunitImportResponse response = ciCdImportService.importJUnitXml(request);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping(value = "/junit/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@projectSecurity.canImportTests(authentication, #projectId)")
+    @Operation(summary = "Import tests from JUnit XML file (multipart upload)")
+    public ResponseEntity<JunitImportResponse> importJUnitFile(
+            @RequestParam UUID projectId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false) String ciSource,
+            @RequestParam(required = false) String ciBuildUrl,
+            @RequestParam(required = false) UUID testSetId) {
+        log.info("Received JUnit import request (multipart) for project: {}", projectId);
+
+        String content;
+        try {
+            content = new String(file.getBytes(), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.error("Failed to read file content", e);
+            return ResponseEntity.badRequest().build();
+        }
+
+        JunitImportRequest request = JunitImportRequest.builder()
+                .projectId(projectId)
+                .xmlContent(content)
+                .ciSource(ciSource)
+                .ciBuildUrl(ciBuildUrl)
+                .testSetId(testSetId)
+                .build();
 
         JunitImportResponse response = ciCdImportService.importJUnitXml(request);
 

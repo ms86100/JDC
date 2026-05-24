@@ -228,22 +228,27 @@ export interface TraceabilityMatrixResponse {
 }
 
 export interface TestSummaryReport {
-  projectId: string;
+  projectId?: string;
   totalTests: number;
   totalTestSets: number;
   totalTestPlans: number;
   totalExecutions: number;
-  passRate: number;
-  failRate: number;
-  blockedRate: number;
-  skippedRate: number;
-  executionsByStatus: Record<string, number>;
-  topFailingTests: {
+  overallPassRate?: number;
+  passRate?: number;
+  failRate?: number;
+  blockedRate?: number;
+  skippedRate?: number;
+  testsPassed?: number;
+  testsFailed?: number;
+  testsBlocked?: number;
+  testsNotRun?: number;
+  executionsByStatus?: Record<string, number>;
+  topFailingTests?: {
     issueKey: string;
     name: string;
     failureCount: number;
   }[];
-  recentExecutions: TestExecutionResponse[];
+  recentExecutions?: TestExecutionResponse[];
 }
 
 // Test API
@@ -377,7 +382,7 @@ const testApi = {
   importCucumber: (projectId: string, file: File): Promise<TestImportResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    return axiosClient.post(`/api/import/cucumber?projectId=${projectId}`, formData, {
+    return axiosClient.post(`/api/import/cucumber/file?projectId=${projectId}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then(r => r.data);
   },
@@ -385,7 +390,7 @@ const testApi = {
   importJUnit: (projectId: string, file: File): Promise<TestImportResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    return axiosClient.post(`/api/import/junit?projectId=${projectId}`, formData, {
+    return axiosClient.post(`/api/import/junit/file?projectId=${projectId}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then(r => r.data);
   },

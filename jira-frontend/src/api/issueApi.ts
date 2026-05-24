@@ -224,15 +224,34 @@ export const issueApi = {
   vote: (id: string) => apiClient.post(`/api/issues/${id}/vote`),
   unvote: (id: string) => apiClient.delete(`/api/issues/${id}/vote`),
 
-  // Clone & Move
+  // Clone & Move (backend uses @RequestParam, not body)
   clone: (id: string, data?: { projectId?: string }) =>
-    apiClient.post<IssueResponse>(`/api/issues/${id}/clone`, data ?? {}),
+    apiClient.post<IssueResponse>(`/api/issues/${id}/clone`, null, {
+      params: { projectId: data?.projectId },
+    }),
+  cloneToProject: (id: string, targetProjectId: string) =>
+    apiClient.post<IssueResponse>(`/api/issues/${id}/clone-to-project`, null, {
+      params: { targetProjectId },
+    }),
   move: (id: string, data: { projectId: string }) =>
-    apiClient.post<IssueResponse>(`/api/issues/${id}/move`, data),
+    apiClient.post<IssueResponse>(`/api/issues/${id}/move`, null, {
+      params: { targetProjectId: data.projectId },
+    }),
 
-  // Link issues
-  linkIssue: (id: string, data: { targetIssueId?: string; targetIssueKey?: string; linkType: string }) => apiClient.post(`/api/issues/${id}/links`, data),
-  unlinkIssue: (id: string, linkId: string) => apiClient.delete(`/api/issues/${id}/links/${linkId}`),
+  // Link issues (key-based or ID-based)
+  linkIssue: async (id: string, data: { targetIssueId?: string; targetIssueKey?: string; linkType: string }) => {
+    let resolvedId = data.targetIssueId;
+    if (data.targetIssueKey && !resolvedId) {
+      const found = await apiClient.get<IssueResponse>(`/api/issues/by-key/${encodeURIComponent(data.targetIssueKey)}`);
+      resolvedId = found.data.id;
+    }
+    return apiClient.post('/api/issues/links', {
+      sourceIssueId: id,
+      targetIssueId: resolvedId,
+      linkTypeName: data.linkType,
+    });
+  },
+  unlinkIssue: (id: string, linkId: string) => apiClient.delete(`/api/issues/links/${linkId}`),
   getLinks: (id: string) => apiClient.get<Array<{ id: string; type: string; targetIssue: IssueResponse }>>(`/api/issues/${id}/links`),
 
   // Subtasks

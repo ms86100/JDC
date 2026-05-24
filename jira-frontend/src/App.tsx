@@ -194,6 +194,7 @@ function App() {
                 <Route path="tests/screen-config/:projectId" element={<TestScreenConfigHubPage />} />
                 <Route path="tests/plugins" element={<PluginManagementPage />} />
                 <Route path="tests/defects" element={<DefectTrackingPage />} />
+                <Route path="tests/defects/:projectId" element={<DefectTrackingPage />} />
                 <Route path="tests/evidence" element={<EvidenceGalleryPage />} />
                 <Route path="tests/shared-steps" element={<SharedStepsPage />} />
                 <Route path="tests/shared-steps/:projectId" element={<SharedStepsPage />} />

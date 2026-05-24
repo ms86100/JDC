@@ -140,6 +140,12 @@ export const sprintApi = {
   getIssues: (sprintId: string) =>
     apiClient.get('/api/issues', { params: { sprintId } }),
 
+  addIssue: (sprintId: string, issueId: string) =>
+    apiClient.post(`/api/sprints/${sprintId}/issues`, { issueId }),
+
+  removeIssue: (sprintId: string, issueId: string) =>
+    apiClient.delete(`/api/sprints/${sprintId}/issues/${issueId}`),
+
   // Reports
   getReport: (sprintId: string) =>
     apiClient.get<SprintReportResponse>(`/api/sprints/reports/${sprintId}`),

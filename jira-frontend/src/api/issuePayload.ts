@@ -60,7 +60,6 @@ export function toBackendCreatePayload(
   delete payload.affectsVersionIds;
   delete payload.sprintId;
   delete payload.classification;
-  delete payload.environment;
   delete payload.teamId;
   delete payload.reporterId;
 

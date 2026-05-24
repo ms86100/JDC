@@ -34,7 +34,7 @@ public class CoverageRule {
     @Column(name = "rule_type", nullable = false, length = 50)
     private RuleType ruleType;
 
-    @Column(name = "threshold", nullable = false, precision = 5, scale = 2)
+    @Column(name = "threshold", nullable = false, columnDefinition = "DECIMAL(5,2)")
     private BigDecimal threshold;
 
     @Enumerated(EnumType.STRING)
