@@ -5,6 +5,9 @@ import com.jira.project.service.ProjectService;
 import com.jira.project.service.ProjectTypeService;
 import com.jira.project.service.ProjectSchemeService;
 import com.jira.project.service.PermissionCheckService;
+import com.jira.project.service.ArchiveService;
+import com.jira.project.service.ExportImportService;
+import com.jira.project.service.BulkProjectService;
 import com.jira.project.exception.PermissionDeniedException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,6 +32,9 @@ public class ProjectController {
     private final ProjectTypeService projectTypeService;
     private final ProjectSchemeService projectSchemeService;
     private final PermissionCheckService permissionCheckService;
+    private final ArchiveService archiveService;
+    private final ExportImportService exportImportService;
+    private final BulkProjectService bulkProjectService;
 
     @PostMapping("/wizard")
     @Operation(summary = "Create project via wizard", description = "Creates a new project using the multi-step wizard flow with full configuration")
@@ -169,6 +175,77 @@ public class ProjectController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/archived")
+    @Operation(summary = "List archived projects", description = "Returns all archived projects")
+    public ResponseEntity<List<ProjectResponse>> getArchivedProjects() {
+        List<ProjectResponse> projects = archiveService.getArchivedProjects();
+        return ResponseEntity.ok(projects);
+    }
+
+    @GetMapping("/active")
+    @Operation(summary = "List active projects", description = "Returns all non-archived projects")
+    public ResponseEntity<List<ProjectResponse>> getActiveProjects() {
+        List<ProjectResponse> projects = archiveService.getActiveProjects();
+        return ResponseEntity.ok(projects);
+    }
+
+    @PostMapping("/{id}/archive")
+    @Operation(summary = "Archive project", description = "Archives a project making it read-only")
+    public ResponseEntity<ProjectResponse> archiveProject(
+            @Parameter(description = "Project ID") @PathVariable UUID id,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+
+        if (userId != null && !permissionCheckService.canAdministerProject(userId, id)) {
+            throw new PermissionDeniedException("ADMINISTER_PROJECTS", "project " + id);
+        }
+
+        ProjectResponse response = archiveService.archiveProject(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/restore")
+    @Operation(summary = "Restore archived project", description = "Restores an archived project to active state")
+    public ResponseEntity<ProjectResponse> restoreProject(
+            @Parameter(description = "Project ID") @PathVariable UUID id,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+
+        if (userId != null && !permissionCheckService.canAdministerProject(userId, id)) {
+            throw new PermissionDeniedException("ADMINISTER_PROJECTS", "project " + id);
+        }
+
+        ProjectResponse response = archiveService.restoreProject(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/clone")
+    @Operation(summary = "Clone project", description = "Creates a copy of a project with a new name and key")
+    public ResponseEntity<ProjectResponse> cloneProject(
+            @Parameter(description = "Source Project ID") @PathVariable UUID id,
+            @Valid @RequestBody CloneProjectRequest request,
+            @RequestHeader("X-User-Id") UUID userId) {
+
+        ProjectResponse response = exportImportService.cloneProject(id, request.getName(), request.getProjectKey(), userId);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{id}/export")
+    @Operation(summary = "Export project", description = "Exports project configuration for import into another project")
+    public ResponseEntity<ProjectExportDto> exportProject(
+            @Parameter(description = "Project ID") @PathVariable UUID id) {
+
+        ProjectExportDto export = exportImportService.exportProject(id);
+        return ResponseEntity.ok(export);
+    }
+
+    @PostMapping("/import")
+    @Operation(summary = "Import project", description = "Imports a project from exported configuration")
+    public ResponseEntity<ProjectResponse> importProject(
+            @Valid @RequestBody ProjectImportRequest request) {
+
+        ProjectResponse response = exportImportService.importProject(request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
     @PostMapping("/{id}/members")
     @Operation(summary = "Add project member", description = "Adds a user as a member of the project with a specific role")
     public ResponseEntity<ProjectMemberResponse> addMember(
@@ -203,5 +280,33 @@ public class ProjectController {
 
         boolean hasPermission = permissionCheckService.hasPermission(userId, id, permission);
         return ResponseEntity.ok(Map.of("hasPermission", hasPermission));
+    }
+
+    @PostMapping("/bulk/archive")
+    @Operation(summary = "Bulk archive projects", description = "Archives multiple projects at once")
+    public ResponseEntity<BulkProjectResponse> bulkArchiveProjects(
+            @Valid @RequestBody BulkArchiveRequest request,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+
+        BulkProjectResponse response = bulkProjectService.bulkArchive(request.getProjectIds());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/bulk/restore")
+    @Operation(summary = "Bulk restore projects", description = "Restores multiple archived projects at once")
+    public ResponseEntity<BulkProjectResponse> bulkRestoreProjects(
+            @Valid @RequestBody BulkArchiveRequest request) {
+
+        BulkProjectResponse response = bulkProjectService.bulkRestore(request.getProjectIds());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/bulk/delete")
+    @Operation(summary = "Bulk delete projects", description = "Deletes multiple projects at once")
+    public ResponseEntity<BulkProjectResponse> bulkDeleteProjects(
+            @Valid @RequestBody BulkDeleteRequest request) {
+
+        BulkProjectResponse response = bulkProjectService.bulkDelete(request.getProjectIds());
+        return ResponseEntity.ok(response);
     }
 }

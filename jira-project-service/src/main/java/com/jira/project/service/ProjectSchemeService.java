@@ -5,7 +5,9 @@ import com.jira.project.dto.AssignWorkflowSchemeRequest;
 import com.jira.project.dto.ProjectSchemeResponse;
 import com.jira.project.dto.ProjectSchemesBundleResponse;
 import com.jira.project.dto.ProjectScreenResolutionResponse;
+import com.jira.project.dto.ProjectSchemesExportDto;
 import com.jira.project.entity.*;
+import com.jira.project.exception.ResourceNotFoundException;
 import com.jira.project.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -433,6 +435,46 @@ public class ProjectSchemeService {
 
         return builder.build();
     }
+
+    public ProjectScheme getSchemeEntityByProjectId(UUID projectId) {
+        return projectSchemeRepository.findByProjectId(projectId).orElse(null);
+    }
+
+    @Transactional
+    public ProjectScheme linkSchemesToProject(UUID projectId, ProjectSchemesExportDto schemes) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
+
+        ProjectScheme scheme = projectSchemeRepository.findByProjectId(projectId).orElse(null);
+        if (scheme == null) {
+            scheme = ProjectScheme.builder().project(project).build();
+        }
+
+        if (schemes.getIssueTypeSchemeId() != null) {
+            issueTypeSchemeRepository.findById(schemes.getIssueTypeSchemeId())
+                    .ifPresent(scheme::setIssueTypeScheme);
+        }
+        if (schemes.getWorkflowSchemeId() != null) {
+            workflowSchemeRepository.findById(schemes.getWorkflowSchemeId())
+                    .ifPresent(scheme::setWorkflowScheme);
+        }
+        if (schemes.getPermissionSchemeId() != null) {
+            permissionSchemeRepository.findById(schemes.getPermissionSchemeId())
+                    .ifPresent(scheme::setPermissionScheme);
+        }
+        if (schemes.getNotificationSchemeId() != null) {
+            notificationSchemeRepository.findById(schemes.getNotificationSchemeId())
+                    .ifPresent(scheme::setNotificationScheme);
+        }
+        if (schemes.getScreenSchemeId() != null) {
+            screenSchemeRepository.findById(schemes.getScreenSchemeId())
+                    .ifPresent(scheme::setScreenScheme);
+        }
+
+        return projectSchemeRepository.save(scheme);
+    }
+
+    private ProjectRepository projectRepository;
 
     /**
      * Resolves CREATE/EDIT/VIEW screen IDs for a project. Issue-type-specific overrides
