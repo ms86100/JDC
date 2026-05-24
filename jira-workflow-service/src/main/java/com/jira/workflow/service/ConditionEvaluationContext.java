@@ -76,6 +76,11 @@ public class ConditionEvaluationContext {
     private UUID projectId;
 
     /**
+     * Direct issue ID if available (may be extracted from issue map)
+     */
+    private UUID issueId;
+
+    /**
      * Screen input values (fields being changed in this transition)
      */
     private Map<String, Object> screenInput;

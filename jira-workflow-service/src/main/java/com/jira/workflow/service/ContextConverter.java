@@ -73,6 +73,16 @@ public class ContextConverter {
 
         builder.projectId(ctx.getProjectId());
 
+        // Extract issue ID directly from WorkflowContext if available
+        if (ctx.getIssueId() != null) {
+            builder.issueId(ctx.getIssueId());
+        } else if (ctx.getIssueData() != null) {
+            Object id = ctx.getIssueData().get("id");
+            if (id != null) {
+                builder.issueId(parseUuid(id));
+            }
+        }
+
         return builder.build();
     }
 
