@@ -22,6 +22,8 @@ public class ReportingService {
     private final TestExecutionRepository executionRepository;
     private final StepResultRepository stepResultRepository;
     private final DefectLinkRepository defectLinkRepository;
+    private final TestSetRepository testSetRepository;
+    private final TestPlanRepository testPlanRepository;
 
     @Transactional(readOnly = true)
     public ReportSummaryResponse getSummary(UUID projectId) {
@@ -33,6 +35,8 @@ public class ReportingService {
                 .collect(Collectors.toList());
 
         long totalTests = tests.size();
+        long totalTestSets = testSetRepository.findByProjectIdAndArchivedFalse(projectId).size();
+        long totalTestPlans = testPlanRepository.findByProjectId(projectId).size();
         long totalExecutions = executions.size();
 
         int testsPassed = 0;
@@ -49,10 +53,10 @@ public class ReportingService {
                 totalPassRate += passRate;
                 passRateCount++;
 
-                testsPassed += execution.getPassedTests();
-                testsFailed += execution.getFailedTests();
-                testsBlocked += execution.getBlockedTests();
-                testsNotRun += execution.getNotRunTests();
+                testsPassed += execution.getPassedTests() != null ? execution.getPassedTests() : 0;
+                testsFailed += execution.getFailedTests() != null ? execution.getFailedTests() : 0;
+                testsBlocked += execution.getBlockedTests() != null ? execution.getBlockedTests() : 0;
+                testsNotRun += execution.getNotRunTests() != null ? execution.getNotRunTests() : 0;
             }
         }
 
@@ -60,6 +64,8 @@ public class ReportingService {
 
         return ReportSummaryResponse.builder()
                 .totalTests(totalTests)
+                .totalTestSets(totalTestSets)
+                .totalTestPlans(totalTestPlans)
                 .totalExecutions(totalExecutions)
                 .overallPassRate(Math.round(overallPassRate * 100.0) / 100.0)
                 .testsPassed(testsPassed)

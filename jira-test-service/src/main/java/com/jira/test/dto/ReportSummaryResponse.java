@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 @Builder
 public class ReportSummaryResponse {
     private long totalTests;
+    private long totalTestSets;
+    private long totalTestPlans;
     private long totalExecutions;
     private double overallPassRate;
     private int testsPassed;
