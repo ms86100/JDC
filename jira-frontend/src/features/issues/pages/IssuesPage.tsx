@@ -11,7 +11,7 @@ export default function IssuesPage() {
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
   const [showBulkOps, setShowBulkOps] = useState(false);
-  const [filter] = useState<'all' | 'my'>('all');
+  const [filter, setFilter] = useState<'all' | 'my'>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: issuesResponse, isLoading } = useQuery<{ content: IssueResponse[]; totalElements: number }>({
@@ -84,13 +84,13 @@ export default function IssuesPage() {
         <div className="ab-tabs">
           <button
             className={`ab-tab ${filter === 'all' ? 'active' : ''}`}
-            onClick={() => {}}
+            onClick={() => setFilter('all')}
           >
             All Issues
           </button>
           <button
             className={`ab-tab ${filter === 'my' ? 'active' : ''}`}
-            onClick={() => {}}
+            onClick={() => setFilter('my')}
           >
             My Issues
           </button>

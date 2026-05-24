@@ -7,6 +7,9 @@ export default function AuditLogsPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [page, setPage] = useState(0);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const pageSize = 50;
 
   const { data, isLoading, refetch } = useAuditLogs({
@@ -15,6 +18,29 @@ export default function AuditLogsPage() {
     size: pageSize
   });
   const { data: statistics } = useAuditStatistics();
+
+  const exportToCsv = () => {
+    const logs = data?.content || [];
+    const csv = [
+      ['Timestamp', 'User', 'Action', 'Category', 'Entity', 'Details', 'Result'].join(','),
+      ...logs.map(log => [
+        log.timestamp || '',
+        log.userId || log.username || '',
+        log.action || '',
+        log.category || '',
+        log.entityId || log.entityType || '',
+        (log.details || '').replace(/,/g, ';'),
+        log.result || ''
+      ].join(','))
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const getSeverityClass = (severity: string) => {
     switch (severity) {
@@ -78,10 +104,10 @@ export default function AuditLogsPage() {
               <option value="SYSTEM">System</option>
               <option value="AUTHENTICATION">Authentication</option>
             </select>
-            <button className="admin-btn-secondary">Date Range</button>
+            <button className="admin-btn-secondary" onClick={() => setShowDatePicker(true)}>Date Range</button>
           </div>
           <div className="admin-toolbar-right">
-            <button className="admin-btn-secondary">Export CSV</button>
+            <button className="admin-btn-secondary" onClick={() => exportToCsv()}>Export CSV</button>
             <button className="admin-btn-secondary" onClick={() => refetch()}>Refresh</button>
           </div>
         </div>

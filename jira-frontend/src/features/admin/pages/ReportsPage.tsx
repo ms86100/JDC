@@ -80,6 +80,9 @@ const RECENT_RUNS = [
 export default function ReportsPage() {
   const [filter, setFilter] = useState<ReportFilter>('all');
   const [search, setSearch] = useState('');
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const filteredReports = useMemo(() => {
     let list = REPORT_CATALOG;
@@ -94,12 +97,29 @@ export default function ReportsPage() {
     return list;
   }, [filter, search]);
 
+  const handleGenerate = (reportId: string) => {
+    setSelectedReport(reportId);
+    setIsGenerating(true);
+    setTimeout(() => {
+      setIsGenerating(false);
+      alert(`Report ${reportId} generated successfully!`);
+    }, 1500);
+  };
+
+  const handleSchedule = () => {
+    setShowScheduleModal(true);
+  };
+
+  const handleNewCustomReport = () => {
+    alert('Custom report builder coming soon!');
+  };
+
   return (
     <div className="dc-page ab-analytics-page">
       <header className="ab-analytics-hero">
         <h1>Reports</h1>
         <p>
-          Generate standard Jira Data Center reports, schedule recurring exports, and download
+          Generate standard Jira DC reports, schedule recurring exports, and download
           results for projects, issues, users, and compliance.
         </p>
       </header>
@@ -159,10 +179,10 @@ export default function ReportsPage() {
             aria-label="Search reports"
             style={{ width: 220 }}
           />
-          <button type="button" className="dc-btn dc-btn-secondary">
+          <button type="button" className="dc-btn dc-btn-secondary" onClick={handleSchedule}>
             Schedule report
           </button>
-          <button type="button" className="dc-btn dc-btn-secondary">
+          <button type="button" className="dc-btn dc-btn-secondary" onClick={handleNewCustomReport}>
             New custom report
           </button>
         </div>
@@ -198,15 +218,15 @@ export default function ReportsPage() {
                     </div>
                   </div>
                   <div className="ab-report-actions">
-                    <button type="button" className="dc-btn dc-btn-sm dc-btn-secondary">
-                      Generate
+                    <button type="button" className="dc-btn dc-btn-sm dc-btn-secondary" onClick={() => handleGenerate(report.id)} disabled={isGenerating}>
+                      {isGenerating ? 'Generating…' : 'Generate'}
                     </button>
                     {report.category === 'scheduled' ? (
                       <button type="button" className="dc-btn dc-btn-sm dc-btn-secondary">
                         Edit schedule
                       </button>
                     ) : (
-                      <button type="button" className="dc-btn dc-btn-sm dc-btn-secondary">
+                      <button type="button" className="dc-btn dc-btn-sm dc-btn-secondary" onClick={handleSchedule}>
                         Schedule
                       </button>
                     )}
@@ -247,7 +267,7 @@ export default function ReportsPage() {
                     <td>{row.size}</td>
                     <td>
                       {row.status === 'ready' && (
-                        <button type="button" className="dc-btn dc-btn-sm dc-btn-secondary">
+                        <button type="button" className="dc-btn dc-btn-sm dc-btn-secondary" onClick={() => alert('Download ready!')}>
                           Download
                         </button>
                       )}

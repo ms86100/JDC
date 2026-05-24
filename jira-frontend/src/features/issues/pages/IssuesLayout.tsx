@@ -110,8 +110,8 @@ export default function IssuesLayout({
           <span className="jdc-muted">
             {project?.name ?? 'Project'} · <strong>{project?.projectKey}</strong>
           </span>
-          <Link to={`/projects/${projectId}/backlog`} className="jdc-link">
-            Back to backlog
+          <Link to={`/projects/${projectId}`} className="jdc-link">
+            Back to project
           </Link>
         </div>
       )}

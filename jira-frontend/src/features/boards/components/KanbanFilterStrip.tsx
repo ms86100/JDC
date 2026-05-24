@@ -223,7 +223,7 @@ export default function KanbanFilterStrip({
 
       {jiraDcLayout && showInsights && (
         <div className="sa-kanban-insights-placeholder" role="status">
-          Board insights (cycle time, CFD, control chart) — Phase C
+          Board insights coming soon! (cycle time, CFD, control chart)
         </div>
       )}
     </>

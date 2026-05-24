@@ -188,7 +188,7 @@ export default function VersionPanel({
         )}
       </div>
 
-      <Link to="/versions" className="sa-board-version-link">
+      <Link to="/admin/versions" className="sa-board-version-link">
         View all versions
       </Link>
     </aside>

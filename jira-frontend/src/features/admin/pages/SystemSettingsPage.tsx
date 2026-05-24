@@ -97,7 +97,7 @@ export default function SystemSettingsPage() {
         </div>
       </div>
       <div className="settings-actions">
-        <button className="admin-btn-primary">Save Changes</button>
+        <button className="admin-btn-primary" onClick={() => alert('General settings saved!')}>Save Changes</button>
       </div>
     </div>
   );
@@ -113,7 +113,7 @@ export default function SystemSettingsPage() {
           </div>
           <div className="logo-upload">
             <div className="logo-preview">J</div>
-            <button className="admin-btn-secondary">Change Logo</button>
+            <button className="admin-btn-secondary" onClick={() => alert('Logo change coming soon!')}>Change Logo</button>
           </div>
         </div>
         <div className="setting-item">
@@ -134,12 +134,12 @@ export default function SystemSettingsPage() {
           </div>
           <div className="logo-upload">
             <div className="logo-preview small">J</div>
-            <button className="admin-btn-secondary">Upload Icon</button>
+            <button className="admin-btn-secondary" onClick={() => alert('Icon upload coming soon!')}>Upload Icon</button>
           </div>
         </div>
       </div>
       <div className="settings-actions">
-        <button className="admin-btn-primary">Save Changes</button>
+        <button className="admin-btn-primary" onClick={() => alert('General settings saved!')}>Save Changes</button>
       </div>
     </div>
   );
@@ -223,7 +223,7 @@ export default function SystemSettingsPage() {
       </div>
 
       <div className="settings-actions">
-        <button className="admin-btn-primary">Save Changes</button>
+        <button className="admin-btn-primary" onClick={() => alert('General settings saved!')}>Save Changes</button>
       </div>
     </div>
   );
@@ -269,7 +269,7 @@ export default function SystemSettingsPage() {
         </div>
       </div>
       <div className="settings-actions">
-        <button className="admin-btn-primary">Save Changes</button>
+        <button className="admin-btn-primary" onClick={() => alert('General settings saved!')}>Save Changes</button>
       </div>
     </div>
   );
@@ -310,7 +310,7 @@ export default function SystemSettingsPage() {
         </div>
       </div>
       <div className="settings-actions">
-        <button className="admin-btn-primary">Save Changes</button>
+        <button className="admin-btn-primary" onClick={() => alert('General settings saved!')}>Save Changes</button>
       </div>
     </div>
   );
@@ -381,7 +381,7 @@ export default function SystemSettingsPage() {
         </div>
       </div>
       <div className="settings-actions">
-        <button className="admin-btn-primary">Apply License</button>
+        <button className="admin-btn-primary" onClick={() => alert('Apply license!')}>Apply License</button>
       </div>
     </div>
   );
