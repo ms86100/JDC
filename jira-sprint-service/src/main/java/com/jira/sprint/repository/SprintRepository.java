@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface SprintRepository extends JpaRepository<Sprint, UUID> {
     List<Sprint> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
     List<Sprint> findByProjectIdAndStatusOrderByCreatedAtDesc(UUID projectId, Sprint.SprintStatus status);
+    List<Sprint> findByBoardIdOrderBySequenceAsc(UUID boardId);
 }
