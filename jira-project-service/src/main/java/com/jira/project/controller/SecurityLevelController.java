@@ -1,15 +1,19 @@
 package com.jira.project.controller;
 
+import com.jira.project.dto.CreateSecurityLevelRequest;
 import com.jira.project.dto.SecurityLevelResponse;
+import com.jira.project.dto.UpdateSecurityLevelRequest;
 import com.jira.project.entity.SecurityLevel;
 import com.jira.project.repository.SecurityLevelRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -65,6 +69,75 @@ public class SecurityLevelController {
                 .map(this::toResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(levels);
+    }
+
+    @PostMapping
+    @Operation(summary = "Create security level", description = "Creates a new security level")
+    public ResponseEntity<SecurityLevelResponse> createSecurityLevel(
+            @Valid @RequestBody CreateSecurityLevelRequest request) {
+        SecurityLevel entity = SecurityLevel.builder()
+                .schemeId(request.getSchemeId())
+                .name(request.getName())
+                .description(request.getDescription())
+                .levelType(request.getLevelType() != null ? request.getLevelType() : "RESTRICTED")
+                .sequence(request.getSequence() != null ? request.getSequence() : 0)
+                .createdAt(LocalDateTime.now())
+                .build();
+        SecurityLevel saved = securityLevelRepository.save(entity);
+        return ResponseEntity.ok(toResponse(saved));
+    }
+
+    @PostMapping("/scheme/{schemeId}")
+    @Operation(summary = "Create security level in scheme", description = "Creates a new security level in a specific scheme")
+    public ResponseEntity<SecurityLevelResponse> createSecurityLevelInScheme(
+            @Parameter(description = "Scheme ID") @PathVariable UUID schemeId,
+            @Valid @RequestBody CreateSecurityLevelRequest request) {
+        SecurityLevel entity = SecurityLevel.builder()
+                .schemeId(schemeId)
+                .name(request.getName())
+                .description(request.getDescription())
+                .levelType(request.getLevelType() != null ? request.getLevelType() : "RESTRICTED")
+                .sequence(request.getSequence() != null ? request.getSequence() : 0)
+                .createdAt(LocalDateTime.now())
+                .build();
+        SecurityLevel saved = securityLevelRepository.save(entity);
+        return ResponseEntity.ok(toResponse(saved));
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Update security level", description = "Updates an existing security level")
+    public ResponseEntity<SecurityLevelResponse> updateSecurityLevel(
+            @Parameter(description = "Security Level ID") @PathVariable UUID id,
+            @Valid @RequestBody UpdateSecurityLevelRequest request) {
+        return securityLevelRepository.findById(id)
+                .map(existing -> {
+                    if (request.getName() != null) {
+                        existing.setName(request.getName());
+                    }
+                    if (request.getDescription() != null) {
+                        existing.setDescription(request.getDescription());
+                    }
+                    if (request.getLevelType() != null) {
+                        existing.setLevelType(request.getLevelType());
+                    }
+                    if (request.getSequence() != null) {
+                        existing.setSequence(request.getSequence());
+                    }
+                    SecurityLevel saved = securityLevelRepository.save(existing);
+                    return ResponseEntity.ok(toResponse(saved));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete security level", description = "Deletes a security level by ID")
+    public ResponseEntity<Void> deleteSecurityLevel(
+            @Parameter(description = "Security Level ID") @PathVariable UUID id) {
+        if (securityLevelRepository.existsById(id)) {
+            securityLevelRepository.deleteById(id);
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 
     private SecurityLevelResponse toResponse(SecurityLevel entity) {

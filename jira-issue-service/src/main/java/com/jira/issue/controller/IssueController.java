@@ -4,7 +4,9 @@ import com.jira.issue.dto.*;
 import com.jira.issue.entity.IssueType;
 import com.jira.issue.entity.IssuePriority;
 import com.jira.issue.entity.IssueStatus;
+import com.jira.issue.service.IssueAvailableTransitionsService;
 import com.jira.issue.service.IssueService;
+import com.jira.issue.service.SecurityLevelService;
 import com.jira.issue.repository.IssueTypeRepository;
 import com.jira.issue.repository.IssuePriorityRepository;
 import com.jira.issue.repository.IssueStatusRepository;
@@ -21,7 +23,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -35,12 +36,11 @@ import java.util.UUID;
 public class IssueController {
 
     private final IssueService issueService;
+    private final IssueAvailableTransitionsService issueAvailableTransitionsService;
     private final IssueTypeRepository issueTypeRepository;
     private final IssuePriorityRepository issuePriorityRepository;
     private final IssueStatusRepository issueStatusRepository;
     private final ProjectPermissionClient projectPermissionClient;
-
-    private final RestTemplate restTemplate = new RestTemplate();
 
     @PostMapping
     @Operation(summary = "Create a new issue", description = "Creates a new issue in the specified project")
@@ -199,22 +199,11 @@ public class IssueController {
 
     @GetMapping("/{id}/transitions")
     @Operation(summary = "Available workflow transitions for issue")
-    public ResponseEntity<Object> getAvailableTransitions(
+    public ResponseEntity<Map<String, Object>> getAvailableTransitions(
             @PathVariable UUID id,
             @RequestParam UUID projectId,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        String url = issueService.getWorkflowServiceUrl()
-                + "/api/workflows/issues/" + id + "/available-transitions?projectId=" + projectId;
-        HttpHeaders headers = new HttpHeaders();
-        if (userId != null) {
-            headers.set("X-User-Id", userId.toString());
-        }
-        Object response = restTemplate.exchange(
-                url,
-                org.springframework.http.HttpMethod.GET,
-                new org.springframework.http.HttpEntity<>(headers),
-                Object.class).getBody();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(issueAvailableTransitionsService.getAvailableTransitions(id, projectId, userId));
     }
 
     @PostMapping("/{id}/clone")
@@ -272,6 +261,60 @@ public class IssueController {
     @Operation(summary = "Get statuses", description = "Returns all available statuses")
     public ResponseEntity<List<IssueStatus>> getStatuses() {
         return ResponseEntity.ok(issueStatusRepository.findAll());
+    }
+
+    @PutMapping("/by-key/{issueKey}/security-level")
+    @Operation(summary = "Set security level on issue", description = "Sets the security level for an issue by its key")
+    public ResponseEntity<IssueResponse> setSecurityLevel(
+            @Parameter(description = "Issue key") @PathVariable String issueKey,
+            @Valid @RequestBody SetSecurityLevelRequest request,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+
+        IssueResponse existingIssue = issueService.getIssueByKey(issueKey);
+        UUID actor = resolveUserId(userId);
+        requirePermission(actor, existingIssue.getProjectId(), "ASSIGN_ISSUES");
+
+        IssueResponse response = issueService.setSecurityLevel(
+                existingIssue.getId(), request.getSecurityLevelId(), actor);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/by-key/{issueKey}/security-level")
+    @Operation(summary = "Get security level on issue", description = "Returns the security level assigned to an issue")
+    public ResponseEntity<SecurityLevelResponse> getSecurityLevel(
+            @Parameter(description = "Issue key") @PathVariable String issueKey) {
+
+        IssueResponse existingIssue = issueService.getIssueByKey(issueKey);
+        SecurityLevelService.SecurityLevelInfo levelInfo = issueService.getSecurityLevel(existingIssue.getId());
+
+        if (levelInfo == null) {
+            return ResponseEntity.noContent().build();
+        }
+
+        SecurityLevelResponse response = SecurityLevelResponse.builder()
+                .issueId(existingIssue.getId())
+                .issueKey(issueKey)
+                .securityLevelId(levelInfo.getId())
+                .securityLevelName(levelInfo.getName())
+                .securityLevelDescription(levelInfo.getDescription())
+                .securityLevelType(levelInfo.getLevelType())
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/by-key/{issueKey}/security-level")
+    @Operation(summary = "Clear security level on issue", description = "Removes the security level from an issue")
+    public ResponseEntity<IssueResponse> clearSecurityLevel(
+            @Parameter(description = "Issue key") @PathVariable String issueKey,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+
+        IssueResponse existingIssue = issueService.getIssueByKey(issueKey);
+        UUID actor = resolveUserId(userId);
+        requirePermission(actor, existingIssue.getProjectId(), "ASSIGN_ISSUES");
+
+        IssueResponse response = issueService.clearSecurityLevel(existingIssue.getId(), actor);
+        return ResponseEntity.ok(response);
     }
 
     /**
