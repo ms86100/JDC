@@ -30,7 +30,7 @@ export interface SchemeProjectAssignment {
 
 export const issueTypeSchemeApi = {
   list: () => apiClient.get<IssueTypeScheme[]>('/admin/issues/issue-type-schemes'),
-  get: (id: string) => apiClient.get<IssueTypeScheme>(`/api/admin/issues/issue-type-schemes/${id}`),
+  get: (id: string) => apiClient.get<IssueTypeScheme>(`/admin/issues/issue-type-schemes/${id}`),
   create: (data: {
     name: string;
     description?: string;
@@ -45,12 +45,12 @@ export const issueTypeSchemeApi = {
       issueTypeIds?: string[];
       defaultIssueType?: string;
     }
-  ) => apiClient.put<IssueTypeScheme>(`/api/admin/issues/issue-type-schemes/${id}`, data),
-  delete: (id: string) => apiClient.delete(`/api/admin/issues/issue-type-schemes/${id}`),
+  ) => apiClient.put<IssueTypeScheme>(`/admin/issues/issue-type-schemes/${id}`, data),
+  delete: (id: string) => apiClient.delete(`/admin/issues/issue-type-schemes/${id}`),
   listProjects: (schemeId: string) =>
-    apiClient.get<SchemeProjectAssignment[]>(`/api/admin/issues/issue-type-schemes/${schemeId}/projects`),
+    apiClient.get<SchemeProjectAssignment[]>(`/admin/issues/issue-type-schemes/${schemeId}/projects`),
   assignProjects: (schemeId: string, projectIds: string[]) =>
-    apiClient.put<SchemeProjectAssignment[]>(`/api/admin/issues/issue-type-schemes/${schemeId}/projects`, {
+    apiClient.put<SchemeProjectAssignment[]>(`/admin/issues/issue-type-schemes/${schemeId}/projects`, {
       projectIds,
     }),
 };

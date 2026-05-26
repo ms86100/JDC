@@ -84,14 +84,14 @@ export const attachmentApi = {
   },
 
   getByIssue: async (issueId: string) => {
-    const response = await apiClient.get<AttachmentResponse[]>(`/api/attachments/issue/${issueId}`);
+    const response = await apiClient.get<AttachmentResponse[]>(`/attachments/issue/${issueId}`);
     response.data = normalizeList(response.data) as unknown as AttachmentResponse[];
     return response;
   },
 
   download: (attachmentId: string) =>
-    apiClient.get(`/api/attachments/${attachmentId}/download`, { responseType: 'blob' }),
+    apiClient.get(`/attachments/${attachmentId}/download`, { responseType: 'blob' }),
 
   delete: (attachmentId: string) =>
-    apiClient.delete(`/api/attachments/${attachmentId}`),
+    apiClient.delete(`/attachments/${attachmentId}`),
 };

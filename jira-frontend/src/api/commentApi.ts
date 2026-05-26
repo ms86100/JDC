@@ -8,7 +8,7 @@ export interface CreateCommentRequest { issueId: string; content: string; parent
 
 export const commentApi = {
   create: (data: CreateCommentRequest) => apiClient.post<CommentResponse>('/comments', data),
-  getByIssue: (issueId: string) => apiClient.get<CommentResponse[]>(`/api/comments/issue/${issueId}`),
-  update: (id: string, content: string) => apiClient.put<CommentResponse>(`/api/comments/${id}`, { content }),
-  delete: (id: string) => apiClient.delete(`/api/comments/${id}`),
+  getByIssue: (issueId: string) => apiClient.get<CommentResponse[]>(`/comments/issue/${issueId}`),
+  update: (id: string, content: string) => apiClient.put<CommentResponse>(`/comments/${id}`, { content }),
+  delete: (id: string) => apiClient.delete(`/comments/${id}`),
 };

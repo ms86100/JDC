@@ -19,11 +19,11 @@ export const integrationApi = {
     applicationType?: string;
     direction?: string;
   }) => apiClient.post<ApplicationLink>('/integration/applinks', data),
-  deleteApplicationLink: (id: string) => apiClient.delete(`/api/integration/applinks/${id}`),
+  deleteApplicationLink: (id: string) => apiClient.delete(`/integration/applinks/${id}`),
   setPrimary: (id: string) =>
-    apiClient.put<ApplicationLink>(`/api/integration/applinks/${id}/primary`),
+    apiClient.put<ApplicationLink>(`/integration/applinks/${id}/primary`),
   testConnection: (id: string) =>
     apiClient.get<{ linkId: string; status: string; message: string }>(
-      `/api/integration/applinks/${id}/health`
+      `/integration/applinks/${id}/health`
     ),
 };

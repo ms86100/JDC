@@ -12,7 +12,7 @@ export const workflowAdminApi = {
 
 
 
-  get: (workflowId: string) => apiClient.get<Record<string, unknown>>(`/api/admin/workflows/${workflowId}`),
+  get: (workflowId: string) => apiClient.get<Record<string, unknown>>(`/admin/workflows/${workflowId}`),
 
 
 
@@ -24,35 +24,35 @@ export const workflowAdminApi = {
 
   update: (workflowId: string, payload: Record<string, unknown>) =>
 
-    apiClient.put<Record<string, unknown>>(`/api/admin/workflows/${workflowId}`, payload),
+    apiClient.put<Record<string, unknown>>(`/admin/workflows/${workflowId}`, payload),
 
 
 
-  delete: (workflowId: string) => apiClient.delete(`/api/admin/workflows/${workflowId}`),
+  delete: (workflowId: string) => apiClient.delete(`/admin/workflows/${workflowId}`),
 
 
 
   publish: (workflowId: string) =>
 
-    apiClient.post<Record<string, unknown>>(`/api/admin/workflows/${workflowId}/publish`),
+    apiClient.post<Record<string, unknown>>(`/admin/workflows/${workflowId}/publish`),
 
 
 
   createDraft: (workflowId: string) =>
 
-    apiClient.post<Record<string, unknown>>(`/api/admin/workflows/${workflowId}/draft`),
+    apiClient.post<Record<string, unknown>>(`/admin/workflows/${workflowId}/draft`),
 
 
 
   clone: (workflowId: string, newName: string) =>
 
-    apiClient.post<Record<string, unknown>>(`/api/admin/workflows/${workflowId}/clone`, { newName }),
+    apiClient.post<Record<string, unknown>>(`/admin/workflows/${workflowId}/clone`, { newName }),
 
 
 
   exportWorkflow: (workflowId: string) =>
 
-    apiClient.post<Record<string, unknown>>(`/api/admin/workflows/${workflowId}/export`),
+    apiClient.post<Record<string, unknown>>(`/admin/workflows/${workflowId}/export`),
 
 
 
@@ -64,31 +64,31 @@ export const workflowAdminApi = {
 
   validate: (workflowId: string) =>
 
-    apiClient.post<Record<string, unknown>>(`/api/admin/workflows/${workflowId}/validate`),
+    apiClient.post<Record<string, unknown>>(`/admin/workflows/${workflowId}/validate`),
 
 
 
   migrate: (workflowId: string, body: Record<string, unknown>) =>
 
-    apiClient.post<Record<string, unknown>>(`/api/admin/workflows/${workflowId}/migrate`, body),
+    apiClient.post<Record<string, unknown>>(`/admin/workflows/${workflowId}/migrate`, body),
 
 
 
   migrationPreview: (workflowId: string) =>
 
-    apiClient.get<Record<string, unknown>>(`/api/admin/workflows/${workflowId}/migration-preview`),
+    apiClient.get<Record<string, unknown>>(`/admin/workflows/${workflowId}/migration-preview`),
 
 
 
   usage: (workflowId: string) =>
 
-    apiClient.get<Record<string, unknown>>(`/api/admin/workflows/${workflowId}/usage`),
+    apiClient.get<Record<string, unknown>>(`/admin/workflows/${workflowId}/usage`),
 
 
 
   transitionStats: (workflowId: string, params?: { startDate?: string; endDate?: string }) =>
 
-    apiClient.get<Record<string, unknown>>(`/api/admin/workflows/${workflowId}/transition-stats`, {
+    apiClient.get<Record<string, unknown>>(`/admin/workflows/${workflowId}/transition-stats`, {
 
       params,
 
@@ -98,7 +98,7 @@ export const workflowAdminApi = {
 
   getVersions: (workflowId: string) =>
 
-    apiClient.get<unknown[]>(`/api/admin/workflows/${workflowId}/versions`),
+    apiClient.get<unknown[]>(`/admin/workflows/${workflowId}/versions`),
 
 
 
@@ -106,7 +106,7 @@ export const workflowAdminApi = {
 
     apiClient.get<Record<string, unknown>>(
 
-      `/api/admin/workflows/${workflowId}/versions/${versionNumber}`,
+      `/admin/workflows/${workflowId}/versions/${versionNumber}`,
 
     ),
 
@@ -114,7 +114,7 @@ export const workflowAdminApi = {
 
   compareVersions: (workflowId: string, v1: number, v2: number) =>
 
-    apiClient.get<Record<string, unknown>>(`/api/admin/workflows/${workflowId}/compare`, {
+    apiClient.get<Record<string, unknown>>(`/admin/workflows/${workflowId}/compare`, {
 
       params: { v1, v2 },
 
@@ -126,7 +126,7 @@ export const workflowAdminApi = {
 
     apiClient.post<Record<string, unknown>>(
 
-      `/api/admin/workflows/${workflowId}/versions/${versionNumber}/revert`,
+      `/admin/workflows/${workflowId}/versions/${versionNumber}/revert`,
 
     ),
 
@@ -134,7 +134,7 @@ export const workflowAdminApi = {
 
   auditLog: (workflowId: string, params?: { limit?: number; action?: string; page?: number; size?: number }) =>
 
-    apiClient.get<unknown[]>(`/api/admin/workflows/${workflowId}/audit-log`, { params }),
+    apiClient.get<unknown[]>(`/admin/workflows/${workflowId}/audit-log`, { params }),
 
 
 
@@ -160,7 +160,7 @@ export const workflowAdminApi = {
 
   getScheme: (schemeId: string) =>
 
-    apiClient.get<Record<string, unknown>>(`/api/admin/workflows/schemes/${schemeId}`),
+    apiClient.get<Record<string, unknown>>(`/admin/workflows/schemes/${schemeId}`),
 
 
 
@@ -172,11 +172,11 @@ export const workflowAdminApi = {
 
   updateScheme: (schemeId: string, data: Record<string, unknown>) =>
 
-    apiClient.put<Record<string, unknown>>(`/api/admin/workflows/schemes/${schemeId}`, data),
+    apiClient.put<Record<string, unknown>>(`/admin/workflows/schemes/${schemeId}`, data),
 
 
 
-  deleteScheme: (schemeId: string) => apiClient.delete(`/api/admin/workflows/schemes/${schemeId}`),
+  deleteScheme: (schemeId: string) => apiClient.delete(`/admin/workflows/schemes/${schemeId}`),
 
 
 
@@ -184,7 +184,7 @@ export const workflowAdminApi = {
 
     apiClient.post<Record<string, unknown>>(
 
-      `/api/admin/workflows/schemes/${schemeId}/mappings`,
+      `/admin/workflows/schemes/${schemeId}/mappings`,
 
       mapping,
 
@@ -204,7 +204,7 @@ export const workflowAdminApi = {
 
   getScreen: (screenId: string) =>
 
-    apiClient.get<Record<string, unknown>>(`/api/admin/workflows/screens/${screenId}`),
+    apiClient.get<Record<string, unknown>>(`/admin/workflows/screens/${screenId}`),
 
 
 
@@ -216,11 +216,11 @@ export const workflowAdminApi = {
 
   updateScreen: (screenId: string, data: Record<string, unknown>) =>
 
-    apiClient.put<Record<string, unknown>>(`/api/admin/workflows/screens/${screenId}`, data),
+    apiClient.put<Record<string, unknown>>(`/admin/workflows/screens/${screenId}`, data),
 
 
 
-  deleteScreen: (screenId: string) => apiClient.delete(`/api/admin/workflows/screens/${screenId}`),
+  deleteScreen: (screenId: string) => apiClient.delete(`/admin/workflows/screens/${screenId}`),
 
 
 

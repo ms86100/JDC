@@ -50,7 +50,7 @@ export const issueTestOpsApi = {
     apiClient.post('/ai/analyze-duplicates', { tests }),
 
   getCoverageRecommendations: (projectId: string, requirementKeys: string[]) =>
-    apiClient.get(`/api/ai/coverage-recommendations/${projectId}`, {
+    apiClient.get(`/ai/coverage-recommendations/${projectId}`, {
       params: { requirementKeys },
       paramsSerializer: (params) => {
         const keys = (params.requirementKeys as string[]) || [];
@@ -65,7 +65,7 @@ export const issueTestOpsApi = {
     apiClient.post('/ai/suggest-tests', { requirementDescription }),
 
   assessRisk: (testId: string, history: unknown[]) =>
-    apiClient.post(`/api/ai/assess-risk/${testId}`, { history }),
+    apiClient.post(`/ai/assess-risk/${testId}`, { history }),
 
   triggerCiExecution: (projectId: string, payload: Record<string, unknown>) =>
     apiClient.post('/webhooks/trigger', payload, { params: { projectId } }),

@@ -160,15 +160,15 @@ export const projectApi = {
         if (Array.isArray(data)) return data;
         return data?.content ?? [];
       }),
-  getById: (id: string) => apiClient.get<ProjectResponse>(`/api/projects/${id}`),
+  getById: (id: string) => apiClient.get<ProjectResponse>(`/projects/${id}`),
   update: (id: string, data: Partial<{ name: string; description?: string; leadUserId?: string }>) =>
-    apiClient.put<ProjectResponse>(`/api/projects/${id}`, data),
-  delete: (id: string) => apiClient.delete(`/api/projects/${id}`),
-  archive: (id: string) => apiClient.post(`/api/projects/${id}/archive`),
-  unarchive: (id: string) => apiClient.post(`/api/projects/${id}/unarchive`),
+    apiClient.put<ProjectResponse>(`/projects/${id}`, data),
+  delete: (id: string) => apiClient.delete(`/projects/${id}`),
+  archive: (id: string) => apiClient.post(`/projects/${id}/archive`),
+  unarchive: (id: string) => apiClient.post(`/projects/${id}/unarchive`),
   addMember: (id: string, userId: string, projectRoleName: string) =>
-    apiClient.post(`/api/projects/${id}/members`, { userId, projectRoleName }),
-  getMembers: (id: string) => apiClient.get<ProjectMemberResponse[]>(`/api/projects/${id}/members`),
+    apiClient.post(`/projects/${id}/members`, { userId, projectRoleName }),
+  getMembers: (id: string) => apiClient.get<ProjectMemberResponse[]>(`/projects/${id}/members`),
   getVersions: async (projectId: string) => {
     const { versionApi } = await import('./versionApi');
     const data = await versionApi.getByProject(projectId);
@@ -188,21 +188,21 @@ export const projectApi = {
       })) as Component[],
     };
   },
-  getSprints: (projectId: string) => apiClient.get(`/api/sprints?projectId=${projectId}`),
+  getSprints: (projectId: string) => apiClient.get(`/sprints?projectId=${projectId}`),
 
   // Wizard endpoints
   getProjectTypes: () => apiClient.get<ProjectType[]>('/projects/types'),
   getTemplatesForType: (typeId: string) =>
-    apiClient.get<ProjectTemplate[]>(`/api/projects/types/${typeId}/templates`),
+    apiClient.get<ProjectTemplate[]>(`/projects/types/${typeId}/templates`),
   getTemplateDetails: (templateId: string) =>
-    apiClient.get<TemplateDetails>(`/api/projects/templates/${templateId}`),
+    apiClient.get<TemplateDetails>(`/projects/templates/${templateId}`),
   getProjectScheme: (projectId: string) =>
-    apiClient.get<ProjectScheme>(`/api/projects/${projectId}/scheme`),
+    apiClient.get<ProjectScheme>(`/projects/${projectId}/scheme`),
   createViaWizard: (data: CreateProjectWizardRequest) =>
     apiClient.post<ProjectResponse>('/projects/wizard', data),
   checkProjectKey: (key: string) =>
     apiClient.get<{ projectKey: string; valid: boolean; available: boolean; message: string }>(
-      `/api/projects/key/check/${key}`
+      `/projects/key/check/${key}`
     ),
 
   /** Re-index all project issues in the search service (DC project maintenance). */

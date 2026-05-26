@@ -34,10 +34,10 @@ export const filterApi = {
     apiClient.post<SavedFilter>('/filters', data),
 
   deleteFilter: (filterId: string) =>
-    apiClient.delete(`/api/filters/${filterId}`),
+    apiClient.delete(`/filters/${filterId}`),
 
   toggleFavorite: (filterId: string) =>
-    apiClient.post<SavedFilter>(`/api/filters/${filterId}/favorite`),
+    apiClient.post<SavedFilter>(`/filters/${filterId}/favorite`),
 
   getSubscriptions: () =>
     apiClient.get<FilterSubscription[]>('/filters/subscriptions'),
@@ -51,8 +51,8 @@ export const filterApi = {
     apiClient.post<FilterSubscription>('/filters/subscriptions', data),
 
   deleteSubscription: (subscriptionId: string) =>
-    apiClient.delete(`/api/filters/subscriptions/${subscriptionId}`),
+    apiClient.delete(`/filters/subscriptions/${subscriptionId}`),
 
   toggleSubscription: (subscriptionId: string) =>
-    apiClient.post<FilterSubscription>(`/api/filters/subscriptions/${subscriptionId}/toggle`),
+    apiClient.post<FilterSubscription>(`/filters/subscriptions/${subscriptionId}/toggle`),
 };

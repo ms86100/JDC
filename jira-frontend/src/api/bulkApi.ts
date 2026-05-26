@@ -41,7 +41,7 @@ export const bulkApi = {
     apiClient.post<BulkOperationResponse>('/bulk-operations', data),
 
   getStatus: (operationId: string) =>
-    apiClient.get<BulkOperationResponse>(`/api/bulk-operations/${operationId}`),
+    apiClient.get<BulkOperationResponse>(`/bulk-operations/${operationId}`),
 
   getRecent: () =>
     apiClient.get<BulkOperationResponse[]>('/bulk-operations/recent'),

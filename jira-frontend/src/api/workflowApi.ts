@@ -88,28 +88,28 @@ export interface WorkflowVersion {
 
 export const workflowApi = {
   getAll: () => apiClient.get<Workflow[]>('/workflows'),
-  getById: (id: string) => apiClient.get<Workflow>(`/api/workflows/${id}`),
+  getById: (id: string) => apiClient.get<Workflow>(`/workflows/${id}`),
   getWorkflowDetail: (id: string) =>
     apiClient.get<{
       workflow: Workflow;
       statuses: WorkflowStatusLink[];
       transitions: WorkflowTransitionDetail[];
       versions: WorkflowVersion[];
-    }>(`/api/workflows/${id}/detail`),
+    }>(`/workflows/${id}/detail`),
   create: (data: { name: string; description?: string; projectId?: string }) =>
     apiClient.post<Workflow>('/workflows', data),
   update: (id: string, data: Partial<Workflow>) =>
-    apiClient.put<Workflow>(`/api/workflows/${id}`, data),
-  delete: (id: string) => apiClient.delete(`/api/workflows/${id}`),
+    apiClient.put<Workflow>(`/workflows/${id}`, data),
+  delete: (id: string) => apiClient.delete(`/workflows/${id}`),
   clone: (id: string, newName: string) =>
-    apiClient.post<Workflow>(`/api/admin/workflows/${id}/clone`, { newName }),
+    apiClient.post<Workflow>(`/admin/workflows/${id}/clone`, { newName }),
 
   getWorkflowStatuses: (workflowId: string) =>
-    apiClient.get<WorkflowStatusLink[]>(`/api/workflows/${workflowId}/statuses`),
+    apiClient.get<WorkflowStatusLink[]>(`/workflows/${workflowId}/statuses`),
   addStatusToWorkflow: (workflowId: string, statusId: string, sequence?: number) =>
-    apiClient.post<WorkflowStatusLink>(`/api/workflows/${workflowId}/statuses`, { statusId, sequence }),
+    apiClient.post<WorkflowStatusLink>(`/workflows/${workflowId}/statuses`, { statusId, sequence }),
   removeStatusFromWorkflow: (workflowId: string, workflowStatusId: string) =>
-    apiClient.delete(`/api/workflows/${workflowId}/statuses/${workflowStatusId}`),
+    apiClient.delete(`/workflows/${workflowId}/statuses/${workflowStatusId}`),
 
   createTransition: (data: {
     workflowId: string;
@@ -120,71 +120,71 @@ export const workflowApi = {
     requiresApproval?: boolean;
   }) => apiClient.post('/workflows/transitions', data),
   updateTransition: (transitionId: string, data: Partial<WorkflowTransitionDetail>) =>
-    apiClient.put(`/api/workflows/transitions/${transitionId}`, data),
+    apiClient.put(`/workflows/transitions/${transitionId}`, data),
   deleteTransition: (transitionId: string) =>
-    apiClient.delete(`/api/workflows/transitions/${transitionId}`),
+    apiClient.delete(`/workflows/transitions/${transitionId}`),
   getTransitionsWithDetails: (workflowId: string) =>
-    apiClient.get<WorkflowTransitionDetail[]>(`/api/workflows/${workflowId}/transitions-with-details`),
+    apiClient.get<WorkflowTransitionDetail[]>(`/workflows/${workflowId}/transitions-with-details`),
 
   addCondition: (transitionId: string, data: { type: string; configuration?: Record<string, unknown> }) =>
-    apiClient.post(`/api/workflows/transitions/${transitionId}/conditions`, data),
+    apiClient.post(`/workflows/transitions/${transitionId}/conditions`, data),
   addValidator: (transitionId: string, data: { type: string; configuration?: Record<string, unknown> }) =>
-    apiClient.post(`/api/workflows/transitions/${transitionId}/validators`, data),
+    apiClient.post(`/workflows/transitions/${transitionId}/validators`, data),
   addPostFunction: (transitionId: string, data: { type: string; configuration?: Record<string, unknown> }) =>
-    apiClient.post(`/api/workflows/transitions/${transitionId}/post-functions`, data),
+    apiClient.post(`/workflows/transitions/${transitionId}/post-functions`, data),
   deleteCondition: (transitionId: string, conditionId: string) =>
-    apiClient.delete(`/api/workflows/transitions/${transitionId}/conditions/${conditionId}`),
+    apiClient.delete(`/workflows/transitions/${transitionId}/conditions/${conditionId}`),
   deleteValidator: (transitionId: string, validatorId: string) =>
-    apiClient.delete(`/api/workflows/transitions/${transitionId}/validators/${validatorId}`),
+    apiClient.delete(`/workflows/transitions/${transitionId}/validators/${validatorId}`),
   deletePostFunction: (transitionId: string, functionId: string) =>
-    apiClient.delete(`/api/workflows/transitions/${transitionId}/post-functions/${functionId}`),
+    apiClient.delete(`/workflows/transitions/${transitionId}/post-functions/${functionId}`),
 
   getConditionDefinitions: () => apiClient.get('/admin/workflows/conditions/definitions'),
   getValidatorDefinitions: () => apiClient.get('/admin/workflows/validators/definitions'),
   getPostFunctionDefinitions: () => apiClient.get('/admin/workflows/post-functions/definitions'),
 
   getSchemes: () => apiClient.get<WorkflowScheme[]>('/workflow-schemes'),
-  getScheme: (id: string) => apiClient.get<WorkflowScheme>(`/api/workflow-schemes/${id}`),
+  getScheme: (id: string) => apiClient.get<WorkflowScheme>(`/workflow-schemes/${id}`),
   createScheme: (data: { name: string; description?: string; defaultWorkflowId?: string }) =>
     apiClient.post<WorkflowScheme>('/workflow-schemes', data),
   updateScheme: (id: string, data: { name: string; description?: string; defaultWorkflowId?: string }) =>
-    apiClient.put<WorkflowScheme>(`/api/workflow-schemes/${id}`, data),
-  deleteScheme: (id: string) => apiClient.delete(`/api/workflow-schemes/${id}`),
+    apiClient.put<WorkflowScheme>(`/workflow-schemes/${id}`, data),
+  deleteScheme: (id: string) => apiClient.delete(`/workflow-schemes/${id}`),
   addSchemeMapping: (schemeId: string, data: { issueTypeId: string; workflowId: string }) =>
-    apiClient.post<WorkflowScheme>(`/api/workflow-schemes/${schemeId}/mappings`, data),
+    apiClient.post<WorkflowScheme>(`/workflow-schemes/${schemeId}/mappings`, data),
   removeSchemeMapping: (schemeId: string, mappingId: string) =>
-    apiClient.delete(`/api/workflow-schemes/${schemeId}/mappings/${mappingId}`),
+    apiClient.delete(`/workflow-schemes/${schemeId}/mappings/${mappingId}`),
   publishScheme: (schemeId: string) =>
-    apiClient.post<WorkflowScheme>(`/api/workflow-schemes/${schemeId}/publish`),
+    apiClient.post<WorkflowScheme>(`/workflow-schemes/${schemeId}/publish`),
   assignSchemeToProject: (projectId: string, schemeId: string) =>
-    apiClient.put(`/api/workflow-schemes/projects/${projectId}/assign`, { schemeId }),
+    apiClient.put(`/workflow-schemes/projects/${projectId}/assign`, { schemeId }),
   getProjectScheme: (projectId: string) =>
-    apiClient.get<{ projectId: string; schemeId: string }>(`/api/workflow-schemes/projects/${projectId}`),
+    apiClient.get<{ projectId: string; schemeId: string }>(`/workflow-schemes/projects/${projectId}`),
 
   syncDesignerLayout: (workflowId: string, nodes: Array<{ nodeId: string; positionX: number; positionY: number }>) =>
-    apiClient.put(`/api/workflow-schemes/workflows/${workflowId}/layout/positions`, { nodes }),
-  getLayout: (workflowId: string) => apiClient.get(`/api/workflow-schemes/workflows/${workflowId}/layout`),
-  autoLayout: (workflowId: string) => apiClient.post(`/api/workflow-schemes/workflows/${workflowId}/layout/auto`),
-  publishWorkflow: (workflowId: string) => apiClient.post(`/api/admin/workflows/${workflowId}/publish`),
+    apiClient.put(`/workflow-schemes/workflows/${workflowId}/layout/positions`, { nodes }),
+  getLayout: (workflowId: string) => apiClient.get(`/workflow-schemes/workflows/${workflowId}/layout`),
+  autoLayout: (workflowId: string) => apiClient.post(`/workflow-schemes/workflows/${workflowId}/layout/auto`),
+  publishWorkflow: (workflowId: string) => apiClient.post(`/admin/workflows/${workflowId}/publish`),
   createWorkflowDraft: (workflowId: string) =>
-    apiClient.post(`/api/workflow-schemes/workflows/${workflowId}/draft`),
-  getVersions: (workflowId: string) => apiClient.get<WorkflowVersion[]>(`/api/workflow-schemes/workflows/${workflowId}/versions`),
+    apiClient.post(`/workflow-schemes/workflows/${workflowId}/draft`),
+  getVersions: (workflowId: string) => apiClient.get<WorkflowVersion[]>(`/workflow-schemes/workflows/${workflowId}/versions`),
   rollbackToVersion: (workflowId: string, versionNumber: number) =>
-    apiClient.post<Workflow>(`/api/workflow-schemes/workflows/${workflowId}/rollback/${versionNumber}`),
+    apiClient.post<Workflow>(`/workflow-schemes/workflows/${workflowId}/rollback/${versionNumber}`),
 
   createSchemeDraft: (schemeId: string) =>
-    apiClient.post<WorkflowScheme>(`/api/workflow-schemes/${schemeId}/draft`),
+    apiClient.post<WorkflowScheme>(`/workflow-schemes/${schemeId}/draft`),
   createWorkflowDraftByScheme: (workflowId: string) =>
-    apiClient.post(`/api/workflow-schemes/workflows/${workflowId}/draft`),
-  getWorkflowDraft: (workflowId: string) => apiClient.get(`/api/workflow-schemes/workflows/${workflowId}/draft`),
+    apiClient.post(`/workflow-schemes/workflows/${workflowId}/draft`),
+  getWorkflowDraft: (workflowId: string) => apiClient.get(`/workflow-schemes/workflows/${workflowId}/draft`),
   publishDraft: (draftId: string, changeDescription?: string) =>
-    apiClient.post<Workflow>(`/api/workflow-schemes/drafts/${draftId}/publish`, null, {
+    apiClient.post<Workflow>(`/workflow-schemes/drafts/${draftId}/publish`, null, {
       params: changeDescription ? { changeDescription } : undefined,
     }),
-  discardDraft: (draftId: string) => apiClient.post(`/api/workflow-schemes/drafts/${draftId}/discard`),
+  discardDraft: (draftId: string) => apiClient.post(`/workflow-schemes/drafts/${draftId}/discard`),
 
-  lockLayout: (workflowId: string) => apiClient.post(`/api/workflow-schemes/workflows/${workflowId}/layout/lock`),
-  unlockLayout: (workflowId: string) => apiClient.post(`/api/workflow-schemes/workflows/${workflowId}/layout/unlock`),
+  lockLayout: (workflowId: string) => apiClient.post(`/workflow-schemes/workflows/${workflowId}/layout/lock`),
+  unlockLayout: (workflowId: string) => apiClient.post(`/workflow-schemes/workflows/${workflowId}/layout/unlock`),
 
   assignSchemeBulk: (schemeId: string, projectIds: string[]) =>
     apiClient.post<{ schemeId: string; updatedProjects: number }>('/workflow-schemes/projects/assign-bulk', {
@@ -200,34 +200,34 @@ export const workflowApi = {
     userId?: string;
   }) => apiClient.post<WorkflowStatusMigration>('/workflow-schemes/migrations', data),
   previewStatusMigration: (migrationId: string, oldStatusId: string, newStatusId: string) =>
-    apiClient.post<MigrationPreview>(`/api/workflow-schemes/migrations/${migrationId}/preview`, null, {
+    apiClient.post<MigrationPreview>(`/workflow-schemes/migrations/${migrationId}/preview`, null, {
       params: { oldStatusId, newStatusId },
     }),
   executeStatusMigration: (migrationId: string) =>
-    apiClient.post<WorkflowStatusMigration>(`/api/workflow-schemes/migrations/${migrationId}/execute`),
+    apiClient.post<WorkflowStatusMigration>(`/workflow-schemes/migrations/${migrationId}/execute`),
   getStatusMigration: (migrationId: string) =>
-    apiClient.get<WorkflowStatusMigration>(`/api/workflow-schemes/migrations/${migrationId}`),
+    apiClient.get<WorkflowStatusMigration>(`/workflow-schemes/migrations/${migrationId}`),
   cancelStatusMigration: (migrationId: string) =>
-    apiClient.post<WorkflowStatusMigration>(`/api/workflow-schemes/migrations/${migrationId}/cancel`),
+    apiClient.post<WorkflowStatusMigration>(`/workflow-schemes/migrations/${migrationId}/cancel`),
   retryStatusMigration: (migrationId: string) =>
-    apiClient.post<WorkflowStatusMigration>(`/api/workflow-schemes/migrations/${migrationId}/retry`),
+    apiClient.post<WorkflowStatusMigration>(`/workflow-schemes/migrations/${migrationId}/retry`),
 
   listTransitionScreens: () => apiClient.get<WorkflowTransitionScreen[]>('/admin/workflows/screens'),
   getTransitionScreen: (screenId: string) =>
-    apiClient.get<WorkflowTransitionScreen>(`/api/admin/workflows/screens/${screenId}`),
+    apiClient.get<WorkflowTransitionScreen>(`/admin/workflows/screens/${screenId}`),
   createTransitionScreen: (data: { name: string; description?: string }) =>
     apiClient.post<WorkflowTransitionScreen>('/admin/workflows/screens', data),
   updateTransitionScreen: (screenId: string, data: Record<string, unknown>) =>
-    apiClient.put<WorkflowTransitionScreen>(`/api/admin/workflows/screens/${screenId}`, data),
-  deleteTransitionScreen: (screenId: string) => apiClient.delete(`/api/admin/workflows/screens/${screenId}`),
+    apiClient.put<WorkflowTransitionScreen>(`/admin/workflows/screens/${screenId}`, data),
+  deleteTransitionScreen: (screenId: string) => apiClient.delete(`/admin/workflows/screens/${screenId}`),
   assignScreenToTransition: (transitionId: string, screenId: string) =>
-    apiClient.post(`/api/admin/workflows/transitions/${transitionId}/screen`, { screenId }),
+    apiClient.post(`/admin/workflows/transitions/${transitionId}/screen`, { screenId }),
   removeScreenFromTransition: (transitionId: string) =>
-    apiClient.delete(`/api/admin/workflows/transitions/${transitionId}/screen`),
+    apiClient.delete(`/admin/workflows/transitions/${transitionId}/screen`),
 
   getAvailableTransitions: (issueId: string, projectId: string) =>
     apiClient.get<{ transitions: AvailableTransition[] }>(
-      `/api/workflows/issues/${issueId}/available-transitions`,
+      `/workflows/issues/${issueId}/available-transitions`,
       { params: { projectId } },
     ),
 

@@ -184,32 +184,32 @@ const workflowEngineApi = {
     axiosClient.get('/test-workflows/definitions', { params: { projectId, workflowType } }).then(r => r.data),
 
   getDefinition: (id: string): Promise<WorkflowDefinitionResponse> =>
-    axiosClient.get(`/api/test-workflows/definitions/${id}`).then(r => r.data),
+    axiosClient.get(`/test-workflows/definitions/${id}`).then(r => r.data),
 
   getDefaultDefinition: (projectId: string, workflowType: string): Promise<WorkflowDefinitionResponse> =>
-    axiosClient.get(`/api/test-workflows/definitions/default`, { params: { projectId, workflowType } }).then(r => r.data),
+    axiosClient.get(`/test-workflows/definitions/default`, { params: { projectId, workflowType } }).then(r => r.data),
 
   updateDefinition: (id: string, data: Partial<CreateWorkflowDefinitionRequest>): Promise<WorkflowDefinitionResponse> =>
-    axiosClient.put(`/api/test-workflows/definitions/${id}`, data).then(r => r.data),
+    axiosClient.put(`/test-workflows/definitions/${id}`, data).then(r => r.data),
 
   deleteDefinition: (id: string): Promise<void> =>
-    axiosClient.delete(`/api/test-workflows/definitions/${id}`).then(r => r.data),
+    axiosClient.delete(`/test-workflows/definitions/${id}`).then(r => r.data),
 
   activateDefinition: (id: string): Promise<WorkflowDefinitionResponse> =>
-    axiosClient.post(`/api/test-workflows/definitions/${id}/activate`).then(r => r.data),
+    axiosClient.post(`/test-workflows/definitions/${id}/activate`).then(r => r.data),
 
   deactivateDefinition: (id: string): Promise<WorkflowDefinitionResponse> =>
-    axiosClient.post(`/api/test-workflows/definitions/${id}/deactivate`).then(r => r.data),
+    axiosClient.post(`/test-workflows/definitions/${id}/deactivate`).then(r => r.data),
 
   // Instance Management
   startWorkflow: (definitionId: string, entityType: string, entityId: string): Promise<WorkflowInstanceResponse> =>
     axiosClient.post('/test-workflows/instances', { definitionId, entityType, entityId }).then(r => r.data),
 
   transition: (instanceId: string, targetState: string, comment?: string): Promise<WorkflowInstanceResponse> =>
-    axiosClient.post(`/api/test-workflows/instances/${instanceId}/transition`, { targetState, comment }).then(r => r.data),
+    axiosClient.post(`/test-workflows/instances/${instanceId}/transition`, { targetState, comment }).then(r => r.data),
 
   getInstance: (id: string): Promise<WorkflowInstanceResponse> =>
-    axiosClient.get(`/api/test-workflows/instances/${id}`).then(r => r.data),
+    axiosClient.get(`/test-workflows/instances/${id}`).then(r => r.data),
 
   getActiveInstances: (): Promise<WorkflowInstanceResponse[]> =>
     axiosClient.get('/test-workflows/instances/active').then(r => r.data),
@@ -221,23 +221,23 @@ const workflowEngineApi = {
     axiosClient.get('/test-workflows/instances', { params: { definitionId } }).then(r => r.data),
 
   cancelWorkflow: (instanceId: string, reason?: string): Promise<WorkflowInstanceResponse> =>
-    axiosClient.post(`/api/test-workflows/instances/${instanceId}/cancel`, { reason }).then(r => r.data),
+    axiosClient.post(`/test-workflows/instances/${instanceId}/cancel`, { reason }).then(r => r.data),
 
   reassignWorkflow: (instanceId: string, newAssigneeId: string): Promise<WorkflowInstanceResponse> =>
-    axiosClient.post(`/api/test-workflows/instances/${instanceId}/reassign`, { newAssigneeId }).then(r => r.data),
+    axiosClient.post(`/test-workflows/instances/${instanceId}/reassign`, { newAssigneeId }).then(r => r.data),
 
   // Workflow Engine Queries
   getAvailableTransitions: (instanceId: string): Promise<string[]> =>
-    axiosClient.get(`/api/test-workflows/instances/${instanceId}/available-transitions`).then(r => r.data),
+    axiosClient.get(`/test-workflows/instances/${instanceId}/available-transitions`).then(r => r.data),
 
   getAllStates: (definitionId: string): Promise<string[]> =>
-    axiosClient.get(`/api/test-workflows/definitions/${definitionId}/states`).then(r => r.data),
+    axiosClient.get(`/test-workflows/definitions/${definitionId}/states`).then(r => r.data),
 
   getWorkflowProgress: (instanceId: string): Promise<WorkflowProgressResponse> =>
-    axiosClient.get(`/api/test-workflows/instances/${instanceId}/progress`).then(r => r.data),
+    axiosClient.get(`/test-workflows/instances/${instanceId}/progress`).then(r => r.data),
 
   getStateHistory: (instanceId: string): Promise<StateTransitionResponse[]> =>
-    axiosClient.get(`/api/test-workflows/instances/${instanceId}/history`).then(r => r.data),
+    axiosClient.get(`/test-workflows/instances/${instanceId}/history`).then(r => r.data),
 
   // Validation
   validateDefinition: (definition: Partial<WorkflowDefinitionResponse>): Promise<ValidationResult> =>

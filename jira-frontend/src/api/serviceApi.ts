@@ -35,11 +35,11 @@ export const auditApi = {
     ),
 
   getLogsForEntity: (entityType: string, entityId: string) =>
-    apiClient.get<AuditLogResponse[]>(`/api/audit/logs/${entityType}/${entityId}`),
+    apiClient.get<AuditLogResponse[]>(`/audit/logs/${entityType}/${entityId}`),
 
   getLogsForUser: (userId: string, page = 0, size = 20) =>
     apiClient.get<{ content: AuditLogResponse[]; totalElements: number }>(
-      `/api/audit/logs/user/${userId}`,
+      `/audit/logs/user/${userId}`,
       { params: { page, size } }
     ),
 
@@ -283,7 +283,7 @@ export const migrationApi = {
     const params = new URLSearchParams({ startStepId });
     if (transitionPath) params.set('path', transitionPath);
     return apiClient.post<Record<string, unknown>>(
-      `/api/migration/import/workflow-xml/simulate?${params}`,
+      `/migration/import/workflow-xml/simulate?${params}`,
       formData,
       { headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() } }
     );
@@ -305,7 +305,7 @@ export const migrationApi = {
     });
     if (projectId) params.set('projectId', projectId);
     return apiClient.post<MigrationJobResponse>(
-      `/api/migration/import/workflow-xml?${params}`,
+      `/migration/import/workflow-xml?${params}`,
       formData,
       { headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() } }
     );
@@ -323,7 +323,7 @@ export const migrationApi = {
 
   rollbackWorkflowXmlImport: (importId: string) =>
     apiClient.post<Record<string, unknown>>(
-      `/api/migration/import/workflow-xml/rollback/${importId}`,
+      `/migration/import/workflow-xml/rollback/${importId}`,
       null,
       { headers: migrationUserHeaders() }
     ),
@@ -339,18 +339,18 @@ export const migrationApi = {
     }),
 
   getJobAttachmentResults: (jobId: string) =>
-    apiClient.get<Array<Record<string, unknown>>>(`/api/migration/jobs/${jobId}/attachment-results`, {
+    apiClient.get<Array<Record<string, unknown>>>(`/migration/jobs/${jobId}/attachment-results`, {
       headers: migrationUserHeaders(),
     }),
 
   getJobVerification: (jobId: string) =>
-    apiClient.get<Record<string, unknown>>(`/api/migration/jobs/${jobId}/verification`, {
+    apiClient.get<Record<string, unknown>>(`/migration/jobs/${jobId}/verification`, {
       headers: migrationUserHeaders(),
     }),
 
   triggerJobReindex: (jobId: string, entityTypes?: string[]) =>
     apiClient.post<Record<string, unknown>>(
-      `/api/migration/jobs/${jobId}/reindex`,
+      `/migration/jobs/${jobId}/reindex`,
       null,
       {
         params: entityTypes?.length ? { entityTypes } : undefined,
@@ -359,7 +359,7 @@ export const migrationApi = {
     ),
 
   getJobReindexStatus: (jobId: string) =>
-    apiClient.get<Record<string, unknown>>(`/api/migration/jobs/${jobId}/reindex`, {
+    apiClient.get<Record<string, unknown>>(`/migration/jobs/${jobId}/reindex`, {
       headers: migrationUserHeaders(),
     }),
 
@@ -369,17 +369,17 @@ export const migrationApi = {
     }),
 
   pauseJob: (jobId: string) =>
-    apiClient.post<Record<string, unknown>>(`/api/migration/jobs/${jobId}/pause`, null, {
+    apiClient.post<Record<string, unknown>>(`/migration/jobs/${jobId}/pause`, null, {
       headers: migrationUserHeaders(),
     }),
 
   resumePausedJob: (jobId: string) =>
-    apiClient.post<Record<string, unknown>>(`/api/migration/jobs/${jobId}/resume-control`, null, {
+    apiClient.post<Record<string, unknown>>(`/migration/jobs/${jobId}/resume-control`, null, {
       headers: migrationUserHeaders(),
     }),
 
   scanUpload: (uploadId: string) =>
-    apiClient.post<Record<string, string>>(`/api/migration/uploads/${uploadId}/virus-scan`, null, {
+    apiClient.post<Record<string, string>>(`/migration/uploads/${uploadId}/virus-scan`, null, {
       headers: migrationUserHeaders(),
     }),
 
@@ -412,19 +412,19 @@ export const migrationApi = {
 
   retryJob: (jobId: string) =>
     apiClient.post<{ jobId: string; retried: number; succeeded: number }>(
-      `/api/migration/jobs/${jobId}/retry`,
+      `/migration/jobs/${jobId}/retry`,
       null,
       { headers: migrationUserHeaders() }
     ),
 
   downloadJobReport: (jobId: string) =>
-    apiClient.get(`/api/migration/jobs/${jobId}/report`, {
+    apiClient.get(`/migration/jobs/${jobId}/report`, {
       responseType: 'blob',
       headers: migrationUserHeaders(),
     }),
 
   downloadJobLogs: (jobId: string) =>
-    apiClient.get(`/api/migration/jobs/${jobId}/logs/download`, {
+    apiClient.get(`/migration/jobs/${jobId}/logs/download`, {
       responseType: 'blob',
       headers: migrationUserHeaders(),
     }),
@@ -436,7 +436,7 @@ export const migrationApi = {
       canRollbackReason: string;
       entitiesToRollback: number;
       backupSnapshotAvailable: boolean;
-    }>(`/api/migration/jobs/${jobId}/rollback-info`, { headers: migrationUserHeaders() }),
+    }>(`/migration/jobs/${jobId}/rollback-info`, { headers: migrationUserHeaders() }),
 
   rollbackJob: (jobId: string) =>
     apiClient.post<{
@@ -444,54 +444,54 @@ export const migrationApi = {
       success: boolean;
       rolledBackCount: number;
       failedCount: number;
-    }>(`/api/migration/jobs/${jobId}/rollback`, null, { headers: migrationUserHeaders() }),
+    }>(`/migration/jobs/${jobId}/rollback`, null, { headers: migrationUserHeaders() }),
 
   downloadValidationReport: (jobId: string) =>
-    apiClient.get(`/api/migration/jobs/${jobId}/validation-report`, {
+    apiClient.get(`/migration/jobs/${jobId}/validation-report`, {
       responseType: 'blob',
       headers: migrationUserHeaders(),
     }),
 
   getJobAuditTrail: (jobId: string) =>
-    apiClient.get<Array<Record<string, unknown>>>(`/api/migration/jobs/${jobId}/audit-trail`, {
+    apiClient.get<Array<Record<string, unknown>>>(`/migration/jobs/${jobId}/audit-trail`, {
       headers: migrationUserHeaders(),
     }),
 
   getJobIssueResults: (jobId: string) =>
-    apiClient.get<Array<Record<string, unknown>>>(`/api/migration/jobs/${jobId}/issue-results`, {
+    apiClient.get<Array<Record<string, unknown>>>(`/migration/jobs/${jobId}/issue-results`, {
       headers: migrationUserHeaders(),
     }),
 
   getJobStagingSummary: (jobId: string) =>
-    apiClient.get<Record<string, unknown>>(`/api/migration/jobs/${jobId}/staging-summary`, {
+    apiClient.get<Record<string, unknown>>(`/migration/jobs/${jobId}/staging-summary`, {
       headers: migrationUserHeaders(),
     }),
 
   getJobLogs: (jobId: string) =>
     apiClient.get<Array<{ timestamp?: string; level?: string; message?: string }>>(
-      `/api/migration/jobs/${jobId}/logs`,
+      `/migration/jobs/${jobId}/logs`,
       { headers: migrationUserHeaders() }
     ),
 
   getJobDlq: (jobId: string) =>
-    apiClient.get<Array<Record<string, unknown>>>(`/api/migration/jobs/${jobId}/dlq`, {
+    apiClient.get<Array<Record<string, unknown>>>(`/migration/jobs/${jobId}/dlq`, {
       headers: migrationUserHeaders(),
     }),
 
   retryJobDlqEntry: (jobId: string, dlqId: string) =>
-    apiClient.post<Record<string, unknown>>(`/api/migration/jobs/${jobId}/dlq/${dlqId}/retry`, null, {
+    apiClient.post<Record<string, unknown>>(`/migration/jobs/${jobId}/dlq/${dlqId}/retry`, null, {
       headers: migrationUserHeaders(),
     }),
 
   // Job Status
   getJobStatus: (jobId: string) =>
-    apiClient.get<MigrationJobResponse>(`/api/migration/jobs/${jobId}`, {
+    apiClient.get<MigrationJobResponse>(`/migration/jobs/${jobId}`, {
       headers: migrationUserHeaders(),
     }),
 
   kickStalledJob: (jobId: string) =>
     apiClient.post<Record<string, unknown>>(
-      `/api/migration/jobs/${jobId}/kick`,
+      `/migration/jobs/${jobId}/kick`,
       null,
       { headers: migrationUserHeaders() }
     ),
@@ -505,32 +505,32 @@ export const migrationApi = {
       processedEntities: number;
       failedEntities: number;
       entityProgress: Array<{ entityType: string; total: number; completed: number; failed: number }>;
-    }>(`/api/migration/jobs/${jobId}/progress`, { headers: migrationUserHeaders() }),
+    }>(`/migration/jobs/${jobId}/progress`, { headers: migrationUserHeaders() }),
 
   getImportResult: (jobId: string) =>
-    apiClient.get<ImportResultResponse>(`/api/migration/jobs/${jobId}/result`, {
+    apiClient.get<ImportResultResponse>(`/migration/jobs/${jobId}/result`, {
       headers: migrationUserHeaders(),
     }),
 
   getDcSlaProof: (jobId: string) =>
-    apiClient.get<Record<string, unknown>>(`/api/migration/jobs/${jobId}/dc-sla-proof`, {
+    apiClient.get<Record<string, unknown>>(`/migration/jobs/${jobId}/dc-sla-proof`, {
       headers: migrationUserHeaders(),
     }),
 
   getDcAcSignoff: (jobId: string) =>
-    apiClient.get<Record<string, unknown>>(`/api/migration/jobs/${jobId}/dc-ac-signoff`, {
+    apiClient.get<Record<string, unknown>>(`/migration/jobs/${jobId}/dc-ac-signoff`, {
       headers: migrationUserHeaders(),
     }),
 
   cancelJob: (jobId: string) =>
-    apiClient.post(`/api/migration/jobs/${jobId}/cancel`, null, { headers: migrationUserHeaders() }),
+    apiClient.post(`/migration/jobs/${jobId}/cancel`, null, { headers: migrationUserHeaders() }),
 
   // Templates
   getTemplates: (entityType?: string) =>
     apiClient.get<CsvTemplateResponse[]>('/migration/templates', { params: { entityType } }),
 
   downloadTemplate: (templateId: string) =>
-    apiClient.get(`/api/migration/templates/${templateId}/download`, { responseType: 'blob' }),
+    apiClient.get(`/migration/templates/${templateId}/download`, { responseType: 'blob' }),
 
   // Field Mappings (saved templates)
   getMappings: (mappingType?: string) =>
@@ -539,7 +539,7 @@ export const migrationApi = {
       headers: migrationUserHeaders(),
     }),
   getMapping: (mappingId: string) =>
-    apiClient.get<Record<string, unknown>>(`/api/migration/mappings/${mappingId}`, {
+    apiClient.get<Record<string, unknown>>(`/migration/mappings/${mappingId}`, {
       headers: migrationUserHeaders(),
     }),
   createMapping: (mapping: Record<string, unknown>) =>
@@ -547,10 +547,10 @@ export const migrationApi = {
       headers: migrationUserHeaders(),
     }),
   deleteMapping: (mappingId: string) =>
-    apiClient.delete(`/api/migration/mappings/${mappingId}`, { headers: migrationUserHeaders() }),
+    apiClient.delete(`/migration/mappings/${mappingId}`, { headers: migrationUserHeaders() }),
 
   getConfigImportSummary: (jobId: string) =>
-    apiClient.get<Record<string, unknown>>(`/api/migration/jobs/${jobId}/config-import-summary`, {
+    apiClient.get<Record<string, unknown>>(`/migration/jobs/${jobId}/config-import-summary`, {
       headers: migrationUserHeaders(),
     }),
 
@@ -565,7 +565,7 @@ export const migrationApi = {
       headers: migrationUserHeaders(),
     }),
   retryGlobalDlq: (id: string) =>
-    apiClient.post<Record<string, unknown>>(`/api/migration/dlq/retry/${id}`, null, {
+    apiClient.post<Record<string, unknown>>(`/migration/dlq/retry/${id}`, null, {
       headers: migrationUserHeaders(),
     }),
   retryAllGlobalDlq: () =>
@@ -681,7 +681,7 @@ export const migrationWizardApi = {
     }),
 
   getSession: (sessionId: string) =>
-    apiClient.get<WizardSessionResponse>(`/api/migration/wizard/sessions/${sessionId}`, {
+    apiClient.get<WizardSessionResponse>(`/migration/wizard/sessions/${sessionId}`, {
       headers: migrationUserHeaders(),
     }),
 
@@ -694,12 +694,12 @@ export const migrationWizardApi = {
       userMappings?: Array<Record<string, unknown>>;
     }
   ) =>
-    apiClient.patch<WizardSessionResponse>(`/api/migration/wizard/sessions/${sessionId}`, body, {
+    apiClient.patch<WizardSessionResponse>(`/migration/wizard/sessions/${sessionId}`, body, {
       headers: migrationUserHeaders(),
     }),
 
   getUserMappings: (sessionId: string) =>
-    apiClient.get<WizardUserMappingRow[]>(`/api/migration/wizard/sessions/${sessionId}/user-mappings`, {
+    apiClient.get<WizardUserMappingRow[]>(`/migration/wizard/sessions/${sessionId}/user-mappings`, {
       headers: migrationUserHeaders(),
     }),
 
@@ -707,7 +707,7 @@ export const migrationWizardApi = {
     const formData = new FormData();
     formData.append('file', file);
     if (importType) formData.append('importType', importType);
-    return apiClient.post<WizardUploadResponse>(`/api/migration/wizard/sessions/${sessionId}/upload`, formData, {
+    return apiClient.post<WizardUploadResponse>(`/migration/wizard/sessions/${sessionId}/upload`, formData, {
       headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
     });
   },
@@ -722,7 +722,7 @@ export const migrationWizardApi = {
     const formData = new FormData();
     formData.append('file', file);
     if (importType) formData.append('importType', importType);
-    return apiClient.post<WizardUploadResponse>(`/api/migration/wizard/sessions/${sessionId}/upload`, formData, {
+    return apiClient.post<WizardUploadResponse>(`/migration/wizard/sessions/${sessionId}/upload`, formData, {
       headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
       signal,
       onUploadProgress: (event) => {
@@ -734,48 +734,48 @@ export const migrationWizardApi = {
   },
 
   getPreview: (sessionId: string, page = 0, size = 10) =>
-    apiClient.get<WizardSessionResponse>(`/api/migration/wizard/sessions/${sessionId}/preview`, {
+    apiClient.get<WizardSessionResponse>(`/migration/wizard/sessions/${sessionId}/preview`, {
       params: { page, size },
       headers: migrationUserHeaders(),
     }),
 
   downloadValidationReport: (sessionId: string) =>
-    apiClient.get(`/api/migration/wizard/sessions/${sessionId}/validation-report`, {
+    apiClient.get(`/migration/wizard/sessions/${sessionId}/validation-report`, {
       responseType: 'blob',
       headers: migrationUserHeaders(),
     }),
 
   validateSession: (sessionId: string, entityType?: string) =>
     apiClient.post(
-      `/api/migration/wizard/sessions/${sessionId}/validate`,
+      `/migration/wizard/sessions/${sessionId}/validate`,
       null,
       { params: { entityType }, headers: migrationUserHeaders() }
     ),
 
   saveFieldMappings: (sessionId: string, mappings: Record<string, unknown>[]) =>
     apiClient.patch<WizardSessionResponse>(
-      `/api/migration/wizard/sessions/${sessionId}/field-mappings`,
+      `/migration/wizard/sessions/${sessionId}/field-mappings`,
       mappings,
       { headers: migrationUserHeaders() }
     ),
 
   discoverSessionFields: (sessionId: string) =>
     apiClient.post<WizardFieldDiscoveryResponse>(
-      `/api/migration/wizard/sessions/${sessionId}/fields/discover`,
+      `/migration/wizard/sessions/${sessionId}/fields/discover`,
       null,
       { headers: migrationUserHeaders() }
     ),
 
   provisionMissingSessionFields: (sessionId: string) =>
     apiClient.post<WizardFieldProvisioningResponse>(
-      `/api/migration/wizard/sessions/${sessionId}/fields/provision-missing`,
+      `/migration/wizard/sessions/${sessionId}/fields/provision-missing`,
       null,
       { headers: migrationUserHeaders() }
     ),
 
   executeImport: (sessionId: string, body?: { targetProjectId?: string; options?: Record<string, unknown> }) =>
     apiClient.post<MigrationJobResponse>(
-      `/api/migration/wizard/sessions/${sessionId}/execute`,
+      `/migration/wizard/sessions/${sessionId}/execute`,
       body ?? {},
       {
         headers: migrationUserHeaders({
@@ -832,7 +832,7 @@ export const sprintApi = {
   getSprints: (projectId?: string) =>
     apiClient.get<SprintResponse[]>('/sprints', { params: { projectId } }),
 
-  getSprint: (sprintId: string) => apiClient.get<SprintResponse>(`/api/sprints/${sprintId}`),
+  getSprint: (sprintId: string) => apiClient.get<SprintResponse>(`/sprints/${sprintId}`),
 
   getActiveSprint: (projectId: string) => apiClient.get<SprintResponse>('/sprints/active', {
     params: { projectId },
@@ -847,31 +847,31 @@ export const sprintApi = {
   }) => apiClient.post<SprintResponse>('/sprints', sprint),
 
   updateSprint: (sprintId: string, sprint: Partial<SprintResponse>) =>
-    apiClient.put<SprintResponse>(`/api/sprints/${sprintId}`, sprint),
+    apiClient.put<SprintResponse>(`/sprints/${sprintId}`, sprint),
 
-  deleteSprint: (sprintId: string) => apiClient.delete(`/api/sprints/${sprintId}`),
+  deleteSprint: (sprintId: string) => apiClient.delete(`/sprints/${sprintId}`),
 
-  startSprint: (sprintId: string) => apiClient.post<SprintResponse>(`/api/sprints/${sprintId}/start`),
+  startSprint: (sprintId: string) => apiClient.post<SprintResponse>(`/sprints/${sprintId}/start`),
 
-  completeSprint: (sprintId: string) => apiClient.post<SprintResponse>(`/api/sprints/${sprintId}/complete`),
+  completeSprint: (sprintId: string) => apiClient.post<SprintResponse>(`/sprints/${sprintId}/complete`),
 
   addIssueToSprint: (sprintId: string, issueId: string) =>
-    apiClient.post(`/api/sprints/${sprintId}/issues`, { issueId }),
+    apiClient.post(`/sprints/${sprintId}/issues`, { issueId }),
 
   removeIssueFromSprint: (sprintId: string, issueId: string) =>
-    apiClient.delete(`/api/sprints/${sprintId}/issues/${issueId}`),
+    apiClient.delete(`/sprints/${sprintId}/issues/${issueId}`),
 
   // Boards
   getBoards: (projectId: string) => apiClient.get<BoardResponse[]>('/boards', { params: { projectId } }),
 
-  getBoard: (boardId: string) => apiClient.get<BoardResponse>(`/api/boards/${boardId}`),
+  getBoard: (boardId: string) => apiClient.get<BoardResponse>(`/boards/${boardId}`),
 
   getBoardData: (boardId: string) =>
     apiClient.get<{
       board: BoardResponse;
       columns: BoardColumnResponse[];
       sprints: SprintResponse[];
-    }>(`/api/boards/${boardId}/data`),
+    }>(`/boards/${boardId}/data`),
 
   createBoard: (board: {
     name: string;
@@ -880,22 +880,22 @@ export const sprintApi = {
   }) => apiClient.post<BoardResponse>('/boards', board),
 
   updateBoard: (boardId: string, board: Partial<BoardResponse>) =>
-    apiClient.put<BoardResponse>(`/api/boards/${boardId}`, board),
+    apiClient.put<BoardResponse>(`/boards/${boardId}`, board),
 
-  deleteBoard: (boardId: string) => apiClient.delete(`/api/boards/${boardId}`),
+  deleteBoard: (boardId: string) => apiClient.delete(`/boards/${boardId}`),
 
   // Board Columns
   addColumn: (boardId: string, column: { name: string; statusId?: string; orderIndex: number }) =>
-    apiClient.post<BoardColumnResponse>(`/api/boards/${boardId}/columns`, column),
+    apiClient.post<BoardColumnResponse>(`/boards/${boardId}/columns`, column),
 
   updateColumn: (boardId: string, columnId: string, column: Partial<BoardColumnResponse>) =>
-    apiClient.put<BoardColumnResponse>(`/api/boards/${boardId}/columns/${columnId}`, column),
+    apiClient.put<BoardColumnResponse>(`/boards/${boardId}/columns/${columnId}`, column),
 
   deleteColumn: (boardId: string, columnId: string) =>
-    apiClient.delete(`/api/boards/${boardId}/columns/${columnId}`),
+    apiClient.delete(`/boards/${boardId}/columns/${columnId}`),
 
   // Velocity
-  getVelocity: (boardId: string) => apiClient.get<VelocityResponse>(`/api/boards/${boardId}/velocity`),
+  getVelocity: (boardId: string) => apiClient.get<VelocityResponse>(`/boards/${boardId}/velocity`),
 };
 
 // ============================================
@@ -917,21 +917,21 @@ export const attachmentApi = {
   upload: (issueId: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return apiClient.post<AttachmentResponse>(`/api/attachments/issue/${issueId}`, formData, {
+    return apiClient.post<AttachmentResponse>(`/attachments/issue/${issueId}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
 
-  getForIssue: (issueId: string) => apiClient.get<AttachmentResponse[]>(`/api/attachments/issue/${issueId}`),
+  getForIssue: (issueId: string) => apiClient.get<AttachmentResponse[]>(`/attachments/issue/${issueId}`),
 
-  getMetadata: (attachmentId: string) => apiClient.get<AttachmentResponse>(`/api/attachments/${attachmentId}`),
+  getMetadata: (attachmentId: string) => apiClient.get<AttachmentResponse>(`/attachments/${attachmentId}`),
 
   download: (attachmentId: string) =>
-    apiClient.get(`/api/attachments/${attachmentId}/download`, { responseType: 'blob' }),
+    apiClient.get(`/attachments/${attachmentId}/download`, { responseType: 'blob' }),
 
-  delete: (attachmentId: string) => apiClient.delete(`/api/attachments/${attachmentId}`),
+  delete: (attachmentId: string) => apiClient.delete(`/attachments/${attachmentId}`),
 
-  deleteAllForIssue: (issueId: string) => apiClient.delete(`/api/attachments/issue/${issueId}`),
+  deleteAllForIssue: (issueId: string) => apiClient.delete(`/attachments/issue/${issueId}`),
 };
 
 // ============================================
@@ -964,10 +964,10 @@ export interface TeamResponse {
 
 export const userManagementApi = {
   // Profiles
-  getProfile: (userId: string) => apiClient.get<UserProfileResponse>(`/api/users/profiles/${userId}`),
+  getProfile: (userId: string) => apiClient.get<UserProfileResponse>(`/users/profiles/${userId}`),
 
   updateProfile: (userId: string, profile: Partial<UserProfileResponse>) =>
-    apiClient.put<UserProfileResponse>(`/api/users/profiles/${userId}`, profile),
+    apiClient.put<UserProfileResponse>(`/users/profiles/${userId}`, profile),
 
   // Organizations
   getOrganizations: () => apiClient.get<OrganizationResponse[]>('/users/organizations'),
@@ -975,18 +975,18 @@ export const userManagementApi = {
   createOrganization: (org: { name: string; description?: string }) =>
     apiClient.post<OrganizationResponse>('/users/organizations', org),
 
-  getOrganization: (orgId: string) => apiClient.get<OrganizationResponse>(`/api/users/organizations/${orgId}`),
+  getOrganization: (orgId: string) => apiClient.get<OrganizationResponse>(`/users/organizations/${orgId}`),
 
   getOrganizationMembers: (orgId: string) =>
     apiClient.get<Array<{ userId: string; displayName: string; role: string }>>(
-      `/api/users/organizations/${orgId}/members`
+      `/users/organizations/${orgId}/members`
     ),
 
   addOrganizationMember: (orgId: string, userId: string, role: string) =>
-    apiClient.post(`/api/users/organizations/${orgId}/members`, { userId, role }),
+    apiClient.post(`/users/organizations/${orgId}/members`, { userId, role }),
 
   removeOrganizationMember: (orgId: string, userId: string) =>
-    apiClient.delete(`/api/users/organizations/${orgId}/members/${userId}`),
+    apiClient.delete(`/users/organizations/${orgId}/members/${userId}`),
 
   // Teams
   getTeams: (orgId?: string) =>
@@ -995,10 +995,10 @@ export const userManagementApi = {
   createTeam: (team: { name: string; organizationId: string }) =>
     apiClient.post<TeamResponse>('/users/teams', team),
 
-  getTeam: (teamId: string) => apiClient.get<TeamResponse>(`/api/users/teams/${teamId}`),
+  getTeam: (teamId: string) => apiClient.get<TeamResponse>(`/users/teams/${teamId}`),
 
   updateTeam: (teamId: string, team: Partial<TeamResponse>) =>
-    apiClient.put<TeamResponse>(`/api/users/teams/${teamId}`, team),
+    apiClient.put<TeamResponse>(`/users/teams/${teamId}`, team),
 
-  deleteTeam: (teamId: string) => apiClient.delete(`/api/users/teams/${teamId}`),
+  deleteTeam: (teamId: string) => apiClient.delete(`/users/teams/${teamId}`),
 };

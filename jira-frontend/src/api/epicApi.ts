@@ -51,35 +51,35 @@ export const epicApi = {
     apiClient.get<EpicResponse[]>('/epics', { params }),
 
   getById: (epicId: string) =>
-    apiClient.get<EpicResponse>(`/api/epics/${epicId}`),
+    apiClient.get<EpicResponse>(`/epics/${epicId}`),
 
   create: (data: CreateEpicRequest) =>
     apiClient.post<EpicResponse>('/epics', data),
 
   update: (epicId: string, data: UpdateEpicRequest) =>
-    apiClient.put<EpicResponse>(`/api/epics/${epicId}`, data),
+    apiClient.put<EpicResponse>(`/epics/${epicId}`, data),
 
   delete: (epicId: string) =>
-    apiClient.delete(`/api/epics/${epicId}`),
+    apiClient.delete(`/epics/${epicId}`),
 
   getIssues: (epicId: string) =>
-    apiClient.get<string[]>(`/api/epics/${epicId}/issues`),
+    apiClient.get<string[]>(`/epics/${epicId}/issues`),
 
   addIssue: (epicId: string, issueId: string) =>
-    apiClient.post(`/api/epics/${epicId}/issues/${issueId}`),
+    apiClient.post(`/epics/${epicId}/issues/${issueId}`),
 
   removeIssue: (epicId: string, issueId: string) =>
-    apiClient.delete(`/api/epics/${epicId}/issues/${issueId}`),
+    apiClient.delete(`/epics/${epicId}/issues/${issueId}`),
 
   getProgress: (epicId: string) =>
-    apiClient.get<EpicProgressResponse>(`/api/epics/${epicId}/progress`),
+    apiClient.get<EpicProgressResponse>(`/epics/${epicId}/progress`),
 
   recalculateProgress: (epicId: string) =>
-    apiClient.post<EpicResponse>(`/api/epics/${epicId}/progress/recalculate`),
+    apiClient.post<EpicResponse>(`/epics/${epicId}/progress/recalculate`),
 
   updateStatus: (epicId: string, status: string) =>
-    apiClient.put<EpicResponse>(`/api/epics/${epicId}/status`, { status }),
+    apiClient.put<EpicResponse>(`/epics/${epicId}/status`, { status }),
 
   getProgressHistory: (epicId: string) =>
-    apiClient.get<EpicProgressResponse[]>(`/api/epics/${epicId}/progress/history`),
+    apiClient.get<EpicProgressResponse[]>(`/epics/${epicId}/progress/history`),
 };

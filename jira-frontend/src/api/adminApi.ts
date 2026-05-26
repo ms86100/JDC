@@ -159,15 +159,15 @@ export const adminApi = {
   createUser: (data: { username: string; email: string; displayName?: string; role?: string }) =>
     apiClient.post<User>('/admin/users', data),
   updateUser: (userId: string, data: Partial<User>) =>
-    apiClient.put<User>(`/api/admin/users/${userId}`, data),
-  deleteUser: (userId: string) => apiClient.delete(`/api/admin/users/${userId}`),
+    apiClient.put<User>(`/admin/users/${userId}`, data),
+  deleteUser: (userId: string) => apiClient.delete(`/admin/users/${userId}`),
   getUserStatistics: () => apiClient.get<UserStatistics>('/admin/users/statistics'),
 
   // Projects
   getProjects: () => apiClient.get<ProjectSettings[]>('/admin/projects'),
-  getProject: (projectId: string) => apiClient.get<ProjectSettings>(`/api/admin/projects/${projectId}`),
+  getProject: (projectId: string) => apiClient.get<ProjectSettings>(`/admin/projects/${projectId}`),
   updateProject: (projectId: string, data: Partial<ProjectSettings>) =>
-    apiClient.put<ProjectSettings>(`/api/admin/projects/${projectId}`, data),
+    apiClient.put<ProjectSettings>(`/admin/projects/${projectId}`, data),
 
   // Appearance
   getAppearance: () => apiClient.get<AppearanceSettings>('/admin/appearance'),

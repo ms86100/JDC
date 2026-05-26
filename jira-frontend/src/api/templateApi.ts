@@ -92,7 +92,7 @@ export interface TemplateWithWorkflow {
 export const templateApi = {
   getCatalog: () => apiClient.get<TemplateCatalog>('/templates/catalog'),
   getTemplateWithWorkflow: (templateId: string) =>
-    apiClient.get<TemplateWithWorkflow>(`/api/templates/${templateId}/workflow`),
+    apiClient.get<TemplateWithWorkflow>(`/templates/${templateId}/workflow`),
   searchCatalog: (query: string, catalog: TemplateCatalog) => {
     const q = query.trim().toLowerCase();
     if (!q) return catalog;

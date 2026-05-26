@@ -34,20 +34,20 @@ export const minutesToSeconds = (minutes: number) => minutes * 60;
 
 export const worklogApi = {
   create: (issueId: string, data: Omit<CreateWorklogRequest, 'issueId'>) =>
-    apiClient.post<WorklogResponse>(`/api/issues/${issueId}/worklogs`, data),
+    apiClient.post<WorklogResponse>(`/issues/${issueId}/worklogs`, data),
 
   getAll: (issueId: string) =>
-    apiClient.get<WorklogResponse[]>(`/api/issues/${issueId}/worklogs`),
+    apiClient.get<WorklogResponse[]>(`/issues/${issueId}/worklogs`),
 
   getById: (issueId: string, worklogId: string) =>
-    apiClient.get<WorklogResponse>(`/api/issues/${issueId}/worklogs/${worklogId}`),
+    apiClient.get<WorklogResponse>(`/issues/${issueId}/worklogs/${worklogId}`),
 
   update: (issueId: string, worklogId: string, data: UpdateWorklogRequest) =>
-    apiClient.put<WorklogResponse>(`/api/issues/${issueId}/worklogs/${worklogId}`, data),
+    apiClient.put<WorklogResponse>(`/issues/${issueId}/worklogs/${worklogId}`, data),
 
   delete: (issueId: string, worklogId: string) =>
-    apiClient.delete(`/api/issues/${issueId}/worklogs/${worklogId}`),
+    apiClient.delete(`/issues/${issueId}/worklogs/${worklogId}`),
 
   getTotalTime: (issueId: string) =>
-    apiClient.get<number>(`/api/issues/${issueId}/worklogs/total`),
+    apiClient.get<number>(`/issues/${issueId}/worklogs/total`),
 };

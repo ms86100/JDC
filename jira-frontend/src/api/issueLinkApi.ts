@@ -30,16 +30,16 @@ export const issueLinkApi = {
     }),
 
   getAll: (issueId: string) =>
-    apiClient.get<IssueLinkResponse[]>(`/api/issues/links/issue/${issueId}`),
+    apiClient.get<IssueLinkResponse[]>(`/issues/links/issue/${issueId}`),
 
   getOutward: (issueId: string) =>
-    apiClient.get<IssueLinkResponse[]>(`/api/issues/links/issue/${issueId}/outward`),
+    apiClient.get<IssueLinkResponse[]>(`/issues/links/issue/${issueId}/outward`),
 
   getInward: (issueId: string) =>
-    apiClient.get<IssueLinkResponse[]>(`/api/issues/links/issue/${issueId}/inward`),
+    apiClient.get<IssueLinkResponse[]>(`/issues/links/issue/${issueId}/inward`),
 
   delete: (issueId: string, linkId: string) =>
-    apiClient.delete(`/api/issues/links/${linkId}`),
+    apiClient.delete(`/issues/links/${linkId}`),
 
   getLinkTypes: (issueId?: string) =>
     apiClient.get<string[]>('/issues/links/types/names'),

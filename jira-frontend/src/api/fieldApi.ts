@@ -64,7 +64,7 @@ export const fieldApi = {
     apiClient.get<CustomFieldDefinitionDto[]>('/fields/custom'),
 
   getCustomField: (id: string) =>
-    apiClient.get<CustomFieldDefinitionDto>(`/api/fields/custom/${id}`),
+    apiClient.get<CustomFieldDefinitionDto>(`/fields/custom/${id}`),
 
   createCustomField: (body: CreateCustomFieldRequest, userId?: string) =>
     apiClient.post<CustomFieldDefinitionDto>('/fields/custom', body, {
@@ -72,19 +72,19 @@ export const fieldApi = {
     }),
 
   updateCustomField: (id: string, body: UpdateCustomFieldRequest) =>
-    apiClient.put<CustomFieldDefinitionDto>(`/api/fields/custom/${id}`, body),
+    apiClient.put<CustomFieldDefinitionDto>(`/fields/custom/${id}`, body),
 
   deleteCustomField: (id: string) =>
-    apiClient.delete(`/api/fields/custom/${id}`),
+    apiClient.delete(`/fields/custom/${id}`),
 
   ensureProjectFieldScheme: (projectId: string, fieldKeys?: string[]) =>
     apiClient.post<{ projectId: string; fieldsAligned: number; status: string }>(
-      `/api/fields/schemes/projects/${projectId}/ensure-fields`,
+      `/fields/schemes/projects/${projectId}/ensure-fields`,
       fieldKeys ?? null
     ),
 
   getScreenConfiguration: (screenType = 'issue') =>
-    apiClient.get(`/api/fields/screens/configuration`, { params: { screenType } }),
+    apiClient.get(`/fields/screens/configuration`, { params: { screenType } }),
 
   mapFields: (sourceFieldKeys: string[]) =>
     apiClient.post<FieldMappingResultDto>('/fields/map', sourceFieldKeys),
@@ -96,14 +96,14 @@ export const fieldApi = {
       customFields?: Record<string, unknown>;
       standardFields?: Record<string, unknown>;
       allFieldValues?: Array<{ fieldKey: string; fieldDisplayName?: string; value: unknown }>;
-    }>(`/api/fields/issues/${encodeURIComponent(issueId)}/values`),
+    }>(`/fields/issues/${encodeURIComponent(issueId)}/values`),
 
   getVisibleIssueFields: (
     issueIdOrKey: string,
     params?: { screen?: string; projectId?: string; issueTypeId?: string },
   ) =>
     apiClient.get<IssueVisibleFieldsDto>(
-      `/api/fields/issues/${encodeURIComponent(issueIdOrKey)}/visible`,
+      `/fields/issues/${encodeURIComponent(issueIdOrKey)}/visible`,
       { params },
     ),
 };
@@ -170,14 +170,14 @@ export interface DashboardGadgetDto {
 
 export const boardFieldApi = {
   getCardLayout: (boardId: string, projectId?: string) =>
-    apiClient.get<BoardCardLayoutDto>(`/api/fields/boards/${boardId}/card-layout`, {
+    apiClient.get<BoardCardLayoutDto>(`/fields/boards/${boardId}/card-layout`, {
       params: projectId ? { projectId } : undefined,
     }),
 
   saveCardLayout: (
     boardId: string,
     body: { projectId?: string; fields: Array<{ fieldKey: string; displayOrder?: number }> },
-  ) => apiClient.put<BoardCardLayoutDto>(`/api/fields/boards/${boardId}/card-layout`, body),
+  ) => apiClient.put<BoardCardLayoutDto>(`/fields/boards/${boardId}/card-layout`, body),
 
   batchIssueFieldValues: (body: {
     issueIds: string[];
@@ -194,7 +194,7 @@ export const dashboardFieldApi = {
   listGadgets: () => apiClient.get<string[]>('/fields/dashboard/gadgets'),
 
   getGadget: (gadgetKey: string, params?: { dashboardKey?: string; projectId?: string }) =>
-    apiClient.get<DashboardGadgetDto>(`/api/fields/dashboard/gadgets/${gadgetKey}`, { params }),
+    apiClient.get<DashboardGadgetDto>(`/fields/dashboard/gadgets/${gadgetKey}`, { params }),
 
   saveGadget: (
     gadgetKey: string,
@@ -205,7 +205,7 @@ export const dashboardFieldApi = {
     },
     projectId?: string,
   ) =>
-    apiClient.put<DashboardGadgetDto>(`/api/fields/dashboard/gadgets/${gadgetKey}`, body, {
+    apiClient.put<DashboardGadgetDto>(`/fields/dashboard/gadgets/${gadgetKey}`, body, {
       params: projectId ? { projectId } : undefined,
     }),
 };
@@ -219,26 +219,26 @@ export interface OptionMappingDto {
 
 export const migrationMappingApi = {
   saveSessionFieldDefaults: (sessionId: string, defaults: Record<string, unknown>) =>
-    apiClient.patch(`/api/migration/mapping-engine/sessions/${sessionId}/field-defaults`, defaults),
+    apiClient.patch(`/migration/mapping-engine/sessions/${sessionId}/field-defaults`, defaults),
 
   saveSessionWorkflowMappings: (sessionId: string, mappings: Record<string, unknown>) =>
-    apiClient.put(`/api/migration/mapping-engine/sessions/${sessionId}/workflow-status-mappings`, mappings),
+    apiClient.put(`/migration/mapping-engine/sessions/${sessionId}/workflow-status-mappings`, mappings),
 
   resolveUsers: (jobId: string, sourceIdentifiers: string[]) =>
-    apiClient.post(`/api/migration/mapping-engine/jobs/${jobId}/resolve-users`, sourceIdentifiers),
+    apiClient.post(`/migration/mapping-engine/jobs/${jobId}/resolve-users`, sourceIdentifiers),
 
   getSessionOptionMappings: (sessionId: string) =>
-    apiClient.get<OptionMappingDto[]>(`/api/migration/mapping-engine/sessions/${sessionId}/option-mappings`),
+    apiClient.get<OptionMappingDto[]>(`/migration/mapping-engine/sessions/${sessionId}/option-mappings`),
 
   saveSessionOptionMappings: (sessionId: string, mappings: OptionMappingDto[]) =>
     apiClient.put<OptionMappingDto[]>(
-      `/api/migration/mapping-engine/sessions/${sessionId}/option-mappings`,
+      `/migration/mapping-engine/sessions/${sessionId}/option-mappings`,
       mappings,
     ),
 
   getJobOptionMappings: (jobId: string) =>
-    apiClient.get<OptionMappingDto[]>(`/api/migration/mapping-engine/jobs/${jobId}/option-mappings`),
+    apiClient.get<OptionMappingDto[]>(`/migration/mapping-engine/jobs/${jobId}/option-mappings`),
 
   saveJobOptionMappings: (jobId: string, mappings: OptionMappingDto[]) =>
-    apiClient.put<OptionMappingDto[]>(`/api/migration/mapping-engine/jobs/${jobId}/option-mappings`, mappings),
+    apiClient.put<OptionMappingDto[]>(`/migration/mapping-engine/jobs/${jobId}/option-mappings`, mappings),
 };

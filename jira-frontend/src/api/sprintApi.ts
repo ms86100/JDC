@@ -123,35 +123,35 @@ export const sprintApi = {
       .catch(() => [] as SprintResponse[]),
 
   getById: (sprintId: string) =>
-    apiClient.get<SprintResponse>(`/api/sprints/${sprintId}`),
+    apiClient.get<SprintResponse>(`/sprints/${sprintId}`),
 
   update: (sprintId: string, data: UpdateSprintRequest) =>
-    apiClient.put<SprintResponse>(`/api/sprints/${sprintId}`, data),
+    apiClient.put<SprintResponse>(`/sprints/${sprintId}`, data),
 
   delete: (sprintId: string) =>
-    apiClient.delete(`/api/sprints/${sprintId}`),
+    apiClient.delete(`/sprints/${sprintId}`),
 
   start: (sprintId: string) =>
-    apiClient.post<SprintResponse>(`/api/sprints/${sprintId}/start`),
+    apiClient.post<SprintResponse>(`/sprints/${sprintId}/start`),
 
   complete: (sprintId: string) =>
-    apiClient.post<SprintResponse>(`/api/sprints/${sprintId}/complete`),
+    apiClient.post<SprintResponse>(`/sprints/${sprintId}/complete`),
 
   getIssues: (sprintId: string) =>
     apiClient.get('/issues', { params: { sprintId } }),
 
   addIssue: (sprintId: string, issueId: string) =>
-    apiClient.post(`/api/sprints/${sprintId}/issues`, { issueId }),
+    apiClient.post(`/sprints/${sprintId}/issues`, { issueId }),
 
   removeIssue: (sprintId: string, issueId: string) =>
-    apiClient.delete(`/api/sprints/${sprintId}/issues/${issueId}`),
+    apiClient.delete(`/sprints/${sprintId}/issues/${issueId}`),
 
   // Reports
   getReport: (sprintId: string) =>
-    apiClient.get<SprintReportResponse>(`/api/sprints/reports/${sprintId}`),
+    apiClient.get<SprintReportResponse>(`/sprints/reports/${sprintId}`),
 
   getBurndown: (sprintId: string) =>
-    apiClient.get<BurndownResponse>(`/api/sprints/reports/${sprintId}/burndown`),
+    apiClient.get<BurndownResponse>(`/sprints/reports/${sprintId}/burndown`),
 
   getVelocity: (projectId: string) =>
     apiClient.get<VelocityResponse>('/sprints/reports/velocity', {

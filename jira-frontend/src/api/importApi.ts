@@ -23,8 +23,8 @@ export const importApi = {
     apiClient.get<ImportBatchResponse[]>('/import/history', { params: { projectId } }),
 
   getCucumberStatus: (batchId: string) =>
-    apiClient.get<ImportBatchResponse>(`/api/import/cucumber/status/${batchId}`),
+    apiClient.get<ImportBatchResponse>(`/import/cucumber/status/${batchId}`),
 
   getJunitStatus: (batchId: string) =>
-    apiClient.get<ImportBatchResponse>(`/api/import/junit/status/${batchId}`),
+    apiClient.get<ImportBatchResponse>(`/import/junit/status/${batchId}`),
 };

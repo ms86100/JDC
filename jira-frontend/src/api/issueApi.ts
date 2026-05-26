@@ -169,21 +169,21 @@ export const issueApi = {
     apiClient.post<IssueResponse>('/issues', toBackendCreatePayload(data)),
   getAll: (params?: Record<string, string>) => apiClient.get<{ content: IssueResponse[]; totalElements: number }>('/issues', { params }),
   getById: async (id: string) => {
-    const response = await apiClient.get<IssueResponse>(`/api/issues/${id}`);
+    const response = await apiClient.get<IssueResponse>(`/issues/${id}`);
     response.data = normalizeIssue(response.data as unknown as Record<string, unknown>);
     return response;
   },
 
   getByKey: (issueKey: string) =>
-    apiClient.get<IssueResponse>(`/api/issues/by-key/${encodeURIComponent(issueKey)}`),
+    apiClient.get<IssueResponse>(`/issues/by-key/${encodeURIComponent(issueKey)}`),
 
   getBatch: (ids: string[]) =>
     apiClient.get<IssueResponse[]>('/issues/batch', {
       params: { ids: ids.join(',') },
     }),
   update: (id: string, data: UpdateIssueRequest) =>
-    apiClient.put<IssueResponse>(`/api/issues/${id}`, toBackendUpdatePayload(data)),
-  delete: (id: string) => apiClient.delete(`/api/issues/${id}`),
+    apiClient.put<IssueResponse>(`/issues/${id}`, toBackendUpdatePayload(data)),
+  delete: (id: string) => apiClient.delete(`/issues/${id}`),
 
   // Status transitions (workflow engine)
   transitionStatus: (id: string, projectId: string, data: {
@@ -192,7 +192,7 @@ export const issueApi = {
     comment?: string;
     resolutionId?: string;
     screenInput?: Record<string, unknown>;
-  }) => apiClient.patch<IssueResponse>(`/api/issues/${id}/status`, data, { params: { projectId } }),
+  }) => apiClient.patch<IssueResponse>(`/issues/${id}/status`, data, { params: { projectId } }),
 
   executeTransition: (data: {
     issueId: string;
@@ -216,25 +216,25 @@ export const issueApi = {
         hasScreen?: boolean;
         screenFields?: Array<{ fieldId: string; fieldName: string; required: boolean }>;
       }>;
-    }>(`/api/issues/${id}/transitions`, { params: { projectId } }),
+    }>(`/issues/${id}/transitions`, { params: { projectId } }),
 
   // Watch & Vote
-  watch: (id: string) => apiClient.post(`/api/issues/${id}/watch`),
-  unwatch: (id: string) => apiClient.delete(`/api/issues/${id}/watch`),
-  vote: (id: string) => apiClient.post(`/api/issues/${id}/vote`),
-  unvote: (id: string) => apiClient.delete(`/api/issues/${id}/vote`),
+  watch: (id: string) => apiClient.post(`/issues/${id}/watch`),
+  unwatch: (id: string) => apiClient.delete(`/issues/${id}/watch`),
+  vote: (id: string) => apiClient.post(`/issues/${id}/vote`),
+  unvote: (id: string) => apiClient.delete(`/issues/${id}/vote`),
 
   // Clone & Move (backend uses @RequestParam, not body)
   clone: (id: string, data?: { projectId?: string }) =>
-    apiClient.post<IssueResponse>(`/api/issues/${id}/clone`, null, {
+    apiClient.post<IssueResponse>(`/issues/${id}/clone`, null, {
       params: { projectId: data?.projectId },
     }),
   cloneToProject: (id: string, targetProjectId: string) =>
-    apiClient.post<IssueResponse>(`/api/issues/${id}/clone-to-project`, null, {
+    apiClient.post<IssueResponse>(`/issues/${id}/clone-to-project`, null, {
       params: { targetProjectId },
     }),
   move: (id: string, data: { projectId: string }) =>
-    apiClient.post<IssueResponse>(`/api/issues/${id}/move`, null, {
+    apiClient.post<IssueResponse>(`/issues/${id}/move`, null, {
       params: { targetProjectId: data.projectId },
     }),
 
@@ -242,7 +242,7 @@ export const issueApi = {
   linkIssue: async (id: string, data: { targetIssueId?: string; targetIssueKey?: string; linkType: string }) => {
     let resolvedId = data.targetIssueId;
     if (data.targetIssueKey && !resolvedId) {
-      const found = await apiClient.get<IssueResponse>(`/api/issues/by-key/${encodeURIComponent(data.targetIssueKey)}`);
+      const found = await apiClient.get<IssueResponse>(`/issues/by-key/${encodeURIComponent(data.targetIssueKey)}`);
       resolvedId = found.data.id;
     }
     return apiClient.post('/issues/links', {
@@ -251,23 +251,23 @@ export const issueApi = {
       linkTypeName: data.linkType,
     });
   },
-  unlinkIssue: (id: string, linkId: string) => apiClient.delete(`/api/issues/links/${linkId}`),
-  getLinks: (id: string) => apiClient.get<Array<{ id: string; type: string; targetIssue: IssueResponse }>>(`/api/issues/${id}/links`),
+  unlinkIssue: (id: string, linkId: string) => apiClient.delete(`/issues/links/${linkId}`),
+  getLinks: (id: string) => apiClient.get<Array<{ id: string; type: string; targetIssue: IssueResponse }>>(`/issues/${id}/links`),
 
   // Subtasks
-  getSubtasks: (id: string) => apiClient.get<IssueResponse[]>(`/api/issues/${id}/subtasks`),
+  getSubtasks: (id: string) => apiClient.get<IssueResponse[]>(`/issues/${id}/subtasks`),
 
   // Labels
-  addLabel: (id: string, label: string) => apiClient.post(`/api/issues/${id}/labels`, { label }),
-  removeLabel: (id: string, label: string) => apiClient.delete(`/api/issues/${id}/labels/${encodeURIComponent(label)}`),
+  addLabel: (id: string, label: string) => apiClient.post(`/issues/${id}/labels`, { label }),
+  removeLabel: (id: string, label: string) => apiClient.delete(`/issues/${id}/labels/${encodeURIComponent(label)}`),
 
   // Versions
-  addFixVersion: (id: string, versionId: string) => apiClient.post(`/api/issues/${id}/fix-versions`, { versionId }),
-  removeFixVersion: (id: string, versionId: string) => apiClient.delete(`/api/issues/${id}/fix-versions/${versionId}`),
+  addFixVersion: (id: string, versionId: string) => apiClient.post(`/issues/${id}/fix-versions`, { versionId }),
+  removeFixVersion: (id: string, versionId: string) => apiClient.delete(`/issues/${id}/fix-versions/${versionId}`),
 
   // Components
-  addComponent: (id: string, componentId: string) => apiClient.post(`/api/issues/${id}/components`, { componentId }),
-  removeComponent: (id: string, componentId: string) => apiClient.delete(`/api/issues/${id}/components/${componentId}`),
+  addComponent: (id: string, componentId: string) => apiClient.post(`/issues/${id}/components`, { componentId }),
+  removeComponent: (id: string, componentId: string) => apiClient.delete(`/issues/${id}/components/${componentId}`),
 
   // Enums lookups
   getTypes: () => apiClient.get<IssueType[]>('/issues/types'),
@@ -278,12 +278,12 @@ export const issueApi = {
 export const projectApi = {
   getAll: (params?: { search?: string; archived?: boolean; page?: number; size?: number }) =>
     apiClient.get<{ content: Project[]; totalElements: number }>('/projects', { params }),
-  getById: (id: string) => apiClient.get<Project>(`/api/projects/${id}`),
+  getById: (id: string) => apiClient.get<Project>(`/projects/${id}`),
   create: (data: Partial<Project>) => apiClient.post<Project>('/projects', data),
-  update: (id: string, data: Partial<Project>) => apiClient.put<Project>(`/api/projects/${id}`, data),
-  delete: (id: string) => apiClient.delete(`/api/projects/${id}`),
-  archive: (id: string) => apiClient.post(`/api/projects/${id}/archive`),
-  unarchive: (id: string) => apiClient.post(`/api/projects/${id}/unarchive`),
+  update: (id: string, data: Partial<Project>) => apiClient.put<Project>(`/projects/${id}`, data),
+  delete: (id: string) => apiClient.delete(`/projects/${id}`),
+  archive: (id: string) => apiClient.post(`/projects/${id}/archive`),
+  unarchive: (id: string) => apiClient.post(`/projects/${id}/unarchive`),
   getVersions: async (projectId: string) => {
     const { versionApi } = await import('./versionApi');
     return { data: await versionApi.getByProject(projectId) };
@@ -292,17 +292,17 @@ export const projectApi = {
     const { componentApi } = await import('./componentApi');
     return { data: await componentApi.getByProject(projectId) };
   },
-  getSprints: (projectId: string) => apiClient.get<Sprint[]>(`/api/sprints?projectId=${projectId}`),
+  getSprints: (projectId: string) => apiClient.get<Sprint[]>(`/sprints?projectId=${projectId}`),
 };
 
 export const sprintApi = {
   getAll: (params?: { boardId?: string; state?: string; projectId?: string }) =>
     apiClient.get<Sprint[]>('/sprints', { params }),
-  getById: (id: string) => apiClient.get<Sprint>(`/api/sprints/${id}`),
+  getById: (id: string) => apiClient.get<Sprint>(`/sprints/${id}`),
   create: (data: Partial<Sprint>) => apiClient.post<Sprint>('/sprints', data),
-  update: (id: string, data: Partial<Sprint>) => apiClient.put<Sprint>(`/api/sprints/${id}`, data),
-  start: (id: string) => apiClient.post<Sprint>(`/api/sprints/${id}/start`),
-  complete: (id: string) => apiClient.post<Sprint>(`/api/sprints/${id}/complete`),
+  update: (id: string, data: Partial<Sprint>) => apiClient.put<Sprint>(`/sprints/${id}`, data),
+  start: (id: string) => apiClient.post<Sprint>(`/sprints/${id}/start`),
+  complete: (id: string) => apiClient.post<Sprint>(`/sprints/${id}/complete`),
 };
 
 /** @deprecated Import from `api/versionApi` — thin wrappers for legacy callers */
@@ -393,13 +393,13 @@ export interface CustomFieldValue {
 
 export const customFieldApi = {
   getAll: () => apiClient.get<CustomField[]>('/custom-fields'),
-  getById: (id: string) => apiClient.get<CustomField>(`/api/custom-fields/${id}`),
+  getById: (id: string) => apiClient.get<CustomField>(`/custom-fields/${id}`),
   create: (data: Partial<CustomField>) => apiClient.post<CustomField>('/custom-fields', data),
-  update: (id: string, data: Partial<CustomField>) => apiClient.put<CustomField>(`/api/custom-fields/${id}`, data),
-  delete: (id: string) => apiClient.delete(`/api/custom-fields/${id}`),
-  getByIssue: (issueId: string) => apiClient.get<CustomFieldValue[]>(`/api/issues/${issueId}/custom-fields`),
+  update: (id: string, data: Partial<CustomField>) => apiClient.put<CustomField>(`/custom-fields/${id}`, data),
+  delete: (id: string) => apiClient.delete(`/custom-fields/${id}`),
+  getByIssue: (issueId: string) => apiClient.get<CustomFieldValue[]>(`/issues/${issueId}/custom-fields`),
   setValue: (issueId: string, customFieldId: string, value: any) =>
-    apiClient.post<CustomFieldValue>(`/api/issues/${issueId}/custom-fields/${customFieldId}`, { value }),
+    apiClient.post<CustomFieldValue>(`/issues/${issueId}/custom-fields/${customFieldId}`, { value }),
 };
 
 // ==================== Resolution ====================
@@ -434,8 +434,8 @@ export interface SecurityLevel {
 export const resolutionApi = {
   getAll: () => apiClient.get<Resolution[]>('/admin/issues/resolutions'),
   create: (data: Partial<Resolution>) => apiClient.post<Resolution>('/admin/issues/resolutions', data),
-  update: (id: string, data: Partial<Resolution>) => apiClient.put<Resolution>(`/api/admin/issues/resolutions/${id}`, data),
-  delete: (id: string) => apiClient.delete(`/api/admin/issues/resolutions/${id}`),
+  update: (id: string, data: Partial<Resolution>) => apiClient.put<Resolution>(`/admin/issues/resolutions/${id}`, data),
+  delete: (id: string) => apiClient.delete(`/admin/issues/resolutions/${id}`),
 };
 
 // ==================== Issue Link Types ====================

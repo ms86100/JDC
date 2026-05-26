@@ -488,152 +488,152 @@ export interface BoardPermissionResponse {
 export const planApi = {
   // Programs
   getPrograms: () => apiClient.get<ProgramResponse[]>('/plans/programs'),
-  getProgramById: (id: string) => apiClient.get<ProgramResponse>(`/api/plans/programs/${id}`),
+  getProgramById: (id: string) => apiClient.get<ProgramResponse>(`/plans/programs/${id}`),
   createProgram: (data: CreateProgramRequest) =>
     apiClient.post<ProgramResponse>('/plans/programs', data),
   updateProgram: (id: string, data: UpdateProgramRequest) =>
-    apiClient.put<ProgramResponse>(`/api/plans/programs/${id}`, data),
-  deleteProgram: (id: string) => apiClient.delete(`/api/plans/programs/${id}`),
+    apiClient.put<ProgramResponse>(`/plans/programs/${id}`, data),
+  deleteProgram: (id: string) => apiClient.delete(`/plans/programs/${id}`),
   linkPlanToProgram: (programId: string, planId: string) =>
-    apiClient.post(`/api/plans/programs/${programId}/plans/${planId}`),
+    apiClient.post(`/plans/programs/${programId}/plans/${planId}`),
   unlinkPlanFromProgram: (programId: string, planId: string) =>
-    apiClient.delete(`/api/plans/programs/${programId}/plans/${planId}`),
+    apiClient.delete(`/plans/programs/${programId}/plans/${planId}`),
   getProgramAggregation: (programId: string) =>
-    apiClient.get<ProgramAggregationResponse>(`/api/plans/programs/${programId}/aggregation`),
+    apiClient.get<ProgramAggregationResponse>(`/plans/programs/${programId}/aggregation`),
 
   // Plans
   getPlans: () => apiClient.get<PlanResponse[]>('/plans'),
-  getPlanById: (id: string) => apiClient.get<PlanResponse>(`/api/plans/${id}`),
+  getPlanById: (id: string) => apiClient.get<PlanResponse>(`/plans/${id}`),
   getPlansByProgram: (programId: string) =>
-    apiClient.get<PlanResponse[]>(`/api/plans/program/${programId}`),
+    apiClient.get<PlanResponse[]>(`/plans/program/${programId}`),
   createPlan: (data: CreatePlanRequest) =>
     apiClient.post<PlanResponse>('/plans', data),
   updatePlan: (id: string, data: UpdatePlanRequest) =>
-    apiClient.put<PlanResponse>(`/api/plans/${id}`, data),
-  deletePlan: (id: string) => apiClient.delete(`/api/plans/${id}`),
+    apiClient.put<PlanResponse>(`/plans/${id}`, data),
+  deletePlan: (id: string) => apiClient.delete(`/plans/${id}`),
   updatePlanSettings: (id: string, settings: Record<string, unknown>) =>
-    apiClient.put<PlanResponse>(`/api/plans/${id}/settings`, settings),
+    apiClient.put<PlanResponse>(`/plans/${id}/settings`, settings),
 
   getIssueSources: (planId: string) =>
-    apiClient.get<PlanIssueSourceResponse[]>(`/api/plans/${planId}/issue-sources`),
+    apiClient.get<PlanIssueSourceResponse[]>(`/plans/${planId}/issue-sources`),
   addIssueSource: (planId: string, data: { sourceType: string; sourceId: string; sourceName: string }) =>
-    apiClient.post<PlanIssueSourceResponse>(`/api/plans/${planId}/issue-sources`, data),
+    apiClient.post<PlanIssueSourceResponse>(`/plans/${planId}/issue-sources`, data),
   removeIssueSource: (planId: string, sourceId: string, sourceType: string) =>
-    apiClient.delete(`/api/plans/${planId}/issue-sources/${sourceId}`, { params: { sourceType } }),
+    apiClient.delete(`/plans/${planId}/issue-sources/${sourceId}`, { params: { sourceType } }),
 
   getExclusionRules: (planId: string) =>
-    apiClient.get<ExclusionRuleResponse[]>(`/api/plans/${planId}/exclusion-rules`),
+    apiClient.get<ExclusionRuleResponse[]>(`/plans/${planId}/exclusion-rules`),
   createExclusionRule: (planId: string, data: { fieldName: string; operator: string; fieldValue: string }) =>
-    apiClient.post<ExclusionRuleResponse>(`/api/plans/${planId}/exclusion-rules`, data),
+    apiClient.post<ExclusionRuleResponse>(`/plans/${planId}/exclusion-rules`, data),
   deleteExclusionRule: (planId: string, ruleId: string) =>
-    apiClient.delete(`/api/plans/${planId}/exclusion-rules/${ruleId}`),
+    apiClient.delete(`/plans/${planId}/exclusion-rules/${ruleId}`),
 
   runAutoSchedule: (planId: string, startDate?: string) =>
-    apiClient.post<ScheduleResultResponse>(`/api/schedule/forward?planId=${planId}&startDate=${startDate || new Date().toISOString().slice(0, 10)}`),
+    apiClient.post<ScheduleResultResponse>(`/schedule/forward?planId=${planId}&startDate=${startDate || new Date().toISOString().slice(0, 10)}`),
 
   getInitiativesByProgram: (programId: string) =>
-    apiClient.get<InitiativeResponse[]>(`/api/initiatives/program/${programId}`),
+    apiClient.get<InitiativeResponse[]>(`/initiatives/program/${programId}`),
 
   // Backlog
-  getBacklog: (planId: string) => apiClient.get<BacklogResponse>(`/api/plans/${planId}/backlog`),
+  getBacklog: (planId: string) => apiClient.get<BacklogResponse>(`/plans/${planId}/backlog`),
   addItemToBacklog: (planId: string, data: CreatePlanItemRequest) =>
-    apiClient.post<PlanItemResponse>(`/api/plans/${planId}/backlog`, data),
+    apiClient.post<PlanItemResponse>(`/plans/${planId}/backlog`, data),
   updateBacklogItem: (planId: string, itemId: string, data: CreatePlanItemRequest) =>
-    apiClient.put<PlanItemResponse>(`/api/plans/${planId}/backlog/${itemId}`, data),
+    apiClient.put<PlanItemResponse>(`/plans/${planId}/backlog/${itemId}`, data),
   removeItemFromBacklog: (planId: string, itemId: string) =>
-    apiClient.delete(`/api/plans/${planId}/backlog/${itemId}`),
+    apiClient.delete(`/plans/${planId}/backlog/${itemId}`),
   reorderBacklog: (planId: string, data: ReorderRequest) =>
-    apiClient.put(`/api/plans/${planId}/backlog/reorder`, data),
+    apiClient.put(`/plans/${planId}/backlog/reorder`, data),
 
   // Teams
-  getTeams: (planId: string) => apiClient.get<TeamResponse[]>(`/api/plans/${planId}/teams`),
+  getTeams: (planId: string) => apiClient.get<TeamResponse[]>(`/plans/${planId}/teams`),
   getTeamById: (planId: string, teamId: string) =>
-    apiClient.get<TeamResponse>(`/api/plans/${planId}/teams/${teamId}`),
+    apiClient.get<TeamResponse>(`/plans/${planId}/teams/${teamId}`),
   createTeam: (planId: string, data: CreateTeamRequest) =>
-    apiClient.post<TeamResponse>(`/api/plans/${planId}/teams`, data),
+    apiClient.post<TeamResponse>(`/plans/${planId}/teams`, data),
   updateTeam: (planId: string, teamId: string, data: CreateTeamRequest) =>
-    apiClient.put<TeamResponse>(`/api/plans/${planId}/teams/${teamId}`, data),
+    apiClient.put<TeamResponse>(`/plans/${planId}/teams/${teamId}`, data),
   deleteTeam: (planId: string, teamId: string) =>
-    apiClient.delete(`/api/plans/${planId}/teams/${teamId}`),
+    apiClient.delete(`/plans/${planId}/teams/${teamId}`),
   addTeamMember: (planId: string, teamId: string, data: AddTeamMemberRequest) =>
-    apiClient.post<TeamMemberResponse>(`/api/plans/${planId}/teams/${teamId}/members`, data),
+    apiClient.post<TeamMemberResponse>(`/plans/${planId}/teams/${teamId}/members`, data),
   removeTeamMember: (planId: string, teamId: string, memberId: string) =>
-    apiClient.delete(`/api/plans/${planId}/teams/${teamId}/members/${memberId}`),
+    apiClient.delete(`/plans/${planId}/teams/${teamId}/members/${memberId}`),
 
   // Releases
-  getReleases: (planId: string) => apiClient.get<ReleaseResponse[]>(`/api/plans/${planId}/releases`),
+  getReleases: (planId: string) => apiClient.get<ReleaseResponse[]>(`/plans/${planId}/releases`),
   getReleaseById: (planId: string, releaseId: string) =>
-    apiClient.get<ReleaseResponse>(`/api/plans/${planId}/releases/${releaseId}`),
+    apiClient.get<ReleaseResponse>(`/plans/${planId}/releases/${releaseId}`),
   createRelease: (planId: string, data: CreateReleaseRequest) =>
-    apiClient.post<ReleaseResponse>(`/api/plans/${planId}/releases`, data),
+    apiClient.post<ReleaseResponse>(`/plans/${planId}/releases`, data),
   updateRelease: (planId: string, releaseId: string, data: CreateReleaseRequest) =>
-    apiClient.put<ReleaseResponse>(`/api/plans/${planId}/releases/${releaseId}`, data),
+    apiClient.put<ReleaseResponse>(`/plans/${planId}/releases/${releaseId}`, data),
   approveRelease: (planId: string, releaseId: string, approvedBy: string) =>
-    apiClient.post<ReleaseResponse>(`/api/plans/${planId}/releases/${releaseId}/approve?approvedBy=${approvedBy}`),
+    apiClient.post<ReleaseResponse>(`/plans/${planId}/releases/${releaseId}/approve?approvedBy=${approvedBy}`),
   releaseVersion: (planId: string, releaseId: string) =>
-    apiClient.post<ReleaseResponse>(`/api/plans/${planId}/releases/${releaseId}/release`),
+    apiClient.post<ReleaseResponse>(`/plans/${planId}/releases/${releaseId}/release`),
   deleteRelease: (planId: string, releaseId: string) =>
-    apiClient.delete(`/api/plans/${planId}/releases/${releaseId}`),
+    apiClient.delete(`/plans/${planId}/releases/${releaseId}`),
 
   // Dependencies
   getDependencies: (planId: string) =>
-    apiClient.get<DependencyResponse[]>(`/api/plans/${planId}/dependencies`),
+    apiClient.get<DependencyResponse[]>(`/plans/${planId}/dependencies`),
   createDependency: (planId: string, data: CreateDependencyRequest) =>
-    apiClient.post<DependencyResponse>(`/api/plans/${planId}/dependencies`, data),
+    apiClient.post<DependencyResponse>(`/plans/${planId}/dependencies`, data),
   deleteDependency: (planId: string, dependencyId: string) =>
-    apiClient.delete(`/api/plans/${planId}/dependencies/${dependencyId}`),
+    apiClient.delete(`/plans/${planId}/dependencies/${dependencyId}`),
 
   // Warnings
   getWarnings: (planId: string) =>
-    apiClient.get<WarningResponse[]>(`/api/plans/${planId}/warnings`),
+    apiClient.get<WarningResponse[]>(`/plans/${planId}/warnings`),
   dismissWarning: (planId: string, warningId: string) =>
-    apiClient.put<WarningResponse>(`/api/plans/${planId}/warnings/${warningId}/dismiss`),
+    apiClient.put<WarningResponse>(`/plans/${planId}/warnings/${warningId}/dismiss`),
 
   // Boards
   getBoards: (planId: string) =>
-    apiClient.get<BoardConfigResponse[]>(`/api/plans/${planId}/boards`),
+    apiClient.get<BoardConfigResponse[]>(`/plans/${planId}/boards`),
   getBoardById: (boardId: string) =>
-    apiClient.get<BoardConfigResponse>(`/api/plans/boards/${boardId}`),
+    apiClient.get<BoardConfigResponse>(`/plans/boards/${boardId}`),
   createBoard: (planId: string, data: CreateBoardConfigRequest) =>
-    apiClient.post<BoardConfigResponse>(`/api/plans/${planId}/boards`, data),
+    apiClient.post<BoardConfigResponse>(`/plans/${planId}/boards`, data),
   updateBoard: (boardId: string, data: CreateBoardConfigRequest) =>
-    apiClient.put<BoardConfigResponse>(`/api/plans/boards/${boardId}`, data),
+    apiClient.put<BoardConfigResponse>(`/plans/boards/${boardId}`, data),
   deleteBoard: (boardId: string) =>
-    apiClient.delete(`/api/plans/boards/${boardId}`),
+    apiClient.delete(`/plans/boards/${boardId}`),
 
   // Sprints
   getSprints: (boardId: string) =>
-    apiClient.get<SprintResponse[]>(`/api/plans/boards/${boardId}/sprints`),
+    apiClient.get<SprintResponse[]>(`/plans/boards/${boardId}/sprints`),
   getSprintById: (sprintId: string) =>
-    apiClient.get<SprintResponse>(`/api/plans/sprints/${sprintId}`),
+    apiClient.get<SprintResponse>(`/plans/sprints/${sprintId}`),
   createSprint: (boardId: string, data: CreateSprintRequest) =>
-    apiClient.post<SprintResponse>(`/api/plans/boards/${boardId}/sprints`, data),
+    apiClient.post<SprintResponse>(`/plans/boards/${boardId}/sprints`, data),
   startSprint: (sprintId: string, userId?: string) =>
-    apiClient.post<SprintResponse>(`/api/plans/sprints/${sprintId}/start${userId ? `?userId=${userId}` : ''}`),
+    apiClient.post<SprintResponse>(`/plans/sprints/${sprintId}/start${userId ? `?userId=${userId}` : ''}`),
   closeSprint: (sprintId: string, userId?: string) =>
-    apiClient.post<SprintResponse>(`/api/plans/sprints/${sprintId}/close${userId ? `?userId=${userId}` : ''}`),
+    apiClient.post<SprintResponse>(`/plans/sprints/${sprintId}/close${userId ? `?userId=${userId}` : ''}`),
   getSprintIssues: (sprintId: string) =>
-    apiClient.get<SprintIssueResponse[]>(`/api/plans/sprints/${sprintId}/issues`),
+    apiClient.get<SprintIssueResponse[]>(`/plans/sprints/${sprintId}/issues`),
   getSprintBurndown: (sprintId: string) =>
-    apiClient.get<SprintBurndownResponse>(`/api/plans/sprints/${sprintId}/burndown`),
+    apiClient.get<SprintBurndownResponse>(`/plans/sprints/${sprintId}/burndown`),
 
   // Working Days
   getWorkingDaysConfigs: () =>
     apiClient.get<WorkingDaysResponse[]>('/plans/working-days'),
   getWorkingDaysConfig: (id: string) =>
-    apiClient.get<WorkingDaysResponse>(`/api/plans/working-days/${id}`),
+    apiClient.get<WorkingDaysResponse>(`/plans/working-days/${id}`),
   getDefaultWorkingDays: () =>
     apiClient.get<WorkingDaysResponse>('/plans/working-days/default'),
   getHolidays: (configId: string) =>
-    apiClient.get<NonWorkingDayResponse[]>(`/api/plans/working-days/${configId}/holidays`),
+    apiClient.get<NonWorkingDayResponse[]>(`/plans/working-days/${configId}/holidays`),
   getTeamAvailability: (teamId: string, start: string, end: string) =>
-    apiClient.get<TeamAvailabilityResponse[]>(`/api/plans/teams/${teamId}/availability?start=${start}&end=${end}`),
+    apiClient.get<TeamAvailabilityResponse[]>(`/plans/teams/${teamId}/availability?start=${start}&end=${end}`),
   getTeamCapacity: (teamId: string, start: string, end: string) =>
-    apiClient.get<CapacityResponse>(`/api/plans/teams/${teamId}/capacity?start=${start}&end=${end}`),
+    apiClient.get<CapacityResponse>(`/plans/teams/${teamId}/capacity?start=${start}&end=${end}`),
 
   // Permissions
   getBoardPermissions: (boardId: string) =>
-    apiClient.get<BoardPermissionResponse[]>(`/api/plans/boards/${boardId}/permissions`),
+    apiClient.get<BoardPermissionResponse[]>(`/plans/boards/${boardId}/permissions`),
   checkBoardPermission: (boardId: string, permission: string, userId: string) =>
-    apiClient.get<boolean>(`/api/plans/boards/${boardId}/permissions/check?permission=${permission}&userId=${userId}`),
+    apiClient.get<boolean>(`/plans/boards/${boardId}/permissions/check?permission=${permission}&userId=${userId}`),
 };

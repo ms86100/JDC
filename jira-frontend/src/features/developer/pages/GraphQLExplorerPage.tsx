@@ -1,7 +1,6 @@
-const ISSUE_SERVICE_URL =
-  import.meta.env.VITE_ISSUE_SERVICE_URL || 'http://localhost:8084';
-
-const GRAPHIQL_URL = `${ISSUE_SERVICE_URL}/graphiql`;
+const base = import.meta.env.VITE_API_GATEWAY_URL ?? '';
+const ISSUE_SERVICE_URL = base ? `${base}/graphql` : 'http://localhost:8084';
+const GRAPHIQL_URL = base ? `${base}/graphiql` : 'http://localhost:8084/graphiql';
 
 const SAMPLE_QUERY = `query {
   tests(projectId: "YOUR_PROJECT_UUID") {

@@ -35,25 +35,25 @@ export const dashboardApi = {
     apiClient.get<Dashboard[]>('/dashboards', { params: { includeGlobal } }),
 
   getById: (id: string) =>
-    apiClient.get<Dashboard>(`/api/dashboards/${id}`),
+    apiClient.get<Dashboard>(`/dashboards/${id}`),
 
   create: (data: CreateDashboardRequest) =>
     apiClient.post<Dashboard>('/dashboards', data),
 
   update: (id: string, data: CreateDashboardRequest) =>
-    apiClient.put<Dashboard>(`/api/dashboards/${id}`, data),
+    apiClient.put<Dashboard>(`/dashboards/${id}`, data),
 
   delete: (id: string) =>
-    apiClient.delete(`/api/dashboards/${id}`),
+    apiClient.delete(`/dashboards/${id}`),
 
   addGadget: (dashboardId: string, gadget: Omit<Gadget, 'id'>) =>
-    apiClient.post<Dashboard>(`/api/dashboards/${dashboardId}/gadgets`, gadget),
+    apiClient.post<Dashboard>(`/dashboards/${dashboardId}/gadgets`, gadget),
 
   updateGadget: (dashboardId: string, gadgetId: string, gadget: Gadget) =>
-    apiClient.put<Dashboard>(`/api/dashboards/${dashboardId}/gadgets/${gadgetId}`, gadget),
+    apiClient.put<Dashboard>(`/dashboards/${dashboardId}/gadgets/${gadgetId}`, gadget),
 
   removeGadget: (dashboardId: string, gadgetId: string) =>
-    apiClient.delete<Dashboard>(`/api/dashboards/${dashboardId}/gadgets/${gadgetId}`),
+    apiClient.delete<Dashboard>(`/dashboards/${dashboardId}/gadgets/${gadgetId}`),
 
   getGadgetData: (gadgetType: string, preferences?: Record<string, any>) =>
     apiClient.get<Record<string, any>>('/dashboards/gadgets/data', {
