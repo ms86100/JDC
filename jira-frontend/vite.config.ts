@@ -24,33 +24,73 @@ export default defineConfig(({ mode }) => {
         overlay: process.env.VITE_HMR_OVERLAY !== 'false',
       },
       proxy: {
-        // Workflow admin APIs — direct to workflow service when gateway is not running
-        '/api/workflow-schemes': {
-          target: env.VITE_WORKFLOW_SERVICE_URL || 'http://localhost:8085',
+        // All API routes proxy to gateway
+        '/auth': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
           changeOrigin: true,
         },
-        '/api/workflows': {
-          target: env.VITE_WORKFLOW_SERVICE_URL || 'http://localhost:8085',
+        '/projects': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
           changeOrigin: true,
         },
-        '/api/admin/workflows': {
-          target: env.VITE_WORKFLOW_SERVICE_URL || 'http://localhost:8085',
+        '/issues': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
           changeOrigin: true,
         },
-        '/api/fields': {
-          target: env.VITE_MIGRATION_SERVICE_URL || 'http://localhost:8094',
+        '/workflows': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
           changeOrigin: true,
         },
-        '/api/custom-fields': {
-          target: env.VITE_MIGRATION_SERVICE_URL || 'http://localhost:8094',
+        '/users': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
           changeOrigin: true,
         },
-        '/api/migration': {
-          target: env.VITE_MIGRATION_SERVICE_URL || 'http://localhost:8094',
+        '/comments': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
           changeOrigin: true,
         },
-        '/api/sse': {
-          target: env.VITE_MIGRATION_SERVICE_URL || 'http://localhost:8094',
+        '/admin': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/sprints': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/boards': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/search': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/notifications': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/audit': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/attachments': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/versions': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/components': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/migration': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/tests': {
+          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
           changeOrigin: true,
         },
         '/graphql': {
@@ -60,28 +100,6 @@ export default defineConfig(({ mode }) => {
         '/graphiql': {
           target: env.VITE_ISSUE_SERVICE_URL || 'http://localhost:8084',
           changeOrigin: true,
-        },
-        '/api/comments': {
-          target: env.VITE_COMMENT_SERVICE_URL || 'http://127.0.0.1:8086',
-          changeOrigin: true,
-        },
-        '/api/epics': {
-          target: env.VITE_ISSUE_SERVICE_URL || 'http://localhost:8084',
-          changeOrigin: true,
-        },
-        '/api/boards': {
-          target: env.VITE_SPRINT_SERVICE_URL || 'http://localhost:8091',
-          changeOrigin: true,
-        },
-        '/api/sprints': {
-          target: env.VITE_SPRINT_SERVICE_URL || 'http://localhost:8091',
-          changeOrigin: true,
-        },
-        '/api': {
-          target: env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
-          changeOrigin: true,
-          timeout: 120_000,
-          proxyTimeout: 120_000,
         },
       },
     },
