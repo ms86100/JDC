@@ -8,9 +8,7 @@ spring:
         cors-configurations:
           '[/**]':
             allowedOrigins:
-              - "http://frontend:3000"
-              - "http://localhost:3000"
-              - "http://0.0.0.0:3000"
+              - "*"
             allowedMethods:
               - GET
               - POST
@@ -20,10 +18,7 @@ spring:
               - OPTIONS
             allowedHeaders:
               - "*"
-            allowCredentials: true
             maxAge: 3600
-            exposeHeaders:
-              - Access-Control-Allow-Credentials
       routes:
         # Auth Service - Critical, must be accessible
         - id: auth-service
@@ -32,6 +27,12 @@ spring:
             - Path=/api/auth/**
           filters:
             - StripPrefix=1
+
+        # Auth routes without /api prefix (for direct access)
+        - id: auth-service-direct
+          uri: http://auth-service:8081
+          predicates:
+            - Path=/auth/**
 
         # User Service
         - id: user-service
