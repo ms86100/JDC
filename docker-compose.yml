@@ -71,7 +71,7 @@ services:
       dockerfile: jira-gateway/Dockerfile
     container_name: jira-gateway
     ports:
-      - "9080:8080"
+      - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       REDIS_HOST: redis
@@ -628,7 +628,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      VITE_API_GATEWAY_URL: http://gateway:8080
+      VITE_API_GATEWAY_URL: ""
       NODE_ENV: production
     networks:
       - jira-network

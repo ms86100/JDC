@@ -31,7 +31,6 @@ public class CorsWebFilter implements WebFilter, Ordered {
         headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
         headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers");
         headers.add("Access-Control-Max-Age", "3600");
-        headers.add("Access-Control-Allow-Credentials", "true");
 
         if (exchange.getRequest().getMethod() == org.springframework.http.HttpMethod.OPTIONS) {
             response.setStatusCode(HttpStatus.OK);
