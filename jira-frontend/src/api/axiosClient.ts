@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-// In dev, use relative URLs so Vite can proxy /api (workflow routes → 8085, rest → 8080).
-const API_BASE = import.meta.env.DEV
-  ? ''
-  : (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:8080');
+// Build-time env var VITE_API_GATEWAY_URL is baked in by Docker
+// In Docker: VITE_API_GATEWAY_URL=/api (nginx proxy handles it)
+// In dev: falls back to '' (relative path, Vite proxy handles it)
+const API_BASE = import.meta.env.VITE_API_GATEWAY_URL ?? '';
 
 const apiClient = axios.create({
   baseURL: API_BASE,

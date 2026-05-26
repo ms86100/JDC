@@ -1,5 +1,10 @@
 FROM node:20-alpine AS build
 WORKDIR /app
+
+# Accept build-time argument for API gateway URL
+ARG VITE_API_GATEWAY_URL=/api
+ENV VITE_API_GATEWAY_URL=$VITE_API_GATEWAY_URL
+
 COPY jira-frontend/package.json .
 RUN npm install
 COPY jira-frontend/ .

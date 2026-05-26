@@ -624,6 +624,8 @@ services:
     build:
       <<: *common-build
       dockerfile: jira-frontend/Dockerfile
+      args:
+        - VITE_API_GATEWAY_URL=/api
     container_name: jira-frontend
     ports:
       - "3000:3000"
