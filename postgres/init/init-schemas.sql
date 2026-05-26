@@ -1,11 +1,12 @@
 -- Initialize Jira Platform Database Schemas
 -- This script creates all schemas needed by microservices
 
--- Auth schema (users, roles, groups)
+-- Auth schema (for future use if services need separate auth schemas)
+-- Note: The current auth-service migration creates users, roles, user_roles in public schema
 CREATE SCHEMA IF NOT EXISTS jira_auth;
 GRANT ALL ON SCHEMA jira_auth TO jiraadmin;
 
--- User schema
+-- User schema (for future use)
 CREATE SCHEMA IF NOT EXISTS jira_user;
 GRANT ALL ON SCHEMA jira_user TO jiraadmin;
 
@@ -63,7 +64,7 @@ GRANT ALL ON SCHEMA jira_component TO jiraadmin;
 
 -- Create default admin user for login
 -- Password: admin123 (BCrypt encoded)
-INSERT INTO jira_auth.users (id, username, email, password_hash, active, created_at, updated_at)
+INSERT INTO public.users (id, username, email, password_hash, active, created_at, updated_at)
 VALUES (
     '5ba38176-421f-431c-87f9-3836e4147a8c',
     'admin',
@@ -75,7 +76,7 @@ VALUES (
 ) ON CONFLICT (username) DO NOTHING;
 
 -- Create default user role
-INSERT INTO jira_auth.roles (id, name, description, created_at)
+INSERT INTO public.roles (id, name, description, created_at)
 VALUES (
     gen_random_uuid(),
     'ROLE_USER',
@@ -84,7 +85,7 @@ VALUES (
 ) ON CONFLICT (name) DO NOTHING;
 
 -- Create admin role
-INSERT INTO jira_auth.roles (id, name, description, created_at)
+INSERT INTO public.roles (id, name, description, created_at)
 VALUES (
     gen_random_uuid(),
     'ROLE_ADMIN',
@@ -93,12 +94,12 @@ VALUES (
 ) ON CONFLICT (name) DO NOTHING;
 
 -- Assign ROLE_USER to admin
-INSERT INTO jira_auth.user_roles (user_id, role_id)
+INSERT INTO public.user_roles (user_id, role_id)
 SELECT u.id, r.id
-FROM jira_auth.users u, jira_auth.roles r
+FROM public.users u, public.roles r
 WHERE u.username = 'admin' AND r.name = 'ROLE_USER'
 AND NOT EXISTS (
-    SELECT 1 FROM jira_auth.user_roles ur
+    SELECT 1 FROM public.user_roles ur
     WHERE ur.user_id = u.id AND ur.role_id = r.id
 );
 

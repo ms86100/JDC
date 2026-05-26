@@ -1,7 +1,89 @@
+# =============================================================================
+# Docker Build Ignore Patterns
+# Excludes unnecessary files from Docker build context to reduce image size
+# and speed up builds
+# =============================================================================
+
+# Version Control
 .git
 .gitignore
-*.md
-node_modules
-npm-debug.log
+.gitattributes
+
+# IDE and Editor Files
+.idea
+.vscode
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+
+# Build Artifacts
+target/
+build/
+**/target/
+**/build/
+*.class
+*.jar
+*.war
+*.ear
+
+# Log Files
+*.log
+logs/
+**/logs/
+*.log.*
+
+# Environment and Configuration (secrets should be passed via env vars)
+.env
+.env.*
 .env.local
 .env.*.local
+
+# Documentation (reduces build context size)
+*.md
+README*
+LICENSE
+docs/
+*.txt
+
+# Node.js (frontend builds)
+node_modules/
+npm-debug.log
+yarn-error.log
+.yarn/
+.pnp.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+*.egg-info/
+
+# Maven
+.m2/
+.mvn/
+*.bak
+
+# Temporary and Cache Files
+*.tmp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Local Development Files
+docker-compose*.yml
+*.sh
+
+# Dependency Cache (needed for cross-service builds)
+.dependency-jars/
+.m2-cache/
+
+# Test Files
+test-results/
+surefire-reports/

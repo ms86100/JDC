@@ -2,6 +2,11 @@ networks:
   jira-network:
     driver: bridge
 
+# YAML anchors for shared build configuration
+x-common-build: &common-build
+  context: .
+  pull: false
+
 volumes:
   postgres_data: {}
   attachment_data: {}
@@ -62,8 +67,8 @@ services:
   # =============================================================================
   gateway:
     build:
-      context: ./jira-gateway
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-gateway/Dockerfile
     container_name: jira-gateway
     ports:
       - "8080:8080"
@@ -91,8 +96,8 @@ services:
   # =============================================================================
   auth-service:
     build:
-      context: ./jira-auth-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-auth-service/Dockerfile
     container_name: jira-auth-service
     ports:
       - "8081:8081"
@@ -124,8 +129,8 @@ services:
   # =============================================================================
   user-service:
     build:
-      context: ./jira-user-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-user-service/Dockerfile
     container_name: jira-user-service
     ports:
       - "8082:8082"
@@ -157,8 +162,17 @@ services:
   # =============================================================================
   project-service:
     build:
-      context: ./jira-project-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-project-service/Dockerfile
+      args:
+        ADMIN_SERVICE_VERSION: latest
+    depends_on:
+      admin-service:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
     container_name: jira-project-service
     ports:
       - "8083:8083"
@@ -173,11 +187,6 @@ services:
       JAVA_OPTS: -Xms256m -Xmx512m
     networks:
       - jira-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      auth-service:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8083/actuator/health || exit 1"]
       interval: 15s
@@ -190,8 +199,20 @@ services:
   # =============================================================================
   issue-service:
     build:
-      context: ./jira-issue-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-issue-service/Dockerfile
+      args:
+        ADMIN_SERVICE_VERSION: latest
+        PROJECT_SERVICE_VERSION: latest
+    depends_on:
+      admin-service:
+        condition: service_started
+      project-service:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
     container_name: jira-issue-service
     ports:
       - "8084:8084"
@@ -207,11 +228,6 @@ services:
       JAVA_OPTS: -Xms256m -Xmx512m
     networks:
       - jira-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      auth-service:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8084/actuator/health || exit 1"]
       interval: 15s
@@ -224,8 +240,8 @@ services:
   # =============================================================================
   workflow-service:
     build:
-      context: ./jira-workflow-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-workflow-service/Dockerfile
     container_name: jira-workflow-service
     ports:
       - "8085:8085"
@@ -257,8 +273,8 @@ services:
   # =============================================================================
   comment-service:
     build:
-      context: ./jira-comment-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-comment-service/Dockerfile
     container_name: jira-comment-service
     ports:
       - "8086:8086"
@@ -290,8 +306,8 @@ services:
   # =============================================================================
   notification-service:
     build:
-      context: ./jira-notification-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-notification-service/Dockerfile
     container_name: jira-notification-service
     ports:
       - "8087:8087"
@@ -323,8 +339,8 @@ services:
   # =============================================================================
   search-service:
     build:
-      context: ./jira-search-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-search-service/Dockerfile
     container_name: jira-search-service
     ports:
       - "8088:8088"
@@ -356,8 +372,8 @@ services:
   # =============================================================================
   audit-service:
     build:
-      context: ./jira-audit-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-audit-service/Dockerfile
     container_name: jira-audit-service
     ports:
       - "8089:8089"
@@ -389,8 +405,8 @@ services:
   # =============================================================================
   attachment-service:
     build:
-      context: ./jira-attachment-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-attachment-service/Dockerfile
     container_name: jira-attachment-service
     ports:
       - "8090:8090"
@@ -425,8 +441,8 @@ services:
   # =============================================================================
   sprint-service:
     build:
-      context: ./jira-sprint-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-sprint-service/Dockerfile
     container_name: jira-sprint-service
     ports:
       - "8091:8091"
@@ -458,8 +474,8 @@ services:
   # =============================================================================
   plan-service:
     build:
-      context: ./jira-plan-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-plan-service/Dockerfile
     container_name: jira-plan-service
     ports:
       - "8092:8092"
@@ -491,8 +507,8 @@ services:
   # =============================================================================
   admin-service:
     build:
-      context: ./jira-admin-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-admin-service/Dockerfile
     container_name: jira-admin-service
     ports:
       - "8093:8093"
@@ -524,8 +540,8 @@ services:
   # =============================================================================
   migration-service:
     build:
-      context: ./jira-migration-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-migration-service/Dockerfile
     container_name: jira-migration-service
     ports:
       - "8094:8094"
@@ -557,8 +573,8 @@ services:
   # =============================================================================
   version-service:
     build:
-      context: ./jira-version-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-version-service/Dockerfile
     container_name: jira-version-service
     ports:
       - "8096:8096"
@@ -590,8 +606,8 @@ services:
   # =============================================================================
   component-service:
     build:
-      context: ./jira-component-service
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-component-service/Dockerfile
     container_name: jira-component-service
     ports:
       - "8097:8097"
@@ -623,8 +639,8 @@ services:
   # =============================================================================
   frontend:
     build:
-      context: ./jira-frontend
-      dockerfile: Dockerfile
+      <<: *common-build
+      dockerfile: jira-frontend/Dockerfile
     container_name: jira-frontend
     ports:
       - "3000:3000"

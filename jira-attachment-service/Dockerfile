@@ -1,16 +1,18 @@
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
-COPY pom.xml .
-COPY src ./src
-RUN apk add --no-cache maven && \
-    mvn clean package -DskipTests
+
+# Copy parent pom and install to local repo
+COPY pom.xml ./pom.xml
+RUN apk add --no-cache maven && mvn install -N -DskipTests -q
+
+# Copy and build service
+COPY jira-attachment-service/pom.xml ./pom.xml
+COPY jira-attachment-service/src ./src
+RUN mvn package -Dmaven.test.skip=true -q
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-RUN apk add --no-cache shadow && \
-    useradd -r -m jira
-COPY --from=builder /app/target/*.jar app.jar
-RUN mkdir -p /var/jira/attachments && chown -R jira:jira /var/jira
-USER jira
+RUN apk add --no-cache wget curl
+COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8090
 ENTRYPOINT ["java", "-jar", "app.jar"]
