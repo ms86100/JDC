@@ -102,26 +102,26 @@ job:
 
 services:
   gatewayServiceUrl: ${GATEWAY_SERVICE_URL:http://localhost:8080}
-  authServiceUrl: ${AUTH_SERVICE_URL:http://localhost:8081}
-  userServiceUrl: ${USER_SERVICE_URL:http://localhost:8082}
-  projectServiceUrl: ${PROJECT_SERVICE_URL:http://localhost:8083}
-  issueServiceUrl: ${ISSUE_SERVICE_URL:http://localhost:8084}
-  workflowServiceUrl: ${WORKFLOW_SERVICE_URL:http://localhost:8085}
-  commentServiceUrl: ${COMMENT_SERVICE_URL:http://localhost:8086}
-  notificationServiceUrl: ${NOTIFICATION_SERVICE_URL:http://localhost:8087}
-  searchServiceUrl: ${SEARCH_SERVICE_URL:http://localhost:8088}
-  auditServiceUrl: ${AUDIT_SERVICE_URL:http://localhost:8089}
-  attachmentServiceUrl: ${ATTACHMENT_SERVICE_URL:http://localhost:8090}
-  sprintServiceUrl: ${SPRINT_SERVICE_URL:http://localhost:8091}
-  planServiceUrl: ${PLAN_SERVICE_URL:http://localhost:8092}
-  adminServiceUrl: ${ADMIN_SERVICE_URL:http://localhost:8093}
-  migrationServiceUrl: ${MIGRATION_SERVICE_URL:http://localhost:8094}
-  testServiceUrl: ${TEST_SERVICE_URL:http://localhost:8095}
+  authServiceUrl: ${AUTH_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  userServiceUrl: ${USER_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  projectServiceUrl: ${PROJECT_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  issueServiceUrl: ${ISSUE_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  workflowServiceUrl: ${WORKFLOW_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  commentServiceUrl: ${COMMENT_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  notificationServiceUrl: ${NOTIFICATION_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  searchServiceUrl: ${SEARCH_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  auditServiceUrl: ${AUDIT_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  attachmentServiceUrl: ${ATTACHMENT_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  sprintServiceUrl: ${SPRINT_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  planServiceUrl: ${PLAN_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  adminServiceUrl: ${ADMIN_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  migrationServiceUrl: ${MIGRATION_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+  testServiceUrl: ${TEST_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
 
 jira:
   services:
-    workflow-url: ${WORKFLOW_SERVICE_URL:http://localhost:8085}
-    issue-url: ${ISSUE_SERVICE_URL:http://localhost:8084}
+    workflow-url: ${WORKFLOW_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+    issue-url: ${ISSUE_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
 
 cluster:
   enabled: false

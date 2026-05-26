@@ -56,11 +56,11 @@ logging:
 
 issue:
   service:
-    url: http://localhost:8084
+    url: http://${DB_HOST:-postgres}:${DB_PORT:-5432}
 
 project:
   service:
-    url: http://localhost:8083
+    url: http://${DB_HOST:-postgres}:${DB_PORT:-5432}
 
 test:
   storage:

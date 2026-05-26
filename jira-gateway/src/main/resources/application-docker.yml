@@ -1,0 +1,374 @@
+spring:
+  config:
+    activate:
+      on-profile: docker
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://frontend:3000"
+              - "http://localhost:3000"
+              - "http://0.0.0.0:3000"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+            maxAge: 3600
+            exposeHeaders:
+              - Access-Control-Allow-Credentials
+      routes:
+        # Auth Service - Critical, must be accessible
+        - id: auth-service
+          uri: http://auth-service:8081
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
+
+        # User Service
+        - id: user-service
+          uri: http://user-service:8082
+          predicates:
+            - Path=/api/users/**
+        - id: user-service-direct
+          uri: http://user-service:8082
+          predicates:
+            - Path=/user-service/**
+          filters:
+            - StripPrefix=1
+
+        # Project Service
+        - id: project-service
+          uri: http://project-service:8083
+          predicates:
+            - Path=/api/projects/**
+        - id: template-service
+          uri: http://project-service:8083
+          predicates:
+            - Path=/api/templates/**
+        - id: security-levels
+          uri: http://project-service:8083
+          predicates:
+            - Path=/api/security-levels/**
+
+        # Issue Service
+        - id: epic-service
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/api/epics/**
+        - id: traceability-service
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/api/traceability/**
+        - id: ai-service
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/api/ai/**
+        - id: webhooks-service
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/api/webhooks/**
+        - id: issue-import-service
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/api/import/**
+        - id: issue-reports-service
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/api/reports/**
+        - id: issue-service
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/api/issues/**
+        - id: bulk-operations
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/api/bulk-operations/**
+        - id: jql-search-issue-service
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/api/jql/**
+
+        # Version Service
+        - id: version-service
+          uri: http://version-service:8096
+          predicates:
+            - Path=/api/versions/**
+
+        # Component Service
+        - id: component-service
+          uri: http://component-service:8097
+          predicates:
+            - Path=/api/components/**
+
+        # Workflow Service
+        - id: workflow-service
+          uri: http://workflow-service:8085
+          predicates:
+            - Path=/api/workflows/**
+        - id: workflow-admin
+          uri: http://workflow-service:8085
+          predicates:
+            - Path=/api/admin/workflows/**
+        - id: workflow-scheme-service
+          uri: http://workflow-service:8085
+          predicates:
+            - Path=/api/workflow-schemes/**
+
+        # Issue Admin Routes
+        - id: issue-admin
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/api/admin/issues/issue-types/**
+
+        # Admin Service (CRUD operations for priorities, statuses)
+        - id: priority-admin
+          uri: http://admin-service:8093
+          predicates:
+            - Path=/api/admin/issues/priorities/**
+        - id: status-admin
+          uri: http://admin-service:8093
+          predicates:
+            - Path=/api/admin/issues/statuses/**
+        - id: admin-service
+          uri: http://admin-service:8093
+          predicates:
+            - Path=/api/admin/**
+        - id: integration-service
+          uri: http://admin-service:8093
+          predicates:
+            - Path=/api/integration/**
+
+        # Comment Service
+        - id: comment-service
+          uri: http://comment-service:8086
+          predicates:
+            - Path=/api/comments/**
+
+        # Test Service
+        - id: test-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/tests/**
+        - id: test-set-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-sets/**
+        - id: test-plan-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-plans/**
+        - id: test-execution-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-executions/**
+        - id: test-environment-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-environments/**
+        - id: test-workflow-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-workflows/**
+        - id: test-folder-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-folders/**
+        - id: test-run-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-runs/**
+
+        # Notification Service
+        - id: notification-service
+          uri: http://notification-service:8087
+          predicates:
+            - Path=/api/notifications/**
+
+        # Search Service
+        - id: search-service
+          uri: http://search-service:8088
+          predicates:
+            - Path=/api/search/**
+
+        # Audit Service
+        - id: audit-service
+          uri: http://audit-service:8089
+          predicates:
+            - Path=/api/audit/**
+
+        # Sprint Service
+        - id: sprint-service
+          uri: http://sprint-service:8091
+          predicates:
+            - Path=/api/sprints/**
+        - id: filters-service
+          uri: http://sprint-service:8091
+          predicates:
+            - Path=/api/filters/**
+
+        # Board Service
+        - id: board-service
+          uri: http://sprint-service:8091
+          predicates:
+            - Path=/api/boards/**
+
+        # Attachment Service
+        - id: attachment-service
+          uri: http://attachment-service:8090
+          predicates:
+            - Path=/api/attachments/**
+
+        # Plan Service
+        - id: plan-service
+          uri: http://plan-service:8092
+          predicates:
+            - Path=/api/plans/**
+
+        # Migration Service
+        - id: migration-service
+          uri: http://migration-service:8094
+          predicates:
+            - Path=/api/migration/**
+        - id: migration-fields-service
+          uri: http://migration-service:8094
+          predicates:
+            - Path=/api/fields/**
+        - id: migration-custom-fields-service
+          uri: http://migration-service:8094
+          predicates:
+            - Path=/api/custom-fields/**
+
+        # WebSocket for real-time updates
+        - id: issue-websocket
+          uri: ws://issue-service:8084
+          predicates:
+            - Path=/ws/issues/**
+
+        # Swagger UI Routes - Aggregate from all services
+        - id: swagger-auth
+          uri: http://auth-service:8081
+          predicates:
+            - Path=/api-docs/auth/**
+          filters:
+            - RewritePath=/api-docs/auth/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-user
+          uri: http://user-service:8082
+          predicates:
+            - Path=/api-docs/user/**
+          filters:
+            - RewritePath=/api-docs/user/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-project
+          uri: http://project-service:8083
+          predicates:
+            - Path=/api-docs/project/**
+          filters:
+            - RewritePath=/api-docs/project/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-issue
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/api-docs/issue/**
+          filters:
+            - RewritePath=/api-docs/issue/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-workflow
+          uri: http://workflow-service:8085
+          predicates:
+            - Path=/api-docs/workflow/**
+          filters:
+            - RewritePath=/api-docs/workflow/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-comment
+          uri: http://comment-service:8086
+          predicates:
+            - Path=/api-docs/comment/**
+          filters:
+            - RewritePath=/api-docs/comment/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-notification
+          uri: http://notification-service:8087
+          predicates:
+            - Path=/api-docs/notification/**
+          filters:
+            - RewritePath=/api-docs/notification/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-search
+          uri: http://search-service:8088
+          predicates:
+            - Path=/api-docs/search/**
+          filters:
+            - RewritePath=/api-docs/search/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-audit
+          uri: http://audit-service:8089
+          predicates:
+            - Path=/api-docs/audit/**
+          filters:
+            - RewritePath=/api-docs/audit/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-attachment
+          uri: http://attachment-service:8090
+          predicates:
+            - Path=/api-docs/attachment/**
+          filters:
+            - RewritePath=/api-docs/attachment/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-sprint
+          uri: http://sprint-service:8091
+          predicates:
+            - Path=/api-docs/sprint/**
+          filters:
+            - RewritePath=/api-docs/sprint/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-plan
+          uri: http://plan-service:8092
+          predicates:
+            - Path=/api-docs/plan/**
+          filters:
+            - RewritePath=/api-docs/plan/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-admin
+          uri: http://admin-service:8093
+          predicates:
+            - Path=/api-docs/admin/**
+          filters:
+            - RewritePath=/api-docs/admin/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-migration
+          uri: http://migration-service:8094
+          predicates:
+            - Path=/api-docs/migration/**
+          filters:
+            - RewritePath=/api-docs/migration/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-test
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api-docs/test/**
+          filters:
+            - RewritePath=/api-docs/test/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-version
+          uri: http://version-service:8096
+          predicates:
+            - Path=/api-docs/version/**
+          filters:
+            - RewritePath=/api-docs/version/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-component
+          uri: http://component-service:8097
+          predicates:
+            - Path=/api-docs/component/**
+          filters:
+            - RewritePath=/api-docs/component/(?<path>.*), /api-docs/$\{path}
+
+# Redis Configuration for Docker
+  data.redis:
+    host: ${REDIS_HOST:redis}
+    port: ${REDIS_PORT:6379}
+    timeout: 2000ms
+
+# JWT Configuration for Docker
+jwt:
+  secret: ${JWT_SECRET:jira-platform-super-secret-key-that-is-at-least-256-bits-long}
+
+# Disable Redis health check in gateway when Redis is unavailable
+management:
+  health:
+    redis:
+      enabled: ${REDIS_ENABLED:false}

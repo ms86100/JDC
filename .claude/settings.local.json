@@ -26,7 +26,12 @@
       "Bash(mv logs/attachment*.log logs/attachment/)",
       "Bash(mv logs/audit*.log logs/audit/)",
       "Bash(mv logs/auth*.log logs/auth/)",
-      "Bash(mv logs/comment*.log logs/comment/)"
+      "Bash(mv logs/comment*.log logs/comment/)",
+      "Bash(dir)",
+      "Bash(mvn compile *)",
+      "Bash(npm run *)",
+      "Bash(git fetch *)",
+      "Bash(git show-ref *)"
     ]
   }
 }

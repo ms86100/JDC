@@ -26,9 +26,9 @@ spring:
 
 jira:
   services:
-    project-url: ${PROJECT_SERVICE_URL:http://localhost:8083}
-    issue-url: ${ISSUE_SERVICE_URL:http://localhost:8084}
-    workflow-url: ${WORKFLOW_SERVICE_URL:http://localhost:8085}
+    project-url: ${PROJECT_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+    issue-url: ${ISSUE_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+    workflow-url: ${WORKFLOW_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
 
 springdoc:
   api-docs:

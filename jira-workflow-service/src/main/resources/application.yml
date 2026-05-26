@@ -53,14 +53,14 @@ springdoc:
 
 jira:
   services:
-    issue-url: ${ISSUE_SERVICE_URL:http://localhost:8084}
-    comment-url: ${COMMENT_SERVICE_URL:http://localhost:8086}
-    attachment-url: ${ATTACHMENT_SERVICE_URL:http://localhost:8090}
-    admin-url: ${ADMIN_SERVICE_URL:http://localhost:8093}
-    user-url: ${USER_SERVICE_URL:http://localhost:8082}
-    notification-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8087}
-    search-url: ${SEARCH_SERVICE_URL:http://localhost:8088}
-    project-url: ${PROJECT_SERVICE_URL:http://localhost:8083}
+    issue-url: ${ISSUE_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+    comment-url: ${COMMENT_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+    attachment-url: ${ATTACHMENT_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+    admin-url: ${ADMIN_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+    user-url: ${USER_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+    notification-url: ${NOTIFICATION_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+    search-url: ${SEARCH_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
+    project-url: ${PROJECT_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
   workflow:
     transition-fallback: false
     outbox:

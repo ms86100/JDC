@@ -71,11 +71,11 @@ spring:
 
 workflow:
   service:
-    url: ${WORKFLOW_SERVICE_URL:http://localhost:8085}
+    url: ${WORKFLOW_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
 
 project:
   service:
-    url: ${PROJECT_SERVICE_URL:http://localhost:8083}
+    url: ${PROJECT_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
 
 jira:
   permissions:

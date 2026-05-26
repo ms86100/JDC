@@ -53,9 +53,9 @@ springdoc:
 
 services:
   issue:
-    url: ${ISSUE_SERVICE_URL:http://localhost:8084}
+    url: ${ISSUE_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
   project:
-    url: ${PROJECT_SERVICE_URL:http://localhost:8083}
+    url: ${PROJECT_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
 
 logging:
   level:
