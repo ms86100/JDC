@@ -17,7 +17,8 @@ export default function RegisterPage() {
     setError('');
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:8080/api/auth/register', {
+      const base = import.meta.env.VITE_API_GATEWAY_URL ?? '';
+      const res = await fetch(`${base}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

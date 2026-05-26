@@ -28,7 +28,7 @@ export function useMigrationSse(jobId: string | null, options: UseMigrationSseOp
       return undefined;
     }
 
-    const base = import.meta.env.DEV ? '' : import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:8080';
+    const base = import.meta.env.VITE_API_GATEWAY_URL ?? '';
     const url = `${base}/api/sse/job/${jobId}/stream`;
     const es = new EventSource(url);
     eventSourceRef.current = es;
