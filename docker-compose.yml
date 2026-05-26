@@ -82,13 +82,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      auth-service:
-        condition: service_healthy
-      user-service:
-        condition: service_healthy
-      project-service:
-        condition: service_healthy
-      issue-service:
+      postgres:
         condition: service_healthy
 
   # =============================================================================
@@ -149,7 +143,7 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8082/actuator/health || exit 1"]
       interval: 15s
@@ -164,15 +158,11 @@ services:
     build:
       <<: *common-build
       dockerfile: jira-project-service/Dockerfile
-      args:
-        ADMIN_SERVICE_VERSION: latest
     depends_on:
-      admin-service:
-        condition: service_started
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     container_name: jira-project-service
     ports:
       - "8083:8083"
@@ -201,18 +191,11 @@ services:
     build:
       <<: *common-build
       dockerfile: jira-issue-service/Dockerfile
-      args:
-        ADMIN_SERVICE_VERSION: latest
-        PROJECT_SERVICE_VERSION: latest
     depends_on:
-      admin-service:
-        condition: service_started
-      project-service:
-        condition: service_started
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     container_name: jira-issue-service
     ports:
       - "8084:8084"
@@ -260,7 +243,7 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8085/actuator/health || exit 1"]
       interval: 15s
@@ -293,7 +276,7 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8086/actuator/health || exit 1"]
       interval: 15s
@@ -326,7 +309,7 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8087/actuator/health || exit 1"]
       interval: 15s
@@ -359,7 +342,7 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8088/actuator/health || exit 1"]
       interval: 15s
@@ -392,7 +375,7 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8089/actuator/health || exit 1"]
       interval: 15s
@@ -428,7 +411,7 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8090/actuator/health || exit 1"]
       interval: 15s
@@ -461,7 +444,7 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8091/actuator/health || exit 1"]
       interval: 15s
@@ -494,7 +477,7 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8092/actuator/health || exit 1"]
       interval: 15s
@@ -527,7 +510,7 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8093/actuator/health || exit 1"]
       interval: 15s
@@ -560,7 +543,7 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8094/actuator/health || exit 1"]
       interval: 15s
@@ -593,7 +576,7 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8096/actuator/health || exit 1"]
       interval: 15s
@@ -626,7 +609,7 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8097/actuator/health || exit 1"]
       interval: 15s
@@ -650,4 +633,5 @@ services:
     networks:
       - jira-network
     depends_on:
-      - gateway
+      gateway:
+        condition: service_started
