@@ -28,10 +28,10 @@ export interface FilterSubscription {
 
 export const filterApi = {
   getSavedFilters: (tab: 'my' | 'shared' | 'system' = 'my') =>
-    apiClient.get<SavedFilter[]>('/api/filters', { params: { tab } }),
+    apiClient.get<SavedFilter[]>('/filters', { params: { tab } }),
 
   createFilter: (data: { name: string; jql: string; isShared?: boolean }) =>
-    apiClient.post<SavedFilter>('/api/filters', data),
+    apiClient.post<SavedFilter>('/filters', data),
 
   deleteFilter: (filterId: string) =>
     apiClient.delete(`/api/filters/${filterId}`),
@@ -40,7 +40,7 @@ export const filterApi = {
     apiClient.post<SavedFilter>(`/api/filters/${filterId}/favorite`),
 
   getSubscriptions: () =>
-    apiClient.get<FilterSubscription[]>('/api/filters/subscriptions'),
+    apiClient.get<FilterSubscription[]>('/filters/subscriptions'),
 
   createSubscription: (data: {
     filterName: string;
@@ -48,7 +48,7 @@ export const filterApi = {
     frequency?: 'INSTANT' | 'DAILY' | 'WEEKLY';
     emailNotification?: boolean;
   }) =>
-    apiClient.post<FilterSubscription>('/api/filters/subscriptions', data),
+    apiClient.post<FilterSubscription>('/filters/subscriptions', data),
 
   deleteSubscription: (subscriptionId: string) =>
     apiClient.delete(`/api/filters/subscriptions/${subscriptionId}`),

@@ -152,9 +152,9 @@ export interface CreateProjectWizardRequest {
 export const projectApi = {
   // Existing endpoints
   create: (data: { name: string; description?: string; leadUserId?: string }) =>
-    apiClient.post<ProjectResponse>('/api/projects', data),
+    apiClient.post<ProjectResponse>('/projects', data),
   getAll: (params?: { search?: string; archived?: boolean; page?: number; size?: number }) =>
-    apiClient.get<ProjectResponse[] | { content: ProjectResponse[] }>('/api/projects', { params })
+    apiClient.get<ProjectResponse[] | { content: ProjectResponse[] }>('/projects', { params })
       .then(response => {
         const data = response.data;
         if (Array.isArray(data)) return data;
@@ -191,7 +191,7 @@ export const projectApi = {
   getSprints: (projectId: string) => apiClient.get(`/api/sprints?projectId=${projectId}`),
 
   // Wizard endpoints
-  getProjectTypes: () => apiClient.get<ProjectType[]>('/api/projects/types'),
+  getProjectTypes: () => apiClient.get<ProjectType[]>('/projects/types'),
   getTemplatesForType: (typeId: string) =>
     apiClient.get<ProjectTemplate[]>(`/api/projects/types/${typeId}/templates`),
   getTemplateDetails: (templateId: string) =>
@@ -199,7 +199,7 @@ export const projectApi = {
   getProjectScheme: (projectId: string) =>
     apiClient.get<ProjectScheme>(`/api/projects/${projectId}/scheme`),
   createViaWizard: (data: CreateProjectWizardRequest) =>
-    apiClient.post<ProjectResponse>('/api/projects/wizard', data),
+    apiClient.post<ProjectResponse>('/projects/wizard', data),
   checkProjectKey: (key: string) =>
     apiClient.get<{ projectKey: string; valid: boolean; available: boolean; message: string }>(
       `/api/projects/key/check/${key}`

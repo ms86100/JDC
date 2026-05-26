@@ -26,8 +26,8 @@ const ISSUE_TYPE_ICONS: Record<string, { icon: string; color: string }> = {
 };
 
 const issueTypeApi = {
-  getIssueTypes: () => apiClient.get<IssueType[]>('/api/admin/issues/issue-types'),
-  createIssueType: (data: Partial<IssueType>) => apiClient.post<IssueType>('/api/admin/issues/issue-types', data),
+  getIssueTypes: () => apiClient.get<IssueType[]>('/admin/issues/issue-types'),
+  createIssueType: (data: Partial<IssueType>) => apiClient.post<IssueType>('/admin/issues/issue-types', data),
   updateIssueType: (id: string, data: Partial<IssueType>) => apiClient.put<IssueType>(`/api/admin/issues/issue-types/${id}`, data),
   deleteIssueType: (id: string) => apiClient.delete(`/api/admin/issues/issue-types/${id}`),
 };

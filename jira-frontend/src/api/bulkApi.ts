@@ -38,11 +38,11 @@ export interface BulkOperationResponse {
 
 export const bulkApi = {
   execute: (data: BulkOperationRequest) =>
-    apiClient.post<BulkOperationResponse>('/api/bulk-operations', data),
+    apiClient.post<BulkOperationResponse>('/bulk-operations', data),
 
   getStatus: (operationId: string) =>
     apiClient.get<BulkOperationResponse>(`/api/bulk-operations/${operationId}`),
 
   getRecent: () =>
-    apiClient.get<BulkOperationResponse[]>('/api/bulk-operations/recent'),
+    apiClient.get<BulkOperationResponse[]>('/bulk-operations/recent'),
 };

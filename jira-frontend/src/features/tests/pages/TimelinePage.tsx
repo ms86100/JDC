@@ -312,7 +312,7 @@ const TimelinePage: React.FC = () => {
   const { data: executions = [], isLoading: executionsLoading } = useQuery({
     queryKey: ['timeline-executions'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/test-runs', {
+      const response = await apiClient.get('/test-runs', {
         params: { limit: 50, sort: 'startedAt_desc' },
       });
       return response.data;
@@ -346,7 +346,7 @@ const TimelinePage: React.FC = () => {
     queryKey: ['timeline-snapshots', selectedExecution],
     queryFn: async () => {
       if (!selectedExecution) return [];
-      const response = await apiClient.get('/api/timeline/snapshots', {
+      const response = await apiClient.get('/timeline/snapshots', {
         params: { executionId: selectedExecution },
       });
       return response.data as Snapshot[];
@@ -377,7 +377,7 @@ const TimelinePage: React.FC = () => {
   // Snapshot mutation
   const createSnapshotMutation = useMutation({
     mutationFn: async (data: { name: string; description?: string }) => {
-      const response = await apiClient.post('/api/timeline/snapshots', {
+      const response = await apiClient.post('/timeline/snapshots', {
         executionId: selectedExecution,
         ...data,
       });

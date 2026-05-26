@@ -405,7 +405,7 @@ const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ onSelect }) => {
   const { data: templates = [] } = useQuery({
     queryKey: ['precondition-templates'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/preconditions/templates');
+      const response = await apiClient.get('/preconditions/templates');
       return response.data as PreconditionTemplate[];
     },
   });
@@ -531,7 +531,7 @@ const PreconditionPage: React.FC = () => {
   const { data: preconditions = [], isLoading } = useQuery({
     queryKey: ['preconditions'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/preconditions');
+      const response = await apiClient.get('/preconditions');
       return response.data as Precondition[];
     },
   });

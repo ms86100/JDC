@@ -18,7 +18,7 @@ interface IssueType {
 }
 
 const issueTypeApi = {
-  list: () => apiClient.get<IssueType[]>('/api/admin/issues/issue-types'),
+  list: () => apiClient.get<IssueType[]>('/admin/issues/issue-types'),
 };
 
 export default function IssueTypeSchemesPage() {

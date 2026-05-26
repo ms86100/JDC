@@ -32,13 +32,13 @@ export interface CreateDashboardRequest {
 
 export const dashboardApi = {
   getAll: (includeGlobal = true) =>
-    apiClient.get<Dashboard[]>('/api/dashboards', { params: { includeGlobal } }),
+    apiClient.get<Dashboard[]>('/dashboards', { params: { includeGlobal } }),
 
   getById: (id: string) =>
     apiClient.get<Dashboard>(`/api/dashboards/${id}`),
 
   create: (data: CreateDashboardRequest) =>
-    apiClient.post<Dashboard>('/api/dashboards', data),
+    apiClient.post<Dashboard>('/dashboards', data),
 
   update: (id: string, data: CreateDashboardRequest) =>
     apiClient.put<Dashboard>(`/api/dashboards/${id}`, data),
@@ -56,7 +56,7 @@ export const dashboardApi = {
     apiClient.delete<Dashboard>(`/api/dashboards/${dashboardId}/gadgets/${gadgetId}`),
 
   getGadgetData: (gadgetType: string, preferences?: Record<string, any>) =>
-    apiClient.get<Record<string, any>>('/api/dashboards/gadgets/data', {
+    apiClient.get<Record<string, any>>('/dashboards/gadgets/data', {
       params: { gadgetType, ...preferences },
     }),
 };

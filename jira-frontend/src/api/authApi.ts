@@ -10,7 +10,7 @@ export interface AuthResponse {
 export interface UserDto { id: string; username: string; email: string; active: boolean; roles: string[] }
 
 export const authApi = {
-  login: (data: LoginRequest) => apiClient.post<AuthResponse>('/api/auth/login', data),
-  register: (data: RegisterRequest) => apiClient.post<UserDto>('/api/auth/register', data),
-  refresh: (refreshToken: string) => apiClient.post<AuthResponse>('/api/auth/refresh', { refreshToken }),
+  login: (data: LoginRequest) => apiClient.post<AuthResponse>('/auth/login', data),
+  register: (data: RegisterRequest) => apiClient.post<UserDto>('/auth/register', data),
+  refresh: (refreshToken: string) => apiClient.post<AuthResponse>('/auth/refresh', { refreshToken }),
 };

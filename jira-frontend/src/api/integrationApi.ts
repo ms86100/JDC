@@ -12,13 +12,13 @@ export interface ApplicationLink {
 
 export const integrationApi = {
   listApplicationLinks: () =>
-    apiClient.get<ApplicationLink[]>('/api/integration/applinks'),
+    apiClient.get<ApplicationLink[]>('/integration/applinks'),
   createApplicationLink: (data: {
     name: string;
     url: string;
     applicationType?: string;
     direction?: string;
-  }) => apiClient.post<ApplicationLink>('/api/integration/applinks', data),
+  }) => apiClient.post<ApplicationLink>('/integration/applinks', data),
   deleteApplicationLink: (id: string) => apiClient.delete(`/api/integration/applinks/${id}`),
   setPrimary: (id: string) =>
     apiClient.put<ApplicationLink>(`/api/integration/applinks/${id}/primary`),

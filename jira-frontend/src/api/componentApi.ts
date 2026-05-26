@@ -54,7 +54,7 @@ export const ASSIGNEE_TYPES = [
   { value: 'SPECIFIC_USER', label: 'Specific user' },
 ] as const;
 
-const BASE = '/api/components';
+const BASE = '/components';
 
 export const componentApi = {
   getByProject: (projectId: string, includeArchived = false) =>

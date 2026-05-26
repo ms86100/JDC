@@ -119,7 +119,7 @@ export default function TraceabilityPage() {
   const { data: defectLinks = [] } = useQuery<DefectLinkResponse[]>({
     queryKey: ['traceability-defects', projectId],
     queryFn: async () => {
-      const response = await apiClient.get('/api/traceability/defects', {
+      const response = await apiClient.get('/traceability/defects', {
         params: projectId ? { executionId: projectId } : undefined,
       });
       return response.data;
@@ -144,7 +144,7 @@ export default function TraceabilityPage() {
   // Mutations
   const linkRequirementMutation = useMutation({
     mutationFn: async (request: RequirementLinkRequest) => {
-      const response = await apiClient.post('/api/traceability/requirements', request);
+      const response = await apiClient.post('/traceability/requirements', request);
       return response.data;
     },
     onSuccess: () => {

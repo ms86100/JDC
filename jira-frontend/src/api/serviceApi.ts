@@ -30,7 +30,7 @@ export interface AuditSearchParams {
 export const auditApi = {
   getLogs: (params?: AuditSearchParams) =>
     apiClient.get<{ content: AuditLogResponse[]; totalElements: number; totalPages: number }>(
-      '/api/audit/logs',
+      '/audit/logs',
       { params }
     ),
 
@@ -48,7 +48,7 @@ export const auditApi = {
     entityId: string;
     action: string;
     changes?: Record<string, any>;
-  }) => apiClient.post('/api/audit/logs', log),
+  }) => apiClient.post('/audit/logs', log),
 };
 
 // ============================================
@@ -89,7 +89,7 @@ export const searchApi = {
     apiClient.delete(`/search/index/${entityType}/${entityId}`),
 
   jqlSearch: (params: JQLSearchParams) =>
-    apiClient.post<{ results: SearchResult[]; totalCount: number }>('/api/jql/search', params),
+    apiClient.post<{ results: SearchResult[]; totalCount: number }>('/jql/search', params),
 };
 
 // ============================================
@@ -209,7 +209,7 @@ export const migrationApi = {
     if (options && Object.keys(options).length > 0) {
       formData.append('options', JSON.stringify(options));
     }
-    return apiClient.post<MigrationJobResponse>('/api/migration/import/csv', formData, {
+    return apiClient.post<MigrationJobResponse>('/migration/import/csv', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
         ...migrationUserHeaders({ targetProjectId }),
@@ -234,7 +234,7 @@ export const migrationApi = {
     if (params.options && Object.keys(params.options).length > 0) {
       formData.append('options', JSON.stringify(params.options));
     }
-    return apiClient.post<JiraDcValidateResponse>('/api/migration/import/jira-dc/validate', formData, {
+    return apiClient.post<JiraDcValidateResponse>('/migration/import/jira-dc/validate', formData, {
       headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
     });
   },
@@ -260,7 +260,7 @@ export const migrationApi = {
     if (params.options && Object.keys(params.options).length > 0) {
       formData.append('options', JSON.stringify(params.options));
     }
-    return apiClient.post<MigrationJobResponse>('/api/migration/import/jira-dc', formData, {
+    return apiClient.post<MigrationJobResponse>('/migration/import/jira-dc', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
         ...migrationUserHeaders({ targetProjectId: params.targetProjectId }),
@@ -272,7 +272,7 @@ export const migrationApi = {
     const formData = new FormData();
     formData.append('file', workflowFile);
     if (schemeFile) formData.append('schemeFile', schemeFile);
-    return apiClient.post<Record<string, unknown>>('/api/migration/import/workflow-xml/validate', formData, {
+    return apiClient.post<Record<string, unknown>>('/migration/import/workflow-xml/validate', formData, {
       headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
     });
   },
@@ -315,7 +315,7 @@ export const migrationApi = {
     const formData = new FormData();
     formData.append('file', workflowFile);
     if (schemeFile) formData.append('schemeFile', schemeFile);
-    return apiClient.post<string>('/api/migration/import/workflow-xml/validation-report', formData, {
+    return apiClient.post<string>('/migration/import/workflow-xml/validation-report', formData, {
       headers: { 'Content-Type': 'multipart/form-data', ...migrationUserHeaders() },
       responseType: 'text',
     });
@@ -329,12 +329,12 @@ export const migrationApi = {
     ),
 
   getServicesHealth: () =>
-    apiClient.get<Record<string, unknown>>('/api/migration/health/services', {
+    apiClient.get<Record<string, unknown>>('/migration/health/services', {
       headers: migrationUserHeaders(),
     }),
 
   getClusterHealth: () =>
-    apiClient.get<Record<string, unknown>>('/api/migration/health/cluster', {
+    apiClient.get<Record<string, unknown>>('/migration/health/cluster', {
       headers: migrationUserHeaders(),
     }),
 
@@ -364,7 +364,7 @@ export const migrationApi = {
     }),
 
   getObservability: () =>
-    apiClient.get<Record<string, unknown>>('/api/migration/health/observability', {
+    apiClient.get<Record<string, unknown>>('/migration/health/observability', {
       headers: migrationUserHeaders(),
     }),
 
@@ -385,13 +385,13 @@ export const migrationApi = {
 
   // Project Import
   startProjectImport: (sourceProjectId: string, targetProjectId: string) =>
-    apiClient.post<MigrationJobResponse>('/api/migration/import/project', null, {
+    apiClient.post<MigrationJobResponse>('/migration/import/project', null, {
       params: { sourceProjectId, targetProjectId },
     }),
 
   // Project Export
   startProjectExport: (projectId: string, format = 'xml') =>
-    apiClient.post<MigrationJobResponse>('/api/migration/export/project', null, {
+    apiClient.post<MigrationJobResponse>('/migration/export/project', null, {
       params: { projectId, format },
     }),
 
@@ -408,7 +408,7 @@ export const migrationApi = {
       totalElements: number;
       totalPages: number;
       number: number;
-    }>('/api/migration/jobs', { params, headers: migrationUserHeaders() }),
+    }>('/migration/jobs', { params, headers: migrationUserHeaders() }),
 
   retryJob: (jobId: string) =>
     apiClient.post<{ jobId: string; retried: number; succeeded: number }>(
@@ -527,14 +527,14 @@ export const migrationApi = {
 
   // Templates
   getTemplates: (entityType?: string) =>
-    apiClient.get<CsvTemplateResponse[]>('/api/migration/templates', { params: { entityType } }),
+    apiClient.get<CsvTemplateResponse[]>('/migration/templates', { params: { entityType } }),
 
   downloadTemplate: (templateId: string) =>
     apiClient.get(`/api/migration/templates/${templateId}/download`, { responseType: 'blob' }),
 
   // Field Mappings (saved templates)
   getMappings: (mappingType?: string) =>
-    apiClient.get<Array<Record<string, unknown>>>('/api/migration/mappings', {
+    apiClient.get<Array<Record<string, unknown>>>('/migration/mappings', {
       params: mappingType ? { mappingType } : undefined,
       headers: migrationUserHeaders(),
     }),
@@ -543,7 +543,7 @@ export const migrationApi = {
       headers: migrationUserHeaders(),
     }),
   createMapping: (mapping: Record<string, unknown>) =>
-    apiClient.post<Record<string, unknown>>('/api/migration/mappings', mapping, {
+    apiClient.post<Record<string, unknown>>('/migration/mappings', mapping, {
       headers: migrationUserHeaders(),
     }),
   deleteMapping: (mappingId: string) =>
@@ -556,12 +556,12 @@ export const migrationApi = {
 
   // Global DLQ
   listGlobalDlq: (page = 0, size = 20) =>
-    apiClient.get<{ content: Array<Record<string, unknown>>; totalElements: number }>('/api/migration/dlq', {
+    apiClient.get<{ content: Array<Record<string, unknown>>; totalElements: number }>('/migration/dlq', {
       params: { page, size },
       headers: migrationUserHeaders(),
     }),
   getGlobalDlqStats: () =>
-    apiClient.get<Record<string, unknown>>('/api/migration/dlq/statistics', {
+    apiClient.get<Record<string, unknown>>('/migration/dlq/statistics', {
       headers: migrationUserHeaders(),
     }),
   retryGlobalDlq: (id: string) =>
@@ -569,24 +569,24 @@ export const migrationApi = {
       headers: migrationUserHeaders(),
     }),
   retryAllGlobalDlq: () =>
-    apiClient.post<Record<string, unknown>>('/api/migration/dlq/retry/all', null, {
+    apiClient.post<Record<string, unknown>>('/migration/dlq/retry/all', null, {
       headers: migrationUserHeaders(),
     }),
   purgeGlobalDlq: () =>
-    apiClient.delete<Record<string, unknown>>('/api/migration/dlq/purge', { headers: migrationUserHeaders() }),
+    apiClient.delete<Record<string, unknown>>('/migration/dlq/purge', { headers: migrationUserHeaders() }),
 
   // Validation
   validateCsv: (file: File, entityType: string) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('entityType', entityType);
-    return apiClient.post('/api/migration/validate/csv', formData, {
+    return apiClient.post('/migration/validate/csv', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
 
   validateRow: (row: Record<string, string>, entityType: string) =>
-    apiClient.post('/api/migration/validate/row', row, { params: { entityType } }),
+    apiClient.post('/migration/validate/row', row, { params: { entityType } }),
 };
 
 // ============================================
@@ -669,14 +669,14 @@ export interface WizardFieldProvisioningResponse {
 
 export const migrationSettingsApi = {
   getSettings: () =>
-    apiClient.get<Record<string, unknown>>('/api/migration/settings', {
+    apiClient.get<Record<string, unknown>>('/migration/settings', {
       headers: migrationUserHeaders(),
     }),
 };
 
 export const migrationWizardApi = {
   createSession: (body: { importType: string; targetProjectId?: string; options?: Record<string, unknown> }) =>
-    apiClient.post<WizardSessionResponse>('/api/migration/wizard/sessions', body, {
+    apiClient.post<WizardSessionResponse>('/migration/wizard/sessions', body, {
       headers: migrationUserHeaders(),
     }),
 
@@ -830,11 +830,11 @@ export interface VelocityResponse {
 export const sprintApi = {
   // Sprints
   getSprints: (projectId?: string) =>
-    apiClient.get<SprintResponse[]>('/api/sprints', { params: { projectId } }),
+    apiClient.get<SprintResponse[]>('/sprints', { params: { projectId } }),
 
   getSprint: (sprintId: string) => apiClient.get<SprintResponse>(`/api/sprints/${sprintId}`),
 
-  getActiveSprint: (projectId: string) => apiClient.get<SprintResponse>('/api/sprints/active', {
+  getActiveSprint: (projectId: string) => apiClient.get<SprintResponse>('/sprints/active', {
     params: { projectId },
   }),
 
@@ -844,7 +844,7 @@ export const sprintApi = {
     startDate?: string;
     endDate?: string;
     projectId: string;
-  }) => apiClient.post<SprintResponse>('/api/sprints', sprint),
+  }) => apiClient.post<SprintResponse>('/sprints', sprint),
 
   updateSprint: (sprintId: string, sprint: Partial<SprintResponse>) =>
     apiClient.put<SprintResponse>(`/api/sprints/${sprintId}`, sprint),
@@ -862,7 +862,7 @@ export const sprintApi = {
     apiClient.delete(`/api/sprints/${sprintId}/issues/${issueId}`),
 
   // Boards
-  getBoards: (projectId: string) => apiClient.get<BoardResponse[]>('/api/boards', { params: { projectId } }),
+  getBoards: (projectId: string) => apiClient.get<BoardResponse[]>('/boards', { params: { projectId } }),
 
   getBoard: (boardId: string) => apiClient.get<BoardResponse>(`/api/boards/${boardId}`),
 
@@ -877,7 +877,7 @@ export const sprintApi = {
     name: string;
     projectId: string;
     boardType: 'SCRUM' | 'KANBAN';
-  }) => apiClient.post<BoardResponse>('/api/boards', board),
+  }) => apiClient.post<BoardResponse>('/boards', board),
 
   updateBoard: (boardId: string, board: Partial<BoardResponse>) =>
     apiClient.put<BoardResponse>(`/api/boards/${boardId}`, board),
@@ -970,10 +970,10 @@ export const userManagementApi = {
     apiClient.put<UserProfileResponse>(`/api/users/profiles/${userId}`, profile),
 
   // Organizations
-  getOrganizations: () => apiClient.get<OrganizationResponse[]>('/api/users/organizations'),
+  getOrganizations: () => apiClient.get<OrganizationResponse[]>('/users/organizations'),
 
   createOrganization: (org: { name: string; description?: string }) =>
-    apiClient.post<OrganizationResponse>('/api/users/organizations', org),
+    apiClient.post<OrganizationResponse>('/users/organizations', org),
 
   getOrganization: (orgId: string) => apiClient.get<OrganizationResponse>(`/api/users/organizations/${orgId}`),
 
@@ -990,10 +990,10 @@ export const userManagementApi = {
 
   // Teams
   getTeams: (orgId?: string) =>
-    apiClient.get<TeamResponse[]>('/api/users/teams', { params: { organizationId: orgId } }),
+    apiClient.get<TeamResponse[]>('/users/teams', { params: { organizationId: orgId } }),
 
   createTeam: (team: { name: string; organizationId: string }) =>
-    apiClient.post<TeamResponse>('/api/users/teams', team),
+    apiClient.post<TeamResponse>('/users/teams', team),
 
   getTeam: (teamId: string) => apiClient.get<TeamResponse>(`/api/users/teams/${teamId}`),
 

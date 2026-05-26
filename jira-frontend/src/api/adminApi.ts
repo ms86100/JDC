@@ -150,33 +150,33 @@ export interface SystemHealth {
 
 export const adminApi = {
   // System Settings
-  getSettings: () => apiClient.get<SystemSettings>('/api/admin/settings'),
-  updateSettings: (data: Partial<SystemSettings>) => apiClient.put<SystemSettings>('/api/admin/settings', data),
+  getSettings: () => apiClient.get<SystemSettings>('/admin/settings'),
+  updateSettings: (data: Partial<SystemSettings>) => apiClient.put<SystemSettings>('/admin/settings', data),
 
   // Users
   getUsers: (params?: { search?: string; status?: string; role?: string }) =>
-    apiClient.get<User[]>('/api/admin/users', { params }),
+    apiClient.get<User[]>('/admin/users', { params }),
   createUser: (data: { username: string; email: string; displayName?: string; role?: string }) =>
-    apiClient.post<User>('/api/admin/users', data),
+    apiClient.post<User>('/admin/users', data),
   updateUser: (userId: string, data: Partial<User>) =>
     apiClient.put<User>(`/api/admin/users/${userId}`, data),
   deleteUser: (userId: string) => apiClient.delete(`/api/admin/users/${userId}`),
-  getUserStatistics: () => apiClient.get<UserStatistics>('/api/admin/users/statistics'),
+  getUserStatistics: () => apiClient.get<UserStatistics>('/admin/users/statistics'),
 
   // Projects
-  getProjects: () => apiClient.get<ProjectSettings[]>('/api/admin/projects'),
+  getProjects: () => apiClient.get<ProjectSettings[]>('/admin/projects'),
   getProject: (projectId: string) => apiClient.get<ProjectSettings>(`/api/admin/projects/${projectId}`),
   updateProject: (projectId: string, data: Partial<ProjectSettings>) =>
     apiClient.put<ProjectSettings>(`/api/admin/projects/${projectId}`, data),
 
   // Appearance
-  getAppearance: () => apiClient.get<AppearanceSettings>('/api/admin/appearance'),
+  getAppearance: () => apiClient.get<AppearanceSettings>('/admin/appearance'),
   updateAppearance: (data: Partial<AppearanceSettings>) =>
-    apiClient.put<AppearanceSettings>('/api/admin/appearance', data),
+    apiClient.put<AppearanceSettings>('/admin/appearance', data),
 
   // Licensing
-  getLicense: () => apiClient.get<License>('/api/admin/license'),
+  getLicense: () => apiClient.get<License>('/admin/license'),
 
   // System Health
-  getHealth: () => apiClient.get<SystemHealth>('/api/admin/health'),
+  getHealth: () => apiClient.get<SystemHealth>('/admin/health'),
 };

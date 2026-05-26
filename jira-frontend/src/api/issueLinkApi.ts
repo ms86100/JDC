@@ -23,7 +23,7 @@ export interface CreateIssueLinkRequest {
 export const issueLinkApi = {
   // Backend: /api/issues/links (root-level, not nested under issueId)
   create: (issueId: string, data: { destinationIssueId: string; linkType: string }) =>
-    apiClient.post<IssueLinkResponse>('/api/issues/links', {
+    apiClient.post<IssueLinkResponse>('/issues/links', {
       sourceIssueId: issueId,
       targetIssueId: data.destinationIssueId,
       linkTypeName: data.linkType,
@@ -42,5 +42,5 @@ export const issueLinkApi = {
     apiClient.delete(`/api/issues/links/${linkId}`),
 
   getLinkTypes: (issueId?: string) =>
-    apiClient.get<string[]>('/api/issues/links/types/names'),
+    apiClient.get<string[]>('/issues/links/types/names'),
 };

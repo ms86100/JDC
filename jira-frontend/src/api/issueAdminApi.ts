@@ -29,14 +29,14 @@ export interface SchemeProjectAssignment {
 }
 
 export const issueTypeSchemeApi = {
-  list: () => apiClient.get<IssueTypeScheme[]>('/api/admin/issues/issue-type-schemes'),
+  list: () => apiClient.get<IssueTypeScheme[]>('/admin/issues/issue-type-schemes'),
   get: (id: string) => apiClient.get<IssueTypeScheme>(`/api/admin/issues/issue-type-schemes/${id}`),
   create: (data: {
     name: string;
     description?: string;
     issueTypeIds: string[];
     defaultIssueType?: string;
-  }) => apiClient.post<IssueTypeScheme>('/api/admin/issues/issue-type-schemes', data),
+  }) => apiClient.post<IssueTypeScheme>('/admin/issues/issue-type-schemes', data),
   update: (
     id: string,
     data: {

@@ -83,7 +83,7 @@ export function FieldDefinitionProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get('/api/fields/definitions');
+      const response = await axios.get('/fields/definitions');
       setFieldDefinitions(response.data);
     } catch (err: any) {
       setError(err.message || 'Failed to load field definitions');
@@ -118,7 +118,7 @@ export function FieldDefinitionProvider({ children }: { children: ReactNode }) {
   };
 
   const createCustomField = async (field: Partial<FieldDefinition>): Promise<FieldDefinition> => {
-    const response = await axios.post('/api/fields/custom', {
+    const response = await axios.post('/fields/custom', {
       name: field.displayName,
       description: field.description,
       type: mapFieldTypeToCustomFieldType(field.fieldType || 'TEXT'),

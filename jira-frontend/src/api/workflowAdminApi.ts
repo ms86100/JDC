@@ -8,7 +8,7 @@ export const workflowAdminApi = {
 
   list: (params?: { status?: string; name?: string }) =>
 
-    apiClient.get<unknown[]>('/api/admin/workflows', { params }),
+    apiClient.get<unknown[]>('/admin/workflows', { params }),
 
 
 
@@ -18,7 +18,7 @@ export const workflowAdminApi = {
 
   create: (payload: Record<string, unknown>) =>
 
-    apiClient.post<Record<string, unknown>>('/api/admin/workflows', payload),
+    apiClient.post<Record<string, unknown>>('/admin/workflows', payload),
 
 
 
@@ -58,7 +58,7 @@ export const workflowAdminApi = {
 
   importWorkflow: (payload: Record<string, unknown>) =>
 
-    apiClient.post<Record<string, unknown>>('/api/admin/workflows/import', payload),
+    apiClient.post<Record<string, unknown>>('/admin/workflows/import', payload),
 
 
 
@@ -150,11 +150,11 @@ export const workflowAdminApi = {
 
     size?: number;
 
-  }) => apiClient.get<unknown[]>('/api/admin/workflows/audit-log', { params }),
+  }) => apiClient.get<unknown[]>('/admin/workflows/audit-log', { params }),
 
 
 
-  listSchemes: () => apiClient.get<unknown[]>('/api/admin/workflows/schemes'),
+  listSchemes: () => apiClient.get<unknown[]>('/admin/workflows/schemes'),
 
 
 
@@ -166,7 +166,7 @@ export const workflowAdminApi = {
 
   createScheme: (data: Record<string, unknown>) =>
 
-    apiClient.post<Record<string, unknown>>('/api/admin/workflows/schemes', data),
+    apiClient.post<Record<string, unknown>>('/admin/workflows/schemes', data),
 
 
 
@@ -194,7 +194,7 @@ export const workflowAdminApi = {
 
   listScreens: (screenType?: string) =>
 
-    apiClient.get<unknown[]>('/api/admin/workflows/screens', {
+    apiClient.get<unknown[]>('/admin/workflows/screens', {
 
       params: screenType ? { screenType } : undefined,
 
@@ -210,7 +210,7 @@ export const workflowAdminApi = {
 
   createScreen: (data: Record<string, unknown>) =>
 
-    apiClient.post<Record<string, unknown>>('/api/admin/workflows/screens', data),
+    apiClient.post<Record<string, unknown>>('/admin/workflows/screens', data),
 
 
 
@@ -226,19 +226,19 @@ export const workflowAdminApi = {
 
   conditionDefinitions: () =>
 
-    apiClient.get<unknown[]>('/api/admin/workflows/conditions/definitions'),
+    apiClient.get<unknown[]>('/admin/workflows/conditions/definitions'),
 
 
 
   validatorDefinitions: () =>
 
-    apiClient.get<unknown[]>('/api/admin/workflows/validators/definitions'),
+    apiClient.get<unknown[]>('/admin/workflows/validators/definitions'),
 
 
 
   postFunctionDefinitions: () =>
 
-    apiClient.get<unknown[]>('/api/admin/workflows/post-functions/definitions'),
+    apiClient.get<unknown[]>('/admin/workflows/post-functions/definitions'),
 
 };
 

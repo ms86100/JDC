@@ -121,7 +121,7 @@ const SeverityConfig: Record<string, { label: string; color: string }> = {
 const defectApi = {
   getDefects: async (projectId: string): Promise<Defect[]> => {
     try {
-      const response = await axiosClient.get('/api/defects', { params: { projectId } });
+      const response = await axiosClient.get('/defects', { params: { projectId } });
       return response.data.map((d: any) => ({
         id: d.id,
         key: d.defectKey,
@@ -154,7 +154,7 @@ const defectApi = {
     };
   },
   createDefect: async (data: CreateDefectRequest): Promise<Defect> => {
-    const response = await axiosClient.post('/api/defects', {
+    const response = await axiosClient.post('/defects', {
       defectKey: data.testIssueKey ? `${data.testIssueKey}-DEF` : `DEF-${Date.now()}`,
       executionId: data.testExecutionId,
       severity: data.severity || 'MEDIUM',

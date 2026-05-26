@@ -1,6 +1,6 @@
 import axiosClient from './axiosClient';
 
-const BASE_URL = '/api/boards';
+const BASE_URL = '/boards';
 
 export interface BoardColumn {
   id: string;

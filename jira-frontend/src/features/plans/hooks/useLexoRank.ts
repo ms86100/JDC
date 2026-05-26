@@ -29,10 +29,10 @@ const lexoRankApi = {
     apiClient.get<LexoRankResponse>(`/api/plans/backlog/rank/${entityType}/${entityId}`),
 
   lockRank: (request: RankItemRequest) =>
-    apiClient.put<LexoRankResponse>('/api/plans/backlog/rank/lock', request),
+    apiClient.put<LexoRankResponse>('/plans/backlog/rank/lock', request),
 
   unlockRank: (request: RankItemRequest) =>
-    apiClient.put<LexoRankResponse>('/api/plans/backlog/rank/unlock', request),
+    apiClient.put<LexoRankResponse>('/plans/backlog/rank/unlock', request),
 
   validateRebalance: (planId: string, rank1: string, rank2: string) =>
     apiClient.get<boolean>(`/api/plans/${planId}/backlog/rank/validate?rank1=${rank1}&rank2=${rank2}`),

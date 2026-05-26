@@ -159,7 +159,7 @@ const CreateRuleModal: React.FC<CreateRuleModalProps> = ({ open, onClose, onSucc
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const response = await apiClient.post('/api/coverage/rules', data);
+      const response = await apiClient.post('/coverage/rules', data);
       return response.data;
     },
     onSuccess: () => {
@@ -308,7 +308,7 @@ const CoveragePage: React.FC = () => {
     queryKey: ['coverage-projects', selectedProject],
     queryFn: async () => {
       const params = selectedProject !== 'all' ? { projectId: selectedProject } : {};
-      const response = await apiClient.get('/api/coverage', { params });
+      const response = await apiClient.get('/coverage', { params });
       let data = response.data;
       // Handle single object vs array
       if (data && !Array.isArray(data)) {
@@ -345,7 +345,7 @@ const CoveragePage: React.FC = () => {
   const { data: rules = [] } = useQuery({
     queryKey: ['coverage-rules'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/coverage/rules');
+      const response = await apiClient.get('/coverage/rules');
       return response.data || [];
     },
     enabled: showRules,
@@ -375,7 +375,7 @@ const CoveragePage: React.FC = () => {
   // Generate report mutation
   const generateReportMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiClient.post('/api/coverage/reports/generate', {
+      const response = await apiClient.post('/coverage/reports/generate', {
         projectId: selectedProject,
       });
       return response.data;

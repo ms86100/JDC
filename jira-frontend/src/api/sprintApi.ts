@@ -108,11 +108,11 @@ export interface SprintReportResponse {
 
 export const sprintApi = {
   create: (data: CreateSprintRequest) =>
-    apiClient.post<SprintResponse>('/api/sprints', data),
+    apiClient.post<SprintResponse>('/sprints', data),
 
   getAll: (projectId?: string) =>
     apiClient
-      .get<{ content: SprintResponse[] } | SprintResponse[]>('/api/sprints', {
+      .get<{ content: SprintResponse[] } | SprintResponse[]>('/sprints', {
         params: projectId ? { projectId } : {},
       })
       .then((response) => {
@@ -138,7 +138,7 @@ export const sprintApi = {
     apiClient.post<SprintResponse>(`/api/sprints/${sprintId}/complete`),
 
   getIssues: (sprintId: string) =>
-    apiClient.get('/api/issues', { params: { sprintId } }),
+    apiClient.get('/issues', { params: { sprintId } }),
 
   addIssue: (sprintId: string, issueId: string) =>
     apiClient.post(`/api/sprints/${sprintId}/issues`, { issueId }),
@@ -154,7 +154,7 @@ export const sprintApi = {
     apiClient.get<BurndownResponse>(`/api/sprints/reports/${sprintId}/burndown`),
 
   getVelocity: (projectId: string) =>
-    apiClient.get<VelocityResponse>('/api/sprints/reports/velocity', {
+    apiClient.get<VelocityResponse>('/sprints/reports/velocity', {
       params: { projectId },
     }),
 };

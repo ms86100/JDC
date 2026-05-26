@@ -487,10 +487,10 @@ export interface BoardPermissionResponse {
 // ============ API Functions ============
 export const planApi = {
   // Programs
-  getPrograms: () => apiClient.get<ProgramResponse[]>('/api/plans/programs'),
+  getPrograms: () => apiClient.get<ProgramResponse[]>('/plans/programs'),
   getProgramById: (id: string) => apiClient.get<ProgramResponse>(`/api/plans/programs/${id}`),
   createProgram: (data: CreateProgramRequest) =>
-    apiClient.post<ProgramResponse>('/api/plans/programs', data),
+    apiClient.post<ProgramResponse>('/plans/programs', data),
   updateProgram: (id: string, data: UpdateProgramRequest) =>
     apiClient.put<ProgramResponse>(`/api/plans/programs/${id}`, data),
   deleteProgram: (id: string) => apiClient.delete(`/api/plans/programs/${id}`),
@@ -502,12 +502,12 @@ export const planApi = {
     apiClient.get<ProgramAggregationResponse>(`/api/plans/programs/${programId}/aggregation`),
 
   // Plans
-  getPlans: () => apiClient.get<PlanResponse[]>('/api/plans'),
+  getPlans: () => apiClient.get<PlanResponse[]>('/plans'),
   getPlanById: (id: string) => apiClient.get<PlanResponse>(`/api/plans/${id}`),
   getPlansByProgram: (programId: string) =>
     apiClient.get<PlanResponse[]>(`/api/plans/program/${programId}`),
   createPlan: (data: CreatePlanRequest) =>
-    apiClient.post<PlanResponse>('/api/plans', data),
+    apiClient.post<PlanResponse>('/plans', data),
   updatePlan: (id: string, data: UpdatePlanRequest) =>
     apiClient.put<PlanResponse>(`/api/plans/${id}`, data),
   deletePlan: (id: string) => apiClient.delete(`/api/plans/${id}`),
@@ -619,11 +619,11 @@ export const planApi = {
 
   // Working Days
   getWorkingDaysConfigs: () =>
-    apiClient.get<WorkingDaysResponse[]>('/api/plans/working-days'),
+    apiClient.get<WorkingDaysResponse[]>('/plans/working-days'),
   getWorkingDaysConfig: (id: string) =>
     apiClient.get<WorkingDaysResponse>(`/api/plans/working-days/${id}`),
   getDefaultWorkingDays: () =>
-    apiClient.get<WorkingDaysResponse>('/api/plans/working-days/default'),
+    apiClient.get<WorkingDaysResponse>('/plans/working-days/default'),
   getHolidays: (configId: string) =>
     apiClient.get<NonWorkingDayResponse[]>(`/api/plans/working-days/${configId}/holidays`),
   getTeamAvailability: (teamId: string, start: string, end: string) =>

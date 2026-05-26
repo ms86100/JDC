@@ -76,7 +76,7 @@ export const attachmentApi = {
     formData.append('file', file);
     formData.append('issueId', issueId);
 
-    const response = await apiClient.post<AttachmentResponse>('/api/attachments', formData, {
+    const response = await apiClient.post<AttachmentResponse>('/attachments', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     response.data = normalizeAttachment(response.data as unknown as Record<string, unknown>);

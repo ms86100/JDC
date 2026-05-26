@@ -255,7 +255,7 @@ export interface TestSummaryReport {
 const testApi = {
   // Tests
   createTest: (data: CreateTestRequest): Promise<TestResponse> =>
-    axiosClient.post('/api/tests', data).then(r => r.data),
+    axiosClient.post('/tests', data).then(r => r.data),
 
   getTest: (testId: string): Promise<TestResponse> =>
     axiosClient.get(`/api/tests/${testId}`).then(r => r.data),
@@ -274,11 +274,11 @@ const testApi = {
     requirementKey?: string;
     search?: string;
   }): Promise<TestResponse[]> =>
-    axiosClient.get('/api/tests/project/' + params.projectId, { params }).then(r => r.data),
+    axiosClient.get('/tests/project/' + params.projectId, { params }).then(r => r.data),
 
   // Test Sets
   createTestSet: (data: TestSetRequest): Promise<TestSetResponse> =>
-    axiosClient.post('/api/test-sets', data).then(r => r.data),
+    axiosClient.post('/test-sets', data).then(r => r.data),
 
   getTestSet: (testSetId: string): Promise<TestSetResponse> =>
     axiosClient.get(`/api/test-sets/${testSetId}`).then(r => r.data),
@@ -300,7 +300,7 @@ const testApi = {
 
   // Test Plans
   createTestPlan: (data: TestPlanRequest): Promise<TestPlanResponse> =>
-    axiosClient.post('/api/test-plans', data).then(r => r.data),
+    axiosClient.post('/test-plans', data).then(r => r.data),
 
   getTestPlan: (testPlanId: string): Promise<TestPlanResponse> =>
     axiosClient.get(`/api/test-plans/${testPlanId}`).then(r => r.data),
@@ -319,7 +319,7 @@ const testApi = {
 
   // Test Executions
   createExecution: (data: TestExecutionRequest): Promise<TestExecutionResponse> =>
-    axiosClient.post('/api/test-executions', data).then(r => r.data),
+    axiosClient.post('/test-executions', data).then(r => r.data),
 
   getExecution: (executionId: string): Promise<TestExecutionResponse> =>
     axiosClient.get(`/api/test-executions/${executionId}`).then(r => r.data),
@@ -347,7 +347,7 @@ const testApi = {
 
   // Requirement Links
   createRequirementLink: (data: RequirementLinkRequest): Promise<RequirementLinkResponse> =>
-    axiosClient.post('/api/requirements/links', data).then(r => r.data),
+    axiosClient.post('/requirements/links', data).then(r => r.data),
 
   getRequirementLinks: (testId: string): Promise<RequirementLinkResponse[]> =>
     axiosClient.get(`/api/requirements/links/test/${testId}`).then(r => r.data),
@@ -1007,7 +1007,7 @@ const advancedApi = {
   // Dataset API
   datasets: {
     create: (data: CreateDatasetRequest): Promise<DatasetResponse> =>
-      axiosClient.post('/api/datasets', data).then(r => r.data),
+      axiosClient.post('/datasets', data).then(r => r.data),
     get: (datasetId: string): Promise<DatasetResponse> =>
       axiosClient.get(`/api/datasets/${datasetId}`).then(r => r.data),
     list: (projectId: string): Promise<DatasetResponse[]> =>
@@ -1021,7 +1021,7 @@ const advancedApi = {
     getVersions: (datasetId: string): Promise<DatasetVersionResponse[]> =>
       axiosClient.get(`/api/datasets/${datasetId}/versions`).then(r => r.data),
     bind: (data: BindDatasetRequest): Promise<DatasetBindingResponse> =>
-      axiosClient.post('/api/datasets/bind', data).then(r => r.data),
+      axiosClient.post('/datasets/bind', data).then(r => r.data),
     unbind: (testId: string, datasetId: string): Promise<void> =>
       axiosClient.delete(`/api/datasets/bind/${testId}/${datasetId}`).then(r => r.data),
     getBindingsForTest: (testId: string): Promise<DatasetBindingResponse[]> =>
@@ -1033,7 +1033,7 @@ const advancedApi = {
   // Shared Steps API
   sharedSteps: {
     create: (data: CreateSharedStepRequest): Promise<SharedStepResponse> =>
-      axiosClient.post('/api/shared-steps', data).then(r => r.data),
+      axiosClient.post('/shared-steps', data).then(r => r.data),
     get: (sharedStepId: string): Promise<SharedStepResponse> =>
       axiosClient.get(`/api/shared-steps/${sharedStepId}`).then(r => r.data),
     list: (projectId: string): Promise<SharedStepResponse[]> =>
@@ -1047,7 +1047,7 @@ const advancedApi = {
     getImpact: (sharedStepId: string): Promise<SharedStepImpactResponse[]> =>
       axiosClient.get(`/api/shared-steps/${sharedStepId}/impact`).then(r => r.data),
     insert: (data: InsertSharedStepRequest): Promise<EmbeddedStepResponse> =>
-      axiosClient.post('/api/shared-steps/insert', data).then(r => r.data),
+      axiosClient.post('/shared-steps/insert', data).then(r => r.data),
     getEmbeddedSteps: (testId: string): Promise<EmbeddedStepResponse[]> =>
       axiosClient.get(`/api/shared-steps/test/${testId}`).then(r => r.data),
   },
@@ -1055,19 +1055,19 @@ const advancedApi = {
   // Impact Analysis API
   impact: {
     analyze: (data: ImpactAnalysisRequest): Promise<ImpactAnalysisResponse> =>
-      axiosClient.post('/api/impact/analyze', data).then(r => r.data),
+      axiosClient.post('/impact/analyze', data).then(r => r.data),
     analyzeCommit: (data: ImpactAnalysisRequest): Promise<ImpactAnalysisResponse> =>
-      axiosClient.post('/api/impact/analyze/commit', data).then(r => r.data),
+      axiosClient.post('/impact/analyze/commit', data).then(r => r.data),
     getResult: (analysisId: string): Promise<ImpactAnalysisResponse> =>
       axiosClient.get(`/api/impact/results/${analysisId}`).then(r => r.data),
     getHistory: (projectId: string): Promise<ImpactAnalysisResponse[]> =>
       axiosClient.get(`/api/impact/history/${projectId}`).then(r => r.data),
     registerComponent: (data: ComponentRequest): Promise<ComponentResponse> =>
-      axiosClient.post('/api/impact/components', data).then(r => r.data),
+      axiosClient.post('/impact/components', data).then(r => r.data),
     getComponents: (projectId: string): Promise<ComponentResponse[]> =>
       axiosClient.get(`/api/impact/components/project/${projectId}`).then(r => r.data),
     mapTestToComponent: (data: TestComponentMappingRequest): Promise<void> =>
-      axiosClient.post('/api/impact/test-component', data).then(r => r.data),
+      axiosClient.post('/impact/test-component', data).then(r => r.data),
     getComponentsForTest: (testId: string): Promise<ComponentResponse[]> =>
       axiosClient.get(`/api/impact/test/${testId}/components`).then(r => r.data),
     analyzeTestImpact: (testId: string, cascadeDepth?: number): Promise<unknown> =>
@@ -1081,19 +1081,19 @@ const advancedApi = {
   // Flaky Test API
   flakyTests: {
     getAll: (limit = 50): Promise<FlakyTestResponse[]> =>
-      axiosClient.get('/api/flaky-tests', { params: { limit } }).then(r => r.data),
+      axiosClient.get('/flaky-tests', { params: { limit } }).then(r => r.data),
     getDetails: (testId: string): Promise<FlakyTestResponse> =>
       axiosClient.get(`/api/flaky-tests/${testId}`).then(r => r.data),
     getCandidates: (): Promise<FlakyTestResponse[]> =>
-      axiosClient.get('/api/flaky-tests/quarantine-candidates').then(r => r.data),
+      axiosClient.get('/flaky-tests/quarantine-candidates').then(r => r.data),
     getDashboard: (projectId: string): Promise<FlakyDashboardResponse> =>
-      axiosClient.get('/api/flaky-tests/dashboard', { params: { projectId } }).then(r => r.data),
+      axiosClient.get('/flaky-tests/dashboard', { params: { projectId } }).then(r => r.data),
   },
 
   // Quarantine API
   quarantine: {
     quarantine: (data: QuarantineRequest): Promise<QuarantineResponse> =>
-      axiosClient.post('/api/quarantine', data).then(r => r.data),
+      axiosClient.post('/quarantine', data).then(r => r.data),
     get: (testId: string): Promise<QuarantineResponse> =>
       axiosClient.get(`/api/quarantine/test/${testId}`).then(r => r.data),
     list: (projectId: string): Promise<QuarantineResponse[]> =>
@@ -1105,9 +1105,9 @@ const advancedApi = {
     restore: (quarantineId: string, reason?: string): Promise<QuarantineResponse> =>
       axiosClient.post(`/api/quarantine/${quarantineId}/restore`, null, { params: { reason } }).then(r => r.data),
     getDashboard: (projectId: string): Promise<QuarantineDashboardResponse> =>
-      axiosClient.get('/api/quarantine/dashboard', { params: { projectId } }).then(r => r.data),
+      axiosClient.get('/quarantine/dashboard', { params: { projectId } }).then(r => r.data),
     createRule: (data: QuarantineRuleRequest): Promise<QuarantineRuleResponse> =>
-      axiosClient.post('/api/quarantine/rules', data).then(r => r.data),
+      axiosClient.post('/quarantine/rules', data).then(r => r.data),
     getRules: (projectId: string): Promise<QuarantineRuleResponse[]> =>
       axiosClient.get(`/api/quarantine/rules/project/${projectId}`).then(r => r.data),
   },
@@ -1151,7 +1151,7 @@ const advancedApi = {
   // Evidence Management API
   evidence: {
     upload: (data: EvidenceUploadRequest): Promise<EvidenceResponse> =>
-      axiosClient.post('/api/evidence', data).then(r => r.data),
+      axiosClient.post('/evidence', data).then(r => r.data),
     get: (evidenceId: string): Promise<EvidenceResponse> =>
       axiosClient.get(`/api/evidence/${evidenceId}`).then(r => r.data),
     getByExecution: (executionId: string): Promise<EvidenceResponse[]> =>
@@ -1161,16 +1161,16 @@ const advancedApi = {
     getByStep: (stepResultId: string): Promise<EvidenceResponse[]> =>
       axiosClient.get(`/api/evidence/step/${stepResultId}`).then(r => r.data),
     classify: (data: EvidenceClassificationRequest): Promise<EvidenceResponse> =>
-      axiosClient.put('/api/evidence/classify', data).then(r => r.data),
+      axiosClient.put('/evidence/classify', data).then(r => r.data),
     delete: (evidenceId: string): Promise<void> =>
       axiosClient.delete(`/api/evidence/${evidenceId}`).then(r => r.data),
     archive: (evidenceId: string): Promise<void> =>
       axiosClient.post(`/api/evidence/${evidenceId}/archive`).then(r => r.data),
     // Retention policies
     createPolicy: (data: RetentionPolicyRequest): Promise<RetentionPolicyResponse> =>
-      axiosClient.post('/api/evidence/policies', data).then(r => r.data),
+      axiosClient.post('/evidence/policies', data).then(r => r.data),
     getPolicies: (projectId?: string): Promise<RetentionPolicyResponse[]> =>
-      axiosClient.get('/api/evidence/policies', { params: { projectId } }).then(r => r.data),
+      axiosClient.get('/evidence/policies', { params: { projectId } }).then(r => r.data),
     getPolicy: (policyId: string): Promise<RetentionPolicyResponse> =>
       axiosClient.get(`/api/evidence/policies/${policyId}`).then(r => r.data),
     applyPolicy: (policyId: string): Promise<void> =>
@@ -1180,11 +1180,11 @@ const advancedApi = {
   // Environment Matrix API
   environmentMatrix: {
     create: (data: MatrixConfigurationRequest): Promise<MatrixConfigurationResponse> =>
-      axiosClient.post('/api/environment-matrix', data).then(r => r.data),
+      axiosClient.post('/environment-matrix', data).then(r => r.data),
     get: (matrixId: string): Promise<MatrixConfigurationResponse> =>
       axiosClient.get(`/api/environment-matrix/${matrixId}`).then(r => r.data),
     list: (projectId: string): Promise<MatrixConfigurationResponse[]> =>
-      axiosClient.get('/api/environment-matrix', { params: { projectId } }).then(r => r.data),
+      axiosClient.get('/environment-matrix', { params: { projectId } }).then(r => r.data),
     delete: (matrixId: string): Promise<void> =>
       axiosClient.delete(`/api/environment-matrix/${matrixId}`).then(r => r.data),
     // Combinations
@@ -1196,14 +1196,14 @@ const advancedApi = {
       axiosClient.post(`/api/environment-matrix/${matrixId}/validate`).then(r => r.data),
     // Provisioning
     provision: (data: EnvironmentProvisionRequest): Promise<ProvisionResponse> =>
-      axiosClient.post('/api/environment-matrix/provision', data).then(r => r.data),
+      axiosClient.post('/environment-matrix/provision', data).then(r => r.data),
     getProvisioned: (combinationId: string): Promise<ProvisionResponse> =>
       axiosClient.get(`/api/environment-matrix/combinations/${combinationId}/provisioned`).then(r => r.data),
     // Rules
     createRule: (data: ProvisioningRuleRequest): Promise<ProvisioningRuleResponse> =>
-      axiosClient.post('/api/environment-matrix/rules', data).then(r => r.data),
+      axiosClient.post('/environment-matrix/rules', data).then(r => r.data),
     getRules: (projectId?: string): Promise<ProvisioningRuleResponse[]> =>
-      axiosClient.get('/api/environment-matrix/rules', { params: { projectId } }).then(r => r.data),
+      axiosClient.get('/environment-matrix/rules', { params: { projectId } }).then(r => r.data),
     getRule: (ruleId: string): Promise<ProvisioningRuleResponse> =>
       axiosClient.get(`/api/environment-matrix/rules/${ruleId}`).then(r => r.data),
     deleteRule: (ruleId: string): Promise<void> =>

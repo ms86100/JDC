@@ -87,7 +87,7 @@ export interface WorkflowVersion {
 }
 
 export const workflowApi = {
-  getAll: () => apiClient.get<Workflow[]>('/api/workflows'),
+  getAll: () => apiClient.get<Workflow[]>('/workflows'),
   getById: (id: string) => apiClient.get<Workflow>(`/api/workflows/${id}`),
   getWorkflowDetail: (id: string) =>
     apiClient.get<{
@@ -97,7 +97,7 @@ export const workflowApi = {
       versions: WorkflowVersion[];
     }>(`/api/workflows/${id}/detail`),
   create: (data: { name: string; description?: string; projectId?: string }) =>
-    apiClient.post<Workflow>('/api/workflows', data),
+    apiClient.post<Workflow>('/workflows', data),
   update: (id: string, data: Partial<Workflow>) =>
     apiClient.put<Workflow>(`/api/workflows/${id}`, data),
   delete: (id: string) => apiClient.delete(`/api/workflows/${id}`),
@@ -118,7 +118,7 @@ export const workflowApi = {
     toStatusId: string;
     description?: string;
     requiresApproval?: boolean;
-  }) => apiClient.post('/api/workflows/transitions', data),
+  }) => apiClient.post('/workflows/transitions', data),
   updateTransition: (transitionId: string, data: Partial<WorkflowTransitionDetail>) =>
     apiClient.put(`/api/workflows/transitions/${transitionId}`, data),
   deleteTransition: (transitionId: string) =>
@@ -139,14 +139,14 @@ export const workflowApi = {
   deletePostFunction: (transitionId: string, functionId: string) =>
     apiClient.delete(`/api/workflows/transitions/${transitionId}/post-functions/${functionId}`),
 
-  getConditionDefinitions: () => apiClient.get('/api/admin/workflows/conditions/definitions'),
-  getValidatorDefinitions: () => apiClient.get('/api/admin/workflows/validators/definitions'),
-  getPostFunctionDefinitions: () => apiClient.get('/api/admin/workflows/post-functions/definitions'),
+  getConditionDefinitions: () => apiClient.get('/admin/workflows/conditions/definitions'),
+  getValidatorDefinitions: () => apiClient.get('/admin/workflows/validators/definitions'),
+  getPostFunctionDefinitions: () => apiClient.get('/admin/workflows/post-functions/definitions'),
 
-  getSchemes: () => apiClient.get<WorkflowScheme[]>('/api/workflow-schemes'),
+  getSchemes: () => apiClient.get<WorkflowScheme[]>('/workflow-schemes'),
   getScheme: (id: string) => apiClient.get<WorkflowScheme>(`/api/workflow-schemes/${id}`),
   createScheme: (data: { name: string; description?: string; defaultWorkflowId?: string }) =>
-    apiClient.post<WorkflowScheme>('/api/workflow-schemes', data),
+    apiClient.post<WorkflowScheme>('/workflow-schemes', data),
   updateScheme: (id: string, data: { name: string; description?: string; defaultWorkflowId?: string }) =>
     apiClient.put<WorkflowScheme>(`/api/workflow-schemes/${id}`, data),
   deleteScheme: (id: string) => apiClient.delete(`/api/workflow-schemes/${id}`),
@@ -187,7 +187,7 @@ export const workflowApi = {
   unlockLayout: (workflowId: string) => apiClient.post(`/api/workflow-schemes/workflows/${workflowId}/layout/unlock`),
 
   assignSchemeBulk: (schemeId: string, projectIds: string[]) =>
-    apiClient.post<{ schemeId: string; updatedProjects: number }>('/api/workflow-schemes/projects/assign-bulk', {
+    apiClient.post<{ schemeId: string; updatedProjects: number }>('/workflow-schemes/projects/assign-bulk', {
       schemeId,
       projectIds,
     }),
@@ -198,7 +198,7 @@ export const workflowApi = {
     newStatusId: string;
     migrationType?: string;
     userId?: string;
-  }) => apiClient.post<WorkflowStatusMigration>('/api/workflow-schemes/migrations', data),
+  }) => apiClient.post<WorkflowStatusMigration>('/workflow-schemes/migrations', data),
   previewStatusMigration: (migrationId: string, oldStatusId: string, newStatusId: string) =>
     apiClient.post<MigrationPreview>(`/api/workflow-schemes/migrations/${migrationId}/preview`, null, {
       params: { oldStatusId, newStatusId },
@@ -212,11 +212,11 @@ export const workflowApi = {
   retryStatusMigration: (migrationId: string) =>
     apiClient.post<WorkflowStatusMigration>(`/api/workflow-schemes/migrations/${migrationId}/retry`),
 
-  listTransitionScreens: () => apiClient.get<WorkflowTransitionScreen[]>('/api/admin/workflows/screens'),
+  listTransitionScreens: () => apiClient.get<WorkflowTransitionScreen[]>('/admin/workflows/screens'),
   getTransitionScreen: (screenId: string) =>
     apiClient.get<WorkflowTransitionScreen>(`/api/admin/workflows/screens/${screenId}`),
   createTransitionScreen: (data: { name: string; description?: string }) =>
-    apiClient.post<WorkflowTransitionScreen>('/api/admin/workflows/screens', data),
+    apiClient.post<WorkflowTransitionScreen>('/admin/workflows/screens', data),
   updateTransitionScreen: (screenId: string, data: Record<string, unknown>) =>
     apiClient.put<WorkflowTransitionScreen>(`/api/admin/workflows/screens/${screenId}`, data),
   deleteTransitionScreen: (screenId: string) => apiClient.delete(`/api/admin/workflows/screens/${screenId}`),
@@ -240,7 +240,7 @@ export const workflowApi = {
       succeeded: number;
       failed: number;
       results: Array<{ issueId: string; success: boolean; error?: string }>;
-    }>('/api/workflows/transitions/execute-bulk', data),
+    }>('/workflows/transitions/execute-bulk', data),
 };
 
 export interface WorkflowDefinition {

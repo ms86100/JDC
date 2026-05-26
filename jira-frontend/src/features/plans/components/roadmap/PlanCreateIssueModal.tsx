@@ -45,7 +45,7 @@ export default function PlanCreateIssueModal({
   const { data: issueTypes = [] } = useQuery<IssueType[]>({
     queryKey: ['issueTypesList'],
     queryFn: async () => {
-      const res = await apiClient.get<IssueType[]>('/api/issue-types');
+      const res = await apiClient.get<IssueType[]>('/issue-types');
       return res.data ?? [];
     },
   });

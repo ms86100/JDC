@@ -175,13 +175,13 @@ export interface WorkflowVisualizerEdge {
 const workflowEngineApi = {
   // Definition Management
   createDefinition: (data: CreateWorkflowDefinitionRequest): Promise<WorkflowDefinitionResponse> =>
-    axiosClient.post('/api/test-workflows/definitions', data).then(r => r.data),
+    axiosClient.post('/test-workflows/definitions', data).then(r => r.data),
 
   getDefinitionsByProject: (projectId: string): Promise<WorkflowDefinitionResponse[]> =>
-    axiosClient.get('/api/test-workflows/definitions', { params: { projectId } }).then(r => r.data),
+    axiosClient.get('/test-workflows/definitions', { params: { projectId } }).then(r => r.data),
 
   getDefinitionsByType: (projectId: string, workflowType: string): Promise<WorkflowDefinitionResponse[]> =>
-    axiosClient.get('/api/test-workflows/definitions', { params: { projectId, workflowType } }).then(r => r.data),
+    axiosClient.get('/test-workflows/definitions', { params: { projectId, workflowType } }).then(r => r.data),
 
   getDefinition: (id: string): Promise<WorkflowDefinitionResponse> =>
     axiosClient.get(`/api/test-workflows/definitions/${id}`).then(r => r.data),
@@ -203,7 +203,7 @@ const workflowEngineApi = {
 
   // Instance Management
   startWorkflow: (definitionId: string, entityType: string, entityId: string): Promise<WorkflowInstanceResponse> =>
-    axiosClient.post('/api/test-workflows/instances', { definitionId, entityType, entityId }).then(r => r.data),
+    axiosClient.post('/test-workflows/instances', { definitionId, entityType, entityId }).then(r => r.data),
 
   transition: (instanceId: string, targetState: string, comment?: string): Promise<WorkflowInstanceResponse> =>
     axiosClient.post(`/api/test-workflows/instances/${instanceId}/transition`, { targetState, comment }).then(r => r.data),
@@ -212,13 +212,13 @@ const workflowEngineApi = {
     axiosClient.get(`/api/test-workflows/instances/${id}`).then(r => r.data),
 
   getActiveInstances: (): Promise<WorkflowInstanceResponse[]> =>
-    axiosClient.get('/api/test-workflows/instances/active').then(r => r.data),
+    axiosClient.get('/test-workflows/instances/active').then(r => r.data),
 
   getInstancesByEntity: (entityType: string, entityId: string): Promise<WorkflowInstanceResponse[]> =>
-    axiosClient.get('/api/test-workflows/instances', { params: { entityType, entityId } }).then(r => r.data),
+    axiosClient.get('/test-workflows/instances', { params: { entityType, entityId } }).then(r => r.data),
 
   getInstancesByDefinition: (definitionId: string): Promise<WorkflowInstanceResponse[]> =>
-    axiosClient.get('/api/test-workflows/instances', { params: { definitionId } }).then(r => r.data),
+    axiosClient.get('/test-workflows/instances', { params: { definitionId } }).then(r => r.data),
 
   cancelWorkflow: (instanceId: string, reason?: string): Promise<WorkflowInstanceResponse> =>
     axiosClient.post(`/api/test-workflows/instances/${instanceId}/cancel`, { reason }).then(r => r.data),
@@ -241,7 +241,7 @@ const workflowEngineApi = {
 
   // Validation
   validateDefinition: (definition: Partial<WorkflowDefinitionResponse>): Promise<ValidationResult> =>
-    axiosClient.post('/api/test-workflows/definitions/validate', definition).then(r => r.data),
+    axiosClient.post('/test-workflows/definitions/validate', definition).then(r => r.data),
 };
 
 export default workflowEngineApi;

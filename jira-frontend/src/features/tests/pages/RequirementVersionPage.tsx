@@ -333,7 +333,7 @@ const RequirementVersionPage: React.FC = () => {
   const { data: requirements = [], isLoading } = useQuery({
     queryKey: ['requirement-versions'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/requirements');
+      const response = await apiClient.get('/requirements');
       return response.data;
     },
   });

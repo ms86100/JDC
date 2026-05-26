@@ -20,7 +20,7 @@ export interface ImportBatchResponse {
 
 export const importApi = {
   getHistory: (projectId: string) =>
-    apiClient.get<ImportBatchResponse[]>('/api/import/history', { params: { projectId } }),
+    apiClient.get<ImportBatchResponse[]>('/import/history', { params: { projectId } }),
 
   getCucumberStatus: (batchId: string) =>
     apiClient.get<ImportBatchResponse>(`/api/import/cucumber/status/${batchId}`),

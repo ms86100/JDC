@@ -303,7 +303,7 @@ export const useBoardVelocity = (boardId: string) => {
 export const useWorkingDays = () => {
   return useQuery({
     queryKey: ['workingDays', 'default'],
-    queryFn: () => apiClient.get('/api/plans/working-days/default'),
+    queryFn: () => apiClient.get('/plans/working-days/default'),
     select: (res) => res.data,
   });
 };

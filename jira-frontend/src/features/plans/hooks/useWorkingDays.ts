@@ -71,11 +71,11 @@ export interface CreateTeamAvailabilityRequest {
 
 // API functions
 const workingDaysApi = {
-  getAll: () => apiClient.get<WorkingDaysResponse[]>('/api/plans/working-days'),
-  getDefault: () => apiClient.get<WorkingDaysResponse>('/api/plans/working-days/default'),
+  getAll: () => apiClient.get<WorkingDaysResponse[]>('/plans/working-days'),
+  getDefault: () => apiClient.get<WorkingDaysResponse>('/plans/working-days/default'),
   getById: (id: string) => apiClient.get<WorkingDaysResponse>(`/api/plans/working-days/${id}`),
   create: (data: CreateWorkingDaysRequest) =>
-    apiClient.post<WorkingDaysResponse>('/api/plans/working-days', data),
+    apiClient.post<WorkingDaysResponse>('/plans/working-days', data),
   update: (id: string, data: CreateWorkingDaysRequest) =>
     apiClient.put<WorkingDaysResponse>(`/api/plans/working-days/${id}`, data),
   delete: (id: string) => apiClient.delete(`/api/plans/working-days/${id}`),

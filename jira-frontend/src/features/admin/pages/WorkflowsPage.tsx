@@ -6,8 +6,8 @@ import WorkflowVersionHistoryPanel from '../../workflows/components/WorkflowVers
 import WorkflowStatusMigrationModal from '../../workflows/components/WorkflowStatusMigrationModal';
 import './WorkflowsPage.css';
 
-const API_BASE = '/api/workflows';
-const SCHEMES_API_BASE = '/api/workflow-schemes';
+const API_BASE = '/workflows';
+const SCHEMES_API_BASE = '/workflow-schemes';
 
 interface WorkflowScheme {
   id: string;

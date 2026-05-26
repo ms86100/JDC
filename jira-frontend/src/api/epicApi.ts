@@ -48,13 +48,13 @@ export interface EpicProgressResponse {
 
 export const epicApi = {
   getAll: (params?: { leadId?: string; status?: string }) =>
-    apiClient.get<EpicResponse[]>('/api/epics', { params }),
+    apiClient.get<EpicResponse[]>('/epics', { params }),
 
   getById: (epicId: string) =>
     apiClient.get<EpicResponse>(`/api/epics/${epicId}`),
 
   create: (data: CreateEpicRequest) =>
-    apiClient.post<EpicResponse>('/api/epics', data),
+    apiClient.post<EpicResponse>('/epics', data),
 
   update: (epicId: string, data: UpdateEpicRequest) =>
     apiClient.put<EpicResponse>(`/api/epics/${epicId}`, data),

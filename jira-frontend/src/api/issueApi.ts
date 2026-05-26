@@ -166,8 +166,8 @@ export interface Component {
 export const issueApi = {
   // Issue CRUD
   create: (data: CreateIssueRequest) =>
-    apiClient.post<IssueResponse>('/api/issues', toBackendCreatePayload(data)),
-  getAll: (params?: Record<string, string>) => apiClient.get<{ content: IssueResponse[]; totalElements: number }>('/api/issues', { params }),
+    apiClient.post<IssueResponse>('/issues', toBackendCreatePayload(data)),
+  getAll: (params?: Record<string, string>) => apiClient.get<{ content: IssueResponse[]; totalElements: number }>('/issues', { params }),
   getById: async (id: string) => {
     const response = await apiClient.get<IssueResponse>(`/api/issues/${id}`);
     response.data = normalizeIssue(response.data as unknown as Record<string, unknown>);
@@ -178,7 +178,7 @@ export const issueApi = {
     apiClient.get<IssueResponse>(`/api/issues/by-key/${encodeURIComponent(issueKey)}`),
 
   getBatch: (ids: string[]) =>
-    apiClient.get<IssueResponse[]>('/api/issues/batch', {
+    apiClient.get<IssueResponse[]>('/issues/batch', {
       params: { ids: ids.join(',') },
     }),
   update: (id: string, data: UpdateIssueRequest) =>
@@ -201,7 +201,7 @@ export const issueApi = {
     comment?: string;
     resolutionId?: string;
     screenInput?: Record<string, unknown>;
-  }) => apiClient.post('/api/workflows/transitions/execute', data),
+  }) => apiClient.post('/workflows/transitions/execute', data),
 
   getAvailableTransitions: (id: string, projectId: string) =>
     apiClient.get<{
@@ -245,7 +245,7 @@ export const issueApi = {
       const found = await apiClient.get<IssueResponse>(`/api/issues/by-key/${encodeURIComponent(data.targetIssueKey)}`);
       resolvedId = found.data.id;
     }
-    return apiClient.post('/api/issues/links', {
+    return apiClient.post('/issues/links', {
       sourceIssueId: id,
       targetIssueId: resolvedId,
       linkTypeName: data.linkType,
@@ -270,16 +270,16 @@ export const issueApi = {
   removeComponent: (id: string, componentId: string) => apiClient.delete(`/api/issues/${id}/components/${componentId}`),
 
   // Enums lookups
-  getTypes: () => apiClient.get<IssueType[]>('/api/issues/types'),
-  getPriorities: () => apiClient.get<IssuePriority[]>('/api/issues/priorities'),
-  getStatuses: () => apiClient.get<IssueStatus[]>('/api/issues/statuses'),
+  getTypes: () => apiClient.get<IssueType[]>('/issues/types'),
+  getPriorities: () => apiClient.get<IssuePriority[]>('/issues/priorities'),
+  getStatuses: () => apiClient.get<IssueStatus[]>('/issues/statuses'),
 };
 
 export const projectApi = {
   getAll: (params?: { search?: string; archived?: boolean; page?: number; size?: number }) =>
-    apiClient.get<{ content: Project[]; totalElements: number }>('/api/projects', { params }),
+    apiClient.get<{ content: Project[]; totalElements: number }>('/projects', { params }),
   getById: (id: string) => apiClient.get<Project>(`/api/projects/${id}`),
-  create: (data: Partial<Project>) => apiClient.post<Project>('/api/projects', data),
+  create: (data: Partial<Project>) => apiClient.post<Project>('/projects', data),
   update: (id: string, data: Partial<Project>) => apiClient.put<Project>(`/api/projects/${id}`, data),
   delete: (id: string) => apiClient.delete(`/api/projects/${id}`),
   archive: (id: string) => apiClient.post(`/api/projects/${id}/archive`),
@@ -297,9 +297,9 @@ export const projectApi = {
 
 export const sprintApi = {
   getAll: (params?: { boardId?: string; state?: string; projectId?: string }) =>
-    apiClient.get<Sprint[]>('/api/sprints', { params }),
+    apiClient.get<Sprint[]>('/sprints', { params }),
   getById: (id: string) => apiClient.get<Sprint>(`/api/sprints/${id}`),
-  create: (data: Partial<Sprint>) => apiClient.post<Sprint>('/api/sprints', data),
+  create: (data: Partial<Sprint>) => apiClient.post<Sprint>('/sprints', data),
   update: (id: string, data: Partial<Sprint>) => apiClient.put<Sprint>(`/api/sprints/${id}`, data),
   start: (id: string) => apiClient.post<Sprint>(`/api/sprints/${id}/start`),
   complete: (id: string) => apiClient.post<Sprint>(`/api/sprints/${id}/complete`),
@@ -392,9 +392,9 @@ export interface CustomFieldValue {
 }
 
 export const customFieldApi = {
-  getAll: () => apiClient.get<CustomField[]>('/api/custom-fields'),
+  getAll: () => apiClient.get<CustomField[]>('/custom-fields'),
   getById: (id: string) => apiClient.get<CustomField>(`/api/custom-fields/${id}`),
-  create: (data: Partial<CustomField>) => apiClient.post<CustomField>('/api/custom-fields', data),
+  create: (data: Partial<CustomField>) => apiClient.post<CustomField>('/custom-fields', data),
   update: (id: string, data: Partial<CustomField>) => apiClient.put<CustomField>(`/api/custom-fields/${id}`, data),
   delete: (id: string) => apiClient.delete(`/api/custom-fields/${id}`),
   getByIssue: (issueId: string) => apiClient.get<CustomFieldValue[]>(`/api/issues/${issueId}/custom-fields`),
@@ -432,8 +432,8 @@ export interface SecurityLevel {
 }
 
 export const resolutionApi = {
-  getAll: () => apiClient.get<Resolution[]>('/api/admin/issues/resolutions'),
-  create: (data: Partial<Resolution>) => apiClient.post<Resolution>('/api/admin/issues/resolutions', data),
+  getAll: () => apiClient.get<Resolution[]>('/admin/issues/resolutions'),
+  create: (data: Partial<Resolution>) => apiClient.post<Resolution>('/admin/issues/resolutions', data),
   update: (id: string, data: Partial<Resolution>) => apiClient.put<Resolution>(`/api/admin/issues/resolutions/${id}`, data),
   delete: (id: string) => apiClient.delete(`/api/admin/issues/resolutions/${id}`),
 };
@@ -441,11 +441,11 @@ export const resolutionApi = {
 // ==================== Issue Link Types ====================
 
 export const issueLinkTypeApi = {
-  getAll: () => apiClient.get<IssueLinkType[]>('/api/issues/links/types'),
+  getAll: () => apiClient.get<IssueLinkType[]>('/issues/links/types'),
 };
 
 // ==================== Security Levels ====================
 
 export const securityLevelApi = {
-  getAll: () => apiClient.get<SecurityLevel[]>('/api/security-levels'),
+  getAll: () => apiClient.get<SecurityLevel[]>('/security-levels'),
 };

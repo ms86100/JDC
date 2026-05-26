@@ -15,7 +15,7 @@ export default function NotificationsPage() {
     queryKey: ['notifications'],
     queryFn: async () => {
       try {
-        const response = await apiClient.get('/api/notifications');
+        const response = await apiClient.get('/notifications');
         return response.data || [];
       } catch {
         return [];

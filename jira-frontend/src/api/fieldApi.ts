@@ -58,16 +58,16 @@ export interface UpdateCustomFieldRequest {
 
 export const fieldApi = {
   getDefinitions: () =>
-    apiClient.get<FieldDefinitionDto[]>('/api/fields/definitions'),
+    apiClient.get<FieldDefinitionDto[]>('/fields/definitions'),
 
   getCustomFields: () =>
-    apiClient.get<CustomFieldDefinitionDto[]>('/api/fields/custom'),
+    apiClient.get<CustomFieldDefinitionDto[]>('/fields/custom'),
 
   getCustomField: (id: string) =>
     apiClient.get<CustomFieldDefinitionDto>(`/api/fields/custom/${id}`),
 
   createCustomField: (body: CreateCustomFieldRequest, userId?: string) =>
-    apiClient.post<CustomFieldDefinitionDto>('/api/fields/custom', body, {
+    apiClient.post<CustomFieldDefinitionDto>('/fields/custom', body, {
       headers: userId ? { 'X-User-Id': userId } : undefined,
     }),
 
@@ -87,7 +87,7 @@ export const fieldApi = {
     apiClient.get(`/api/fields/screens/configuration`, { params: { screenType } }),
 
   mapFields: (sourceFieldKeys: string[]) =>
-    apiClient.post<FieldMappingResultDto>('/api/fields/map', sourceFieldKeys),
+    apiClient.post<FieldMappingResultDto>('/fields/map', sourceFieldKeys),
 
   getIssueFieldValues: (issueId: string) =>
     apiClient.get<{
@@ -185,13 +185,13 @@ export const boardFieldApi = {
     projectId?: string;
   }) =>
     apiClient.post<{ valuesByIssue: Record<string, VisibleFieldDto[]> }>(
-      '/api/fields/boards/issues/visible-batch',
+      '/fields/boards/issues/visible-batch',
       body,
     ),
 };
 
 export const dashboardFieldApi = {
-  listGadgets: () => apiClient.get<string[]>('/api/fields/dashboard/gadgets'),
+  listGadgets: () => apiClient.get<string[]>('/fields/dashboard/gadgets'),
 
   getGadget: (gadgetKey: string, params?: { dashboardKey?: string; projectId?: string }) =>
     apiClient.get<DashboardGadgetDto>(`/api/fields/dashboard/gadgets/${gadgetKey}`, { params }),

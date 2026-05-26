@@ -1,3 +1,6 @@
+-- Enable UUID extension for all microservices
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Initialize Jira Platform Database Schemas
 -- This script creates all schemas needed by microservices
 

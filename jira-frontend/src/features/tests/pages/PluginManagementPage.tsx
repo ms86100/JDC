@@ -46,7 +46,7 @@ interface HookTestResult {
   executionTimeMs: number;
 }
 
-const API_BASE = '/api/plugins';
+const API_BASE = '/plugins';
 
 export const PluginManagementPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
