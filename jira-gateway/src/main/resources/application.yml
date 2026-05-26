@@ -6,6 +6,16 @@ spring:
     name: jira-gateway
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
 
 # Swagger/OpenAPI Configuration
 springdoc:
