@@ -1,0 +1,43 @@
+name: Pull and Run Pre-built Images
+
+on:
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull backend services
+        run: |
+          echo "Pulling pre-built images..."
+          for service in auth-service gateway user-service project-service workflow-service comment-service notification-service search-service audit-service attachment-service sprint-service plan-service admin-service migration-service version-service component-service issue-service test-service dashboard-service portal-service report-service document-service; do
+            echo "Pulling: jira-$service"
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-$service:latest || echo "Failed: $service"
+          done
+
+      - name: Pull frontend
+        run: |
+          echo "Pulling: jira-frontend"
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-frontend:latest || echo "Failed: frontend"
+
+      - name: Show available images
+        run: |
+          echo "=========================================="
+          echo " Available Images"
+          echo "=========================================="
+          docker images | grep "${{ env.IMAGE_PREFIX }}/jira" | head -30
