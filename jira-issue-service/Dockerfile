@@ -1,37 +1,27 @@
-FROM eclipse-temurin:21-jdk-alpine AS build
-WORKDIR /app
+FROM maven:3.9.9-eclipse-temurin-21-alpine AS builder
+WORKDIR /build
 
-# Copy all service modules (Maven reactor needs them all due to cross-dependencies)
+# Step 1: Strip modules section from root pom and install as parent
 COPY pom.xml ./pom.xml
-COPY jira-gateway ./jira-gateway
-COPY jira-auth-service ./jira-auth-service
-COPY jira-user-service ./jira-user-service
-COPY jira-project-service ./jira-project-service
-COPY jira-issue-service ./jira-issue-service
-COPY jira-workflow-service ./jira-workflow-service
-COPY jira-comment-service ./jira-comment-service
-COPY jira-notification-service ./jira-notification-service
-COPY jira-search-service ./jira-search-service
-COPY jira-audit-service ./jira-audit-service
-COPY jira-sprint-service ./jira-sprint-service
-COPY jira-attachment-service ./jira-attachment-service
-COPY jira-migration-service ./jira-migration-service
-COPY jira-plan-service ./jira-plan-service
-COPY jira-admin-service ./jira-admin-service
-COPY jira-test-service ./jira-test-service
-COPY jira-dashboard-service ./jira-dashboard-service
-COPY jira-report-service ./jira-report-service
-COPY jira-document-service ./jira-document-service
-COPY jira-portal-service ./jira-portal-service
-COPY jira-component-service ./jira-component-service
-COPY jira-version-service ./jira-version-service
+RUN sed -i '/<modules>/,/<\/modules>/d' pom.xml
+RUN mvn install -N -q
 
-RUN apk add --no-cache maven && \
-    mvn install -Dmaven.test.skip=true -q
+# Step 2: Copy and build dependency services to local .m2
+COPY jira-project-service ./jira-project-service
+RUN cd jira-project-service && mvn install -DskipTests -q
+COPY jira-admin-service ./jira-admin-service
+RUN cd jira-admin-service && mvn install -DskipTests -q
+
+# Step 3: Build issue-service
+COPY jira-issue-service/pom.xml ./pom.xml
+COPY jira-issue-service/src ./src
+RUN mvn package -DskipTests -q
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-RUN apk add --no-cache wget curl
-COPY --from=build /app/jira-issue-service/target/*.jar app.jar
+RUN addgroup -S jira && adduser -S jira -G jira
+COPY --from=builder /build/target/*.jar app.jar
+RUN chown -R jira:jira /app
+USER jira
 EXPOSE 8084
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java","-jar","app.jar"]

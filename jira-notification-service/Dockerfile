@@ -1,18 +1,21 @@
-FROM eclipse-temurin:21-jdk-alpine AS build
-WORKDIR /app
+FROM maven:3.9.9-eclipse-temurin-21-alpine AS builder
+WORKDIR /build
 
-# Copy parent pom and install to local repo
+# Strip modules section to avoid reactor validation
 COPY pom.xml ./pom.xml
-RUN apk add --no-cache maven && mvn install -N -DskipTests -q
+RUN sed -i '/<modules>/,/<\/modules>/d' pom.xml
+RUN mvn install -N -q
 
-# Copy and build service
+# Build this service
 COPY jira-notification-service/pom.xml ./pom.xml
 COPY jira-notification-service/src ./src
-RUN mvn package -Dmaven.test.skip=true -q
+RUN mvn package -DskipTests -q
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-RUN apk add --no-cache wget curl
-COPY --from=build /app/target/*.jar app.jar
+RUN addgroup -S jira && adduser -S jira -G jira
+COPY --from=builder /build/target/*.jar app.jar
+RUN chown -R jira:jira /app
+USER jira
 EXPOSE 8087
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java","-jar","app.jar"]

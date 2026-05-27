@@ -12,7 +12,7 @@
     "test:e2e": "playwright test",
     "test:e2e:migration-live": "playwright test e2e/jira-dc-import.spec.ts e2e/migration-center.spec.ts",
     "test:e2e:ui": "playwright test --ui",
-    "postinstall": "playwright install chromium"
+    "postinstall": "if [ \"$NODE_ENV\" != 'production' ]; then npx playwright install chromium 2>/dev/null || true; fi"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
