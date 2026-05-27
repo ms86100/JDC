@@ -359,26 +359,6 @@ services:
       auth-service:
         condition: service_started
 
-  migration-service:
-    image: ghcr.io/ms86100/jira-migration-service:latest
-    container_name: jira-migration-service
-    ports:
-      - "8094:8094"
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
-      AUTH_SERVICE_URL: http://auth-service:8081
-    networks:
-      - jira-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      auth-service:
-        condition: service_started
 
   version-service:
     image: ghcr.io/ms86100/jira-version-service:latest
