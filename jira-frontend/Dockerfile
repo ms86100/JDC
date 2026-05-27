@@ -1,9 +1,7 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
-ENV NODE_ENV=production
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 COPY jira-frontend/package.json .
-RUN npm install --ignore-scripts
+RUN npm install
 COPY jira-frontend/ .
 RUN npm run build
 FROM nginx:alpine
