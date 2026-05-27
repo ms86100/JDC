@@ -12,7 +12,7 @@ RUN cd jira-project-service && mvn install -Dmaven.test.skip=true -q
 COPY jira-admin-service ./jira-admin-service
 RUN cd jira-admin-service && mvn install -Dmaven.test.skip=true -q
 
-# Step 3: Build issue-service
+# Step 3: Build issue-service (skip BOTH test compilation and execution)
 COPY jira-issue-service/pom.xml ./pom.xml
 COPY jira-issue-service/src ./src
 RUN mvn package -Dmaven.test.skip=true -q
