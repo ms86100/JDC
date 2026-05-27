@@ -30,7 +30,23 @@ services:
       test: ["CMD-SHELL", "pg_isready -U jiraadmin -d jira_platform"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+
+  migration-service:
+    image: ghcr.io/ms86100/jira-migration-service:latest
+    container_name: jira-migration-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+    networks:
+      - jira-network
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   redis:
     image: redis:7-alpine
