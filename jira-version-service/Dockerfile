@@ -9,7 +9,7 @@ RUN mvn install -N -q
 # Build this service
 COPY jira-version-service/pom.xml ./pom.xml
 COPY jira-version-service/src ./src
-RUN mvn package -DskipTests -q
+RUN mvn package -Dmaven.test.skip=true -q
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app

@@ -8,14 +8,14 @@ RUN mvn install -N -q
 
 # Step 2: Copy and build dependency services to local .m2
 COPY jira-project-service ./jira-project-service
-RUN cd jira-project-service && mvn install -DskipTests -q
+RUN cd jira-project-service && mvn install -Dmaven.test.skip=true -q
 COPY jira-admin-service ./jira-admin-service
-RUN cd jira-admin-service && mvn install -DskipTests -q
+RUN cd jira-admin-service && mvn install -Dmaven.test.skip=true -q
 
 # Step 3: Build issue-service
 COPY jira-issue-service/pom.xml ./pom.xml
 COPY jira-issue-service/src ./src
-RUN mvn package -DskipTests -q
+RUN mvn package -Dmaven.test.skip=true -q
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
