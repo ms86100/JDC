@@ -338,7 +338,7 @@ services:
     image: ghcr.io/ms86100/jira-frontend:latest
     container_name: jira-frontend
     ports:
-      - "3000:80"
+      - "3000:3000"
     environment:
       VITE_API_GATEWAY_URL: http://gateway:8080
       VITE_ENV: cloudshell
