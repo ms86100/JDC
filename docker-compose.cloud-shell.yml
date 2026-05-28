@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: jira-postgres
     environment:
       POSTGRES_USER: jiraadmin
       POSTGRES_PASSWORD: jirapass123
@@ -9,9 +10,18 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init/init-schemas.sql:/docker-entrypoint-initdb.d/init-schemas.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jiraadmin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jira-network
 
   gateway:
     image: ghcr.io/ms86100/jira-gateway:latest
+    container_name: jira-gateway
     ports:
       - "8080:8080"
     environment:
@@ -20,9 +30,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - jira-network
 
   auth-service:
     image: ghcr.io/ms86100/jira-auth-service:latest
+    container_name: jira-auth-service
     environment:
       SPRING_PROFILES_ACTIVE: cloudshell
       DB_HOST: postgres
@@ -33,42 +46,310 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - jira-network
 
   user-service:
     image: ghcr.io/ms86100/jira-user-service:latest
+    container_name: jira-user-service
     environment:
       SPRING_PROFILES_ACTIVE: cloudshell
       DB_HOST: postgres
       DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
 
   project-service:
     image: ghcr.io/ms86100/jira-project-service:latest
+    container_name: jira-project-service
     environment:
       SPRING_PROFILES_ACTIVE: cloudshell
       DB_HOST: postgres
       DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
 
   issue-service:
     image: ghcr.io/ms86100/jira-issue-service:latest
+    container_name: jira-issue-service
     environment:
       SPRING_PROFILES_ACTIVE: cloudshell
       DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
+
+  workflow-service:
+    image: ghcr.io/ms86100/jira-workflow-service:latest
+    container_name: jira-workflow-service
+    environment:
+      SPRING_PROFILES_ACTIVE: cloudshell
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
+
+  comment-service:
+    image: ghcr.io/ms86100/jira-comment-service:latest
+    container_name: jira-comment-service
+    environment:
+      SPRING_PROFILES_ACTIVE: cloudshell
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
+
+  notification-service:
+    image: ghcr.io/ms86100/jira-notification-service:latest
+    container_name: jira-notification-service
+    environment:
+      SPRING_PROFILES_ACTIVE: cloudshell
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
+
+  search-service:
+    image: ghcr.io/ms86100/jira-search-service:latest
+    container_name: jira-search-service
+    environment:
+      SPRING_PROFILES_ACTIVE: cloudshell
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
+
+  audit-service:
+    image: ghcr.io/ms86100/jira-audit-service:latest
+    container_name: jira-audit-service
+    environment:
+      SPRING_PROFILES_ACTIVE: cloudshell
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
+
+  attachment-service:
+    image: ghcr.io/ms86100/jira-attachment-service:latest
+    container_name: jira-attachment-service
+    environment:
+      SPRING_PROFILES_ACTIVE: cloudshell
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
+
+  sprint-service:
+    image: ghcr.io/ms86100/jira-sprint-service:latest
+    container_name: jira-sprint-service
+    environment:
+      SPRING_PROFILES_ACTIVE: cloudshell
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
+
+  plan-service:
+    image: ghcr.io/ms86100/jira-plan-service:latest
+    container_name: jira-plan-service
+    environment:
+      SPRING_PROFILES_ACTIVE: cloudshell
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
+
+  admin-service:
+    image: ghcr.io/ms86100/jira-admin-service:latest
+    container_name: jira-admin-service
+    environment:
+      SPRING_PROFILES_ACTIVE: cloudshell
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
+
+  migration-service:
+    image: ghcr.io/ms86100/jira-migration-service:latest
+    container_name: jira-migration-service
+    environment:
+      SPRING_PROFILES_ACTIVE: cloudshell
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
+
+  version-service:
+    image: ghcr.io/ms86100/jira-version-service:latest
+    container_name: jira-version-service
+    environment:
+      SPRING_PROFILES_ACTIVE: cloudshell
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
+
+  component-service:
+    image: ghcr.io/ms86100/jira-component-service:latest
+    container_name: jira-component-service
+    environment:
+      SPRING_PROFILES_ACTIVE: cloudshell
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jira_platform
+      DB_USERNAME: jiraadmin
+      DB_PASSWORD: jirapass123
+      AUTH_SERVICE_URL: http://auth-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - jira-network
 
   frontend:
     image: ghcr.io/ms86100/jira-frontend:latest
+    container_name: jira-frontend
     ports:
-      - "3000:3000"
+      - "3000:80"
     environment:
-      VITE_API_GATEWAY_URL: http://localhost:8080
+      VITE_API_GATEWAY_URL: http://gateway:8080
       VITE_ENV: cloudshell
     depends_on:
       - gateway
+    networks:
+      - jira-network
+
+networks:
+  jira-network:
+    driver: bridge
 
 volumes:
   postgres_data:
