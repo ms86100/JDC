@@ -1,16 +1,9 @@
-# =============================================================================
-# Docker Compose Override for Google Cloud Shell
-# Usage: docker-compose -f docker-compose.yml -f docker-compose.cloudshell.yml up -d
-# =============================================================================
-
 services:
   gateway:
     image: ghcr.io/ms86100/jira-gateway:latest
     environment:
       SPRING_PROFILES_ACTIVE: cloudshell
       REDIS_ENABLED: "false"
-    ports:
-      - "8080:8080"
 
   auth-service:
     image: ghcr.io/ms86100/jira-auth-service:latest
@@ -27,11 +20,10 @@ services:
       DB_PORT: 5432
 
   frontend:
+    image: ghcr.io/ms86100/jira-frontend:latest
     environment:
       VITE_API_GATEWAY_URL: http://localhost:8080
       VITE_ENV: cloudshell
-    ports:
-      - "3000:3000"
 
   redis:
     profiles:
