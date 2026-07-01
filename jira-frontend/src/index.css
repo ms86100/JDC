@@ -1,0 +1,34 @@
+/* Systems and Avionics — design tokens (must load first) */
+@import './styles/tokens.css';
+
+/* Airbus Design System Theme */
+@import './styles/airbus-theme.css';
+
+/* Jira Data Center Classic UI */
+@import './styles/jira-classic.css';
+
+/* Jira Platform Custom Styles */
+@import './features/dashboard/DashboardStyles.css';
+
+/* Administration — Jira DC shell + shared page primitives */
+@import './features/admin/styles/admin-shell.css';
+@import './components/layout/styles/workspace-shell.css';
+@import './features/admin/styles/admin-shared.css';
+
+/* Jira Data Center visual overlay — Phase 4 (load LAST so it overrides) */
+@import './styles/jira-dc-overlay.css';
+
+/* Airbus tokens → Jira DC composition variables */
+@import './styles/airbus-dc-bridge.css';
+
+/* Jira DC UI composition (video_frames parity) */
+@import './styles/jira-dc-ui.css';
+@import './features/projects/styles/project-dc.css';
+@import './features/issues/styles/issues-layout.css';
+@import './components/workspace/workspace-dashboard.css';
+@import './styles/ui-polish.css';
+@import './features/boards/styles/kanban-board.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

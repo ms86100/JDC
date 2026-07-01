@@ -1,0 +1,25 @@
+package com.jira.workflow.dto;
+
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
+import java.util.UUID;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class WorkflowSchemeMappingRequest {
+    @NotNull(message = "Issue type ID is required")
+    private UUID issueTypeId;
+
+    @NotNull(message = "Workflow ID is required")
+    private UUID workflowId;
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+class BulkMappingRequest {
+    private java.util.List<WorkflowSchemeMappingRequest> mappings;
+}

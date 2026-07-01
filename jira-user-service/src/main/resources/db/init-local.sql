@@ -1,0 +1,22 @@
+-- Local dev: ensure jira_user schema and minimal columns
+CREATE SCHEMA IF NOT EXISTS jira_user;
+
+-- Organizations
+ALTER TABLE jira_user.organizations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE jira_user.organizations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE jira_user.organizations ADD COLUMN IF NOT EXISTS slug VARCHAR(255);
+ALTER TABLE jira_user.organizations ADD COLUMN IF NOT EXISTS description TEXT;
+
+-- Users
+ALTER TABLE jira_user.users ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+ALTER TABLE jira_user.users ADD COLUMN IF NOT EXISTS username VARCHAR(100);
+ALTER TABLE jira_user.users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE jira_user.users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- Profiles
+ALTER TABLE jira_user.profiles ADD COLUMN IF NOT EXISTS display_name VARCHAR(255);
+ALTER TABLE jira_user.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+-- Teams
+ALTER TABLE jira_user.teams ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+ALTER TABLE jira_user.teams ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;

@@ -1,0 +1,113 @@
+/* Permissions Page Styles */
+
+.permissions-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--sa-n200);
+}
+
+.permissions-tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--sa-n600);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.permissions-tab:hover {
+  color: var(--sa-n700);
+}
+
+.permissions-tab.active {
+  color: var(--sa-brand-500);
+  border-bottom-color: var(--sa-brand-500);
+}
+
+.permissions-content {
+  /* content wrapper */
+}
+
+.scheme-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scheme-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--sa-brand-500);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.scheme-icon.notification {
+  background: var(--sa-success-500);
+}
+
+.scheme-icon.security {
+  background: #6554c0;
+}
+
+.scheme-name {
+  font-weight: 500;
+  color: var(--sa-n1000);
+  margin-right: 8px;
+}
+
+.scheme-default-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--sa-success-50);
+  color: var(--sa-success-700);
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.admin-alert {
+  padding: 10px 16px;
+  border-radius: 3px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.admin-alert-success {
+  background: var(--sa-success-50);
+  color: var(--sa-success-700);
+  border: 1px solid var(--sa-success-500);
+}
+
+.admin-alert-error {
+  background: var(--sa-danger-50);
+  color: #bf2600;
+  border: 1px solid var(--sa-danger-500);
+}
+
+.admin-form-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--sa-n200);
+  border-radius: 3px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.admin-form-textarea:focus {
+  outline: none;
+  border-color: #4c9aff;
+  box-shadow: 0 0 0 1px #4c9aff;
+}

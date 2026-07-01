@@ -1,0 +1,44 @@
+/**
+ * Airbus Design System ↔ Application shell bridge.
+ * Maps SA tokens (--sa-*) onto composition variables (--jdc-*)
+ * so all UI composition CSS stays aligned with Airbus brand.
+ */
+:root {
+  --jdc-header-bg: var(--sa-brand-800, #00205b);
+  --jdc-header-text: var(--sa-n0, #ffffff);
+  --jdc-header-hover: var(--sa-brand-700, #002d80);
+  --jdc-gadget-header: var(--sa-brand-600, #063b9e);
+  --jdc-page-bg: var(--sa-n50, #fafafa);
+  --jdc-border: var(--sa-n200, #e0e3e9);
+  --jdc-border-strong: var(--sa-n400, #b3bbc8);
+  --jdc-text: var(--sa-n1000, #14171d);
+  --jdc-text-subtle: var(--sa-n600, #63728a);
+  --jdc-text-muted: var(--sa-n500, #919cb0);
+  --jdc-lozenge-todo: var(--sa-status-todo-bg);
+  --jdc-today: var(--sa-warn-500, #ffc929);
+  --jdc-primary: var(--sa-brand-500, #255fcc);
+  --jdc-radius: var(--sa-radius-md, 6px);
+  --jdc-radius-sm: var(--sa-radius-sm, 3px);
+  --jdc-radius-lg: var(--sa-radius-lg, 8px);
+  --jdc-font: var(--sa-font-sans);
+  --jdc-link: var(--sa-brand-500, #255fcc);
+  --jdc-link-hover: var(--sa-brand-700, #002d80);
+  --jdc-surface: var(--sa-n0, #ffffff);
+  --jdc-surface-alt: var(--sa-n50, #fafafa);
+  --jdc-bg: var(--sa-n50, #fafafa);
+  --jdc-blue: var(--sa-brand-500, #255fcc);
+  --jdc-blue-bg: var(--sa-brand-50, #e5ecf7);
+  --jdc-green: var(--sa-success-500, #08875b);
+  --jdc-green-bg: var(--sa-success-50, #e3fcef);
+  --jdc-yellow: var(--sa-warn-600, #ddab17);
+  --jdc-yellow-bg: var(--sa-warn-50, #fffae6);
+  --jdc-red: var(--sa-danger-500, #e4002b);
+  --jdc-red-bg: var(--sa-danger-50, #ffebe6);
+  --jdc-purple: #6554c0;
+  --jdc-purple-bg: #eae6ff;
+  --jdc-grey-bg: var(--sa-n100, #eff1f4);
+  --jdc-focus: var(--sa-brand-400, #638ee0);
+  --jdc-shadow-card: var(--sa-elev-1);
+  --jdc-shadow-raised: var(--sa-elev-2);
+  --jdc-shadow-modal: var(--sa-elev-3);
+}

@@ -1,0 +1,22 @@
+FROM maven:3.9-eclipse-temurin-21 AS builder
+WORKDIR /build
+
+# Copy cached Maven repo (pre-downloaded dependencies, avoids Maven Central)
+# Build context must be JDC-main/ for this COPY to work
+COPY .m2-cache /root/.m2/repository
+
+# Copy project files (paths relative to JDC-main/ build context)
+COPY jira-migration-service/pom.xml .
+COPY jira-migration-service/src ./src
+
+# Build offline using the pre-populated local Maven repo
+RUN mvn package -Dmaven.test.skip=true -o -q
+
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+RUN addgroup -S jira && adduser -S jira -G jira
+COPY --from=builder /build/target/*.jar app.jar
+RUN chown -R jira:jira /app
+USER jira
+EXPOSE 8094
+ENTRYPOINT ["java","-jar","app.jar"]

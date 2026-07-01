@@ -1,0 +1,108 @@
+.xray-hub {
+  padding: 20px 24px 32px;
+  max-width: 1200px;
+}
+
+.xray-hub-header {
+  margin-bottom: 24px;
+}
+
+.xray-hub-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--jdc-primary, #0052cc);
+  background: var(--sa-brand-50);
+  padding: 4px 8px;
+  border-radius: 3px;
+  margin-bottom: 8px;
+}
+
+.xray-hub-title {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--sa-n900, #172b4d);
+}
+
+.xray-hub-tagline {
+  margin: 0;
+  font-size: 14px;
+  color: var(--sa-n600, #5e6c84);
+  max-width: 720px;
+}
+
+.xray-hub-project {
+  padding: 16px 20px;
+  margin-bottom: 28px;
+}
+
+.xray-hub-project-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.xray-hub-project-row .jdc-input {
+  min-width: 280px;
+  flex: 1;
+}
+
+.xray-hub-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sa-n600, #5e6c84);
+  margin: 0 0 12px;
+}
+
+.xray-hub-group {
+  margin-bottom: 28px;
+}
+
+.xray-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.xray-hub-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--sa-n0, #fff);
+  border: 1px solid var(--jdc-border, #dfe1e6);
+  border-radius: 3px;
+  text-decoration: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+button.xray-hub-card {
+  font: inherit;
+  width: 100%;
+}
+
+.xray-hub-card:hover {
+  border-color: var(--jdc-primary, #0052cc);
+  box-shadow: 0 2px 6px rgba(0, 82, 204, 0.12);
+}
+
+.xray-hub-card-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--jdc-primary, #0052cc);
+}
+
+.xray-hub-card-desc {
+  font-size: 12px;
+  color: var(--sa-n600, #5e6c84);
+}

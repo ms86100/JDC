@@ -1,0 +1,344 @@
+/* Workflow management — Jira DC style */
+
+.wf-page {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.wf-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.wf-page-header h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.wf-muted { color: var(--sa-n600, #5e6c84); font-size: 13px; margin: 0; }
+.wf-back { font-size: 13px; color: var(--sa-brand-500); text-decoration: none; font-weight: 500; }
+
+.wf-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--sa-n200, #dfe1e6);
+  margin-bottom: 20px;
+}
+
+.wf-tab {
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--sa-n600);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-family: inherit;
+}
+
+.wf-tab--active { color: var(--sa-brand-500); border-bottom-color: var(--sa-brand-500); }
+
+.wf-toolbar { margin-bottom: 16px; }
+.wf-search { max-width: 320px; }
+
+.wf-workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.wf-workflow-card {
+  background: #fff;
+  border: 1px solid var(--sa-n200);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.wf-workflow-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.wf-workflow-card h3 { margin: 0; font-size: 16px; }
+
+.wf-workflow-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--sa-n600);
+  margin: 12px 0;
+}
+
+.wf-card-actions { display: flex; gap: 8px; }
+
+.wf-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+.wf-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--sa-n100);
+  color: var(--sa-n600);
+}
+
+.wf-badge-draft { background: #fff0b3; color: var(--sa-n1000); }
+.wf-badge-active { background: var(--sa-success-50); color: var(--sa-success-700); }
+.wf-badge-inactive { background: var(--sa-n100); color: var(--sa-n600); }
+
+.wf-panel {
+  background: #fff;
+  border: 1px solid var(--sa-n200);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.wf-panel-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.wf-panel-toolbar h2 { margin: 0; font-size: 16px; }
+
+.wf-create-panel { display: flex; flex-direction: column; gap: 10px; }
+
+.wf-template-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+.wf-template-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--sa-n200);
+  border-radius: 999px;
+  background: var(--sa-n50);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.wf-template-chip:hover { border-color: var(--sa-brand-500); background: var(--sa-brand-50); }
+
+.wf-form-actions { display: flex; gap: 8px; }
+
+.wf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.wf-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--sa-n50);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sa-n600);
+  border-bottom: 1px solid var(--sa-n200);
+}
+
+.wf-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sa-n100);
+}
+
+.wf-table tbody tr { cursor: pointer; }
+.wf-table tbody tr:hover { background: var(--sa-n50); }
+.wf-row-selected { background: var(--sa-brand-50) !important; }
+
+.wf-cat {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.wf-cat--todo { background: var(--sa-n100); }
+.wf-cat--in_progress, .wf-cat--in progress { background: var(--sa-brand-50); color: var(--sa-brand-500); }
+.wf-cat--done { background: var(--sa-success-50); color: var(--sa-success-700); }
+
+.wf-schemes-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  min-height: 400px;
+}
+
+.wf-schemes-list ul { list-style: none; margin: 0; padding: 0; }
+
+.wf-scheme-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid var(--sa-n100);
+  font-family: inherit;
+}
+
+.wf-scheme-item--active { background: var(--sa-brand-50); }
+
+.wf-scheme-create { margin-bottom: 12px; }
+
+.wf-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.wf-add-transition { padding: 12px; background: var(--sa-n50); border-radius: 6px; }
+
+.wf-detail-body { display: block; }
+.wf-detail-body--split {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+}
+
+.wf-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.wf-transition-panel {
+  background: #fff;
+  border: 1px solid var(--sa-n200);
+  border-radius: 8px;
+  padding: 16px;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.wf-transition-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--sa-n100);
+}
+
+.wf-transition-panel h3 { margin: 0; }
+
+.wf-config-section { margin-bottom: 16px; }
+.wf-config-section h4 { margin: 0 0 4px; font-size: 13px; }
+
+.wf-config-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.wf-config-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--sa-n50);
+  font-size: 13px;
+}
+
+.wf-config-add { display: flex; gap: 6px; }
+
+.wf-version-list { list-style: none; padding: 0; margin: 0; }
+.wf-version-list li { padding: 8px 0; border-bottom: 1px solid var(--sa-n100); font-size: 13px; }
+
+.wf-architecture ol { line-height: 1.7; }
+.wf-arch-list li { margin-bottom: 8px; }
+
+.wf-scheme-hint { margin-bottom: 12px; }
+
+@media (max-width: 900px) {
+  .wf-schemes-layout { grid-template-columns: 1fr; }
+  .wf-detail-body--split { grid-template-columns: 1fr; }
+}
+
+/* Workflow list — Operations column */
+.jdc-wf-dc-table-wrap {
+  overflow-x: auto;
+}
+
+.jdc-wf-dc-table th:last-child,
+.jdc-wf-dc-table td:last-child {
+  min-width: 220px;
+  white-space: nowrap;
+}
+
+.jdc-wf-ops {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  padding: 2px 0;
+}
+
+.jdc-wf-op {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-decoration: none;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.jdc-wf-op:hover {
+  text-decoration: none;
+  background: var(--sa-n50);
+}
+
+.jdc-wf-op:focus-visible {
+  outline: 2px solid #4c9aff;
+  outline-offset: 1px;
+}
+
+.jdc-wf-op--view {
+  color: var(--sa-n1000);
+}
+
+.jdc-wf-op--view:hover {
+  color: var(--sa-brand-500);
+  background: var(--sa-brand-50);
+}
+
+.jdc-wf-op--edit,
+.jdc-wf-op--copy {
+  color: var(--sa-brand-500);
+}
+
+.jdc-wf-op--edit:hover,
+.jdc-wf-op--copy:hover {
+  background: var(--sa-brand-50);
+}
+
+.jdc-wf-op:disabled {
+  color: var(--sa-n500);
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.jdc-wf-op-sep {
+  display: inline-block;
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: var(--sa-n200);
+  flex-shrink: 0;
+}

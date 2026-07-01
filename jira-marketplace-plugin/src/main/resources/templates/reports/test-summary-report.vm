@@ -1,0 +1,34 @@
+<html>
+<head>
+    <title>Test Summary Report</title>
+</head>
+<body>
+    <div class="report-container">
+        <h2>Test Summary Report</h2>
+        <div class="report-filters">
+            <label>Project:</label>
+            <select id="project-filter">
+                <option value="">All Projects</option>
+            </select>
+        </div>
+        <div class="report-metrics">
+            <div class="metric-card">
+                <span class="metric-value">$totalTests</span>
+                <span class="metric-label">Total Tests</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-value">$passedTests</span>
+                <span class="metric-label">Passed</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-value">$failedTests</span>
+                <span class="metric-label">Failed</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-value">$passRate%</span>
+                <span class="metric-label">Pass Rate</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

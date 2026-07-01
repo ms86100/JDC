@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Minimal Jira Data Center entity-export compatible with jira-migration-service JiraDcXmlParser.
+  Format: each logical DC entity is one <Entity> with <entityName> and name/value <field> pairs.
+  See docs/samples/JIRA_DC_XML_SAMPLE.md for field reference.
+-->
+<JiraDcBackup>
+  <backupInfo>
+    <jiraVersion>9.12.0</jiraVersion>
+    <exportDate>2026-05-21T12:00:00Z</exportDate>
+    <exportUser>admin</exportUser>
+  </backupInfo>
+
+  <Entity>
+    <entityName>Project</entityName>
+    <field><name>key</name><value>DEMO</value></field>
+    <field><name>name</name><value>DC Import Sample Project</value></field>
+    <field><name>projectType</name><value>COMPANY_MANAGED</value></field>
+  </Entity>
+
+  <Entity>
+    <entityName>Issue</entityName>
+    <field><name>project</name><value>DEMO</value></field>
+    <field><name>id</name><value>1</value></field>
+    <field><name>summary</name><value>Sample issue for comment and attachment import</value></field>
+    <field><name>issueType</name><value>Task</value></field>
+    <field><name>status</name><value>To Do</value></field>
+    <field><name>priority</name><value>Medium</value></field>
+  </Entity>
+
+  <Entity>
+    <entityName>Comment</entityName>
+    <field><name>issue</name><value>DEMO-1</value></field>
+    <field><name>id</name><value>10001</value></field>
+    <field><name>body</name><value>Imported from Jira DC XML — validation comment.</value></field>
+    <field><name>author</name><value>admin</value></field>
+    <field><name>created</name><value>2026-05-21T10:00:00</value></field>
+  </Entity>
+
+  <Entity>
+    <entityName>Attachment</entityName>
+    <field><name>issue</name><value>DEMO-1</value></field>
+    <field><name>filename</name><value>dc-sample-readme.txt</value></field>
+    <field><name>mimeType</name><value>text/plain</value></field>
+    <field><name>author</name><value>admin</value></field>
+    <!-- Base64: "Hello from Jira DC attachment test" -->
+    <field><name>file</name><value>SGVsbG8gZnJvbSBKaXJhIERDIGF0dGFjaG1lbnQgdGVzdA==</value></field>
+  </Entity>
+</JiraDcBackup>

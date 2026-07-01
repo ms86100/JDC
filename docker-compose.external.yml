@@ -1,0 +1,192 @@
+# Docker Compose override for external PostgreSQL (in0-eplmdb-v01)
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.external.yml up -d
+#
+# This override:
+#   1. Disables the local postgres container
+#   2. Points all services to the external PostgreSQL server
+#   3. Removes postgres health-check dependencies
+
+services:
+  postgres:
+    profiles:
+      - disabled
+    deploy:
+      replicas: 0
+
+  auth-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on: !override []
+
+  user-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  project-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  issue-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  workflow-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  comment-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  notification-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  search-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  audit-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  attachment-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  sprint-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  version-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  component-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  plan-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  admin-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
+  migration-service:
+    environment:
+      DB_HOST: in0-eplmdb-v01
+      DB_PORT: 5432
+      DB_NAME: systems
+      DB_USERNAME: systems_admin
+      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      project-service:
+        condition: service_started
+      issue-service:
+        condition: service_started

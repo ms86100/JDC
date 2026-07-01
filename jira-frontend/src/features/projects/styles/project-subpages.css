@@ -1,0 +1,355 @@
+/* Shared cosmetic shell for all project sidebar routes */
+
+.jdc-project-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.sa-project-route-body {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Standard content pages (releases, components, reports) */
+.sa-project-subpage {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  padding: 24px 28px 32px;
+  overflow: auto;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.sa-project-subpage__header {
+  margin-bottom: 20px;
+}
+
+.sa-project-subpage__title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--sa-n900, #161a20);
+  line-height: 1.25;
+}
+
+.sa-project-subpage__lead {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--sa-n600, #5b6573);
+}
+
+.sa-project-subpage__lead strong {
+  color: var(--sa-n800, #2a313b);
+}
+
+.sa-project-subpage__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.sa-project-subpage-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--sa-n200, #e2e5ea);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.sa-project-subpage .jdc-settings-table {
+  width: 100%;
+  margin: 0;
+}
+
+.sa-project-subpage .jdc-settings-table th,
+.sa-project-subpage .jdc-settings-table td {
+  padding: 12px 16px;
+}
+
+.sa-project-subpage .jdc-settings-table td {
+  font-size: 14px;
+  vertical-align: top;
+}
+
+.sa-project-subpage .jdc-settings-table td:last-child {
+  max-width: 360px;
+  word-break: break-word;
+}
+
+.sa-project-subpage-empty {
+  padding: 40px 24px;
+  text-align: center;
+  background: #fff;
+  border: 1px solid var(--sa-n200, #e2e5ea);
+  border-radius: 8px;
+}
+
+.sa-project-subpage-empty p {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--sa-n600, #5b6573);
+}
+
+/* Reports grid inside project */
+.sa-project-subpage .xray-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.sa-project-subpage .xray-hub-card {
+  min-height: 100px;
+  padding: 16px 18px;
+}
+
+/* Backlog — full height, improved panel tabs */
+.jdc-backlog-page.sa-project-backlog {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.jdc-backlog-page.sa-project-backlog .jdc-backlog-side-tabs {
+  width: auto;
+  flex-shrink: 0;
+  flex-direction: row;
+  border-right: none;
+  border-bottom: 1px solid var(--jdc-border, #dfe1e6);
+  background: var(--sa-n50, #f7f8fa);
+  padding: 0 12px;
+  gap: 4px;
+}
+
+.jdc-backlog-page.sa-project-backlog .jdc-backlog-side-tab {
+  writing-mode: horizontal-tb;
+  transform: none;
+  padding: 12px 16px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  border-left: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  white-space: nowrap;
+}
+
+.jdc-backlog-page.sa-project-backlog .jdc-backlog-side-tab.active {
+  border-left: none;
+  border-bottom-color: var(--jdc-primary, #0052cc);
+  background: transparent;
+  color: var(--jdc-primary, #0052cc);
+}
+
+.jdc-backlog-page.sa-project-backlog .jdc-backlog-main {
+  flex: 1;
+  padding: 20px 24px 28px;
+}
+
+.jdc-backlog-page.sa-project-backlog .jdc-backlog-header {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.jdc-backlog-page.sa-project-backlog .jdc-backlog-header > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.jdc-backlog-main .jdc-backlog-side-panel {
+  width: 100%;
+  max-width: none;
+  border-left: none;
+  padding: 0;
+  background: transparent;
+}
+
+.jdc-backlog-main .jdc-backlog-side-panel-head {
+  margin-bottom: 16px;
+}
+
+.jdc-backlog-sprint-head {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.jdc-backlog-sprint-head > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.jdc-backlog-inline-create input {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  border: 1px solid var(--sa-n300, #c9ced6);
+  border-radius: 6px;
+}
+
+/* Board — fill project content area */
+.sa-project-board-shell {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--jdc-bg-page, #f4f5f7);
+}
+
+.sa-project-board-shell .ab-enhanced-kanban-board,
+.sa-project-board-shell > .jdc-board-with-drawer,
+.sa-project-board-shell > .sa-kanban-workspace,
+.sa-project-board-shell > div:not(.sa-classic-board-toolbar) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-project-board-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  background: #fff;
+}
+
+.sa-project-board-empty h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.sa-project-board-empty p {
+  margin: 0;
+  color: var(--sa-n600, #5b6573);
+  max-width: 40ch;
+}
+
+/* Classic Kanban (/board/classic) */
+.sa-classic-kanban-page {
+  height: 100%;
+}
+
+.sa-classic-board-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 10px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--sa-n200, #e2e5ea);
+  flex-shrink: 0;
+}
+
+.sa-classic-board-toolbar-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.sa-classic-board-toolbar-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sa-n600, #5b6573);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sa-classic-board-select {
+  min-width: 160px;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 14px;
+  border: 1px solid var(--sa-n300, #c9ced6);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.sa-classic-board-project-hint--warn {
+  color: var(--sa-color-warning, #b38600);
+}
+
+.sa-classic-board-project-hint {
+  font-size: 13px;
+  color: var(--sa-n600, #5b6573);
+  margin-left: auto;
+}
+
+/* Issues navigator inside project */
+.sa-issues-page--project {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sa-issues-page--project .jdc-project-issues-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 12px 20px;
+  background: #fff;
+  border-bottom: 1px solid var(--sa-n200, #e2e5ea);
+  flex-shrink: 0;
+}
+
+.sa-issues-page--project .jdc-issue-navigator {
+  flex: 1;
+  min-height: 0;
+  border-top: none;
+}
+
+/* Overview scroll inside route body */
+.sa-project-route-body > .sa-project-overview.ws-page {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Settings inside project layout */
+.jdc-project-content .jdc-settings-layout {
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .sa-project-subpage {
+    padding: 16px;
+  }
+
+  .sa-project-subpage .xray-hub-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .jdc-backlog-page.sa-project-backlog .jdc-backlog-side-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+}

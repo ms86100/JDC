@@ -1,0 +1,219 @@
+# Alert Rules for Enterprise Jira Platform
+# Based on dc-app-performance-toolkit performance expectations
+
+groups:
+  # ============ PERFORMANCE ALERTS ============
+  - name: jira-performance
+    interval: 30s
+    rules:
+      # Critical: Search latency above 500ms P95
+      - alert: HighSearchLatency
+        expr: histogram_quantile(0.95, rate(jira_search_query_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: critical
+          service: jira-search
+        annotations:
+          summary: "Search latency P95 exceeded 500ms"
+          description: "Search query P95 latency is {{ $value | humanizeDuration }}. Target is < 500ms."
+
+      # Critical: Issue view latency above 300ms P95
+      - alert: HighIssueViewLatency
+        expr: histogram_quantile(0.95, rate(jira_issue_view_duration_seconds_bucket[5m])) > 0.3
+        for: 3m
+        labels:
+          severity: critical
+          service: jira-issue
+        annotations:
+          summary: "Issue view latency P95 exceeded 300ms"
+          description: "Issue view P95 latency is {{ $value | humanizeDuration }}."
+
+      # Critical: Board load latency above 1s P95
+      - alert: HighBoardLatency
+        expr: histogram_quantile(0.95, rate(jira_board_load_duration_seconds_bucket[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: critical
+          service: jira-board
+        annotations:
+          summary: "Board load latency P95 exceeded 1s"
+          description: "Board loading P95 latency is {{ $value | humanizeDuration }}."
+
+  # ============ ERROR RATE ALERTS ============
+  - name: jira-errors
+    interval: 30s
+    rules:
+      # Critical: Error rate above 0.1%
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(jira_http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(jira_http_requests_total[5m]))
+          ) > 0.001
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP error rate exceeded 0.1%"
+          description: "Current error rate is {{ $value | humanizePercentage }}."
+
+      # Warning: Database error rate increasing
+      - alert: HighDatabaseErrorRate
+        expr: |
+          (
+            sum(rate(jira_database_errors_total[5m]))
+            /
+            sum(rate(jira_database_queries_total[5m]))
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database error rate above 1%"
+          description: "Database error rate is {{ $value | humanizePercentage }}."
+
+  # ============ CACHE ALERTS ============
+  - name: jira-cache
+    interval: 60s
+    rules:
+      # Warning: Cache hit ratio below 80%
+      - alert: LowCacheHitRatio
+        expr: jira_cache_hit_ratio < 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cache hit ratio below 80%"
+          description: "Current cache hit ratio is {{ $value | humanizePercentage }}. This may indicate cache misses."
+
+      # Warning: Cache size approaching limit
+      - alert: CacheSizeWarning
+        expr: (jira_cache_size_bytes / jira_cache_size_limit_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cache size above 90%"
+          description: "Cache is {{ $value | humanizePercentage }} of its maximum size."
+
+  # ============ DATABASE ALERTS ============
+  - name: jira-database
+    interval: 30s
+    rules:
+      # Warning: Connection pool usage above 80%
+      - alert: HighDatabaseConnectionUsage
+        expr: (jira_db_connections_active / jira_db_connections_max) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connection pool above 80%"
+          description: "{{ $value | humanizePercentage }} of connection pool in use."
+
+      # Warning: Slow queries (> 100ms)
+      - alert: HighSlowQueryRate
+        expr: rate(jira_database_slow_queries_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High rate of slow database queries"
+          description: "{{ $value | humanizeDuration }} slow queries per second."
+
+  # ============ SEARCH/INDEXING ALERTS ============
+  - name: jira-search
+    interval: 60s
+    rules:
+      # Critical: Indexing lag > 30 seconds
+      - alert: HighIndexingLag
+        expr: jira_search_indexing_lag_seconds > 30
+        for: 5m
+        labels:
+          severity: critical
+          service: jira-search
+        annotations:
+          summary: "Search indexing lag above 30 seconds"
+          description: "Index is {{ $value }} seconds behind. Recent changes may not appear in search."
+
+      # Warning: Search index size > 10GB
+      - alert: LargeSearchIndex
+        expr: jira_search_index_size_bytes > 10 * 1024 * 1024 * 1024
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Search index size above 10GB"
+          description: "Search index is {{ $value | humanizeBytes }}. Consider cleanup or sharding."
+
+  # ============ QUEUE/MESSAGING ALERTS ============
+  - name: jira-queues
+    interval: 60s
+    rules:
+      # Warning: Kafka consumer lag > 1000
+      - alert: HighKafkaConsumerLag
+        expr: jira_kafka_consumer_lag > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consumer lag above 1000"
+          description: "Consumer is {{ $value }} messages behind. Processing may be delayed."
+
+      # Critical: Queue depth > 10000
+      - alert: QueueDepthHigh
+        expr: jira_queue_depth > 10000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Message queue depth above 10000"
+          description: "Queue has {{ $value }} pending messages. System may be overloaded."
+
+  # ============ AVAILABILITY ALERTS ============
+  - name: jira-availability
+    interval: 30s
+    rules:
+      # Critical: Service down
+      - alert: ServiceDown
+        expr: up{job=~"jira-.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service has been unreachable for more than 1 minute."
+
+      # Warning: High request latency P99
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.99, rate(jira_http_request_duration_seconds_bucket[5m])) > 2.0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Request latency P99 above 2s"
+          description: "P99 latency is {{ $value | humanizeDuration }}. Some requests are timing out."
+
+  # ============ CLUSTER ALERTS ============
+  - name: jira-cluster
+    interval: 60s
+    rules:
+      # Warning: Node count below expected
+      - alert: LowClusterNodeCount
+        expr: count(up{job=~"jira-.*"}) < 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cluster node count below expected"
+          description: "Only {{ $value }} nodes are available. Expected at least 3."
+
+      # Critical: Distributed lock timeout
+      - alert: DistributedLockTimeout
+        expr: rate(jira_distributed_lock_timeout_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Distributed lock timeouts detected"
+          description: "{{ $value | humanizeDuration }} distributed lock timeouts per second. Cluster coordination may be failing."

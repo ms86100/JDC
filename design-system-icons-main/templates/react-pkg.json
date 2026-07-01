@@ -1,0 +1,7 @@
+{
+  "name": "@airbus/icons/react",
+  "sideEffects": false,
+  "main": "index.cjs.js",
+  "module": "index.esm.js",
+  "types": "index.tsx"
+}

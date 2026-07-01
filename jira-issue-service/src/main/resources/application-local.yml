@@ -1,0 +1,34 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/jira_platform
+    username: jiraadmin
+    password: UNIpay@123
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
+      schema-locations: classpath:db/init-local.sql
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: jira_issue
+  flyway:
+    enabled: false
+
+jira:
+  permissions:
+    fail-open: true
+  workflow:
+    transition-fallback: true
+
+project:
+  service:
+    url: http://localhost:8083
+
+workflow:
+  service:
+    url: http://localhost:8085

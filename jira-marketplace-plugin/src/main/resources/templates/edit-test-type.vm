@@ -1,0 +1,16 @@
+<html>
+<head>
+    <title>Edit Test Type</title>
+</head>
+<body>
+    <div class="ajs-dialog-content">
+        <form class="test-type-form">
+            <select name="testType" id="test-type-select">
+                <option value="MANUAL">Manual</option>
+                <option value="AUTOMATED">Automated</option>
+                <option value="BDD">BDD (Cucumber)</option>
+            </select>
+        </form>
+    </div>
+</body>
+</html>

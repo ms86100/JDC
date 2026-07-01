@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <title>{{ name }} - SVG Sprite</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 10px 20px;
+            text-align: center;
+        }
+
+        .preview {
+            width: 160px;
+            display: inline-block;
+            margin: 10px;
+        }
+
+        .preview .inner {
+            display: flex;
+            text-align: center;
+            background: #f5f5f5;
+            -webkit-border-radius: 3px 3px 0 0;
+            -moz-border-radius: 3px 3px 0 0;
+            border-radius: 3px 3px 0 0;
+        }
+
+        .preview .inner {{ baseTag }} {
+            display: flex;
+            color: #333;
+            padding: 16px;
+        }
+
+        svg {
+            width: 40px;
+            height: 40px;
+            margin: auto;
+        }
+
+        .label {
+            display: inline-block;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 5px;
+            font-size: 10px;
+            font-family: Monaco, monospace;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background: #ddd;
+            -webkit-border-radius: 0 0 3px 3px;
+            -moz-border-radius: 0 0 3px 3px;
+            border-radius: 0 0 3px 3px;
+            color: #666;
+        }
+    </style>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+
+<body>
+    <h1>{{ name }} - SVG Sprite</h1>
+
+    <div class="search">
+        <label for="search">Filter</label>
+        <input type="text" name="search" />
+    </div>
+
+    {{# each assets }}
+
+    <div class="preview">
+        <span class="inner">
+            <svg role="img"><use xlink:href="./airbus-icons.svg#{{ @key }}"/></svg>
+        </span>
+        <span class='label'>{{ @key }}</span>
+    </div>
+
+    {{/ each }}
+
+    <footer>{{ count }} icons</footer>
+
+    <script>
+        function onSearch(evt) {
+            $(".preview").each(function(i, elt) {
+                var name = $(elt).find(".label").text();
+                name.indexOf(evt.target.value) >= 0 ? $(elt).show() : $(elt).hide();
+            });
+        }
+        $(document).ready(function() {
+            $("input[name=search]").on('input', onSearch);
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,455 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "http://localhost:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+            maxAge: 3600
+            exposeHeaders:
+              - Access-Control-Allow-Credentials
+      routes:
+        - id: auth-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
+        - id: auth-service-noprefix
+          uri: http://localhost:8081
+          predicates:
+            - Path=/auth/**
+        - id: user-service-noprefix
+          uri: http://localhost:8082
+          predicates:
+            - Path=/users/**
+          filters:
+            - RewritePath=/users/(?<path>.*), /api/users/$\{path}
+        - id: project-service-noprefix
+          uri: http://localhost:8083
+          predicates:
+            - Path=/projects/**
+          filters:
+            - RewritePath=/projects(?<path>/?.*), /api/projects$\{path}
+        - id: templates-noprefix
+          uri: http://localhost:8083
+          predicates:
+            - Path=/templates/**
+          filters:
+            - RewritePath=/templates(?<path>/?.*), /api/templates$\{path}
+        - id: issues-noprefix
+          uri: http://localhost:8084
+          predicates:
+            - Path=/issues/**
+          filters:
+            - RewritePath=/issues(?<path>/?.*), /api/issues$\{path}
+        - id: workflows-noprefix
+          uri: http://localhost:8085
+          predicates:
+            - Path=/workflows/**
+          filters:
+            - RewritePath=/workflows(?<path>/?.*), /api/workflows$\{path}
+        - id: comments-noprefix
+          uri: http://localhost:8086
+          predicates:
+            - Path=/comments/**
+          filters:
+            - RewritePath=/comments(?<path>/?.*), /api/comments$\{path}
+        - id: sprints-noprefix
+          uri: http://localhost:8091
+          predicates:
+            - Path=/sprints/**
+          filters:
+            - RewritePath=/sprints(?<path>/?.*), /api/sprints$\{path}
+        - id: boards-noprefix
+          uri: http://localhost:8091
+          predicates:
+            - Path=/boards/**
+          filters:
+            - RewritePath=/boards(?<path>/?.*), /api/boards$\{path}
+        - id: search-noprefix
+          uri: http://localhost:8088
+          predicates:
+            - Path=/search/**
+          filters:
+            - RewritePath=/search(?<path>/?.*), /api/search$\{path}
+        - id: notifications-noprefix
+          uri: http://localhost:8087
+          predicates:
+            - Path=/notifications/**
+          filters:
+            - RewritePath=/notifications(?<path>/?.*), /api/notifications$\{path}
+        - id: audit-noprefix
+          uri: http://localhost:8089
+          predicates:
+            - Path=/audit/**
+          filters:
+            - RewritePath=/audit(?<path>/?.*), /api/audit$\{path}
+        - id: plans-noprefix
+          uri: http://localhost:8092
+          predicates:
+            - Path=/plans/**
+          filters:
+            - RewritePath=/plans(?<path>/?.*), /api/plans$\{path}
+        - id: fields-noprefix
+          uri: http://localhost:8094
+          predicates:
+            - Path=/fields/**
+          filters:
+            - RewritePath=/fields(?<path>/?.*), /api/fields$\{path}
+        - id: custom-fields-noprefix
+          uri: http://localhost:8094
+          predicates:
+            - Path=/custom-fields/**
+          filters:
+            - RewritePath=/custom-fields(?<path>/?.*), /api/custom-fields$\{path}
+        - id: workflow-schemes-noprefix
+          uri: http://localhost:8085
+          predicates:
+            - Path=/workflow-schemes/**
+          filters:
+            - RewritePath=/workflow-schemes(?<path>/?.*), /api/workflow-schemes$\{path}
+        - id: versions-noprefix
+          uri: http://localhost:8096
+          predicates:
+            - Path=/versions/**
+          filters:
+            - RewritePath=/versions(?<path>/?.*), /api/versions$\{path}
+        - id: components-noprefix
+          uri: http://localhost:8098
+          predicates:
+            - Path=/components/**
+          filters:
+            - RewritePath=/components(?<path>/?.*), /api/components$\{path}
+        - id: migration-noprefix
+          uri: http://localhost:8094
+          predicates:
+            - Path=/migration/**
+          filters:
+            - RewritePath=/migration(?<path>/?.*), /api/migration$\{path}
+        - id: admin-workflows-noprefix
+          uri: http://localhost:8085
+          predicates:
+            - Path=/admin/workflows/**
+          filters:
+            - RewritePath=/admin/workflows(?<path>/?.*), /api/admin/workflows$\{path}
+        - id: admin-noprefix
+          uri: http://localhost:8093
+          predicates:
+            - Path=/admin/**
+          filters:
+            - RewritePath=/admin(?<path>/?.*), /api/admin$\{path}
+        - id: attachments-noprefix
+          uri: http://localhost:8090
+          predicates:
+            - Path=/attachments/**
+          filters:
+            - RewritePath=/attachments(?<path>/?.*), /api/attachments$\{path}
+        - id: user-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/users/**
+        - id: user-service-direct
+          uri: http://localhost:8082
+          predicates:
+            - Path=/user-service/**
+          filters:
+            - StripPrefix=1
+        - id: project-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/projects/**
+        - id: template-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/templates/**
+        - id: security-levels
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/security-levels/**
+        - id: epic-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/epics/**
+        - id: traceability-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/traceability/**
+        - id: ai-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/ai/**
+        - id: webhooks-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/webhooks/**
+        - id: issue-import-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/import/**
+        - id: issue-reports-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/reports/**
+        - id: issue-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/issues/**
+        - id: bulk-operations
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/bulk-operations/**
+        - id: version-service
+          uri: http://localhost:8096
+          predicates:
+            - Path=/api/versions/**
+        - id: component-service
+          uri: http://localhost:8098
+          predicates:
+            - Path=/api/components/**
+        - id: workflow-service
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/workflows/**
+        - id: workflow-admin
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/admin/workflows/**
+        - id: issue-admin
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/admin/issues/issue-types/**
+        - id: priority-admin
+          uri: http://localhost:8093
+          predicates:
+            - Path=/api/admin/issues/priorities/**
+        - id: status-admin
+          uri: http://localhost:8093
+          predicates:
+            - Path=/api/admin/issues/statuses/**
+        - id: admin-service
+          uri: http://localhost:8093
+          predicates:
+            - Path=/api/admin/**
+        - id: workflow-scheme-service
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/workflow-schemes/**
+        - id: comment-service
+          uri: http://127.0.0.1:8086
+          predicates:
+            - Path=/api/comments/**
+        - id: test-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/tests/**
+        - id: test-set-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/test-sets/**
+        - id: test-plan-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/test-plans/**
+        - id: test-execution-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/test-executions/**
+        - id: test-environment-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/test-environments/**
+        - id: test-workflow-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/test-workflows/**
+        - id: test-folder-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/test-folders/**
+        - id: test-run-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/test-runs/**
+        - id: notification-service
+          uri: http://localhost:8087
+          predicates:
+            - Path=/api/notifications/**
+        - id: search-service
+          uri: http://localhost:8088
+          predicates:
+            - Path=/api/search/**
+        - id: jql-search-issue-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/jql/**
+        - id: filters-service
+          uri: http://localhost:8091
+          predicates:
+            - Path=/api/filters/**
+        - id: issue-websocket
+          uri: ws://localhost:8084
+          predicates:
+            - Path=/ws/issues/**
+        - id: audit-service
+          uri: http://localhost:8089
+          predicates:
+            - Path=/api/audit/**
+        - id: sprint-service
+          uri: http://localhost:8091
+          predicates:
+            - Path=/api/sprints/**
+        - id: board-service
+          uri: http://localhost:8091
+          predicates:
+            - Path=/api/boards/**
+        - id: attachment-service
+          uri: http://localhost:8090
+          predicates:
+            - Path=/api/attachments/**
+        - id: plan-service
+          uri: http://localhost:8092
+          predicates:
+            - Path=/api/plans/**
+        - id: migration-service
+          uri: http://localhost:8094
+          predicates:
+            - Path=/api/migration/**
+        - id: migration-fields-service
+          uri: http://localhost:8094
+          predicates:
+            - Path=/api/fields/**
+        - id: migration-custom-fields-service
+          uri: http://localhost:8094
+          predicates:
+            - Path=/api/custom-fields/**
+        - id: integration-service
+          uri: http://localhost:8093
+          predicates:
+            - Path=/api/integration/**
+        - id: admin-service
+          uri: http://localhost:8093
+          predicates:
+            - Path=/api/admin/**
+
+        # Swagger UI Routes - Aggregate from all services
+        - id: swagger-auth
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api-docs/auth/**
+          filters:
+            - RewritePath=/api-docs/auth/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-user
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api-docs/user/**
+          filters:
+            - RewritePath=/api-docs/user/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-project
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api-docs/project/**
+          filters:
+            - RewritePath=/api-docs/project/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-issue
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api-docs/issue/**
+          filters:
+            - RewritePath=/api-docs/issue/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-workflow
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api-docs/workflow/**
+          filters:
+            - RewritePath=/api-docs/workflow/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-comment
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api-docs/comment/**
+          filters:
+            - RewritePath=/api-docs/comment/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-notification
+          uri: http://localhost:8087
+          predicates:
+            - Path=/api-docs/notification/**
+          filters:
+            - RewritePath=/api-docs/notification/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-search
+          uri: http://localhost:8088
+          predicates:
+            - Path=/api-docs/search/**
+          filters:
+            - RewritePath=/api-docs/search/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-audit
+          uri: http://localhost:8089
+          predicates:
+            - Path=/api-docs/audit/**
+          filters:
+            - RewritePath=/api-docs/audit/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-attachment
+          uri: http://localhost:8090
+          predicates:
+            - Path=/api-docs/attachment/**
+          filters:
+            - RewritePath=/api-docs/attachment/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-sprint
+          uri: http://localhost:8091
+          predicates:
+            - Path=/api-docs/sprint/**
+          filters:
+            - RewritePath=/api-docs/sprint/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-plan
+          uri: http://localhost:8092
+          predicates:
+            - Path=/api-docs/plan/**
+          filters:
+            - RewritePath=/api-docs/plan/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-admin
+          uri: http://localhost:8093
+          predicates:
+            - Path=/api-docs/admin/**
+          filters:
+            - RewritePath=/api-docs/admin/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-migration
+          uri: http://localhost:8094
+          predicates:
+            - Path=/api-docs/migration/**
+          filters:
+            - RewritePath=/api-docs/migration/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-test
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api-docs/test/**
+          filters:
+            - RewritePath=/api-docs/test/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-version
+          uri: http://localhost:8096
+          predicates:
+            - Path=/api-docs/version/**
+          filters:
+            - RewritePath=/api-docs/version/(?<path>.*), /api-docs/$\{path}
+        - id: swagger-component
+          uri: http://localhost:8098
+          predicates:
+            - Path=/api-docs/component/**
+          filters:
+            - RewritePath=/api-docs/component/(?<path>.*), /api-docs/$\{path}
+
+jwt:
+  secret: jira-platform-super-secret-key-that-is-at-least-256-bits-long

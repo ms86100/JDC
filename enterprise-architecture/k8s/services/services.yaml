@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-project-service
+  namespace: jira-platform
+  labels:
+    app: jira-project-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8083
+      targetPort: 8083
+      protocol: TCP
+  selector:
+    app: jira-project-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-workflow-service
+  namespace: jira-platform
+  labels:
+    app: jira-workflow-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8085
+      targetPort: 8085
+      protocol: TCP
+  selector:
+    app: jira-workflow-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-admin-service
+  namespace: jira-platform
+  labels:
+    app: jira-admin-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
+      protocol: TCP
+  selector:
+    app: jira-admin-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-gateway
+  namespace: jira-platform
+  labels:
+    app: jira-gateway
+    component: gateway
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 443
+      protocol: TCP
+  selector:
+    app: jira-gateway

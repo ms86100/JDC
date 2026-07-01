@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ name }} - Webfont</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        .preview {
+            width: 160px;
+            display: inline-block;
+            margin: 10px;
+        }
+        .preview .inner {
+            display: inline-block;
+            width: 100%;
+            text-align: center;
+            background: #f5f5f5;
+            -webkit-border-radius: 3px 3px 0 0;
+            -moz-border-radius: 3px 3px 0 0;
+            border-radius: 3px 3px 0 0;
+        }
+        .preview .inner {{ baseTag }} {
+            line-height: 85px;
+            font-size: 40px;
+            color: #333;
+        }
+        .label {
+            display: inline-block;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 5px;
+            font-size: 10px;
+            font-family: Monaco, monospace;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background: #ddd;
+            -webkit-border-radius: 0 0 3px 3px;
+            -moz-border-radius: 0 0 3px 3px;
+            border-radius: 0 0 3px 3px;
+            color: #666;
+        }
+    </style>
+
+    <link rel="stylesheet" type="text/css" href="{{ name }}.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+
+    <h1>{{ name }} - Webfont</h1>
+
+    <div class="search">
+        <label for="search">Filter</label>
+        <input type="text" name="search" />
+    </div>
+
+    {{# each assets }}
+
+        <div class="preview">
+            <span class="inner">
+                <{{ ../tag }} class="{{ ../prefix }}-{{ @key }}"></{{ ../tag }}>
+            </span>
+            <br>
+            <span class='label'>{{ @key }}</span>
+        </div>
+
+    {{/ each }}
+
+    <script>
+        function onSearch(evt) {
+            $(".preview").each(function(i, elt) {
+                var name = $(elt).find(".label").text();
+                name.indexOf(evt.target.value) >= 0 ? $(elt).show() : $(elt).hide();
+            });
+        }
+        $(document).ready(function() {
+            $("input[name=search]").on('input', onSearch);
+        });
+    </script>
+</body>
+</html>

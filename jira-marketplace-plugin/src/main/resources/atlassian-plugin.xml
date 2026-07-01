@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<atlassian-plugin key="${project.groupId}.${project.artifactId}" name="Jira Test Management Plugin"
+                  i18n-name-key="plugin.name" pluginsVersion="9"
+                  description="Xray Test Management Clone - Native Jira Plugin">
+
+    <plugin-info>
+        <description>${project.description}</description>
+        <version>${project.version}</version>
+        <vendor name="Jira Platform Team" url="https://platform.example.com"/>
+        <description key="plugin.description">Xray Test Management Clone Plugin</description>
+    </plugin-info>
+
+    <!-- Resource for internationalization -->
+    <resource type="i18n" name="i18n" location="i18n/plugin"/>
+    <resource type="download" name="test-icon.png" location="images/test-icon.png"/>
+
+    <!-- Web Sections -->
+    <web-section key="test-management-section" location="jira/ISSUE_MENU" weight="100">
+        <label key="jira.testmanagement.menu.label"/>
+        <description key="jira.testmanagement.menu.description"/>
+    </web-section>
+
+    <web-section key="test-cycles-section" location="jira/ISSUE_MENU" weight="110">
+        <label key="jira.testcycles.menu.label"/>
+    </web-section>
+
+    <!-- Web Items -->
+    <web-item key="test-management-item" section="jira.issue.ops.groupby" weight="100">
+        <label key="jira.testmanagement.item.label"/>
+        <link linkId="test-management-link">/secure/TestManagement!default.jspa</link>
+        <tooltip key="jira.testmanagement.item.tooltip"/>
+    </web-item>
+
+    <!-- REST Resources -->
+    <rest key="testRestResource" path="/test-management"
+          version="1.0">
+        <description>Test Management REST API</description>
+        <mapping path="/tests" class="com.jira.plugin.rest.TestResource"/>
+        <mapping path="/test-sets" class="com.jira.plugin.rest.TestSetResource"/>
+        <mapping path="/test-plans" class="com.jira.plugin.rest.TestPlanResource"/>
+        <mapping path="/test-executions" class="com.jira.plugin.rest.TestExecutionResource"/>
+        <mapping path="/import" class="com.jira.plugin.rest.ImportResource"/>
+        <mapping path="/reports" class="com.jira.plugin.rest.ReportsResource"/>
+    </rest>
+
+    <!-- Issue Type Module -->
+    <issue-type key="Test" name="Test" description="Test case for test management">
+        <icon>images/issue-types/test.png</icon>
+        <label key="jira.issuetype.test"/>
+        <hidden>false</hidden>
+        <subtasks>false</subtasks>
+    </issue-type>
+
+    <issue-type key="TestSet" name="Test Set" description="Group of related tests">
+        <icon>images/issue-types/testset.png</icon>
+        <label key="jira.issuetype.testset"/>
+    </issue-type>
+
+    <issue-type key="TestPlan" name="Test Plan" description="Test execution plan">
+        <icon>images/issue-types/testplan.png</icon>
+        <label key="jira.issuetype.testplan"/>
+    </issue-type>
+
+    <!-- Custom Field -->
+    <custom-field-type key="test-type-field" name="Test Type"
+                        i18n-name-key="jira.customfield.testtype.name">
+        <description key="jira.customfield.testtype.description"/>
+        <resource type="velocity" name="edit" location="templates/edit-test-type.vm"/>
+        <resource type="velocity" name="view" location="templates/view-test-type.vm"/>
+        <validable>true</validable>
+        <searchable>true</searchable>
+        <nestable>false</nestable>
+    </custom-field-type>
+
+    <custom-field-type key="test-steps-field" name="Test Steps"
+                        i18n-name-key="jira.customfield.teststeps.name">
+        <description key="jira.customfield.teststeps.description"/>
+        <resource type="velocity" name="edit" location="templates/edit-test-steps.vm"/>
+        <resource type="velocity" name="view" location="templates/view-test-steps.vm"/>
+    </custom-field-type>
+
+    <custom-field-type key="test-status-field" name="Test Status"
+                        i18n-name-key="jira.customfield.teststatus.name">
+        <description key="jira.customfield.teststatus.description"/>
+        <list-jira-issues-validation-params>true</list-jira-issues-validation-params>
+    </custom-field-type>
+
+    <!-- Condition for Test Issue Types -->
+    <condition key="test-issue-condition" class="com.jira.plugin.conditions.TestIssueCondition">
+        <-or>
+            <issue-type id="Test"/>
+            <issue-type id="TestSet"/>
+            <issue-type id="TestPlan"/>
+        </or>
+    </condition>
+
+    <!-- Reports -->
+    <report key="test-summary-report" name="Test Summary Report"
+            key-report-renderer="com.jira.plugin.reports.TestSummaryReportRenderer">
+        <label key="jira.report.testsummary.label"/>
+        <label key="jira.report.testsummary.description"/>
+        <resource type="velocity" name="template" location="templates/reports/test-summary-report.vm"/>
+    </report>
+
+    <report key="test-coverage-report" name="Test Coverage Report"
+            key-report-renderer="com.jira.plugin.reports.TestCoverageReportRenderer">
+        <label key="jira.report.testcoverage.label"/>
+        <resource type="velocity" name="template" location="templates/reports/test-coverage-report.vm"/>
+    </report>
+
+    <report key="test-execution-history-report" name="Test Execution History"
+            key-report-renderer="com.jira.plugin.reports.TestExecutionHistoryRenderer">
+        <label key="jira.report.testexecutionhistory.label"/>
+        <resource type="velocity" name="template" location="templates/reports/test-execution-history.vm"/>
+    </report>
+
+    <!-- Workflow Conditions -->
+    <workflow-function key="test-execution-condition"
+                        name="Test Execution Condition"
+                        i18n-name-key="jira.workflow.testexecution.name">
+        <description key="jira.workflow.testexecution.description"/>
+        <function-class>com.jira.plugin.workflow.TestExecutionCondition</function-class>
+        <resource type="velocity" name="edit-template" location="templates/workflow/test-execution-condition.vm"/>
+    </workflow-function>
+
+    <!-- Post Functions -->
+    <workflow-function key="test-status-update"
+                        name="Update Test Status"
+                        i18n-name-key="jira.workflow.updateteststatus.name">
+        <function-class>com.jira.plugin.workflow.UpdateTestStatusFunction</function-class>
+    </workflow-function>
+
+    <!-- Events -->
+    <listener key="testEventListener" class="com.jira.plugin.listeners.TestEventListener">
+        <description>Listens to test-related events</description>
+    </listener>
+
+    <!-- DAO Module -->
+    <dao key="testManagementDao" class="com.jira.plugin.dao.TestManagementDao">
+        <description>Test Management Data Access Object</description>
+    </dao>
+
+    <!-- Module Type -->
+    <module-type key="test-import-processor" class="com.jira.plugin.modules.TestImportProcessor">
+        <description>Processes test imports from CI/CD systems</description>
+    </module-type>
+
+</atlassian-plugin>

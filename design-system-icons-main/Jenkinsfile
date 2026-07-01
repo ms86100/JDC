@@ -1,0 +1,27 @@
+pipeline {
+    agent {
+        label 'nonprod-slave'
+    }
+    environment {
+        GH_TOKEN  = credentials('83784a24-fd21-4d82-960c-e526b3dbb390')
+        NPM_TOKEN = credentials('artif_ehelier_auth')
+    }
+    stages {
+        stage('Install') {
+            steps {
+                sh 'printenv'
+                sh 'npm install'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+        stage('Release') {
+            steps {
+                sh 'npx semantic-release'
+            }
+        }
+    }
+}

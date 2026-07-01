@@ -1,0 +1,14 @@
+spring:
+  config:
+    activate:
+      on-profile: docker
+  jpa:
+    properties:
+      hibernate:
+        default_schema: jira_auth
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    default-schema: jira_auth
+    schemas: jira_auth
+    create-schemas: true

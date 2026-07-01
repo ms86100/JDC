@@ -1,0 +1,68 @@
+server:
+  port: 8095
+
+spring:
+  application:
+    name: jira-test-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:jira_platform}
+    username: ${DB_USERNAME:jiraadmin}
+    password: ${DB_PASSWORD:jirapass123}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: public
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: false
+    repair: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+logging:
+  level:
+    com.jira: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: INFO
+  file:
+    path: ${LOG_PATH:../../logs}/test
+
+issue:
+  service:
+    url: http://${DB_HOST:-postgres}:${DB_PORT:-5432}
+
+project:
+  service:
+    url: http://${DB_HOST:-postgres}:${DB_PORT:-5432}
+
+test:
+  storage:
+    type: LOCAL
+    path: /var/test-evidence

@@ -1,0 +1,28 @@
+spring:
+  config:
+    activate:
+      on-profile: external
+  datasource:
+    url: jdbc:postgresql://in0-eplmdb-v01:5432/systems
+    username: systems_admin
+    password: Hcu4ieD8R13qaf7JVSsu
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        default_schema: jira_plan
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    default-schema: jira_plan
+    schemas: jira_plan
+    create-schemas: true
+    validate-on-migrate: false
+    locations: filesystem:migrations-external/jira-plan-service
+
+logging:
+  level:
+    com.jira.plan: INFO
+    org.springframework.web: WARN
+    org.hibernate: WARN

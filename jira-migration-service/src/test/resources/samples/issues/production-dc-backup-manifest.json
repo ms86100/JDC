@@ -1,0 +1,19 @@
+{
+  "description": "Synthetic Jira DC 9.x-style backup layout for integration tests (not a real customer export).",
+  "layout": {
+    "entitiesXml": ["export/entities.xml", "entities.xml"],
+    "attachmentsRoot": "data/attachments/{projectKey}/{issueId}/{fileName}",
+    "descriptor": "export/exportDescriptor.properties"
+  },
+  "entityTypesExpected": [
+    "Project", "User", "Group", "IssueType", "Status", "Priority", "Resolution",
+    "Component", "Version", "Issue", "SubTask", "Action", "Worklog",
+    "FileAttachment", "ChangeGroup", "ChangeItem", "IssueLink", "Label",
+    "Watcher", "Vote", "PluginEntity"
+  ],
+  "slaTargets": {
+    "parse10kMaxMs": 120000,
+    "liveImport10kMaxMs": 1800000,
+    "liveImport1kMaxMs": 300000
+  }
+}

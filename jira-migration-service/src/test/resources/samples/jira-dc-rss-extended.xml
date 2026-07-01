@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="0.92">
+  <channel>
+    <title>Extended DC Export</title>
+    <item>
+      <key id="20001">EXT-1</key>
+      <summary>Issue with links labels worklog</summary>
+      <labels>
+        <label>backend</label>
+        <label>critical</label>
+      </labels>
+      <issuelinks>
+        <issuelink type="Blocks" outwardKey="EXT-2" inwardKey="EXT-1"/>
+      </issuelinks>
+      <worklogs>
+        <worklog id="70001" author="devuser" timeSpent="2h" started="2026-01-15T09:00:00Z">Investigation</worklog>
+      </worklogs>
+      <changelog>
+        <change field="status" author="admin" created="2026-01-10T08:00:00Z" old="Open" new="In Progress"/>
+      </changelog>
+    </item>
+    <item>
+      <key id="20002">EXT-2</key>
+      <summary>Blocked issue</summary>
+    </item>
+  </channel>
+</rss>

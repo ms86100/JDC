@@ -1,0 +1,110 @@
+/* Project overview (index) — full width inside DC layout, no clipped nav */
+
+.jdc-project-layout .jdc-project-content {
+  background: var(--sa-n50, #f7f8fa);
+}
+
+.sa-project-overview.ws-page {
+  --ws-pad: 24px;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0 var(--ws-pad) var(--ws-pad);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.sa-project-overview .ws-header--sticky {
+  margin-left: 0;
+  margin-right: 0;
+  border-radius: 0;
+}
+
+.sa-project-overview .ws-header-subtitle {
+  line-height: 1.5;
+  max-width: 72ch;
+}
+
+.sa-project-overview .ws-entity-card-key {
+  font-weight: 700;
+  color: var(--sa-brand-700, #1a3d74);
+}
+
+.sa-project-overview .ws-quick-nav {
+  margin-left: 0;
+  margin-right: 0;
+  top: 0;
+  position: relative;
+  border-radius: 8px 8px 0 0;
+  border: 1px solid var(--sa-n200, #e2e5ea);
+  border-bottom: 1px solid var(--sa-n200, #e2e5ea);
+}
+
+.sa-project-overview .ws-context-actions {
+  background: #fff;
+  padding: 12px 16px;
+  gap: 8px;
+}
+
+.sa-project-overview .ws-portfolio-summary {
+  margin-top: 4px;
+}
+
+.sa-project-overview .ws-dashboard-row--main {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  align-items: start;
+}
+
+.sa-project-overview .ws-dashboard-col {
+  min-width: 0;
+}
+
+.sa-project-overview .ws-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sa-project-overview .ws-table td:nth-child(2),
+.sa-project-overview .ws-table th:nth-child(2) {
+  max-width: 280px;
+}
+
+.sa-project-overview .ws-table td:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sa-project-overview .ws-panel-action a {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+@media (max-width: 1100px) {
+  .sa-project-overview .ws-dashboard-row--main {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .sa-project-overview.ws-page {
+    --ws-pad: 16px;
+  }
+
+  .sa-project-overview .ws-header-main {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sa-project-overview .ws-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .sa-project-overview .ws-context-actions a,
+  .sa-project-overview .ws-context-actions button {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: 120px;
+  }
+}

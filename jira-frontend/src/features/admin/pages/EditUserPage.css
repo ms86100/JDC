@@ -1,0 +1,137 @@
+/* Edit User Page Styles */
+
+.edit-user-error {
+  padding: 24px;
+  text-align: center;
+  color: var(--sa-n600);
+}
+
+.edit-user-error a {
+  color: var(--sa-brand-500);
+  text-decoration: none;
+}
+
+.edit-user-error a:hover {
+  text-decoration: underline;
+}
+
+.loading-state {
+  padding: 24px;
+  text-align: center;
+  color: var(--sa-n600);
+}
+
+.edit-user-section {
+  background: white;
+  border: 1px solid var(--sa-n200);
+  border-radius: 3px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sa-n1000);
+  padding: 12px 16px;
+  margin: 0;
+  border-bottom: 1px solid var(--sa-n200);
+  background: var(--sa-n50);
+}
+
+.info-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-row {
+  display: flex;
+  border-bottom: 1px solid var(--sa-n200);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  width: 200px;
+  padding: 10px 16px;
+  color: var(--sa-n600);
+  font-weight: 500;
+  background: var(--sa-n50);
+  border-right: 1px solid var(--sa-n200);
+}
+
+.info-value {
+  flex: 1;
+  padding: 10px 16px;
+  color: var(--sa-n1000);
+}
+
+.groups-list {
+  padding: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.group-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  background: var(--sa-brand-50);
+  color: var(--sa-brand-500);
+  border-radius: 3px;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.group-tag:hover {
+  background: #cce0ff;
+}
+
+.no-groups,
+.no-applications {
+  color: var(--sa-n600);
+  font-size: 13px;
+}
+
+.applications-list {
+  padding: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.application-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  background: var(--sa-success-50);
+  color: var(--sa-success-700);
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.edit-user-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 16px 0;
+}
+
+.admin-alert {
+  padding: 10px 16px;
+  border-radius: 3px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.admin-alert-success {
+  background: var(--sa-success-50);
+  color: var(--sa-success-700);
+  border: 1px solid var(--sa-success-500);
+}
+
+.admin-alert-error {
+  background: var(--sa-danger-50);
+  color: #bf2600;
+  border: 1px solid var(--sa-danger-500);
+}

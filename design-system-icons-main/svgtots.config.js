@@ -1,0 +1,18 @@
+module.exports = {
+  conversionType: "files",
+  srcFiles: ["./dist/icons-flatten/**/*.svg"],
+  outputDirectory: "./dist/",
+  interfaceName: "AirbusIcon",
+  typeName: "airbusIcon",
+  prefix: "Icon",
+  // fileName: "",
+  generateType: true,
+  // generateTypeObject: true,
+  // exportCompleteIconSet: true,
+  optimizeForLazyLoading: true,
+  modelFileName: "airbusIcon.model",
+  iconsFolderName: "js",
+  delimiter: "CAMEL",
+  barrelFileName: "index",
+  compileSources: true,
+};

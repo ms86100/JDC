@@ -1,0 +1,20 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+  <proxies>
+    <proxy>
+      <id>netskope-http</id>
+      <active>true</active>
+      <protocol>http</protocol>
+      <host>epot-netskope.dyn.airbus.corp</host>
+      <port>8080</port>
+      <nonProxyHosts>localhost|127.0.0.1|*.local</nonProxyHosts>
+    </proxy>
+    <proxy>
+      <id>netskope-https</id>
+      <active>true</active>
+      <protocol>https</protocol>
+      <host>epot-netskope.dyn.airbus.corp</host>
+      <port>8080</port>
+      <nonProxyHosts>localhost|127.0.0.1|*.local</nonProxyHosts>
+    </proxy>
+  </proxies>
+</settings>

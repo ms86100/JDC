@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="0.92">
+  <channel>
+    <title>Enterprise DC Export SOC</title>
+    <item>
+      <title>[ENT-1] Enterprise migration sample</title>
+      <link>https://jira.example.com/browse/ENT-1</link>
+      <description>Full parity validation fixture</description>
+      <key>ENT-1</key>
+      <type>Story</type>
+      <status>Open</status>
+      <priority>High</priority>
+      <assignee>migration-user@example.com</assignee>
+      <reporter>admin@example.com</reporter>
+      <comment author="admin@example.com">Initial comment on enterprise issue</comment>
+    </item>
+    <item>
+      <title>[ENT-2] Sub-task sample</title>
+      <key>ENT-2</key>
+      <type>Sub-task</type>
+      <parent>ENT-1</parent>
+      <status>In Progress</status>
+    </item>
+  </channel>
+</rss>

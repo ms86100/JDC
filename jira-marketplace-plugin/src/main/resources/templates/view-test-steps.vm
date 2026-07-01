@@ -1,0 +1,11 @@
+<div class="test-steps-view">
+    #foreach($step in $value)
+    <div class="test-step">
+        <span class="step-index">$step.order</span>
+        <div class="step-content">
+            <div class="step-description">$step.description</div>
+            <div class="step-expected">$step.expectedResult</div>
+        </div>
+    </div>
+    #end
+</div>

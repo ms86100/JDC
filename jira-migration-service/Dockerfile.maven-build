@@ -1,0 +1,10 @@
+FROM maven:3.9-eclipse-temurin-21 AS builder
+WORKDIR /build
+COPY netskope-ca.cer /tmp/netskope-ca.cer
+RUN keytool -importcert -noprompt -alias netskope-ca \
+    -file /tmp/netskope-ca.cer \
+    -keystore /usr/local/openjdk-21/lib/security/cacerts \
+    -storepass changeit || true
+COPY pom.xml .
+COPY src ./src
+RUN mvn package -DskipTests -q

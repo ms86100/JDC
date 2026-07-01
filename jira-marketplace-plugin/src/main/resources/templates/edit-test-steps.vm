@@ -1,0 +1,13 @@
+<html>
+<head>
+    <title>Edit Test Steps</title>
+</head>
+<body>
+    <div class="test-steps-editor">
+        <div class="step-list" id="step-list">
+            <!-- Steps will be rendered here -->
+        </div>
+        <button type="button" id="add-step-btn" class="aui-button">Add Step</button>
+    </div>
+</body>
+</html>

@@ -1,0 +1,62 @@
+server:
+  port: 8093
+
+spring:
+  application:
+    name: jira-admin-service
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:jira_platform}
+    username: ${DB_USERNAME:jiraadmin}
+    password: ${DB_PASSWORD:jirapass123}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: jira_admin
+        hbm2ddl:
+          create_namespaces: true
+
+  flyway:
+    enabled: true
+    schemas: jira_admin
+    default-schema: jira_admin
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: false
+    locations: classpath:db/migration
+
+jira:
+  services:
+    project-url: ${PROJECT_SERVICE_URL:http://localhost:8083}
+    issue-url: ${ISSUE_SERVICE_URL:http://localhost:8084}
+    workflow-url: ${WORKFLOW_SERVICE_URL:http://localhost:8085}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    root: INFO
+    com.jira: DEBUG
+    org.hibernate.SQL: WARN
+  file:
+    path: ${LOG_PATH:../../logs}/admin

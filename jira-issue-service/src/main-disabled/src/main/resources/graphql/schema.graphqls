@@ -1,0 +1,497 @@
+# GraphQL Schema for Jira Test Management
+# Phase 9 - GraphQL API Implementation
+
+scalar UUID
+scalar DateTime
+scalar JSON
+
+# Enums
+enum TestType {
+    MANUAL
+    AUTOMATED
+    BDD
+}
+
+enum TestStatus {
+    DRAFT
+    READY
+    APPROVED
+    DEPRECATED
+}
+
+enum TestPriority {
+    CRITICAL
+    HIGH
+    MEDIUM
+    LOW
+}
+
+enum ExecutionStatus {
+    TODO
+    RUNNING
+    PASSED
+    FAILED
+    BLOCKED
+    ABORTED
+    SKIPPED
+}
+
+enum StepStatus {
+    UNTESTED
+    PASSED
+    FAILED
+    BLOCKED
+    SKIPPED
+}
+
+enum CoverageStatus {
+    NOT_COVERED
+    PARTIALLY_COVERED
+    FULLY_COVERED
+}
+
+# Types
+
+type Project {
+    id: UUID!
+    projectKey: String!
+    name: String!
+    description: String
+    leadId: UUID
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+type TestIssue {
+    id: UUID!
+    issueKey: String!
+    projectId: UUID!
+    project: Project
+    title: String!
+    description: String
+    testType: TestType!
+    testStatus: TestStatus!
+    testPriority: TestPriority
+    testOwnerId: UUID
+    testSteps: [TestStep!]!
+    requirementKeys: [String!]!
+    gherkinFeatureKey: String
+    gherkinScenarioId: String
+    labels: [String!]!
+    status: IssueStatus
+    priority: IssuePriority
+    assigneeId: UUID
+    reporterId: UUID
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    testSet: TestSet
+    testPlan: TestPlan
+    lastExecution: TestExecution
+    folders: [TestRepositoryFolder!]!
+}
+
+type TestStep {
+    index: Int!
+    description: String!
+    testData: String
+    expectedResult: String!
+}
+
+type TestSet {
+    id: UUID!
+    projectId: UUID!
+    project: Project
+    name: String!
+    description: String
+    status: String
+    testCount: Int!
+    tests: [TestIssue!]!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type TestPlan {
+    id: UUID!
+    projectId: UUID!
+    project: Project
+    name: String!
+    description: String
+    testCycle: String
+    testEnvironment: String
+    status: String
+    testCount: Int!
+    tests: [TestIssue!]!
+    testSetIds: [UUID!]!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type TestExecution {
+    id: UUID!
+    testId: UUID!
+    test: TestIssue
+    name: String!
+    status: ExecutionStatus!
+    testEnvironment: TestEnvironment
+    startedAt: DateTime
+    finishedAt: DateTime
+    executedBy: UUID
+    totalSteps: Int!
+    passedSteps: Int!
+    failedSteps: Int!
+    blockedSteps: Int!
+    skippedSteps: Int!
+    stepResults: [StepResult!]!
+    defects: [DefectLink!]!
+    evidence: [TestEvidence!]!
+    createdAt: DateTime!
+}
+
+type StepResult {
+    id: UUID!
+    executionId: UUID!
+    stepIndex: Int!
+    status: StepStatus!
+    comment: String
+    evidenceUrls: [String!]!
+    defectKey: String
+    createdAt: DateTime!
+}
+
+type TestEnvironment {
+    id: UUID!
+    projectId: UUID!
+    name: String!
+    description: String
+    url: String
+    variables: JSON
+    isDefault: Boolean!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type TestRepositoryFolder {
+    id: UUID!
+    projectId: UUID!
+    name: String!
+    description: String
+    parentId: UUID
+    parent: TestRepositoryFolder
+    sortOrder: Int!
+    testCount: Int!
+    tests: [TestIssue!]!
+    children: [TestRepositoryFolder!]!
+    createdAt: DateTime!
+}
+
+type RequirementLink {
+    id: UUID!
+    requirementKey: String!
+    testId: UUID!
+    test: TestIssue
+    coverageStatus: CoverageStatus!
+    createdAt: DateTime!
+}
+
+type DefectLink {
+    id: UUID!
+    executionId: UUID!
+    execution: TestExecution
+    defectKey: String!
+    status: String!
+    comment: String
+    createdAt: DateTime!
+}
+
+type TestEvidence {
+    id: UUID!
+    executionId: UUID!
+    stepIndex: Int
+    fileName: String!
+    fileUrl: String!
+    fileType: String!
+    fileSize: Long!
+    uploadedBy: UUID
+    createdAt: DateTime!
+}
+
+type TestSummary {
+    totalTests: Int!
+    manualTests: Int!
+    automatedTests: Int!
+    bddTests: Int!
+    draftTests: Int!
+    readyTests: Int!
+    approvedTests: Int!
+    deprecatedTests: Int!
+    totalTestSets: Int!
+    totalTestPlans: Int!
+    totalExecutions: Int!
+    passRate: Float!
+}
+
+type TraceabilityMatrix {
+    requirements: [RequirementCoverage!]!
+}
+
+type RequirementCoverage {
+    requirementKey: String!
+    requirementTitle: String
+    totalTests: Int!
+    passingTests: Int!
+    failingTests: Int!
+    blockedTests: Int!
+    untestedTests: Int!
+    coverageStatus: CoverageStatus!
+    tests: [TestIssue!]!
+}
+
+type TestReportsSummary {
+    testSummary: TestSummary!
+    recentExecutions: [TestExecution!]!
+    passRateTrend: [TrendDataPoint!]!
+    coverageByRequirement: [RequirementCoverage!]!
+    defectDensity: Float!
+}
+
+type TrendDataPoint {
+    date: DateTime!
+    value: Float!
+    label: String
+}
+
+# Input Types
+
+input TestIssueCreateInput {
+    projectId: UUID!
+    title: String!
+    description: String
+    testType: TestType = MANUAL
+    testStatus: TestStatus = DRAFT
+    testPriority: TestPriority
+    testOwnerId: UUID
+    testSteps: [TestStepInput!]
+    requirementKeys: [String!]
+    labels: [String!]
+    assigneeId: UUID
+    folderId: UUID
+}
+
+input TestIssueUpdateInput {
+    title: String
+    description: String
+    testType: TestType
+    testStatus: TestStatus
+    testPriority: TestPriority
+    testOwnerId: UUID
+    testSteps: [TestStepInput!]
+    requirementKeys: [String!]
+    labels: [String!]
+    assigneeId: UUID
+    folderId: UUID
+}
+
+input TestStepInput {
+    index: Int!
+    description: String!
+    testData: String
+    expectedResult: String!
+}
+
+input TestSetCreateInput {
+    projectId: UUID!
+    name: String!
+    description: String
+    testIds: [UUID!]
+}
+
+input TestPlanCreateInput {
+    projectId: UUID!
+    name: String!
+    description: String
+    testCycle: String
+    testEnvironment: String
+    testSetIds: [UUID!]
+    testIds: [UUID!]
+}
+
+input ExecutionStartInput {
+    testIds: [UUID!]!
+    name: String
+    testEnvironment: String
+}
+
+input StepResultInput {
+    stepIndex: Int!
+    status: StepStatus!
+    comment: String
+    evidenceUrls: [String!]
+    defectKey: String
+}
+
+input RequirementLinkInput {
+    requirementKey: String!
+    testIds: [UUID!]!
+}
+
+input TestFilterInput {
+    projectId: UUID
+    testType: TestType
+    testStatus: TestStatus
+    testPriority: TestPriority
+    labels: [String!]
+    requirementKey: String
+    assigneeId: UUID
+    testSetId: UUID
+    testPlanId: UUID
+    search: String
+}
+
+input PaginationInput {
+    page: Int = 0
+    size: Int = 20
+    sortBy: String = "createdAt"
+    sortDirection: SortDirection = DESC
+}
+
+enum SortDirection {
+    ASC
+    DESC
+}
+
+type TestConnection {
+    edges: [TestEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+}
+
+type TestEdge {
+    node: TestIssue!
+    cursor: String!
+}
+
+type PageInfo {
+    hasNextPage: Boolean!
+    hasPreviousPage: Boolean!
+    startCursor: String
+    endCursor: String
+}
+
+# Queries
+
+type Query {
+    # Test queries
+    test(id: UUID!): TestIssue
+    tests(filter: TestFilterInput, pagination: PaginationInput): TestConnection!
+    searchTests(projectId: UUID!, search: String!, pagination: PaginationInput): TestConnection!
+    testsByRequirement(requirementKey: String!): [TestIssue!]!
+
+    # Test Set queries
+    testSet(id: UUID!): TestSet
+    testSets(projectId: UUID!): [TestSet!]!
+    testSetTests(testSetId: UUID!): [TestIssue!]!
+
+    # Test Plan queries
+    testPlan(id: UUID!): TestPlan
+    testPlans(projectId: UUID!): [TestPlan!]!
+    testPlanTests(testPlanId: UUID!): [TestIssue!]!
+
+    # Test Execution queries
+    testExecution(id: UUID!): TestExecution
+    testExecutions(testId: UUID!): [TestExecution!]!
+    testExecutionHistory(testId: UUID!, limit: Int = 10): [TestExecution!]!
+    activeExecution(testId: UUID!): TestExecution
+
+    # Environment queries
+    testEnvironment(id: UUID!): TestEnvironment
+    testEnvironments(projectId: UUID!): [TestEnvironment!]!
+
+    # Folder queries
+    testFolder(id: UUID!): TestRepositoryFolder
+    testFolders(projectId: UUID!, parentId: UUID): [TestRepositoryFolder!]!
+    folderTests(folderId: UUID!): [TestIssue!]!
+
+    # Traceability queries
+    requirementLink(requirementKey: String!, testId: UUID!): RequirementLink
+    requirementLinks(requirementKey: String!): [RequirementLink!]!
+    traceabilityMatrix(projectId: UUID!): TraceabilityMatrix!
+    requirementCoverage(requirementKey: String!): RequirementCoverage!
+
+    # Defect queries
+    defectLink(executionId: UUID!, defectKey: String!): DefectLink
+    executionDefects(executionId: UUID!): [DefectLink!]!
+    testDefects(testId: UUID!): [DefectLink!]!
+
+    # Report queries
+    testReportsSummary(projectId: UUID!): TestReportsSummary!
+    testSummary(projectId: UUID!): TestSummary!
+    passRateTrend(testId: UUID!, days: Int = 30): [TrendDataPoint!]!
+    requirementCoverageReport(projectId: UUID!): [RequirementCoverage!]!
+}
+
+# Mutations
+
+type Mutation {
+    # Test mutations
+    createTest(input: TestIssueCreateInput!): TestIssue!
+    updateTest(id: UUID!, input: TestIssueUpdateInput!): TestIssue!
+    deleteTest(id: UUID!): Boolean!
+
+    # Test Set mutations
+    createTestSet(input: TestSetCreateInput!): TestSet!
+    updateTestSet(id: UUID!, name: String, description: String): TestSet!
+    deleteTestSet(id: UUID!): Boolean!
+    addTestsToSet(testSetId: UUID!, testIds: [UUID!]!): TestSet!
+    removeTestsFromSet(testSetId: UUID!, testIds: [UUID!]!): TestSet!
+
+    # Test Plan mutations
+    createTestPlan(input: TestPlanCreateInput!): TestPlan!
+    updateTestPlan(id: UUID!, name: String, description: String): TestPlan!
+    deleteTestPlan(id: UUID!): Boolean!
+    addTestsToPlan(testPlanId: UUID!, testIds: [UUID!]!): TestPlan!
+    removeTestsFromPlan(testPlanId: UUID!, testIds: [UUID!]!): TestPlan!
+
+    # Test Execution mutations
+    startExecution(input: ExecutionStartInput!): TestExecution!
+    recordStepResult(executionId: UUID!, input: StepResultInput!): StepResult!
+    completeExecution(executionId: UUID!, status: ExecutionStatus!): TestExecution!
+    abortExecution(executionId: UUID!): TestExecution!
+
+    # Environment mutations
+    createTestEnvironment(projectId: UUID!, name: String!, description: String, url: String, variables: JSON): TestEnvironment!
+    updateTestEnvironment(id: UUID!, name: String, description: String, url: String, variables: JSON): TestEnvironment!
+    deleteTestEnvironment(id: UUID!): Boolean!
+    setDefaultEnvironment(id: UUID!): TestEnvironment!
+
+    # Folder mutations
+    createTestFolder(projectId: UUID!, name: String!, description: String, parentId: UUID): TestRepositoryFolder!
+    updateTestFolder(id: UUID!, name: String, description: String): TestRepositoryFolder!
+    deleteTestFolder(id: UUID!): Boolean!
+    moveTestFolder(id: UUID!, newParentId: UUID): TestRepositoryFolder!
+    moveTestsToFolder(testIds: [UUID!]!, folderId: UUID): Boolean!
+
+    # Requirement/Traceability mutations
+    linkRequirement(input: RequirementLinkInput!): [RequirementLink!]!
+    unlinkRequirement(requirementKey: String!, testIds: [UUID!]!): Boolean!
+    updateCoverageStatus(requirementKey: String!, testId: UUID!, status: CoverageStatus!): RequirementLink!
+
+    # Defect mutations
+    linkDefect(executionId: UUID!, defectKey: String!, comment: String): DefectLink!
+    unlinkDefect(executionId: UUID!, defectKey: String!): Boolean!
+    updateDefectStatus(executionId: UUID!, defectKey: String!, status: String!): DefectLink!
+
+    # Bulk operations
+    cloneTests(testIds: [UUID!]!, targetFolderId: UUID, offsetIssueKey: Int = 0): [TestIssue!]!
+    bulkUpdateTestStatus(testIds: [UUID!]!, status: TestStatus!): [TestIssue!]!
+    bulkAssignTests(testIds: [UUID!]!, assigneeId: UUID): [TestIssue!]!
+}
+
+# Subscriptions
+
+type Subscription {
+    testExecutionUpdated(executionId: UUID!): TestExecution!
+    testExecutionCompleted(testId: UUID!): TestExecution!
+    testCreated(projectId: UUID!): TestIssue!
+    testUpdated(projectId: UUID!): TestIssue!
+    testDeleted(projectId: UUID!): UUID!
+}

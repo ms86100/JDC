@@ -1,0 +1,161 @@
+package com.jira.sprint.service;
+
+import com.jira.sprint.dto.FilterSubscriptionResponse;
+import com.jira.sprint.dto.SavedFilterResponse;
+import com.jira.sprint.dto.SubscriptionFrequency;
+import com.jira.sprint.entity.SavedFilterEntity;
+import com.jira.sprint.repository.SavedFilterRepository;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class SavedFilterService {
+
+    private final SavedFilterRepository savedFilterRepository;
+    private final Map<UUID, FilterSubscriptionResponse> subscriptions = new HashMap<>();
+
+    @PostConstruct
+    void seedSystemFilters() {
+        if (savedFilterRepository.count() > 0) return;
+        seed("All Issues", "", true);
+        seed("My Issues", "assignee = currentUser()", true);
+        seed("Reported by Me", "reporter = currentUser()", true);
+        seed("Recently Updated", "ORDER BY updated DESC", true);
+        seed("Open Issues", "status NOT IN (Done, Closed)", true);
+    }
+
+    private void seed(String name, String jql, boolean system) {
+        savedFilterRepository.save(SavedFilterEntity.builder()
+                .name(name)
+                .jql(jql)
+                .isShared(true)
+                .shareType("SYSTEM")
+                .isSystem(system)
+                .favorite(false)
+                .build());
+    }
+
+    @Transactional(readOnly = true)
+    public List<SavedFilterResponse> getSavedFilters(UUID userId, String tab) {
+        List<SavedFilterEntity> entities = switch (tab != null ? tab : "my") {
+            case "system" -> savedFilterRepository.findByIsSystemTrue();
+            case "shared" -> savedFilterRepository.findByIsSharedTrueAndIsSystemFalse();
+            default -> {
+                List<SavedFilterEntity> mine = userId != null
+                        ? savedFilterRepository.findByOwnerIdAndIsSystemFalse(userId)
+                        : List.of();
+                yield mine;
+            }
+        };
+        return entities.stream().map(this::toResponse).toList();
+    }
+
+    public boolean canAccessFilter(UUID userId, UUID filterId) {
+        return savedFilterRepository.findById(filterId)
+                .map(f -> Boolean.TRUE.equals(f.getIsSystem())
+                        || Boolean.TRUE.equals(f.getIsShared())
+                        || (userId != null && userId.equals(f.getOwnerId())))
+                .orElse(false);
+    }
+
+    @Transactional
+    public SavedFilterResponse createFilter(UUID userId, String name, String jql, boolean isShared) {
+        if (userId == null) {
+            throw new IllegalArgumentException("Authentication required to save filters");
+        }
+        SavedFilterEntity entity = SavedFilterEntity.builder()
+                .name(name)
+                .jql(jql)
+                .ownerId(userId)
+                .isShared(isShared)
+                .shareType(isShared ? "PROJECT" : "PRIVATE")
+                .isSystem(false)
+                .favorite(false)
+                .usageCount(0)
+                .build();
+        return toResponse(savedFilterRepository.save(entity));
+    }
+
+    @Transactional
+    public void deleteFilter(UUID filterId, UUID userId) {
+        SavedFilterEntity f = savedFilterRepository.findById(filterId)
+                .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
+        if (Boolean.TRUE.equals(f.getIsSystem())) {
+            throw new IllegalArgumentException("Cannot delete system filter");
+        }
+        if (userId == null || !userId.equals(f.getOwnerId())) {
+            throw new IllegalArgumentException("Only the filter owner can delete this filter");
+        }
+        savedFilterRepository.delete(f);
+    }
+
+    @Transactional
+    public SavedFilterResponse toggleFavorite(UUID filterId, UUID userId) {
+        SavedFilterEntity entity = savedFilterRepository.findById(filterId)
+                .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
+        if (!canAccessFilter(userId, filterId)) {
+            throw new IllegalArgumentException("Not allowed to modify this filter");
+        }
+        entity.setFavorite(!Boolean.TRUE.equals(entity.getFavorite()));
+        return toResponse(savedFilterRepository.save(entity));
+    }
+
+    public List<FilterSubscriptionResponse> getSubscriptions(UUID userId) {
+        return subscriptions.values().stream()
+                .filter(s -> userId == null || userId.equals(s.getUserId()))
+                .toList();
+    }
+
+    public FilterSubscriptionResponse createSubscription(UUID userId, String filterName, String jql,
+                                                          SubscriptionFrequency frequency,
+                                                          boolean emailNotification) {
+        FilterSubscriptionResponse subscription = FilterSubscriptionResponse.builder()
+                .id(UUID.randomUUID())
+                .userId(userId)
+                .filterName(filterName)
+                .jqlQuery(jql)
+                .frequency(frequency)
+                .isActive(true)
+                .emailNotification(emailNotification)
+                .createdAt(LocalDateTime.now())
+                .build();
+        subscriptions.put(subscription.getId(), subscription);
+        return subscription;
+    }
+
+    public void deleteSubscription(UUID subscriptionId) {
+        subscriptions.remove(subscriptionId);
+    }
+
+    public FilterSubscriptionResponse toggleSubscription(UUID subscriptionId) {
+        FilterSubscriptionResponse subscription = subscriptions.get(subscriptionId);
+        if (subscription != null) {
+            subscription.setIsActive(!subscription.getIsActive());
+        }
+        return subscription;
+    }
+
+    private SavedFilterResponse toResponse(SavedFilterEntity e) {
+        return SavedFilterResponse.builder()
+                .id(e.getId())
+                .name(e.getName())
+                .jql(e.getJql())
+                .owner(e.getOwnerId() != null ? e.getOwnerId().toString() : "System")
+                .isShared(Boolean.TRUE.equals(e.getIsShared()))
+                .favorite(Boolean.TRUE.equals(e.getFavorite()))
+                .shareType(e.getShareType())
+                .isSystem(Boolean.TRUE.equals(e.getIsSystem()))
+                .usageCount(e.getUsageCount())
+                .lastUsed(e.getLastUsed())
+                .createdAt(e.getCreatedAt())
+                .build();
+    }
+}

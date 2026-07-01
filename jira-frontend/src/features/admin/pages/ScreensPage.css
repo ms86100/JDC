@@ -1,0 +1,74 @@
+/* Screens Page Styles */
+
+.screens-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--sa-n200);
+}
+
+.screens-tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--sa-n600);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.screens-tab:hover {
+  color: var(--sa-n700);
+}
+
+.screens-tab.active {
+  color: var(--sa-brand-500);
+  border-bottom-color: var(--sa-brand-500);
+}
+
+.screens-content {
+  /* content wrapper */
+}
+
+.screen-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.screen-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--sa-brand-500);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.screen-icon.scheme {
+  background: #6554c0;
+  font-size: 10px;
+  width: 32px;
+}
+
+.screen-name {
+  font-weight: 500;
+  color: var(--sa-n1000);
+}
+
+.tab-count,
+.field-count {
+  font-size: 13px;
+  color: var(--sa-n600);
+}
+
+.tab-count::before,
+.field-count::before {
+  content: '';
+}

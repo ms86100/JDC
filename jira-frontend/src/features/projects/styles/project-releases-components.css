@@ -1,0 +1,163 @@
+/* Releases & Components — Jira DC project hub + settings */
+
+.jdc-rc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.jdc-rc-toolbar .jdc-input {
+  min-width: 200px;
+  max-width: 320px;
+  flex: 1;
+}
+
+.jdc-rc-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.jdc-rc-filter-tab {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--sa-n200, #e2e5ea);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  color: var(--sa-n700, #3d4654);
+}
+
+.jdc-rc-filter-tab.active {
+  background: var(--jdc-primary, #0052cc);
+  border-color: var(--jdc-primary, #0052cc);
+  color: #fff;
+}
+
+.jdc-rc-progress {
+  min-width: 120px;
+}
+
+.jdc-rc-progress-bar {
+  height: 8px;
+  background: var(--sa-n200, #e2e5ea);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.jdc-rc-progress-fill {
+  height: 100%;
+  background: var(--sa-brand-600, #2563eb);
+  border-radius: 4px;
+  transition: width 0.2s ease;
+}
+
+.jdc-rc-progress-fill--done {
+  background: var(--sa-success-500);
+}
+
+.jdc-rc-status {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.jdc-rc-status--released {
+  background: var(--sa-success-50);
+  color: var(--sa-success-700);
+}
+
+.jdc-rc-status--unreleased {
+  background: var(--sa-brand-50);
+  color: var(--sa-brand-700);
+}
+
+.jdc-rc-status--archived {
+  background: var(--sa-n100, #f0f1f3);
+  color: var(--sa-n600, #5b6573);
+}
+
+.jdc-rc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.jdc-rc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 23, 29, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 24px;
+}
+
+.jdc-rc-modal {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(20, 23, 29, 0.25);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.jdc-rc-modal-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--sa-n200, #e2e5ea);
+}
+
+.jdc-rc-modal-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.jdc-rc-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.jdc-rc-modal-foot {
+  padding: 12px 20px;
+  border-top: 1px solid var(--sa-n200, #e2e5ea);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.jdc-rc-form-row label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sa-n600, #5b6573);
+  margin-bottom: 4px;
+}
+
+.jdc-rc-form-row .jdc-input,
+.jdc-rc-form-row select,
+.jdc-rc-form-row textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.jdc-rc-form-row textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.jdc-rc-table .jdc-rc-actions {
+  white-space: nowrap;
+}

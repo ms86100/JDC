@@ -1,0 +1,83 @@
+# Optional live migration E2E (MG-P1-7). Runs only when repository variable MIGRATION_E2E_API=1.
+name: Migration E2E (live API)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'jira-frontend/**'
+      - 'jira-migration-service/**'
+      - '.github/workflows/migration-e2e-live.yml'
+
+jobs:
+  migration-e2e-live:
+    if: vars.MIGRATION_E2E_API == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: jira-frontend
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: jiraadmin
+          POSTGRES_PASSWORD: jiraadmin
+          POSTGRES_DB: jira_platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jiraadmin -d jira_platform"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Start migration service
+        working-directory: jira-migration-service
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: jira_platform
+          DB_USERNAME: jiraadmin
+          DB_PASSWORD: jiraadmin
+          JWT_SECRET: jira-platform-super-secret-key-that-is-at-least-256-bits-long
+        run: |
+          mvn -q -DskipTests spring-boot:run &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8094/actuator/health && break
+            sleep 5
+          done
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: jira-frontend/package-lock.json
+
+      - name: Install frontend + Playwright
+        run: |
+          npm ci
+          npx playwright install chromium --with-deps
+
+      - name: Run live migration E2E
+        env:
+          MIGRATION_E2E_API: '1'
+          MIGRATION_E2E_LIVE: '1'
+          PLAYWRIGHT_BASE_URL: http://localhost:5173
+        run: |
+          npm run dev &
+          for i in $(seq 1 30); do curl -sf http://localhost:5173 && break; sleep 2; done
+          npm run test:e2e:migration-live

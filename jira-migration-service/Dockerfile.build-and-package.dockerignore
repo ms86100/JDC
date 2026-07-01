@@ -1,0 +1,44 @@
+# Specific ignore rules for the migration-service multi-stage build
+# This file takes precedence over the root .dockerignore when building with
+# -f jira-migration-service/Dockerfile.build-and-package from the JDC-main/ context
+
+# Exclude all other services (they're not needed for this build)
+jira-admin-service/
+jira-attachment-service/
+jira-audit-service/
+jira-auth-service/
+jira-comment-service/
+jira-component-service/
+jira-dashboard-service/
+jira-document-service/
+jira-frontend/
+jira-gateway/
+jira-issue-service/
+jira-notification-service/
+jira-plan-service/
+jira-portal-service/
+jira-project-service/
+jira-report-service/
+jira-search-service/
+jira-sprint-service/
+jira-test-service/
+jira-user-service/
+jira-version-service/
+jira-workflow-service/
+
+# Exclude unnecessary root-level files
+.git
+node_modules/
+*.log
+.env
+.env.*
+docs/
+config/
+*.md
+*.bat
+*.py
+*.js
+*.yaml
+
+# .m2-cache is intentionally INCLUDED (needed for offline Maven build)
+# jira-migration-service/ is intentionally INCLUDED (source code)

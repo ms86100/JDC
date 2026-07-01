@@ -1,0 +1,201 @@
+openapi: 3.0.3
+info:
+  title: Jira Platform Integration Service API
+  description: |
+    Application Links (Jira ↔ Confluence) and cross-product entity linking.
+    Implemented as stub on jira-admin-service (`/api/integration/**`) until jira-integration-service is extracted.
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+    description: API Gateway (local)
+paths:
+  /api/integration/applinks:
+    get:
+      summary: List application links
+      operationId: listApplicationLinks
+      tags: [ApplicationLinks]
+      responses:
+        '200':
+          description: Application links
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApplicationLink'
+    post:
+      summary: Create application link
+      operationId: createApplicationLink
+      tags: [ApplicationLinks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApplicationLinkRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationLink'
+  /api/integration/applinks/{id}:
+    delete:
+      summary: Delete application link
+      operationId: deleteApplicationLink
+      tags: [ApplicationLinks]
+      parameters:
+        - $ref: '#/components/parameters/LinkId'
+      responses:
+        '204':
+          description: Deleted
+  /api/integration/applinks/{id}/primary:
+    put:
+      summary: Set primary application link
+      operationId: setPrimaryApplicationLink
+      tags: [ApplicationLinks]
+      parameters:
+        - $ref: '#/components/parameters/LinkId'
+      responses:
+        '200':
+          description: Updated link
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationLink'
+  /api/integration/applinks/{id}/health:
+    get:
+      summary: Test link connectivity
+      operationId: testApplicationLink
+      tags: [ApplicationLinks]
+      parameters:
+        - $ref: '#/components/parameters/LinkId'
+      responses:
+        '200':
+          description: Health check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinkHealth'
+  /api/issues/{issueId}/confluence-links:
+    get:
+      summary: List Confluence pages linked to an issue
+      operationId: listConfluenceLinksForIssue
+      tags: [ConfluenceLinks]
+      parameters:
+        - $ref: '#/components/parameters/IssueId'
+      responses:
+        '200':
+          description: Linked pages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConfluencePageLink'
+    post:
+      summary: Link a Confluence page to an issue
+      operationId: createConfluenceLink
+      tags: [ConfluenceLinks]
+      parameters:
+        - $ref: '#/components/parameters/IssueId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConfluencePageLinkRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfluencePageLink'
+components:
+  parameters:
+    LinkId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IssueId:
+      name: issueId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    ApplicationLink:
+      type: object
+      required: [id, name, url, applicationType, direction, status, primary]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        url:
+          type: string
+          format: uri
+        applicationType:
+          type: string
+          enum: [confluence, jira, bitbucket, bamboo, generic]
+        direction:
+          type: string
+          enum: [incoming, outgoing, two-way]
+        status:
+          type: string
+          enum: [connected, pending, failing, not_configured]
+        primary:
+          type: boolean
+    CreateApplicationLinkRequest:
+      type: object
+      required: [name, url, applicationType]
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+          format: uri
+        applicationType:
+          type: string
+        direction:
+          type: string
+          default: two-way
+    LinkHealth:
+      type: object
+      properties:
+        linkId:
+          type: string
+        status:
+          type: string
+        message:
+          type: string
+    ConfluencePageLink:
+      type: object
+      properties:
+        id:
+          type: string
+        issueId:
+          type: string
+        pageId:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+    CreateConfluencePageLinkRequest:
+      type: object
+      required: [pageId]
+      properties:
+        pageId:
+          type: string
+        title:
+          type: string
+        url:
+          type: string

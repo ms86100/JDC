@@ -1,0 +1,152 @@
+/**
+ * Migration Center — design token utilities (UI hardening gap #4).
+ * Import once from MigrationPage.
+ */
+
+.migration-panel {
+  background: var(--sa-n0);
+  border: 1px solid var(--sa-n200);
+  border-radius: var(--sa-radius-md);
+  font-family: var(--sa-font-sans);
+  color: var(--sa-n900);
+}
+
+.migration-panel__header {
+  padding: var(--sa-space-4);
+  border-bottom: 1px solid var(--sa-n100);
+  background: var(--sa-n50);
+}
+
+.migration-panel__title {
+  margin: 0;
+  font-size: var(--sa-fs-lg);
+  font-weight: 600;
+  color: var(--sa-n900);
+}
+
+.migration-panel__body {
+  padding: var(--sa-space-4);
+}
+
+.migration-btn-primary {
+  padding: var(--sa-space-2) var(--sa-space-5);
+  background: var(--sa-brand-600);
+  color: var(--sa-n0);
+  border: none;
+  border-radius: var(--sa-radius-sm);
+  font-family: var(--sa-font-sans);
+  font-size: var(--sa-fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--sa-motion-fast);
+}
+
+.migration-btn-primary:hover:not(:disabled) {
+  background: var(--sa-brand-700);
+}
+
+.migration-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.migration-btn-secondary {
+  padding: var(--sa-space-2) var(--sa-space-4);
+  background: var(--sa-n100);
+  color: var(--sa-n800);
+  border: 1px solid var(--sa-n200);
+  border-radius: var(--sa-radius-sm);
+  font-family: var(--sa-font-sans);
+  font-size: var(--sa-fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.migration-btn-secondary:hover:not(:disabled) {
+  background: var(--sa-n200);
+}
+
+.migration-step-pill {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--sa-fs-sm);
+  font-weight: 600;
+  font-family: var(--sa-font-sans);
+}
+
+.migration-step-pill--current {
+  background: var(--sa-brand-600);
+  color: var(--sa-n0);
+}
+
+.migration-step-pill--done {
+  background: var(--sa-status-done-bg);
+  color: var(--sa-status-done-fg);
+}
+
+.migration-step-pill--pending {
+  background: var(--sa-n200);
+  color: var(--sa-n600);
+}
+
+.migration-alert-error {
+  padding: var(--sa-space-3) var(--sa-space-4);
+  border-radius: var(--sa-radius-sm);
+  border: 1px solid var(--sa-status-blocked-bg);
+  background: var(--sa-status-blocked-bg);
+  color: var(--sa-status-blocked-fg);
+  font-size: var(--sa-fs-sm);
+}
+
+.migration-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--sa-fs-sm);
+  font-family: var(--sa-font-sans);
+}
+
+.migration-table thead {
+  background: var(--sa-n50);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.migration-table th {
+  padding: var(--sa-space-3) var(--sa-space-4);
+  text-align: left;
+  font-size: var(--sa-fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sa-n600);
+  border-bottom: 1px solid var(--sa-n200);
+}
+
+.migration-table td {
+  padding: var(--sa-space-3) var(--sa-space-4);
+  border-bottom: 1px solid var(--sa-n100);
+  color: var(--sa-n800);
+}
+
+.migration-table tbody tr:hover {
+  background: var(--sa-n50);
+}
+
+.migration-link {
+  color: var(--sa-brand-600);
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font: inherit;
+  padding: 0;
+}
+
+.migration-link:hover {
+  color: var(--sa-brand-700);
+}

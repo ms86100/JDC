@@ -1,0 +1,65 @@
+# Load Testing Configuration
+# Based on dc-app-performance-toolkit jira.yml workload model
+
+version: '3.8'
+
+settings:
+  artifacts-dir: results/jira-enterprise/%Y-%m-%d_%H-%M-%S
+  aggregator: consolidator
+  verbose: false
+  check-updates: false
+
+env:
+  application_hostname: localhost
+  application_protocol: http
+  application_port: 8080
+  secure: false
+  application_postfix: /api
+
+  # Load profile (based on toolkit)
+  load_executor: jmeter
+  concurrency: 200
+  test_duration: 45m
+  ramp_up: 3m
+  total_actions_per_hour: 54500
+
+  # Action percentages from toolkit
+  create_issue: 4
+  search_jql: 11
+  view_issue: 34
+  view_project_summary: 3
+  view_dashboard: 10
+  edit_issue: 5
+  add_comment: 2
+  browse_projects: 9
+  view_scrum_board: 8
+  view_kanban_board: 7
+  view_backlog: 6
+  browse_boards: 1
+
+modules:
+  jmeter:
+    version: 5.6.3
+    memory-xmx: 8G
+    plugins:
+      - jpgc-casutg=2.10
+      - jpgc-ffw=2.0
+      - jpgc-functions=2.2
+      - jpgc-json=2.7
+      - jpgc-perfmon=2.1
+      - jpgc-prmctl=0.4
+
+scenarios:
+  jmeter:
+    script: jmeter/jira-enterprise.jmx
+
+execution:
+  - scenario: jmeter
+    executor: jmeter
+    concurrency: ${concurrency}
+    hold-for: ${test_duration}
+    ramp-up: ${ramp_up}
+
+reporting:
+  - data-source: sample-labels
+    module: junit-xml

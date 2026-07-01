@@ -1,0 +1,250 @@
+spring:
+  config:
+    activate:
+      on-profile: cloudshell
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            maxAge: 3600
+      routes:
+        # Auth Service (frontend uses /api/auth/*, gateway strips /api)
+        # Use IP address to bypass potential DNS resolution issues
+        - id: auth-service-api
+          uri: http://172.18.0.3:8081
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
+
+        - id: auth-service
+          uri: http://172.18.0.3:8081
+          predicates:
+            - Path=/auth/**
+
+        # User Service
+        - id: user-service
+          uri: http://user-service:8082
+          predicates:
+            - Path=/users/**
+        - id: user-service-api
+          uri: http://user-service:8082
+          predicates:
+            - Path=/api/users/**
+
+        # Project Service
+        - id: project-service
+          uri: http://project-service:8083
+          predicates:
+            - Path=/projects/**
+        - id: project-service-api
+          uri: http://project-service:8083
+          predicates:
+            - Path=/api/projects/**
+
+        # Templates (from project service)
+        - id: template-service
+          uri: http://project-service:8083
+          predicates:
+            - Path=/templates/**
+        - id: template-service-api
+          uri: http://project-service:8083
+          predicates:
+            - Path=/api/templates/**
+
+        # Issue Service
+        - id: issue-service
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/issues/**
+        - id: issue-service-api
+          uri: http://issue-service:8084
+          predicates:
+            - Path=/api/issues/**
+
+        # Fields & Dashboard Gadgets (from migration service)
+        - id: fields-service
+          uri: http://migration-service:8094
+          predicates:
+            - Path=/fields/**
+        - id: fields-service-api
+          uri: http://migration-service:8094
+          predicates:
+            - Path=/api/fields/**
+
+        # Dashboard Service
+        - id: dashboard-service
+          uri: http://dashboard-service:8095
+          predicates:
+            - Path=/dashboards/**
+        - id: dashboard-service-api
+          uri: http://dashboard-service:8095
+          predicates:
+            - Path=/api/dashboards/**
+
+        # Version Service
+        - id: version-service
+          uri: http://version-service:8096
+          predicates:
+            - Path=/versions/**
+        - id: version-service-api
+          uri: http://version-service:8096
+          predicates:
+            - Path=/api/versions/**
+
+        # Component Service
+        - id: component-service
+          uri: http://component-service:8097
+          predicates:
+            - Path=/components/**
+        - id: component-service-api
+          uri: http://component-service:8097
+          predicates:
+            - Path=/api/components/**
+
+        # Workflow Service
+        - id: workflow-service
+          uri: http://workflow-service:8085
+          predicates:
+            - Path=/workflows/**
+        - id: workflow-service-api
+          uri: http://workflow-service:8085
+          predicates:
+            - Path=/api/workflows/**
+
+        # Admin Service
+        - id: admin-service
+          uri: http://admin-service:8093
+          predicates:
+            - Path=/admin/**
+        - id: admin-service-api
+          uri: http://admin-service:8093
+          predicates:
+            - Path=/api/admin/**
+
+        # Comment Service
+        - id: comment-service
+          uri: http://comment-service:8086
+          predicates:
+            - Path=/comments/**
+        - id: comment-service-api
+          uri: http://comment-service:8086
+          predicates:
+            - Path=/api/comments/**
+
+        # Notification Service
+        - id: notification-service
+          uri: http://notification-service:8087
+          predicates:
+            - Path=/notifications/**
+        - id: notification-service-api
+          uri: http://notification-service:8087
+          predicates:
+            - Path=/api/notifications/**
+
+        # Search Service
+        - id: search-service
+          uri: http://search-service:8088
+          predicates:
+            - Path=/search/**
+        - id: search-service-api
+          uri: http://search-service:8088
+          predicates:
+            - Path=/api/search/**
+
+        # Audit Service
+        - id: audit-service
+          uri: http://audit-service:8089
+          predicates:
+            - Path=/audit/**
+        - id: audit-service-api
+          uri: http://audit-service:8089
+          predicates:
+            - Path=/api/audit/**
+
+        # Sprint Service
+        - id: sprint-service
+          uri: http://sprint-service:8091
+          predicates:
+            - Path=/sprints/**
+        - id: sprint-service-api
+          uri: http://sprint-service:8091
+          predicates:
+            - Path=/api/sprints/**
+
+        # Board Service
+        - id: board-service
+          uri: http://sprint-service:8091
+          predicates:
+            - Path=/boards/**
+        - id: board-service-api
+          uri: http://sprint-service:8091
+          predicates:
+            - Path=/api/boards/**
+
+        # Plan Service - Use IP to bypass DNS issues
+        - id: plan-service
+          uri: http://172.18.0.11:8092
+          predicates:
+            - Path=/plans/**
+        - id: plan-service-api
+          uri: http://172.18.0.11:8092
+          predicates:
+            - Path=/api/plans/**
+
+        # Attachment Service
+        - id: attachment-service
+          uri: http://attachment-service:8090
+          predicates:
+            - Path=/attachments/**
+        - id: attachment-service-api
+          uri: http://attachment-service:8090
+          predicates:
+            - Path=/api/attachments/**
+
+        # Migration Service
+        - id: migration-service
+          uri: http://migration-service:8094
+          predicates:
+            - Path=/migration/**
+        - id: migration-service-api
+          uri: http://migration-service:8094
+          predicates:
+            - Path=/api/migration/**
+
+        # WebSocket
+        - id: issue-websocket
+          uri: ws://issue-service:8084
+          predicates:
+            - Path=/ws/issues/**
+
+# Redis Configuration (disabled for cloudshell)
+data:
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 2000ms
+
+# JWT Configuration
+jwt:
+  secret: jira-platform-super-secret-key-that-is-at-least-256-bits-long
+  expiration-ms: 3600000
+  refresh-expiration-ms: 604800000
+
+# Disable Redis health check
+management:
+  health:
+    redis:
+      enabled: false

@@ -1,0 +1,158 @@
+/* Group Members Page Styles */
+
+.group-members-error {
+  padding: 24px;
+  text-align: center;
+  color: var(--sa-n600);
+}
+
+.group-members-error a {
+  color: var(--sa-brand-500);
+  text-decoration: none;
+}
+
+.group-members-error a:hover {
+  text-decoration: underline;
+}
+
+.admin-alert {
+  padding: 10px 16px;
+  border-radius: 3px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.admin-alert-success {
+  background: var(--sa-success-50);
+  color: var(--sa-success-700);
+  border: 1px solid var(--sa-success-500);
+}
+
+.admin-alert-error {
+  background: var(--sa-danger-50);
+  color: #bf2600;
+  border: 1px solid var(--sa-danger-500);
+}
+
+.admin-modal-wide {
+  max-width: 640px;
+}
+
+.modal-info {
+  margin-bottom: 16px;
+  color: var(--sa-n600);
+}
+
+.user-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--sa-n200);
+  border-radius: 3px;
+}
+
+.user-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sa-n200);
+}
+
+.user-list-item:last-child {
+  border-bottom: none;
+}
+
+.user-list-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--sa-brand-500);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.user-list-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-list-name {
+  font-weight: 500;
+  color: var(--sa-n1000);
+}
+
+.user-list-email {
+  font-size: 12px;
+  color: var(--sa-n600);
+}
+
+.admin-btn-sm {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.already-member-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--sa-brand-50);
+  color: var(--sa-brand-500);
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--sa-brand-500);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 500;
+  color: var(--sa-n1000);
+}
+
+.user-username {
+  font-size: 12px;
+  color: var(--sa-n600);
+}
+
+.admin-btn-danger {
+  background: var(--sa-danger-50);
+  color: #bf2600;
+  border: 1px solid var(--sa-danger-500);
+  height: 24px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.admin-btn-danger:hover {
+  background: #ffbdad;
+}
