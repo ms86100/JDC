@@ -41,7 +41,7 @@ export default function IssueTypesPage() {
 
   const { data: issueTypes, isLoading, isError } = useQuery({
     queryKey: ['admin', 'issueTypes'],
-    queryFn: () => issueTypeApi.getIssueTypes().then(res => res.data),
+    queryFn: () => issueTypeApi.getIssueTypes().then(res => Array.isArray(res.data) ? res.data : []),
   });
 
   const { data: schemes } = useQuery({

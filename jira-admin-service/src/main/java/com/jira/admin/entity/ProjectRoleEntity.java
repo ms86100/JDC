@@ -3,6 +3,8 @@ package com.jira.admin.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.UUID;
+
 @Entity
 @Table(name = "project_roles")
 @Data
@@ -13,7 +15,7 @@ public class ProjectRoleEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+    private UUID id;
 
     @Column(nullable = false, unique = true)
     private String name;

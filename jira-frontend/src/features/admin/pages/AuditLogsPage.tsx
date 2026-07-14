@@ -135,7 +135,7 @@ export default function AuditLogsPage() {
                   <td colSpan={7} style={{ textAlign: 'center', padding: '24px' }}>No audit logs found</td>
                 </tr>
               ) : (
-                data?.content.map((log) => (
+                data?.content?.map((log) => (
                   <tr key={log.id}>
                     <td>
                       <div className="timestamp-cell">

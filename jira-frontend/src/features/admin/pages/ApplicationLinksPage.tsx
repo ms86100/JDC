@@ -14,7 +14,7 @@ export default function ApplicationLinksPage() {
 
   const { data: links, isLoading, isError, refetch } = useQuery({
     queryKey: ['integration', 'applinks'],
-    queryFn: () => integrationApi.listApplicationLinks().then((r) => r.data),
+    queryFn: () => integrationApi.listApplicationLinks().then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
   const createMutation = useMutation({

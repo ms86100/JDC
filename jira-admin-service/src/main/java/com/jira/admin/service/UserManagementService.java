@@ -233,14 +233,14 @@ public class UserManagementService {
 
         role = projectRoleRepository.save(role);
 
-        createAuditLog("CREATE", "PROJECT_ROLE", role.getId(), role.getName(), null, "Project role created", "SUCCESS");
+        createAuditLog("CREATE", "PROJECT_ROLE", role.getId().toString(), role.getName(), null, "Project role created", "SUCCESS");
 
         return role;
     }
 
     @Transactional
     public ProjectRoleEntity updateProjectRole(String roleId, String name, String description) {
-        ProjectRoleEntity role = projectRoleRepository.findById(roleId)
+        ProjectRoleEntity role = projectRoleRepository.findById(java.util.UUID.fromString(roleId))
                 .orElseThrow(() -> new IllegalArgumentException("Project role not found: " + roleId));
 
         Map<String, String> oldValues = new HashMap<>();
@@ -256,7 +256,7 @@ public class UserManagementService {
 
         role = projectRoleRepository.save(role);
 
-        createAuditLog("UPDATE", "PROJECT_ROLE", role.getId(), role.getName(),
+        createAuditLog("UPDATE", "PROJECT_ROLE", role.getId().toString(), role.getName(),
             oldValues.toString(), "Project role updated", "SUCCESS");
 
         return role;
@@ -264,7 +264,7 @@ public class UserManagementService {
 
     @Transactional
     public void deleteProjectRole(String roleId) {
-        ProjectRoleEntity role = projectRoleRepository.findById(roleId)
+        ProjectRoleEntity role = projectRoleRepository.findById(java.util.UUID.fromString(roleId))
                 .orElseThrow(() -> new IllegalArgumentException("Project role not found: " + roleId));
 
         // Prevent deletion of system/default roles

@@ -128,7 +128,7 @@ export default function UserManagementPage() {
                   </td>
                 </tr>
               ) : (
-                data?.content.map((user) => (
+                data?.content?.map((user) => (
                   <tr key={user.id}>
                     <td>
                       <div className="user-cell">

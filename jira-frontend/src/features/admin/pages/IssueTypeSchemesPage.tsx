@@ -38,12 +38,12 @@ export default function IssueTypeSchemesPage() {
 
   const { data: schemes, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'issueTypeSchemes'],
-    queryFn: () => issueTypeSchemeApi.list().then((r) => r.data),
+    queryFn: () => issueTypeSchemeApi.list().then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
   const { data: issueTypes } = useQuery({
     queryKey: ['admin', 'issueTypes'],
-    queryFn: () => issueTypeApi.list().then((r) => r.data),
+    queryFn: () => issueTypeApi.list().then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
   const configuringScheme = useMemo(
@@ -101,7 +101,7 @@ export default function IssueTypeSchemesPage() {
 
   const { data: schemeProjects, isLoading: projectsLoading } = useQuery({
     queryKey: ['admin', 'schemeProjects', configureId],
-    queryFn: () => issueTypeSchemeApi.listProjects(configureId!).then((r) => r.data),
+    queryFn: () => issueTypeSchemeApi.listProjects(configureId!).then((r) => Array.isArray(r.data) ? r.data : []),
     enabled: !!configureId,
   });
 

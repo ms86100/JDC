@@ -44,7 +44,7 @@ export default function CustomFieldsPage() {
     queryKey: ['admin-custom-fields'],
     queryFn: async () => {
       const res = await fieldApi.getCustomFields();
-      return (res.data ?? []).map(
+      return (Array.isArray(res.data) ? res.data : []).map(
         (f): CustomFieldRow => ({
           id: f.id,
           name: f.name,

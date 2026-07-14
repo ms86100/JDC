@@ -203,98 +203,98 @@ export interface SessionPolicy {
 const adminApi = {
   // Users
   getUsers: (params?: { search?: string; status?: string; role?: string; page?: number; size?: number }) =>
-    apiClient.get<{ content: User[]; totalElements: number }>('/admin/users', { params }),
+    apiClient.get<{ content: User[]; totalElements: number }>('/api/admin/users', { params }),
   getUser: (userId: string) => apiClient.get<User>(`/api/admin/users/${userId}`),
-  createUser: (data: Partial<User>) => apiClient.post<User>('/admin/users', data),
+  createUser: (data: Partial<User>) => apiClient.post<User>('/api/admin/users', data),
   updateUser: (userId: string, data: Partial<User>) => apiClient.put<User>(`/api/admin/users/${userId}`, data),
   deleteUser: (userId: string) => apiClient.delete(`/api/admin/users/${userId}`),
   deactivateUser: (userId: string) => apiClient.post(`/api/admin/users/${userId}/deactivate`),
   activateUser: (userId: string) => apiClient.post(`/api/admin/users/${userId}/activate`),
 
   // Groups
-  getGroups: () => apiClient.get<Group[]>('/admin/users/groups'),
+  getGroups: () => apiClient.get<Group[]>('/api/admin/users/groups'),
   createGroup: (name: string, description?: string) =>
-    apiClient.post<Group>('/admin/users/groups', null, { params: { name, description } }),
+    apiClient.post<Group>('/api/admin/users/groups', null, { params: { name, description } }),
 
   // Issue Types
-  getIssueTypes: () => apiClient.get<IssueType[]>('/admin/issues/issue-types'),
-  createIssueType: (data: Partial<IssueType>) => apiClient.post<IssueType>('/admin/issues/issue-types', data),
+  getIssueTypes: () => apiClient.get<IssueType[]>('/api/admin/issues/issue-types'),
+  createIssueType: (data: Partial<IssueType>) => apiClient.post<IssueType>('/api/admin/issues/issue-types', data),
 
   // Priorities
-  getPriorities: () => apiClient.get<Priority[]>('/admin/issues/priorities'),
-  createPriority: (data: Partial<Priority>) => apiClient.post<Priority>('/admin/issues/priorities', data),
+  getPriorities: () => apiClient.get<Priority[]>('/api/admin/issues/priorities'),
+  createPriority: (data: Partial<Priority>) => apiClient.post<Priority>('/api/admin/issues/priorities', data),
 
   // Statuses
-  getStatuses: () => apiClient.get<Status[]>('/admin/issues/statuses'),
-  createStatus: (data: Partial<Status>) => apiClient.post<Status>('/admin/issues/statuses', data),
+  getStatuses: () => apiClient.get<Status[]>('/api/admin/issues/statuses'),
+  createStatus: (data: Partial<Status>) => apiClient.post<Status>('/api/admin/issues/statuses', data),
 
   // Workflows
-  getWorkflows: () => apiClient.get<Workflow[]>('/admin/issues/workflows'),
-  createWorkflow: (data: Partial<Workflow>) => apiClient.post<Workflow>('/admin/issues/workflows', data),
+  getWorkflows: () => apiClient.get<Workflow[]>('/api/admin/issues/workflows'),
+  createWorkflow: (data: Partial<Workflow>) => apiClient.post<Workflow>('/api/admin/issues/workflows', data),
   publishWorkflow: (workflowId: string) => apiClient.post<Workflow>(`/api/admin/issues/workflows/${workflowId}/publish`),
 
   // Screens
-  getScreens: () => apiClient.get<Screen[]>('/admin/issues/screens'),
-  createScreen: (data: Partial<Screen>) => apiClient.post<Screen>('/admin/issues/screens', data),
+  getScreens: () => apiClient.get<Screen[]>('/api/admin/issues/screens'),
+  createScreen: (data: Partial<Screen>) => apiClient.post<Screen>('/api/admin/issues/screens', data),
 
   // Cluster Nodes
-  getClusterNodes: () => apiClient.get<ClusterNode[]>('/admin/datacenter/cluster/nodes'),
-  getClusterHealth: () => apiClient.get('/admin/datacenter/cluster/health'),
+  getClusterNodes: () => apiClient.get<ClusterNode[]>('/api/admin/datacenter/cluster/nodes'),
+  getClusterHealth: () => apiClient.get('/api/admin/datacenter/cluster/health'),
 
   // Scheduled Jobs
-  getScheduledJobs: () => apiClient.get<ScheduledJob[]>('/admin/datacenter/jobs'),
+  getScheduledJobs: () => apiClient.get<ScheduledJob[]>('/api/admin/datacenter/jobs'),
   runJob: (jobId: string) => apiClient.post<ScheduledJob>(`/api/admin/datacenter/jobs/${jobId}/run`),
   enableJob: (jobId: string) => apiClient.post<ScheduledJob>(`/api/admin/datacenter/jobs/${jobId}/enable`),
   disableJob: (jobId: string) => apiClient.post<ScheduledJob>(`/api/admin/datacenter/jobs/${jobId}/disable`),
 
   // System Info
-  getSystemInfo: () => apiClient.get('/admin/datacenter/system-info'),
+  getSystemInfo: () => apiClient.get('/api/admin/datacenter/system-info'),
 
   // Audit Logs
   getAuditLogs: (params?: { userId?: string; category?: string; action?: string; page?: number; size?: number }) =>
-    apiClient.get<{ content: AuditLog[]; totalElements: number }>('/admin/audit', { params }),
-  getAuditStatistics: () => apiClient.get('/admin/audit/statistics'),
+    apiClient.get<{ content: AuditLog[]; totalElements: number }>('/api/admin/audit', { params }),
+  getAuditStatistics: () => apiClient.get('/api/admin/audit/statistics'),
 
   // Permission Schemes
-  getPermissionSchemes: () => apiClient.get<PermissionScheme[]>('/admin/permission-schemes'),
-  createPermissionScheme: (data: Partial<PermissionScheme>) => apiClient.post<PermissionScheme>('/admin/permission-schemes', data),
+  getPermissionSchemes: () => apiClient.get<PermissionScheme[]>('/api/admin/permission-schemes'),
+  createPermissionScheme: (data: Partial<PermissionScheme>) => apiClient.post<PermissionScheme>('/api/admin/permission-schemes', data),
   updatePermissionScheme: (id: string, data: Partial<PermissionScheme>) => apiClient.put<PermissionScheme>(`/api/admin/permission-schemes/${id}`, data),
   deletePermissionScheme: (id: string) => apiClient.delete(`/api/admin/permission-schemes/${id}`),
   copyPermissionScheme: (id: string) => apiClient.post<PermissionScheme>(`/api/admin/permission-schemes/${id}/copy`),
 
   // Notification Schemes
-  getNotificationSchemes: () => apiClient.get<NotificationScheme[]>('/admin/notification-schemes'),
-  createNotificationScheme: (data: Partial<NotificationScheme>) => apiClient.post<NotificationScheme>('/admin/notification-schemes', data),
+  getNotificationSchemes: () => apiClient.get<NotificationScheme[]>('/api/admin/notification-schemes'),
+  createNotificationScheme: (data: Partial<NotificationScheme>) => apiClient.post<NotificationScheme>('/api/admin/notification-schemes', data),
   updateNotificationScheme: (id: string, data: Partial<NotificationScheme>) => apiClient.put<NotificationScheme>(`/api/admin/notification-schemes/${id}`, data),
   deleteNotificationScheme: (id: string) => apiClient.delete(`/api/admin/notification-schemes/${id}`),
   copyNotificationScheme: (id: string) => apiClient.post<NotificationScheme>(`/api/admin/notification-schemes/${id}/copy`),
 
   // Security Schemes
-  getSecuritySchemes: () => apiClient.get<SecurityScheme[]>('/admin/security-schemes'),
-  createSecurityScheme: (data: Partial<SecurityScheme>) => apiClient.post<SecurityScheme>('/admin/security-schemes', data),
+  getSecuritySchemes: () => apiClient.get<SecurityScheme[]>('/api/admin/security-schemes'),
+  createSecurityScheme: (data: Partial<SecurityScheme>) => apiClient.post<SecurityScheme>('/api/admin/security-schemes', data),
   updateSecurityScheme: (id: string, data: Partial<SecurityScheme>) => apiClient.put<SecurityScheme>(`/api/admin/security-schemes/${id}`, data),
   deleteSecurityScheme: (id: string) => apiClient.delete(`/api/admin/security-schemes/${id}`),
   copySecurityScheme: (id: string) => apiClient.post<SecurityScheme>(`/api/admin/security-schemes/${id}/copy`),
 
-  // Project Roles
-  getProjectRoles: () => apiClient.get<ProjectRole[]>('/admin/project-roles'),
-  createProjectRole: (data: Partial<ProjectRole>) => apiClient.post<ProjectRole>('/admin/project-roles', data),
-  updateProjectRole: (id: string, data: Partial<ProjectRole>) => apiClient.put<ProjectRole>(`/api/admin/project-roles/${id}`, data),
-  deleteProjectRole: (id: string) => apiClient.delete(`/api/admin/project-roles/${id}`),
+  // Project Roles (under UserManagementController: /api/admin/users/project-roles)
+  getProjectRoles: () => apiClient.get<ProjectRole[]>('/api/admin/users/project-roles'),
+  createProjectRole: (data: Partial<ProjectRole>) => apiClient.post<ProjectRole>('/api/admin/users/project-roles', null, { params: { name: data.name, description: data.description, roleType: data.roleType ?? 'PROJECT' } }),
+  updateProjectRole: (id: string, data: Partial<ProjectRole>) => apiClient.put<ProjectRole>(`/api/admin/users/project-roles/${id}`, data),
+  deleteProjectRole: (id: string) => apiClient.delete(`/api/admin/users/project-roles/${id}`),
 
-  // Password Policies
-  getPasswordPolicies: () => apiClient.get<PasswordPolicy[]>('/admin/password-policies'),
-  createPasswordPolicy: (data: Partial<PasswordPolicy>) => apiClient.post<PasswordPolicy>('/admin/password-policies', data),
-  updatePasswordPolicy: (id: string, data: Partial<PasswordPolicy>) => apiClient.put<PasswordPolicy>(`/api/admin/password-policies/${id}`, data),
-  deletePasswordPolicy: (id: string) => apiClient.delete(`/api/admin/password-policies/${id}`),
-  setDefaultPasswordPolicy: (id: string) => apiClient.post(`/api/admin/password-policies/${id}/default`),
+  // Password Policies (under UserManagementController: /api/admin/users/password-policy)
+  getPasswordPolicies: () => apiClient.get<PasswordPolicy[]>('/api/admin/users/password-policy'),
+  createPasswordPolicy: (data: Partial<PasswordPolicy>) => apiClient.post<PasswordPolicy>('/api/admin/users/password-policy', data),
+  updatePasswordPolicy: (id: string, data: Partial<PasswordPolicy>) => apiClient.put<PasswordPolicy>(`/api/admin/users/password-policy/${id}`, data),
+  deletePasswordPolicy: (id: string) => apiClient.delete(`/api/admin/users/password-policy/${id}`),
+  setDefaultPasswordPolicy: (id: string) => apiClient.post(`/api/admin/users/password-policy/${id}/default`),
 
-  // Sessions
-  getUserSessions: () => apiClient.get<UserSession[]>('/admin/sessions'),
-  revokeSession: (sessionId: string) => apiClient.post(`/api/admin/sessions/${sessionId}/revoke`),
-  revokeAllSessions: (userId?: string) => apiClient.post(`/api/admin/sessions/revoke-all`, { userId }),
-  getSessionPolicy: () => apiClient.get<SessionPolicy>('/admin/sessions/policy'),
-  updateSessionPolicy: (policy: SessionPolicy) => apiClient.put<SessionPolicy>('/admin/sessions/policy', policy),
+  // Sessions (no backend endpoint yet — return empty for now)
+  getUserSessions: () => Promise.resolve({ data: [] as UserSession[] }),
+  revokeSession: (_sessionId: string) => Promise.resolve({ data: {} }),
+  revokeAllSessions: (_userId?: string) => Promise.resolve({ data: {} }),
+  getSessionPolicy: () => Promise.resolve({ data: { sessionTimeout: 30, maxSessions: 5, allowMultipleSessions: true } as SessionPolicy }),
+  updateSessionPolicy: (policy: SessionPolicy) => Promise.resolve({ data: policy }),
 };
 
 // ==================== React Query Hooks ====================
@@ -493,7 +493,7 @@ export const useAuditLogs = (params?: { userId?: string; category?: string; acti
   return useQuery({
     queryKey: ['admin', 'auditLogs', params],
     queryFn: () => adminApi.getAuditLogs(params),
-    select: (res) => Array.isArray(res.data) ? res.data : [],
+    select: (res) => res.data ?? { content: [], totalElements: 0 },
   });
 };
 

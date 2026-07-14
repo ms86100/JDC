@@ -108,7 +108,7 @@ function SchemeItem({
     <div className="scheme-item">
       <div className="scheme-label">{label}</div>
       <div className="scheme-content">
-        {schemes.length === 0 ? (
+        {!schemes || schemes.length === 0 ? (
           <span className="scheme-empty">{emptyMessage}</span>
         ) : (
           <ul className="scheme-list-items">

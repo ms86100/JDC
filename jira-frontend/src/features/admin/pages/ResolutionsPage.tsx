@@ -7,7 +7,7 @@ export default function ResolutionsPage() {
   const [search, setSearch] = useState('');
   const { data: resolutions, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'resolutions'],
-    queryFn: () => resolutionApi.getAll().then((r) => r.data),
+    queryFn: () => resolutionApi.getAll().then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
   const filtered =
