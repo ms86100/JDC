@@ -185,7 +185,7 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
     queryKey: ['comments', issueId],
     queryFn: async () => {
       const response = await commentApi.getByIssue(issueId!);
-      return response.data;
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: !!issueId,
   });

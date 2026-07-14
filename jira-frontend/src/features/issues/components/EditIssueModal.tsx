@@ -90,7 +90,7 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
     queryKey: ['priorities'],
     queryFn: async () => {
       const response = await issueApi.getPriorities();
-      return response.data;
+      return Array.isArray(response.data) ? response.data : [];
     },
   });
 
@@ -100,20 +100,26 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
       const response = await apiClient.get<{ id: string; userName?: string; displayName?: string }[]>(
         `/api/projects/${projectId}/members`
       );
-      return response.data || [];
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: !!projectId,
   });
 
   const { data: versions = [] } = useQuery({
     queryKey: ['project-versions', projectId],
-    queryFn: () => versionApi.getByProject(projectId),
+    queryFn: async () => {
+      const data = await versionApi.getByProject(projectId);
+      return Array.isArray(data) ? data : [];
+    },
     enabled: !!projectId,
   });
 
   const { data: components = [] } = useQuery({
     queryKey: ['project-components', projectId],
-    queryFn: () => componentApi.getByProject(projectId),
+    queryFn: async () => {
+      const data = await componentApi.getByProject(projectId);
+      return Array.isArray(data) ? data : [];
+    },
     enabled: !!projectId,
   });
 
@@ -127,7 +133,10 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
 
   const { data: sprints = [] } = useQuery({
     queryKey: ['sprints', projectId],
-    queryFn: () => sprintApi.getAll(projectId),
+    queryFn: async () => {
+      const data = await sprintApi.getAll(projectId);
+      return Array.isArray(data) ? data : [];
+    },
     enabled: !!projectId,
   });
   const [newLabel, setNewLabel] = useState('');

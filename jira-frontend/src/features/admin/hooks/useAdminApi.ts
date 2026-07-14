@@ -422,7 +422,7 @@ export const useScreens = () => {
   return useQuery({
     queryKey: ['admin', 'screens'],
     queryFn: () => adminApi.getScreens(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 

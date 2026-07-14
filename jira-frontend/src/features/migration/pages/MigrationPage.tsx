@@ -344,10 +344,12 @@ export default function MigrationPage() {
     resetValidation,
   } = useValidation({
     onValidationComplete: (result: ValidationResult) => {
-      const mappings = generateFieldMappings(result.headers, targetFields);
+      const safeHeaders = (result.headers ?? []).map((h) => (h != null ? String(h) : ''));
+      const safeResult = { ...result, headers: safeHeaders };
+      const mappings = generateFieldMappings(safeHeaders, targetFields);
       setState((prev) => ({
         ...prev,
-        validationResult: result,
+        validationResult: safeResult,
         fieldMappings: mappings,
       }));
     },
@@ -522,7 +524,7 @@ export default function MigrationPage() {
         wizard.sessionId
       ) {
         const refreshed = await wizard.refetchSession();
-        const headers = refreshed.data?.detectedHeaders ?? [];
+        const headers = (refreshed.data?.detectedHeaders ?? []).map((h: unknown) => (h != null ? String(h) : ''));
         const resolvedHeaders =
           (state.validationResult?.headers?.length ? state.validationResult.headers : headers) ?? [];
         if (resolvedHeaders.length > 0 && state.fieldMappings.length === 0) {
@@ -737,9 +739,11 @@ export default function MigrationPage() {
           await refreshVirusScanStatus(upload.uploadId, upload.virusScanStatus);
         }
 
-        const serverHeaders = upload?.detectedHeaders?.filter((h) => h?.trim()) ?? [];
+        const serverHeaders = (upload?.detectedHeaders ?? [])
+          .map((h: unknown) => (h != null ? String(h) : ''))
+          .filter((h: string) => h.trim() !== '');
         const headers =
-          serverHeaders.length > 0 ? serverHeaders : (clientResult?.headers ?? []);
+          serverHeaders.length > 0 ? serverHeaders : (clientResult?.headers ?? []).map((h) => (h != null ? String(h) : ''));
 
         if (headers.length > 0) {
           let mappings = generateFieldMappings(headers, targetFields);

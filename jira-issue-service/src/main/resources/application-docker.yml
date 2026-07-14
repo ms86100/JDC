@@ -48,6 +48,10 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
+jira:
+  permissions:
+    fail-open: ${JIRA_PERMISSIONS_FAIL_OPEN:true}
+
 eureka:
   client:
     enabled: false

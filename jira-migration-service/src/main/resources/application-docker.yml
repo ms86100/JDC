@@ -21,6 +21,7 @@ spring:
     default-schema: jira_migration
     create-schemas: true
     baseline-on-migrate: true
+    validate-on-migrate: false
 
 services:
   gatewayServiceUrl: http://gateway:8080

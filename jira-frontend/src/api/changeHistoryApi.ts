@@ -23,8 +23,8 @@ export interface ChangeHistoryResponse {
 
 export const changeHistoryApi = {
   getByIssue: (issueId: string) =>
-    apiClient.get<ChangeHistoryResponse[]>(`/issues/${issueId}/history`),
+    apiClient.get<ChangeHistoryResponse[]>(`/api/issues/${issueId}/history`),
 
   getById: (issueId: string, changeGroupId: string) =>
-    apiClient.get<ChangeHistoryResponse>(`/issues/${issueId}/history/${changeGroupId}`),
+    apiClient.get<ChangeHistoryResponse>(`/api/issues/${issueId}/history/${changeGroupId}`),
 };

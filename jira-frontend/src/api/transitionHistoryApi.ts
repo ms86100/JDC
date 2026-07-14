@@ -18,5 +18,5 @@ export interface IssueTransitionHistoryEntry {
 
 export const transitionHistoryApi = {
   listByIssue: (issueId: string) =>
-    apiClient.get<IssueTransitionHistoryEntry[]>(`/issues/${issueId}/transitions/history`),
+    apiClient.get<IssueTransitionHistoryEntry[]>(`/api/issues/${issueId}/transitions/history`),
 };

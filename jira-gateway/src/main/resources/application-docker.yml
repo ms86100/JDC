@@ -179,6 +179,12 @@ spring:
           uri: http://jira-comment-service:8086
           predicates:
             - Path=/comments/**
+        - id: comment-service-api
+          uri: http://jira-comment-service:8086
+          predicates:
+            - Path=/api/comments/**
+          filters:
+            - StripPrefix=1
 
         # Test Service
         - id: test-service

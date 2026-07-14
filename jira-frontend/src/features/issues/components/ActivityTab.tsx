@@ -45,7 +45,7 @@ export default function ActivityTab({ issueId }: ActivityTabProps) {
     queryKey: ['change-history', issueId],
     queryFn: async () => {
       const response = await changeHistoryApi.getByIssue(issueId);
-      return response.data;
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: !!issueId,
   });
@@ -54,7 +54,7 @@ export default function ActivityTab({ issueId }: ActivityTabProps) {
     queryKey: ['transition-history', issueId],
     queryFn: async () => {
       const response = await transitionHistoryApi.listByIssue(issueId);
-      return response.data;
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: !!issueId,
   });

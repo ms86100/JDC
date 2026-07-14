@@ -9,13 +9,13 @@ export default function WorkflowAdminAuditPage() {
   const { data: globalLog = [], isLoading: globalLoading } = useQuery({
     queryKey: ['workflow-admin', 'audit-global', limit],
     queryFn: () =>
-      workflowAdminApi.globalAuditLog({ size: limit }).then((r) => r.data as unknown[]),
+      workflowAdminApi.globalAuditLog({ size: limit }).then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
   const { data: workflowLog = [], isLoading: wfLoading } = useQuery({
     queryKey: ['workflow-admin', 'audit-wf', workflowId, limit],
     queryFn: () =>
-      workflowAdminApi.auditLog(workflowId, { size: limit }).then((r) => r.data as unknown[]),
+      workflowAdminApi.auditLog(workflowId, { size: limit }).then((r) => Array.isArray(r.data) ? r.data : []),
     enabled: !!workflowId,
   });
 

@@ -27,7 +27,7 @@ export default function WorklogsTab({ issueId }: WorklogsTabProps) {
     queryKey: ['worklogs', issueId],
     queryFn: async () => {
       const response = await worklogApi.getAll(issueId);
-      return response.data;
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: !!issueId,
   });
@@ -36,7 +36,7 @@ export default function WorklogsTab({ issueId }: WorklogsTabProps) {
     queryKey: ['worklogs-total', issueId],
     queryFn: async () => {
       const response = await worklogApi.getTotalTime(issueId);
-      return response.data;
+      return typeof response.data === 'number' ? response.data : 0;
     },
     enabled: !!issueId,
   });

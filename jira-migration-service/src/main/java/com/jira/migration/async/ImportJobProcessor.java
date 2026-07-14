@@ -42,6 +42,7 @@ import com.jira.migration.service.MigrationRollbackService;
 import com.jira.migration.service.MigrationService;
 import com.jira.migration.service.MigrationWorkflowStatusApplier;
 import com.jira.migration.service.clients.IssueServiceClient;
+import com.jira.migration.service.clients.ProjectServiceClient;
 import com.jira.migration.service.OptionMappingService;
 import com.jira.migration.service.ProjectMappingSetupService;
 import com.jira.migration.service.PollingFallbackService;
@@ -124,6 +125,7 @@ public class ImportJobProcessor {
     private final MigrationEventPublisher migrationEventPublisher;
     private final VirusScanService virusScanService;
     private final JiraDcCsvAttachmentResolver csvAttachmentResolver;
+    private final ProjectServiceClient projectServiceClient;
 
     // Batch size for progress updates
     private static final int PROGRESS_UPDATE_BATCH_SIZE = 50;
@@ -197,6 +199,8 @@ public class ImportJobProcessor {
             if (targetProjectId == null && options.get("targetProjectId") != null) {
                 targetProjectId = UUID.fromString(options.get("targetProjectId").toString());
             }
+
+            deriveProjectKeyForRows(mappedRows, targetProjectId);
 
             String csvImportProfile = stringOption(jobOptions, "csvImportProfile", "EXTERNAL");
             if ("LIGHTWEIGHT".equalsIgnoreCase(csvImportProfile)) {
@@ -1573,9 +1577,42 @@ public class ImportJobProcessor {
     private Map<String, String> convertRowToMap(String[] row, String[] headers) {
         Map<String, String> map = new HashMap<>();
         for (int i = 0; i < headers.length && i < row.length; i++) {
-            map.put(headers[i].trim().toLowerCase(), row[i]);
+            map.put(headers[i].trim().toLowerCase().replace(" ", "_"), row[i]);
         }
         return map;
+    }
+
+    private void deriveProjectKeyForRows(List<Map<String, String>> rows, UUID targetProjectId) {
+        String resolvedProjectKey = null;
+        for (Map<String, String> row : rows) {
+            String pk = row.get("project_key");
+            if (pk == null || pk.isBlank()) pk = row.get("project key");
+            if (pk == null || pk.isBlank()) pk = row.get("projectkey");
+            if (pk != null && !pk.isBlank()) {
+                continue;
+            }
+            String issueKey = row.get("issue_key");
+            if (issueKey == null || issueKey.isBlank()) issueKey = row.get("issue key");
+            if (issueKey == null || issueKey.isBlank()) issueKey = row.get("issuekey");
+            if (issueKey != null && issueKey.contains("-")) {
+                row.put("project_key", issueKey.substring(0, issueKey.lastIndexOf('-')));
+                continue;
+            }
+            if (targetProjectId != null && resolvedProjectKey == null) {
+                try {
+                    var project = projectServiceClient.getProject(targetProjectId.toString());
+                    if (project != null && project.getKey() != null && !project.getKey().isBlank()) {
+                        resolvedProjectKey = project.getKey();
+                    }
+                } catch (Exception e) {
+                    log.debug("Could not resolve project key for targetProjectId {}: {}", targetProjectId, e.getMessage());
+                    resolvedProjectKey = "";
+                }
+            }
+            if (resolvedProjectKey != null && !resolvedProjectKey.isBlank()) {
+                row.put("project_key", resolvedProjectKey);
+            }
+        }
     }
 
     private void recordFailure(UUID jobId, String entityType, String entityKey,

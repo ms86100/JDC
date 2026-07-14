@@ -87,6 +87,7 @@ public class IssueServicePayloadMapper {
         }
 
         if (request.getOriginalIssueKey() != null && !request.getOriginalIssueKey().isBlank()) {
+            payload.put("issueKey", request.getOriginalIssueKey());
             payload.put("originalIssueKey", request.getOriginalIssueKey());
             payload.put("migrationSourceKey", request.getOriginalIssueKey());
         }

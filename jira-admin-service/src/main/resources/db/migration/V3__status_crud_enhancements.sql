@@ -3,6 +3,20 @@
 -- Adds missing fields to support full Jira DC Status management
 
 -- ============================================
+-- CREATE STATUSES TABLE IF NOT EXISTS
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS jira_admin.statuses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
+    status_category VARCHAR(100),
+    sequence INTEGER,
+    status_color VARCHAR(50),
+    icon_url VARCHAR(500)
+);
+
+-- ============================================
 -- ENHANCE STATUSES TABLE
 -- ============================================
 

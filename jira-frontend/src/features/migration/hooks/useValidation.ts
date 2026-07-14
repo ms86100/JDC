@@ -83,14 +83,18 @@ export function useValidation(options: UseValidationOptions = {}) {
             return;
           }
 
-          const headers = allRows[0];
+          const headers = allRows[0].map((h) => h ?? '');
 
           if (headers.length > MAX_COLUMNS) {
             reject(new Error(`File has too many columns (max ${MAX_COLUMNS})`));
             return;
           }
 
-          const dataRows = allRows.slice(1);
+          const dataRows = allRows.slice(1).map((row) => {
+            const padded = row.map((cell) => cell ?? '');
+            while (padded.length < headers.length) padded.push('');
+            return padded;
+          });
           const previewRows = dataRows.slice(0, MAX_PREVIEW_ROWS);
 
           resolve({

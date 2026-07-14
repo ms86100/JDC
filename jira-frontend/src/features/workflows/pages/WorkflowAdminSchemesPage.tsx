@@ -11,7 +11,7 @@ export default function WorkflowAdminSchemesPage() {
 
   const { data: schemes = [], isLoading } = useQuery({
     queryKey: ['workflow-admin', 'schemes'],
-    queryFn: () => workflowAdminApi.listSchemes().then((r) => r.data as Record<string, unknown>[]),
+    queryFn: () => workflowAdminApi.listSchemes().then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
   const { data: schemeDetail } = useQuery({

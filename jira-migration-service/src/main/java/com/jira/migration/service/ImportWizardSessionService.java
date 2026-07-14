@@ -17,6 +17,8 @@ import com.jira.migration.repository.MigrationFileUploadRepository;
 import com.jira.migration.repository.MigrationJobRepository;
 import com.jira.migration.repository.WizardSessionRepository;
 import com.jira.migration.entity.MigrationJob;
+import com.jira.migration.service.clients.ProjectServiceClient;
+import com.jira.migration.service.clients.dto.ProjectResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -56,6 +58,7 @@ public class ImportWizardSessionService {
     private final DryRunValidationService dryRunValidationService;
     private final TargetProjectValidator targetProjectValidator;
     private final JiraDcImportApiService jiraDcImportApiService;
+    private final ProjectServiceClient projectServiceClient;
 
     @Transactional
     public WizardSessionDto createSession(CreateWizardSessionRequest request, UUID userId) {
@@ -581,9 +584,32 @@ public class ImportWizardSessionService {
                     putRowValue(map, mappedTarget, value);
                 }
             }
+            deriveProjectKeyIfMissing(map, session);
             rows.add(map);
         }
         return rows;
+    }
+
+    private void deriveProjectKeyIfMissing(Map<String, String> row, WizardSession session) {
+        String projectKey = row.get("project_key");
+        if (projectKey != null && !projectKey.isBlank()) {
+            return;
+        }
+        String issueKey = row.get("issue_key");
+        if (issueKey != null && issueKey.contains("-")) {
+            row.put("project_key", issueKey.substring(0, issueKey.lastIndexOf('-')));
+            return;
+        }
+        if (session.getTargetProjectId() != null) {
+            try {
+                ProjectResponse project = projectServiceClient.getProject(session.getTargetProjectId().toString());
+                if (project != null && project.getKey() != null && !project.getKey().isBlank()) {
+                    row.put("project_key", project.getKey());
+                }
+            } catch (Exception e) {
+                log.debug("Could not resolve project key for targetProjectId {}: {}", session.getTargetProjectId(), e.getMessage());
+            }
+        }
     }
 
     /** Do not let a later empty mapped column overwrite a non-empty canonical value (e.g. Epic Name → summary). */

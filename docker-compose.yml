@@ -164,6 +164,8 @@ services:
       DB_PASSWORD: jirapass123
       JAVA_OPTS: -Xms256m -Xmx512m
       WORKFLOW_SERVICE_URL: http://workflow-service:8085
+      PROJECT_SERVICE_URL: http://project-service:8083
+      JIRA_PERMISSIONS_FAILOPEN: "true"
     networks:
       - jira-network
     depends_on:

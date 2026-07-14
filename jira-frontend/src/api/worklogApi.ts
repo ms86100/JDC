@@ -34,10 +34,10 @@ export const minutesToSeconds = (minutes: number) => minutes * 60;
 
 export const worklogApi = {
   create: (issueId: string, data: Omit<CreateWorklogRequest, 'issueId'>) =>
-    apiClient.post<WorklogResponse>(`/issues/${issueId}/worklogs`, data),
+    apiClient.post<WorklogResponse>(`/api/issues/${issueId}/worklogs`, data),
 
   getAll: (issueId: string) =>
-    apiClient.get<WorklogResponse[]>(`/issues/${issueId}/worklogs`),
+    apiClient.get<WorklogResponse[]>(`/api/issues/${issueId}/worklogs`),
 
   getById: (issueId: string, worklogId: string) =>
     apiClient.get<WorklogResponse>(`/issues/${issueId}/worklogs/${worklogId}`),

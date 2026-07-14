@@ -15,15 +15,15 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
 
   const { data: conditionDefs = [] } = useQuery({
     queryKey: ['wf-condition-definitions'],
-    queryFn: () => workflowApi.getConditionDefinitions().then((r) => r.data as WorkflowDefinition[]),
+    queryFn: () => workflowApi.getConditionDefinitions().then((r) => Array.isArray(r.data) ? r.data : []),
   });
   const { data: validatorDefs = [] } = useQuery({
     queryKey: ['wf-validator-definitions'],
-    queryFn: () => workflowApi.getValidatorDefinitions().then((r) => r.data as WorkflowDefinition[]),
+    queryFn: () => workflowApi.getValidatorDefinitions().then((r) => Array.isArray(r.data) ? r.data : []),
   });
   const { data: postFnDefs = [] } = useQuery({
     queryKey: ['wf-postfn-definitions'],
-    queryFn: () => workflowApi.getPostFunctionDefinitions().then((r) => r.data as WorkflowDefinition[]),
+    queryFn: () => workflowApi.getPostFunctionDefinitions().then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
   useEffect(() => {

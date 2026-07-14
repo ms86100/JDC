@@ -15,14 +15,14 @@ export interface CreateLabelRequest {
 
 export const labelApi = {
   add: (issueId: string, name: string) =>
-    apiClient.post<LabelResponse>(`/issues/${issueId}/labels`, { name }),
+    apiClient.post<LabelResponse>(`/api/issues/${issueId}/labels`, { name }),
 
   getAll: (issueId: string) =>
-    apiClient.get<LabelResponse[]>(`/issues/${issueId}/labels`),
+    apiClient.get<LabelResponse[]>(`/api/issues/${issueId}/labels`),
 
   search: (_issueId: string, query: string) =>
-    apiClient.get<LabelResponse[]>(`/issues/${_issueId}/labels/search`, { params: { query } }),
+    apiClient.get<LabelResponse[]>(`/api/issues/${_issueId}/labels/search`, { params: { query } }),
 
   remove: (issueId: string, labelName: string) =>
-    apiClient.delete(`/issues/${issueId}/labels/${encodeURIComponent(labelName)}`),
+    apiClient.delete(`/api/issues/${issueId}/labels/${encodeURIComponent(labelName)}`),
 };

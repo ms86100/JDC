@@ -310,7 +310,7 @@ public class IssuePersisterHandler {
                 .originalIssueKey((String) data.getOrDefault("originalIssueKey",
                         data.getOrDefault("issueKey", data.get("issue_key"))));
 
-        Object createdAt = data.get("createdAt");
+        Object createdAt = data.getOrDefault("createdAt", data.get("created"));
         if (createdAt != null) {
             try {
                 builder.migrationCreatedAt(java.time.LocalDateTime.parse(createdAt.toString().replace("Z", "")));
@@ -318,7 +318,7 @@ public class IssuePersisterHandler {
                 log.debug("Could not parse migration createdAt: {}", createdAt);
             }
         }
-        Object updatedAt = data.get("updatedAt");
+        Object updatedAt = data.getOrDefault("updatedAt", data.get("updated"));
         if (updatedAt != null) {
             try {
                 builder.migrationUpdatedAt(java.time.LocalDateTime.parse(updatedAt.toString().replace("Z", "")));

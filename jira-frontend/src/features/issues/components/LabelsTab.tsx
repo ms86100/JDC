@@ -29,7 +29,7 @@ export default function LabelsTab({ issueId }: LabelsTabProps) {
     queryKey: ['labels', issueId],
     queryFn: async () => {
       const response = await labelApi.getAll(issueId);
-      return response.data;
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: !!issueId,
   });
@@ -38,7 +38,7 @@ export default function LabelsTab({ issueId }: LabelsTabProps) {
     queryKey: ['label-suggestions', issueId, searchQuery],
     queryFn: async () => {
       const response = await labelApi.search(issueId, searchQuery);
-      return response.data;
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: !!issueId && searchQuery.length > 1,
   });

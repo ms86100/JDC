@@ -65,4 +65,7 @@ public class CreateIssueRequest {
 
     // Components
     private UUID[] componentIds;
+
+    // Migration support: preserve original issue key from source system
+    private String issueKey;
 }

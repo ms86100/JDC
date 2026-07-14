@@ -87,7 +87,16 @@ public class IssueService {
                 .orElseThrow(() -> new ResourceNotFoundException("IssuePriority", "id",
                         request.getPriorityId() != null ? request.getPriorityId() : DEFAULT_PRIORITY_ID));
 
-        String issueKey = generateIssueKey(projectKey);
+        String issueKey;
+        if (request.getIssueKey() != null && !request.getIssueKey().isBlank()) {
+            issueKey = request.getIssueKey().trim();
+            if (issueRepository.findByIssueKey(issueKey).isPresent()) {
+                log.warn("Issue key {} already exists, generating new key", issueKey);
+                issueKey = generateIssueKey(projectKey);
+            }
+        } else {
+            issueKey = generateIssueKey(projectKey);
+        }
 
         Issue issue = Issue.builder()
                 .projectId(request.getProjectId())

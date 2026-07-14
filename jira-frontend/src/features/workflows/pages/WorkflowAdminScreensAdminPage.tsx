@@ -15,7 +15,7 @@ export default function WorkflowAdminScreensAdminPage() {
     queryFn: () =>
       workflowAdminApi
         .listScreens(screenType || undefined)
-        .then((r) => r.data as Record<string, unknown>[]),
+        .then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
   const { data: screenDetail } = useQuery({
