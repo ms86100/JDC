@@ -304,7 +304,7 @@ export const useUsers = (params?: { search?: string; status?: string; role?: str
   return useQuery({
     queryKey: ['admin', 'users', params],
     queryFn: () => adminApi.getUsers(params),
-    select: (res) => res.data,
+    select: (res) => res.data ?? { content: [], totalElements: 0, totalPages: 0 },
   });
 };
 
@@ -363,7 +363,7 @@ export const useGroups = () => {
   return useQuery({
     queryKey: ['admin', 'groups'],
     queryFn: () => adminApi.getGroups(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 
@@ -386,7 +386,7 @@ export const useIssueTypes = () => {
   return useQuery({
     queryKey: ['admin', 'issueTypes'],
     queryFn: () => adminApi.getIssueTypes(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 
@@ -395,7 +395,7 @@ export const usePriorities = () => {
   return useQuery({
     queryKey: ['admin', 'priorities'],
     queryFn: () => adminApi.getPriorities(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 
@@ -404,7 +404,7 @@ export const useStatuses = () => {
   return useQuery({
     queryKey: ['admin', 'statuses'],
     queryFn: () => adminApi.getStatuses(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 
@@ -413,7 +413,7 @@ export const useWorkflows = () => {
   return useQuery({
     queryKey: ['admin', 'workflows'],
     queryFn: () => adminApi.getWorkflows(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 
@@ -431,7 +431,7 @@ export const useClusterNodes = () => {
   return useQuery({
     queryKey: ['admin', 'clusterNodes'],
     queryFn: () => adminApi.getClusterNodes(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 
@@ -448,7 +448,7 @@ export const useScheduledJobs = () => {
   return useQuery({
     queryKey: ['admin', 'scheduledJobs'],
     queryFn: () => adminApi.getScheduledJobs(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 
@@ -493,7 +493,7 @@ export const useAuditLogs = (params?: { userId?: string; category?: string; acti
   return useQuery({
     queryKey: ['admin', 'auditLogs', params],
     queryFn: () => adminApi.getAuditLogs(params),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 
@@ -706,7 +706,7 @@ export const useJiraGroupMembers = (groupId: string) => {
   return useQuery({
     queryKey: ['jira', 'groupMembers', groupId],
     queryFn: () => jiraUserApi.getGroupMembers(groupId),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
     enabled: !!groupId,
   });
 };
@@ -717,7 +717,7 @@ export const usePermissionSchemes = () => {
   return useQuery({
     queryKey: ['admin', 'permissionSchemes'],
     queryFn: () => adminApi.getPermissionSchemes(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 
@@ -768,7 +768,7 @@ export const useNotificationSchemes = () => {
   return useQuery({
     queryKey: ['admin', 'notificationSchemes'],
     queryFn: () => adminApi.getNotificationSchemes(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 
@@ -819,7 +819,7 @@ export const useSecuritySchemes = () => {
   return useQuery({
     queryKey: ['admin', 'securitySchemes'],
     queryFn: () => adminApi.getSecuritySchemes(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 
@@ -870,7 +870,7 @@ export const useProjectRoles = () => {
   return useQuery({
     queryKey: ['admin', 'projectRoles'],
     queryFn: () => adminApi.getProjectRoles(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 
@@ -911,7 +911,7 @@ export const usePasswordPolicies = () => {
   return useQuery({
     queryKey: ['admin', 'passwordPolicies'],
     queryFn: () => adminApi.getPasswordPolicies(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 
@@ -962,7 +962,7 @@ export const useUserSessions = () => {
   return useQuery({
     queryKey: ['admin', 'userSessions'],
     queryFn: () => adminApi.getUserSessions(),
-    select: (res) => res.data,
+    select: (res) => Array.isArray(res.data) ? res.data : [],
   });
 };
 

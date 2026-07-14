@@ -121,7 +121,7 @@ export default function UserManagementPage() {
                     Loading...
                   </td>
                 </tr>
-              ) : data?.content.length === 0 ? (
+              ) : data?.content?.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ textAlign: 'center', padding: '24px' }}>
                     No users found
