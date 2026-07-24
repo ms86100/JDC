@@ -50,12 +50,12 @@ public class RateLimiterConfig {
 
         Bandwidth hourlyLimit = Bandwidth.classic(
                 DEFAULT_REQUESTS_PER_HOUR,
-                Refill.greedy(DEFAULT_REQUESTS_PER_HOUR / 60, Duration.ofHours(1))
+                Refill.greedy(DEFAULT_REQUESTS_PER_HOUR, Duration.ofHours(1))
         );
 
         Bandwidth dailyLimit = Bandwidth.classic(
                 DEFAULT_REQUESTS_PER_DAY,
-                Refill.greedy(DEFAULT_REQUESTS_PER_DAY / 1440, Duration.ofDays(1))
+                Refill.greedy(DEFAULT_REQUESTS_PER_DAY, Duration.ofDays(1))
         );
 
         return Bucket.builder()

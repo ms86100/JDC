@@ -464,10 +464,15 @@ public class WorkflowService {
         List<WorkflowCondition> conditions = workflowConditionRepository.findByTransitionIdOrderBySequenceAsc(transitionId);
         for (WorkflowCondition condition : conditions) {
             if (!evaluateCondition(condition, userId, issueId)) {
-                if (condition.getNegate()) {
-                    warnings.add("Condition not met: " + condition.getConditionType());
-                } else {
+                boolean isNegated = Boolean.TRUE.equals(condition.getNegate());
+                if (!isNegated) {
                     errors.add("Condition not met: " + condition.getConditionType());
+                }
+                // Negated condition that fails = condition passes, so no error
+            } else {
+                boolean isNegated = Boolean.TRUE.equals(condition.getNegate());
+                if (isNegated) {
+                    errors.add("Negated condition met: " + condition.getConditionType());
                 }
             }
         }
@@ -762,7 +767,8 @@ public class WorkflowService {
         for (WorkflowPostFunction postFunction : postFunctions) {
             if (Boolean.TRUE.equals(postFunction.getAsync())) {
                 // Execute asynchronously
-                executePostFunction(postFunction, issueId, userId);
+                java.util.concurrent.CompletableFuture.runAsync(() ->
+                    executePostFunction(postFunction, issueId, userId));
             } else {
                 // Execute synchronously
                 executePostFunction(postFunction, issueId, userId);

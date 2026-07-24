@@ -1,6 +1,9 @@
 package com.jira.workflow.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.*;
 import java.util.UUID;
 

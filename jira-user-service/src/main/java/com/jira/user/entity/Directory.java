@@ -67,4 +67,6 @@ public class Directory {
     @Column(name = "last_sync_at")
     private LocalDateTime lastSyncAt;
 
-  
+    @Column(name = "sync_status", length = 20)
+    private String syncStatus;
+}

@@ -38,4 +38,7 @@ public class CwdMembership {
     private LocalDateTime createdDate;
 
     @PrePersist
-    protected void onCreate() 
+    protected void onCreate() {
+        if (createdDate == null) createdDate = LocalDateTime.now();
+    }
+}

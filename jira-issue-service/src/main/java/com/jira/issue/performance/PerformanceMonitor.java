@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * Performance Monitoring Component
@@ -153,12 +154,5 @@ public class PerformanceMonitor {
         double getAvg() { return count > 0 ? (double) sum / count : 0.0; }
     }
 
-    /**
-     * Simple LongAdder for aggregating response times
-     */
-    private static class LongAdder {
-        private volatile long value = 0;
-        public void add(long delta) { value += delta; }
-        public long get() { return value; }
-    }
+    // Uses java.util.concurrent.atomic.LongAdder for thread-safe aggregation
 }

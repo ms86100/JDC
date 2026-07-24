@@ -31,4 +31,6 @@ public class Organization {
     private String slug;
 
     @CreationTimestamp
-    @Column(na
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
+}

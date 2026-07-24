@@ -82,4 +82,8 @@ public class CwdUser {
     @PreUpdate
     protected void onUpdate() {
         updatedDate = LocalDateTime.now();
-        if (lowerUserName == null && userName != 
+        if (lowerUserName == null && userName != null) {
+            lowerUserName = userName.toLowerCase();
+        }
+    }
+}

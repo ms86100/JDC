@@ -38,4 +38,6 @@ public class OrganizationMember {
     private OffsetDateTime joinedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "org_id", in
+    @JoinColumn(name = "org_id", insertable = false, updatable = false)
+    private Organization organization;
+}

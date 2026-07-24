@@ -62,12 +62,11 @@ public class NotificationService {
         }
 
         try {
-            Map<String, Object> notificationData = Map.of(
-                    "issueKey", notification.getReferenceId() != null ? notification.getReferenceId().toString() : "",
-                    "title", notification.getTitle(),
-                    "message", notification.getMessage(),
-                    "projectKey", ""
-            );
+            Map<String, Object> notificationData = new java.util.HashMap<>();
+            notificationData.put("issueKey", notification.getReferenceId() != null ? notification.getReferenceId().toString() : "");
+            notificationData.put("title", notification.getTitle() != null ? notification.getTitle() : "");
+            notificationData.put("message", notification.getMessage() != null ? notification.getMessage() : "");
+            notificationData.put("projectKey", "");
 
             switch (notification.getType()) {
                 case "ISSUE_ASSIGNED":

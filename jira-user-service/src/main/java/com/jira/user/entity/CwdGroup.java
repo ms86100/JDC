@@ -63,4 +63,8 @@ public class CwdGroup {
     @PreUpdate
     protected void onUpdate() {
         updatedDate = LocalDateTime.now();
-        if (lowerGroupName == null && groupName != nu
+        if (lowerGroupName == null && groupName != null) {
+            lowerGroupName = groupName.toLowerCase();
+        }
+    }
+}

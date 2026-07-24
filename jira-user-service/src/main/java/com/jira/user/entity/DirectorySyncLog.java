@@ -54,4 +54,7 @@ public class DirectorySyncLog {
 
     @PrePersist
     protected void onCreate() {
-        if (startedAt == null) startedAt = 
+        if (startedAt == null) startedAt = LocalDateTime.now();
+        if (status == null) status = "RUNNING";
+    }
+}

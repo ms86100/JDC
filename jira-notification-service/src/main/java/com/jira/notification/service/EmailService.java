@@ -37,6 +37,8 @@ public class EmailService {
     private final EmailQueueRepository emailQueueRepository;
     private final RestTemplate restTemplate;
 
+    private final Object queueLock = new Object();
+
     @Value("${user.service.url:http://jira-user-service:8082}")
     private String userServiceUrl;
 
@@ -124,39 +126,43 @@ public class EmailService {
     @Scheduled(fixedDelay = 30000)
     @Transactional
     public void processQueue() {
-        OffsetDateTime now = OffsetDateTime.now();
+        synchronized (queueLock) {
+            OffsetDateTime now = OffsetDateTime.now();
 
-        List<EmailQueue> queued = emailQueueRepository.findReadyToSend(now);
-        List<EmailQueue> retryable = emailQueueRepository.findRetryable(now);
+            List<EmailQueue> queued = emailQueueRepository.findReadyToSend(now);
+            List<EmailQueue> retryable = emailQueueRepository.findRetryable(now);
 
-        queued.addAll(retryable);
+            queued.addAll(retryable);
 
-        if (queued.isEmpty()) {
-            return;
-        }
+            if (queued.isEmpty()) {
+                return;
+            }
 
-        log.info("Processing email queue: {} entries", queued.size());
+            log.info("Processing email queue: {} entries", queued.size());
 
-        for (EmailQueue entry : queued) {
-            sendQueuedEmail(entry);
+            for (EmailQueue entry : queued) {
+                sendQueuedEmail(entry);
+            }
         }
     }
 
     @Transactional
     public int flushQueue() {
-        OffsetDateTime future = OffsetDateTime.now().plusYears(1);
-        List<EmailQueue> queued = emailQueueRepository.findReadyToSend(future);
-        List<EmailQueue> retryable = emailQueueRepository.findRetryable(future);
-        queued.addAll(retryable);
+        synchronized (queueLock) {
+            OffsetDateTime future = OffsetDateTime.now().plusYears(1);
+            List<EmailQueue> queued = emailQueueRepository.findReadyToSend(future);
+            List<EmailQueue> retryable = emailQueueRepository.findRetryable(future);
+            queued.addAll(retryable);
 
-        log.info("Flushing email queue: {} entries", queued.size());
+            log.info("Flushing email queue: {} entries", queued.size());
 
-        int processed = 0;
-        for (EmailQueue entry : queued) {
-            sendQueuedEmail(entry);
-            processed++;
+            int processed = 0;
+            for (EmailQueue entry : queued) {
+                sendQueuedEmail(entry);
+                processed++;
+            }
+            return processed;
         }
-        return processed;
     }
 
     @Transactional(readOnly = true)

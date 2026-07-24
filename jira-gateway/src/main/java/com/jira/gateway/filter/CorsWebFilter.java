@@ -18,25 +18,12 @@ public class CorsWebFilter implements WebFilter, Ordered {
 
     private static final List<String> ALLOWED_ORIGINS = List.of("*");
 
+    /**
+     * No-op filter: CORS headers are handled by the YAML gateway config.
+     * This filter was adding duplicate CORS headers alongside the YAML config.
+     */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        if (exchange.getRequest().getPath().value().startsWith("/actuator")) {
-            return chain.filter(exchange);
-        }
-
-        ServerHttpResponse response = exchange.getResponse();
-        HttpHeaders headers = response.getHeaders();
-
-        headers.add("Access-Control-Allow-Origin", "*");
-        headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-        headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers");
-        headers.add("Access-Control-Max-Age", "3600");
-
-        if (exchange.getRequest().getMethod() == org.springframework.http.HttpMethod.OPTIONS) {
-            response.setStatusCode(HttpStatus.OK);
-            return response.setComplete();
-        }
-
         return chain.filter(exchange);
     }
 

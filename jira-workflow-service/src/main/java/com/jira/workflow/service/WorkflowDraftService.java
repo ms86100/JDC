@@ -311,10 +311,17 @@ public class WorkflowDraftService {
                                        String changeDescription, UUID userId) {
         Map<String, Object> snapshot = buildDraftData(workflow);
 
+        String snapshotJson;
+        try {
+            snapshotJson = objectMapper.writeValueAsString(snapshot);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize workflow snapshot", e);
+        }
+
         WorkflowVersion version = WorkflowVersion.builder()
                 .workflow(workflow)
                 .versionNumber(versionNumber)
-                .workflowSnapshot(snapshot.toString())
+                .workflowSnapshot(snapshotJson)
                 .createdBy(userId)
                 .changeDescription(changeDescription)
                 .changeType("UPDATE")

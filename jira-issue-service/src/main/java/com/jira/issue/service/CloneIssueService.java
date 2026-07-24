@@ -4,9 +4,11 @@ import com.jira.issue.client.ProjectServiceClient;
 import com.jira.issue.dto.CloneIssueResponse;
 import com.jira.issue.dto.IssueResponse;
 import com.jira.issue.entity.Issue;
+import com.jira.issue.entity.IssueStatus;
 import com.jira.issue.event.IssueEventOutboxPublisher;
 import com.jira.issue.exception.ResourceNotFoundException;
 import com.jira.issue.repository.IssueRepository;
+import com.jira.issue.repository.IssueStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,9 +23,12 @@ import java.util.UUID;
 public class CloneIssueService {
 
     private final IssueRepository issueRepository;
+    private final IssueStatusRepository issueStatusRepository;
     private final IssueEventOutboxPublisher eventOutboxPublisher;
     private final IssueService issueService;
     private final ProjectServiceClient projectServiceClient;
+
+    private static final UUID DEFAULT_STATUS_ID = UUID.fromString("00000000-0000-0000-0001-000000000002");
 
     @Transactional
     public CloneIssueResponse cloneIssue(UUID issueId, UUID userId, boolean includeComments, boolean includeAttachments) {
@@ -35,17 +40,20 @@ public class CloneIssueService {
         String projectKey = extractProjectKeyFromIssueKey(original.getIssueKey());
         String newIssueKey = generateIssueKey(projectKey);
 
+        IssueStatus initialStatus = issueStatusRepository.findById(DEFAULT_STATUS_ID)
+                .orElseThrow(() -> new ResourceNotFoundException("IssueStatus", "id", DEFAULT_STATUS_ID));
+
         Issue clone = Issue.builder()
                 .projectId(original.getProjectId())
                 .issueKey(newIssueKey)
                 .title(original.getTitle() + " (Copy)")
                 .description(original.getDescription())
-                .status(original.getStatus())
+                .status(initialStatus)
                 .priority(original.getPriority())
                 .issueType(original.getIssueType())
                 .reporterId(userId)
                 .assigneeId(original.getAssigneeId())
-                .resolutionId(original.getResolutionId())
+                .resolutionId(null)
                 .labels(original.getLabels())
                 .originalEstimate(original.getOriginalEstimate())
                 .fixVersions(original.getFixVersions())
@@ -89,17 +97,20 @@ public class CloneIssueService {
         }
         String newIssueKey = generateIssueKey(targetProjectKey);
 
+        IssueStatus initialStatus = issueStatusRepository.findById(DEFAULT_STATUS_ID)
+                .orElseThrow(() -> new ResourceNotFoundException("IssueStatus", "id", DEFAULT_STATUS_ID));
+
         Issue clone = Issue.builder()
                 .projectId(targetProjectId)
                 .issueKey(newIssueKey)
                 .title(original.getTitle())
                 .description(original.getDescription())
-                .status(original.getStatus())
+                .status(initialStatus)
                 .priority(original.getPriority())
                 .issueType(original.getIssueType())
                 .reporterId(userId)
                 .assigneeId(original.getAssigneeId())
-                .resolutionId(original.getResolutionId())
+                .resolutionId(null)
                 .labels(original.getLabels())
                 .originalEstimate(original.getOriginalEstimate())
                 .fixVersions(original.getFixVersions())
