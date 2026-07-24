@@ -100,6 +100,14 @@ public class BoardService {
         if (request.getCardLayout() != null) board.setCardLayout(request.getCardLayout());
         if (request.getEstimationStatistic() != null) board.setEstimationStatistic(request.getEstimationStatistic());
         if (request.getDaysOnBoard() != null) board.setDaysOnBoard(request.getDaysOnBoard());
+        if (request.getTimezone() != null) board.setTimezone(request.getTimezone());
+        if (request.getWorkingDays() != null) board.setWorkingDays(request.getWorkingDays());
+        if (request.getNonWorkingDates() != null) board.setNonWorkingDates(request.getNonWorkingDates());
+        if (request.getTimeTracking() != null) board.setTimeTracking(request.getTimeTracking());
+        if (request.getKanbanBacklogEnabled() != null) board.setKanbanBacklogEnabled(request.getKanbanBacklogEnabled());
+        if (request.getSubFilter() != null) board.setSubFilter(request.getSubFilter());
+        if (request.getHideCompletedAfterDays() != null) board.setHideCompletedAfterDays(request.getHideCompletedAfterDays());
+        if (request.getUseSimplifiedWorkflow() != null) board.setUseSimplifiedWorkflow(request.getUseSimplifiedWorkflow());
         board.setUpdatedAt(LocalDateTime.now());
 
         board = boardRepository.save(board);
@@ -349,12 +357,33 @@ public class BoardService {
 
     @Transactional(readOnly = true)
     public CapacityResponse getSprintCapacity(UUID boardId, UUID sprintId) {
-        // Mock capacity data
+        AgileBoard board = findBoardById(boardId);
+        List<UUID> issueIds = getSprintIssueIds(sprintId);
+
+        int committed = 0;
+        int completed = 0;
+        for (UUID issueId : issueIds) {
+            try {
+                var issue = issueServiceClient.getIssue(issueId);
+                int points = issue.getStoryPoints() != null ? issue.getStoryPoints() : 0;
+                committed += points;
+                String status = issue.getStatusName();
+                if (status != null && (status.contains("Done") || status.contains("Completed") || status.contains("Closed"))) {
+                    completed += points;
+                }
+            } catch (Exception e) {
+                log.debug("Failed to get issue data for capacity: {}", e.getMessage());
+            }
+        }
+
+        int capacity = board.getDaysOnBoard() * 8;
+        int remaining = committed - completed;
+
         return CapacityResponse.builder()
-                .capacity(40)
-                .committed(32)
-                .completed(18)
-                .remaining(14)
+                .capacity(capacity)
+                .committed(committed)
+                .completed(completed)
+                .remaining(Math.max(0, remaining))
                 .build();
     }
 
@@ -487,6 +516,14 @@ public class BoardService {
                 .cardLayout(board.getCardLayout())
                 .estimationStatistic(board.getEstimationStatistic())
                 .daysOnBoard(board.getDaysOnBoard())
+                .timezone(board.getTimezone())
+                .workingDays(board.getWorkingDays())
+                .nonWorkingDates(board.getNonWorkingDates())
+                .timeTracking(board.getTimeTracking())
+                .kanbanBacklogEnabled(board.getKanbanBacklogEnabled())
+                .subFilter(board.getSubFilter())
+                .hideCompletedAfterDays(board.getHideCompletedAfterDays())
+                .useSimplifiedWorkflow(board.getUseSimplifiedWorkflow())
                 .lastViewed(board.getLastViewed())
                 .createdAt(board.getCreatedAt())
                 .updatedAt(board.getUpdatedAt())

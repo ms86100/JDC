@@ -30,4 +30,7 @@ public class BoardIssueResponse {
     private String sprintName;
     private String dueDate;
     private String rank;
+    private Integer daysInColumn;
+    private java.util.Map<String, Object> additionalFields;
+    private String cardColor;
 }

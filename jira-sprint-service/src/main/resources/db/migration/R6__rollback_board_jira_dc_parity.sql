@@ -1,0 +1,20 @@
+-- Rollback V6: Board Jira DC parity
+DROP TABLE IF EXISTS filter_subscriptions CASCADE;
+DROP TABLE IF EXISTS board_cfd_snapshots CASCADE;
+DROP TABLE IF EXISTS board_issue_detail_fields CASCADE;
+DROP TABLE IF EXISTS board_card_fields CASCADE;
+DROP TABLE IF EXISTS board_card_color_rules CASCADE;
+DROP TABLE IF EXISTS board_swimlanes CASCADE;
+DROP TABLE IF EXISTS board_administrators CASCADE;
+ALTER TABLE sprint_issues DROP COLUMN IF EXISTS removed_reason;
+ALTER TABLE sprint_issues DROP COLUMN IF EXISTS removed_at;
+ALTER TABLE sprint_issues DROP COLUMN IF EXISTS added_at;
+ALTER TABLE board_columns DROP COLUMN IF EXISTS show_days_in_column;
+ALTER TABLE agile_boards DROP COLUMN IF EXISTS non_working_dates;
+ALTER TABLE agile_boards DROP COLUMN IF EXISTS working_days;
+ALTER TABLE agile_boards DROP COLUMN IF EXISTS timezone;
+ALTER TABLE agile_boards DROP COLUMN IF EXISTS time_tracking;
+ALTER TABLE agile_boards DROP COLUMN IF EXISTS use_simplified_workflow;
+ALTER TABLE agile_boards DROP COLUMN IF EXISTS hide_completed_after_days;
+ALTER TABLE agile_boards DROP COLUMN IF EXISTS sub_filter;
+ALTER TABLE agile_boards DROP COLUMN IF EXISTS kanban_backlog_enabled;

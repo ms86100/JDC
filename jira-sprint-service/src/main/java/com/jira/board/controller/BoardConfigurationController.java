@@ -24,6 +24,13 @@ public class BoardConfigurationController {
     private final BoardConfigurationService configService;
     private final ControlChartService controlChartService;
 
+    private void requireBoardAdmin(UUID boardId, UUID userId) {
+        if (userId == null) return;
+        if (!configService.isAdministrator(boardId, userId)) {
+            throw new RuntimeException("User " + userId + " is not an administrator of board " + boardId);
+        }
+    }
+
     // === Administrators ===
 
     @GetMapping("/{boardId}/administrators")
@@ -33,7 +40,9 @@ public class BoardConfigurationController {
 
     @PostMapping("/{boardId}/administrators")
     public ResponseEntity<BoardAdministrator> addAdministrator(
-            @PathVariable UUID boardId, @RequestBody Map<String, String> request) {
+            @PathVariable UUID boardId, @RequestBody Map<String, String> request,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+        requireBoardAdmin(boardId, userId);
         UUID holderId = UUID.fromString(request.get("holderId"));
         String holderType = request.getOrDefault("holderType", "USER");
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -161,6 +170,14 @@ public class BoardConfigurationController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return ResponseEntity.ok(configService.getCFDData(boardId, startDate, endDate));
+    }
+
+    // === Kanban Backlog ===
+
+    @GetMapping("/{boardId}/kanban-backlog")
+    public ResponseEntity<Map<String, Object>> getKanbanBacklog(@PathVariable UUID boardId) {
+        log.info("Getting kanban backlog for board {}", boardId);
+        return ResponseEntity.ok(Map.of("boardId", boardId, "backlog", List.of(), "selectedForDevelopment", List.of()));
     }
 
     // === Control Chart ===

@@ -115,13 +115,14 @@ public class SprintService {
     public SprintResponse startSprint(UUID sprintId) {
         Sprint sprint = findSprintById(sprintId);
 
-        // Complete any currently active sprints
-        List<Sprint> activeSprints = sprintRepository.findByProjectIdAndStatusOrderByCreatedAtDesc(
-                sprint.getProjectId(), Sprint.SprintStatus.ACTIVE);
-        activeSprints.forEach(s -> {
-            s.setStatus(Sprint.SprintStatus.COMPLETED);
-            sprintRepository.save(s);
-        });
+        if (!isParallelSprintsEnabled()) {
+            List<Sprint> activeSprints = sprintRepository.findByProjectIdAndStatusOrderByCreatedAtDesc(
+                    sprint.getProjectId(), Sprint.SprintStatus.ACTIVE);
+            activeSprints.forEach(s -> {
+                s.setStatus(Sprint.SprintStatus.COMPLETED);
+                sprintRepository.save(s);
+            });
+        }
 
         sprint.setStatus(Sprint.SprintStatus.ACTIVE);
         if (sprint.getStartDate() == null) {
@@ -216,6 +217,21 @@ public class SprintService {
     private Sprint findSprintById(UUID sprintId) {
         return sprintRepository.findById(sprintId)
                 .orElseThrow(() -> new ResourceNotFoundException("Sprint not found: " + sprintId));
+    }
+
+    private boolean isParallelSprintsEnabled() {
+        try {
+            String url = "http://jira-admin-service:8093/api/admin/settings/PARALLEL_SPRINTS_ENABLED";
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> response = new org.springframework.web.client.RestTemplate()
+                    .getForObject(url, java.util.Map.class);
+            if (response != null && response.get("settingValue") != null) {
+                return "true".equalsIgnoreCase(response.get("settingValue").toString());
+            }
+        } catch (Exception e) {
+            log.debug("Could not check parallel sprints setting, defaulting to false: {}", e.getMessage());
+        }
+        return false;
     }
 
     private SprintResponse enrichSprintResponse(SprintResponse response) {

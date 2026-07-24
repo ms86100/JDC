@@ -198,9 +198,16 @@ public class SprintPlanningService {
     @Transactional
     public void removeIssuesFromSprint(UUID sprintId, List<UUID> issueIds) {
         for (UUID issueId : issueIds) {
-            sprintIssueRepository.deleteBySprintIdAndIssueId(sprintId, issueId);
+            sprintIssueRepository.findBySprintIdAndIssueId(sprintId, issueId).ifPresentOrElse(
+                    sprintIssue -> {
+                        sprintIssue.setRemovedAt(java.time.LocalDateTime.now());
+                        sprintIssue.setRemovedReason("Moved to backlog");
+                        sprintIssueRepository.save(sprintIssue);
+                    },
+                    () -> sprintIssueRepository.deleteBySprintIdAndIssueId(sprintId, issueId)
+            );
         }
-        log.info("Removed {} issues from sprint {}", issueIds.size(), sprintId);
+        log.info("Soft-removed {} issues from sprint {}", issueIds.size(), sprintId);
     }
 
     /**

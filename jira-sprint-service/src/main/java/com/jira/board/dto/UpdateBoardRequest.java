@@ -15,4 +15,12 @@ public class UpdateBoardRequest {
     private String cardLayout;
     private String estimationStatistic;
     private Integer daysOnBoard;
+    private String timezone;
+    private String workingDays;
+    private String nonWorkingDates;
+    private String timeTracking;
+    private Boolean kanbanBacklogEnabled;
+    private String subFilter;
+    private Integer hideCompletedAfterDays;
+    private Boolean useSimplifiedWorkflow;
 }
