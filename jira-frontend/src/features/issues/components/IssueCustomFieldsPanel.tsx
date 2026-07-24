@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fieldApi, VisibleFieldDto } from '../../../api/fieldApi';
+import apiClient from '../../../api/axiosClient';
 import './IssueCustomFieldsPanel.css';
 
 export interface IssueCustomFieldsPanelProps {
@@ -56,6 +58,21 @@ async function loadCustomFields(
   }
 }
 
+async function evaluateCalculatedField(
+  issueId: string,
+  fieldId: string,
+): Promise<{ hasScript: boolean; success?: boolean; value?: unknown } | null> {
+  try {
+    const res = await apiClient.get<{ hasScript: boolean; success?: boolean; value?: unknown }>(
+      '/api/workflow/scripts/calculated-fields/evaluate',
+      { params: { issueId, fieldId } },
+    );
+    return res.data;
+  } catch {
+    return null;
+  }
+}
+
 export default function IssueCustomFieldsPanel({
   issueId,
   issueKey,
@@ -70,7 +87,39 @@ export default function IssueCustomFieldsPanel({
     retry: 1,
   });
 
-  const withValues = fields.filter((f) => !isEmpty(f.value));
+  const [calculatedValues, setCalculatedValues] = useState<Map<string, unknown>>(new Map());
+
+  useEffect(() => {
+    if (!issueId || fields.length === 0) return;
+
+    const loadCalculated = async () => {
+      const overrides = new Map<string, unknown>();
+      for (const field of fields) {
+        const rawField = field as unknown as { id?: string };
+        const fieldId = rawField.id;
+        if (!fieldId || !fieldId.match(/^[0-9a-f-]{36}$/i)) continue;
+
+        const result = await evaluateCalculatedField(issueId, fieldId);
+        if (result && result.hasScript && result.success && result.value !== undefined) {
+          overrides.set(field.fieldKey, result.value);
+        }
+      }
+      if (overrides.size > 0) {
+        setCalculatedValues(overrides);
+      }
+    };
+
+    loadCalculated();
+  }, [issueId, fields]);
+
+  const getDisplayValue = (f: VisibleFieldDto): { value: unknown; isCalculated: boolean } => {
+    if (calculatedValues.has(f.fieldKey)) {
+      return { value: calculatedValues.get(f.fieldKey), isCalculated: true };
+    }
+    return { value: f.value, isCalculated: false };
+  };
+
+  const withValues = fields.filter((f) => !isEmpty(f.value) || calculatedValues.has(f.fieldKey));
 
   if (isLoading) {
     return (
@@ -113,20 +162,24 @@ export default function IssueCustomFieldsPanel({
   if (variant === 'sidebar') {
     return (
       <div data-testid="issue-custom-fields">
-        {fields.map((f) => (
-          <div key={f.fieldKey} className="idc-sidebar-item">
-            <span className="idc-sidebar-label">
-              {f.displayName || f.fieldKey}
-            </span>
-            <div className="idc-sidebar-value">
-              {isEmpty(f.value) ? (
-                <span className="idc-no-value">None</span>
-              ) : (
-                <span>{formatValue(f.value)}</span>
-              )}
+        {fields.map((f) => {
+          const { value: displayVal, isCalculated } = getDisplayValue(f);
+          return (
+            <div key={f.fieldKey} className="idc-sidebar-item">
+              <span className="idc-sidebar-label">
+                {f.displayName || f.fieldKey}
+                {isCalculated && <span title="Calculated by script" style={{ marginLeft: 4, color: '#6366f1', fontSize: '0.7rem' }}>&#9889;</span>}
+              </span>
+              <div className="idc-sidebar-value">
+                {isEmpty(displayVal) ? (
+                  <span className="idc-no-value">None</span>
+                ) : (
+                  <span>{formatValue(displayVal)}</span>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   }
@@ -137,20 +190,24 @@ export default function IssueCustomFieldsPanel({
         {withValues.length} of {fields.length} field{fields.length !== 1 ? 's' : ''} with values
       </p>
       <div className="idc-details-grid">
-        {fields.map((f) => (
-          <div key={f.fieldKey} className="idc-detail-item">
-            <span className="idc-detail-label">
-              {f.displayName || f.fieldKey}
-            </span>
-            <span className="idc-detail-value">
-              {isEmpty(f.value) ? (
-                <span className="idc-no-value">None</span>
-              ) : (
-                formatValue(f.value)
-              )}
-            </span>
-          </div>
-        ))}
+        {fields.map((f) => {
+          const { value: displayVal, isCalculated } = getDisplayValue(f);
+          return (
+            <div key={f.fieldKey} className="idc-detail-item">
+              <span className="idc-detail-label">
+                {f.displayName || f.fieldKey}
+                {isCalculated && <span title="Calculated by script" style={{ marginLeft: 4, color: '#6366f1', fontSize: '0.7rem' }}>&#9889;</span>}
+              </span>
+              <span className="idc-detail-value">
+                {isEmpty(displayVal) ? (
+                  <span className="idc-no-value">None</span>
+                ) : (
+                  formatValue(displayVal)
+                )}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
