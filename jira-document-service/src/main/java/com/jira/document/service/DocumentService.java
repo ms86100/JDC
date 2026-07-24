@@ -20,6 +20,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DocumentService {
 
+    private static final java.util.Set<String> VALID_ARCHIVE_STATUSES =
+            java.util.Set.of("ACTIVE", "ARCHIVED", "DISPOSED", "DISPUTED");
+
     private final DocumentRepository documentRepository;
     private final DocumentVersionRepository documentVersionRepository;
     private final LegalArchiveRepository legalArchiveRepository;
@@ -82,6 +85,11 @@ public class DocumentService {
 
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Document", "id", documentId));
+
+        // Before saving the updated document, create a version
+        if (request.getContent() != null) {
+            createVersion(documentId, request.getContent(), "Content updated", userId);
+        }
 
         document.setTitle(request.getTitle());
         document.setContent(request.getContent());

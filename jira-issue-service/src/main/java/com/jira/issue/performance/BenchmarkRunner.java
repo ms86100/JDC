@@ -46,7 +46,7 @@ public class BenchmarkRunner {
         double avgTimeMs = (double) totalTime / iterations / 1_000_000;
         double minTimeMs = (double) minTime / 1_000_000;
         double maxTimeMs = (double) maxTime / 1_000_000;
-        double opsPerSecond = 1_000_000_000.0 / avgTimeMs;
+        double opsPerSecond = avgTimeMs > 0 ? 1_000.0 / avgTimeMs : 0;
 
         BenchmarkResult result = new BenchmarkResult(
                 name,
