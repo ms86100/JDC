@@ -73,6 +73,18 @@ public class GadgetInstance {
     @Builder.Default
     private Boolean isCollapsed = false;
 
+    @Column(name = "chart_type", length = 30)
+    private String chartType;
+
+    @Column(name = "chart_config", columnDefinition = "JSONB")
+    private String chartConfig;
+
+    @Column(name = "reference_id", length = 50)
+    private String referenceId;
+
+    @Column(name = "data_source_jql", columnDefinition = "TEXT")
+    private String dataSourceJql;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

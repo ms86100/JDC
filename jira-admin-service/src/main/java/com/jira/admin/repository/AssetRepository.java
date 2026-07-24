@@ -1,0 +1,20 @@
+package com.jira.admin.repository;
+
+import com.jira.admin.entity.AssetEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface AssetRepository extends JpaRepository<AssetEntity, UUID> {
+
+    List<AssetEntity> findByAssetTypeIdAndIsActiveTrue(UUID assetTypeId);
+
+    List<AssetEntity> findByStatusAndIsActiveTrue(String status);
+
+    List<AssetEntity> findByLocationAndIsActiveTrue(String location);
+
+    List<AssetEntity> findByIsActiveTrue();
+}

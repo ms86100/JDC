@@ -50,6 +50,17 @@ public class ExternalPageLink {
     @Column(name = "linked_at")
     private LocalDateTime linkedAt;
 
+    @Column(name = "link_provider", length = 30)
+    @Builder.Default
+    private String linkProvider = "GENERIC";
+    // Values: GENERIC, GOOGLE_DRIVE, CONFLUENCE, SHAREPOINT
+
+    @Column(name = "file_type", length = 50)
+    private String fileType;
+
+    @Column(name = "last_modified_at")
+    private LocalDateTime lastModifiedAt;
+
     @PrePersist
     protected void onCreate() {
         if (linkedAt == null) {

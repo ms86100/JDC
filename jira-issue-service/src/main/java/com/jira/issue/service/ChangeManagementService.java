@@ -4,15 +4,22 @@ import com.jira.issue.entity.ChangeCardMetadata;
 import com.jira.issue.entity.DclMetadata;
 import com.jira.issue.entity.DeliverableMetadata;
 import com.jira.issue.entity.DesignItemMetadata;
+import com.jira.issue.entity.ModificationMetadata;
+import com.jira.issue.entity.ReviewSubTaskMetadata;
+import com.jira.issue.entity.SystemStandardMetadata;
 import com.jira.issue.repository.ChangeCardMetadataRepository;
 import com.jira.issue.repository.DclMetadataRepository;
 import com.jira.issue.repository.DeliverableMetadataRepository;
 import com.jira.issue.repository.DesignItemMetadataRepository;
+import com.jira.issue.repository.ModificationMetadataRepository;
+import com.jira.issue.repository.ReviewSubTaskMetadataRepository;
+import com.jira.issue.repository.SystemStandardMetadataRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +33,19 @@ public class ChangeManagementService {
     private final DesignItemMetadataRepository designItemRepo;
     private final DclMetadataRepository dclRepo;
     private final DeliverableMetadataRepository deliverableRepo;
+    private final SystemStandardMetadataRepository systemStandardRepo;
+    private final ReviewSubTaskMetadataRepository reviewSubTaskRepo;
+    private final ModificationMetadataRepository modificationRepo;
+
+    /**
+     * Standard review types created by autoCreateReviewSubTasks.
+     * Order follows M1659.2 milestone sequence (excluding INTERNAL_KOM which is
+     * handled at project level).
+     */
+    private static final List<String> STANDARD_REVIEW_TYPES = List.of(
+            "COMMON_KOM", "PLANS_REVIEW", "FCR", "PDR", "DDR",
+            "CDR", "LAR", "FAR", "FFR", "CR"
+    );
 
     // ========== Change Card CRUD ==========
 
@@ -274,5 +294,234 @@ public class ChangeManagementService {
         DeliverableMetadata updated = deliverableRepo.save(deliverable);
         log.info("Updated deliverable metadata for issue {}", issueId);
         return updated;
+    }
+
+    // ========== System Standard CRUD ==========
+
+    @Transactional
+    public SystemStandardMetadata createSystemStandard(UUID issueId, String standardType,
+                                                        LocalDate specFreezeDate,
+                                                        LocalDate deliveryToLabDate,
+                                                        LocalDate requestedLabClearanceDate,
+                                                        LocalDate plannedFlightClearanceDate,
+                                                        LocalDate targetFlightDate,
+                                                        List<String> applicability,
+                                                        List<String> componentIds) {
+        if (systemStandardRepo.existsByIssueId(issueId)) {
+            throw new IllegalStateException("System standard metadata already exists for issue " + issueId);
+        }
+        SystemStandardMetadata std = SystemStandardMetadata.builder()
+                .issueId(issueId)
+                .standardType(standardType)
+                .specFreezeDate(specFreezeDate)
+                .deliveryToLabDate(deliveryToLabDate)
+                .requestedLabClearanceDate(requestedLabClearanceDate)
+                .plannedFlightClearanceDate(plannedFlightClearanceDate)
+                .targetFlightDate(targetFlightDate)
+                .applicability(applicability != null ? applicability : List.of())
+                .componentIds(componentIds != null ? componentIds : List.of())
+                .build();
+        SystemStandardMetadata saved = systemStandardRepo.save(std);
+        log.info("Created system standard metadata for issue {}", issueId);
+        return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<SystemStandardMetadata> getSystemStandardByIssueId(UUID issueId) {
+        return systemStandardRepo.findByIssueId(issueId);
+    }
+
+    @Transactional
+    public SystemStandardMetadata updateSystemStandard(UUID issueId, String standardType,
+                                                        LocalDate specFreezeDate,
+                                                        LocalDate deliveryToLabDate,
+                                                        LocalDate requestedLabClearanceDate,
+                                                        LocalDate plannedFlightClearanceDate,
+                                                        LocalDate targetFlightDate,
+                                                        List<String> applicability,
+                                                        List<String> componentIds) {
+        SystemStandardMetadata std = systemStandardRepo.findByIssueId(issueId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No system standard metadata found for issue " + issueId));
+        if (standardType != null) {
+            std.setStandardType(standardType);
+        }
+        if (specFreezeDate != null) {
+            std.setSpecFreezeDate(specFreezeDate);
+        }
+        if (deliveryToLabDate != null) {
+            std.setDeliveryToLabDate(deliveryToLabDate);
+        }
+        if (requestedLabClearanceDate != null) {
+            std.setRequestedLabClearanceDate(requestedLabClearanceDate);
+        }
+        if (plannedFlightClearanceDate != null) {
+            std.setPlannedFlightClearanceDate(plannedFlightClearanceDate);
+        }
+        if (targetFlightDate != null) {
+            std.setTargetFlightDate(targetFlightDate);
+        }
+        if (applicability != null) {
+            std.setApplicability(applicability);
+        }
+        if (componentIds != null) {
+            std.setComponentIds(componentIds);
+        }
+        SystemStandardMetadata updated = systemStandardRepo.save(std);
+        log.info("Updated system standard metadata for issue {}", issueId);
+        return updated;
+    }
+
+    // ========== Modification (MOD) CRUD ==========
+
+    @Transactional
+    public ModificationMetadata createModification(UUID issueId, String modType,
+                                                     String ataChapter, String certificationImpact,
+                                                     String modRationale, List<String> affectedDocuments) {
+        if (modificationRepo.existsByIssueId(issueId)) {
+            throw new IllegalStateException("Modification metadata already exists for issue " + issueId);
+        }
+        ModificationMetadata mod = ModificationMetadata.builder()
+                .issueId(issueId)
+                .modType(modType)
+                .ataChapter(ataChapter)
+                .certificationImpact(certificationImpact)
+                .modRationale(modRationale)
+                .affectedDocuments(affectedDocuments != null
+                        ? affectedDocuments.toArray(new String[0])
+                        : null)
+                .build();
+        ModificationMetadata saved = modificationRepo.save(mod);
+        log.info("Created modification metadata for issue {} (type={})", issueId, modType);
+        return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<ModificationMetadata> getModification(UUID issueId) {
+        return modificationRepo.findByIssueId(issueId);
+    }
+
+    @Transactional
+    public ModificationMetadata updateModification(UUID issueId, String modType,
+                                                     String ataChapter, String certificationImpact,
+                                                     String modRationale, List<String> affectedDocuments) {
+        ModificationMetadata mod = modificationRepo.findByIssueId(issueId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No modification metadata found for issue " + issueId));
+        if (modType != null) {
+            mod.setModType(modType);
+        }
+        if (ataChapter != null) {
+            mod.setAtaChapter(ataChapter);
+        }
+        if (certificationImpact != null) {
+            mod.setCertificationImpact(certificationImpact);
+        }
+        if (modRationale != null) {
+            mod.setModRationale(modRationale);
+        }
+        if (affectedDocuments != null) {
+            mod.setAffectedDocuments(affectedDocuments.toArray(new String[0]));
+        }
+        ModificationMetadata updated = modificationRepo.save(mod);
+        log.info("Updated modification metadata for issue {}", issueId);
+        return updated;
+    }
+
+    // ========== Review Sub-Task CRUD ==========
+
+    @Transactional
+    public ReviewSubTaskMetadata createReviewSubTask(UUID issueId, UUID parentSystemStandardId,
+                                                      String reviewType) {
+        if (reviewSubTaskRepo.existsByIssueId(issueId)) {
+            throw new IllegalStateException("Review sub-task metadata already exists for issue " + issueId);
+        }
+        ReviewSubTaskMetadata review = ReviewSubTaskMetadata.builder()
+                .issueId(issueId)
+                .parentSystemStandardId(parentSystemStandardId)
+                .reviewType(reviewType)
+                .build();
+        ReviewSubTaskMetadata saved = reviewSubTaskRepo.save(review);
+        log.info("Created review sub-task metadata for issue {} (type={}, parent={})",
+                issueId, reviewType, parentSystemStandardId);
+        return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<ReviewSubTaskMetadata> getReviewSubTaskByIssueId(UUID issueId) {
+        return reviewSubTaskRepo.findByIssueId(issueId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReviewSubTaskMetadata> getReviewSubTasksBySystemStandard(UUID parentSystemStandardId) {
+        return reviewSubTaskRepo.findByParentSystemStandardId(parentSystemStandardId);
+    }
+
+    /**
+     * Updates the review status. When status changes to PASSED_RED, a follow-up
+     * review sub-task is automatically cloned with the same type and parent, and
+     * the original review's followUpReviewId is set to point to the clone.
+     */
+    @Transactional
+    public ReviewSubTaskMetadata updateReviewStatus(UUID issueId, String newStatus,
+                                                     LocalDate baselineStartDate,
+                                                     LocalDate baselineEndDate) {
+        ReviewSubTaskMetadata review = reviewSubTaskRepo.findByIssueId(issueId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No review sub-task metadata found for issue " + issueId));
+        if (newStatus != null) {
+            review.setReviewStatus(newStatus);
+        }
+        if (baselineStartDate != null) {
+            review.setBaselineStartDate(baselineStartDate);
+        }
+        if (baselineEndDate != null) {
+            review.setBaselineEndDate(baselineEndDate);
+        }
+
+        // Auto-clone on PASSED_RED
+        if ("PASSED_RED".equals(newStatus) && review.getFollowUpReviewId() == null) {
+            UUID followUpIssueId = UUID.randomUUID();
+            ReviewSubTaskMetadata followUp = ReviewSubTaskMetadata.builder()
+                    .issueId(followUpIssueId)
+                    .parentSystemStandardId(review.getParentSystemStandardId())
+                    .reviewType(review.getReviewType())
+                    .reviewStatus("BACKLOG")
+                    .build();
+            ReviewSubTaskMetadata savedFollowUp = reviewSubTaskRepo.save(followUp);
+            review.setFollowUpReviewId(savedFollowUp.getIssueId());
+            log.info("Auto-cloned follow-up review sub-task {} for PASSED_RED review {}",
+                    savedFollowUp.getIssueId(), issueId);
+        }
+
+        ReviewSubTaskMetadata updated = reviewSubTaskRepo.save(review);
+        log.info("Updated review sub-task status for issue {} to {}", issueId, newStatus);
+        return updated;
+    }
+
+    /**
+     * Automatically creates the 10 standard M1659.2 review sub-tasks for a
+     * system standard. Each review gets a generated issue UUID.
+     */
+    @Transactional
+    public List<ReviewSubTaskMetadata> autoCreateReviewSubTasks(UUID systemStandardId) {
+        SystemStandardMetadata parent = systemStandardRepo.findById(systemStandardId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No system standard found with id " + systemStandardId));
+        List<ReviewSubTaskMetadata> reviews = STANDARD_REVIEW_TYPES.stream()
+                .map(type -> {
+                    UUID reviewIssueId = UUID.randomUUID();
+                    return ReviewSubTaskMetadata.builder()
+                            .issueId(reviewIssueId)
+                            .parentSystemStandardId(parent.getId())
+                            .reviewType(type)
+                            .reviewStatus("BACKLOG")
+                            .build();
+                })
+                .toList();
+        List<ReviewSubTaskMetadata> saved = reviewSubTaskRepo.saveAll(reviews);
+        log.info("Auto-created {} review sub-tasks for system standard {} (issue {})",
+                saved.size(), systemStandardId, parent.getIssueId());
+        return saved;
     }
 }

@@ -4,22 +4,27 @@ import com.jira.issue.entity.ChangeCardMetadata;
 import com.jira.issue.entity.DclMetadata;
 import com.jira.issue.entity.DeliverableMetadata;
 import com.jira.issue.entity.DesignItemMetadata;
+import com.jira.issue.entity.ModificationMetadata;
+import com.jira.issue.entity.ReviewSubTaskMetadata;
+import com.jira.issue.entity.SystemStandardMetadata;
 import com.jira.issue.service.ChangeManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/issues")
 @RequiredArgsConstructor
-@Tag(name = "Change Management", description = "Change Card, Design Item, DCL, and Deliverable metadata")
+@Tag(name = "Change Management", description = "Change Card, Design Item, DCL, Deliverable, System Standard, and Review Sub-Task metadata")
 public class ChangeManagementController {
 
     private final ChangeManagementService service;
@@ -65,6 +70,45 @@ public class ChangeManagementController {
             @Parameter(description = "Design item ID") @PathVariable UUID designItemId) {
         List<ChangeCardMetadata> cards = service.getChangeCardsByDesignItem(designItemId);
         return ResponseEntity.ok(cards);
+    }
+
+    // ========== Modification (MOD) Endpoints ==========
+
+    @PostMapping("/{issueId}/modification")
+    @Operation(summary = "Create modification metadata for an issue")
+    public ResponseEntity<ModificationMetadata> createModification(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId,
+            @Parameter(description = "Modification type: MAJOR or MINOR") @RequestParam String modType,
+            @Parameter(description = "ATA chapter reference") @RequestParam(required = false) String ataChapter,
+            @Parameter(description = "Certification impact description") @RequestParam(required = false) String certificationImpact,
+            @Parameter(description = "Modification rationale") @RequestParam(required = false) String modRationale,
+            @Parameter(description = "Affected document references") @RequestParam(required = false) List<String> affectedDocuments) {
+        ModificationMetadata mod = service.createModification(issueId, modType, ataChapter,
+                certificationImpact, modRationale, affectedDocuments);
+        return new ResponseEntity<>(mod, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{issueId}/modification")
+    @Operation(summary = "Get modification metadata for an issue")
+    public ResponseEntity<ModificationMetadata> getModification(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId) {
+        return service.getModification(issueId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{issueId}/modification")
+    @Operation(summary = "Update modification metadata for an issue")
+    public ResponseEntity<ModificationMetadata> updateModification(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId,
+            @Parameter(description = "Modification type: MAJOR or MINOR") @RequestParam(required = false) String modType,
+            @Parameter(description = "ATA chapter reference") @RequestParam(required = false) String ataChapter,
+            @Parameter(description = "Certification impact description") @RequestParam(required = false) String certificationImpact,
+            @Parameter(description = "Modification rationale") @RequestParam(required = false) String modRationale,
+            @Parameter(description = "Affected document references") @RequestParam(required = false) List<String> affectedDocuments) {
+        ModificationMetadata updated = service.updateModification(issueId, modType, ataChapter,
+                certificationImpact, modRationale, affectedDocuments);
+        return ResponseEntity.ok(updated);
     }
 
     // ========== Design Item Endpoints ==========
@@ -158,5 +202,101 @@ public class ChangeManagementController {
             @RequestBody DeliverableMetadata updates) {
         DeliverableMetadata updated = service.updateDeliverable(issueId, updates);
         return ResponseEntity.ok(updated);
+    }
+
+    // ========== System Standard Endpoints ==========
+
+    @PostMapping("/{issueId}/system-standard")
+    @Operation(summary = "Create system standard metadata for an issue (M1659.2)")
+    public ResponseEntity<SystemStandardMetadata> createSystemStandard(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId,
+            @Parameter(description = "Standard type: LAB or LAB_AND_FLIGHT") @RequestParam String standardType,
+            @Parameter(description = "Spec freeze date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate specFreezeDate,
+            @Parameter(description = "Delivery to lab date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryToLabDate,
+            @Parameter(description = "Requested lab clearance date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate requestedLabClearanceDate,
+            @Parameter(description = "Planned flight clearance date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate plannedFlightClearanceDate,
+            @Parameter(description = "Target flight date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate targetFlightDate,
+            @Parameter(description = "Applicability list") @RequestParam(required = false) List<String> applicability,
+            @Parameter(description = "Component IDs") @RequestParam(required = false) List<String> componentIds) {
+        SystemStandardMetadata std = service.createSystemStandard(issueId, standardType,
+                specFreezeDate, deliveryToLabDate, requestedLabClearanceDate,
+                plannedFlightClearanceDate, targetFlightDate, applicability, componentIds);
+        return new ResponseEntity<>(std, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{issueId}/system-standard")
+    @Operation(summary = "Get system standard metadata for an issue")
+    public ResponseEntity<SystemStandardMetadata> getSystemStandard(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId) {
+        return service.getSystemStandardByIssueId(issueId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{issueId}/system-standard")
+    @Operation(summary = "Update system standard metadata for an issue")
+    public ResponseEntity<SystemStandardMetadata> updateSystemStandard(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId,
+            @Parameter(description = "Standard type: LAB or LAB_AND_FLIGHT") @RequestParam(required = false) String standardType,
+            @Parameter(description = "Spec freeze date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate specFreezeDate,
+            @Parameter(description = "Delivery to lab date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryToLabDate,
+            @Parameter(description = "Requested lab clearance date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate requestedLabClearanceDate,
+            @Parameter(description = "Planned flight clearance date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate plannedFlightClearanceDate,
+            @Parameter(description = "Target flight date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate targetFlightDate,
+            @Parameter(description = "Applicability list") @RequestParam(required = false) List<String> applicability,
+            @Parameter(description = "Component IDs") @RequestParam(required = false) List<String> componentIds) {
+        SystemStandardMetadata updated = service.updateSystemStandard(issueId, standardType,
+                specFreezeDate, deliveryToLabDate, requestedLabClearanceDate,
+                plannedFlightClearanceDate, targetFlightDate, applicability, componentIds);
+        return ResponseEntity.ok(updated);
+    }
+
+    // ========== Review Sub-Task Endpoints ==========
+
+    @PostMapping("/{issueId}/review-sub-task")
+    @Operation(summary = "Create review sub-task metadata for an issue")
+    public ResponseEntity<ReviewSubTaskMetadata> createReviewSubTask(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId,
+            @Parameter(description = "Parent system standard ID") @RequestParam UUID parentSystemStandardId,
+            @Parameter(description = "Review type: INTERNAL_KOM, COMMON_KOM, PLANS_REVIEW, FCR, PDR, DDR, CDR, LAR, FAR, FFR, CR") @RequestParam String reviewType) {
+        ReviewSubTaskMetadata review = service.createReviewSubTask(issueId, parentSystemStandardId, reviewType);
+        return new ResponseEntity<>(review, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{issueId}/review-sub-task")
+    @Operation(summary = "Get review sub-task metadata for an issue")
+    public ResponseEntity<ReviewSubTaskMetadata> getReviewSubTask(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId) {
+        return service.getReviewSubTaskByIssueId(issueId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{issueId}/review-sub-task")
+    @Operation(summary = "Update review sub-task status (auto-clones on PASSED_RED)")
+    public ResponseEntity<ReviewSubTaskMetadata> updateReviewSubTask(
+            @Parameter(description = "Issue ID") @PathVariable UUID issueId,
+            @Parameter(description = "New review status: NOT_REQUIRED, BACKLOG, PLANNED, PASSED_GREEN, PASSED_AMBER, PASSED_RED") @RequestParam(required = false) String reviewStatus,
+            @Parameter(description = "Baseline start date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate baselineStartDate,
+            @Parameter(description = "Baseline end date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate baselineEndDate) {
+        ReviewSubTaskMetadata updated = service.updateReviewStatus(issueId, reviewStatus,
+                baselineStartDate, baselineEndDate);
+        return ResponseEntity.ok(updated);
+    }
+
+    @GetMapping("/system-standards/{systemStandardId}/reviews")
+    @Operation(summary = "Get all review sub-tasks for a system standard")
+    public ResponseEntity<List<ReviewSubTaskMetadata>> getReviewsBySystemStandard(
+            @Parameter(description = "System standard entity ID") @PathVariable UUID systemStandardId) {
+        List<ReviewSubTaskMetadata> reviews = service.getReviewSubTasksBySystemStandard(systemStandardId);
+        return ResponseEntity.ok(reviews);
+    }
+
+    @PostMapping("/system-standards/{systemStandardId}/auto-create-reviews")
+    @Operation(summary = "Auto-create the 10 standard M1659.2 review sub-tasks for a system standard")
+    public ResponseEntity<List<ReviewSubTaskMetadata>> autoCreateReviews(
+            @Parameter(description = "System standard entity ID") @PathVariable UUID systemStandardId) {
+        List<ReviewSubTaskMetadata> reviews = service.autoCreateReviewSubTasks(systemStandardId);
+        return new ResponseEntity<>(reviews, HttpStatus.CREATED);
     }
 }
