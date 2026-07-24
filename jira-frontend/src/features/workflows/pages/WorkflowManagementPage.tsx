@@ -28,18 +28,18 @@ export default function WorkflowManagementPage() {
 
   const { data: workflows = [], isLoading } = useQuery({
     queryKey: ['workflows'],
-    queryFn: () => workflowApi.getAll().then((r) => r.data),
+    queryFn: () => workflowApi.getAll().then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
   const { data: schemes = [] } = useQuery({
     queryKey: ['workflow-schemes'],
-    queryFn: () => workflowApi.getSchemes().then((r) => r.data),
+    queryFn: () => workflowApi.getSchemes().then((r) => Array.isArray(r.data) ? r.data : []),
     enabled: tab === 'schemes',
   });
 
   const { data: issueTypes = [] } = useQuery({
     queryKey: ['issue-types'],
-    queryFn: () => issueApi.getTypes().then((r) => r.data),
+    queryFn: () => issueApi.getTypes().then((r) => Array.isArray(r.data) ? r.data : []),
     enabled: tab === 'schemes',
   });
 

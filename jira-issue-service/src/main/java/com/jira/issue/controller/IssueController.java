@@ -156,7 +156,7 @@ public class IssueController {
         return ResponseEntity.ok(issueService.updateIssueStatusInternal(id, statusId, projectId));
     }
 
-    @PatchMapping("/{id}/workflow/internal")
+    @RequestMapping(value = "/{id}/workflow/internal", method = {RequestMethod.PATCH, RequestMethod.POST})
     @Operation(summary = "Internal workflow post-function update")
     public ResponseEntity<IssueResponse> workflowInternalUpdate(
             @PathVariable UUID id,

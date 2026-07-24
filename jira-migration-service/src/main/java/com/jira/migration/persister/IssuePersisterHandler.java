@@ -312,19 +312,13 @@ public class IssuePersisterHandler {
 
         Object createdAt = data.getOrDefault("createdAt", data.get("created"));
         if (createdAt != null) {
-            try {
-                builder.migrationCreatedAt(java.time.LocalDateTime.parse(createdAt.toString().replace("Z", "")));
-            } catch (Exception e) {
-                log.debug("Could not parse migration createdAt: {}", createdAt);
-            }
+            java.time.LocalDateTime parsed = parseMigrationTimestamp(createdAt.toString());
+            if (parsed != null) builder.migrationCreatedAt(parsed);
         }
         Object updatedAt = data.getOrDefault("updatedAt", data.get("updated"));
         if (updatedAt != null) {
-            try {
-                builder.migrationUpdatedAt(java.time.LocalDateTime.parse(updatedAt.toString().replace("Z", "")));
-            } catch (Exception e) {
-                log.debug("Could not parse migration updatedAt: {}", updatedAt);
-            }
+            java.time.LocalDateTime parsed = parseMigrationTimestamp(updatedAt.toString());
+            if (parsed != null) builder.migrationUpdatedAt(parsed);
         }
 
         // Handle labels (list or comma-separated Jira export)
@@ -677,5 +671,26 @@ public class IssuePersisterHandler {
         public void setSuccesses(List<IssuePersisterResult> successes) { this.successes = successes; }
         public List<IssuePersisterResult> getFailures() { return failures; }
         public void setFailures(List<IssuePersisterResult> failures) { this.failures = failures; }
+    }
+
+    private static final java.time.format.DateTimeFormatter[] MIGRATION_DATE_FORMATS = {
+        java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME,
+        java.time.format.DateTimeFormatter.ofPattern("dd/MMM/yy h:mm a", java.util.Locale.ENGLISH),
+        java.time.format.DateTimeFormatter.ofPattern("dd/MMM/yy hh:mm a", java.util.Locale.ENGLISH),
+        java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
+        java.time.format.DateTimeFormatter.ofPattern("MM/dd/yy h:mm a", java.util.Locale.ENGLISH),
+        java.time.format.DateTimeFormatter.ofPattern("dd/MMM/yyyy h:mm a", java.util.Locale.ENGLISH),
+    };
+
+    private static java.time.LocalDateTime parseMigrationTimestamp(String value) {
+        if (value == null || value.isBlank()) return null;
+        String clean = value.replace("Z", "").trim();
+        for (var fmt : MIGRATION_DATE_FORMATS) {
+            try {
+                return java.time.LocalDateTime.parse(clean, fmt);
+            } catch (Exception ignored) {}
+        }
+        log.debug("Could not parse migration timestamp: {}", value);
+        return null;
     }
 }

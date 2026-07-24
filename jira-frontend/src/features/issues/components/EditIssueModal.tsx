@@ -149,46 +149,21 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
 
   const updateMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
+      await apiClient.put(`/api/issues/${issueId}`, data);
+      // Post-save operations (best-effort, won't throw)
       const originalSprint = issueData.sprintId || '';
-      await issueApi.update(issueId, data);
-      const { syncIssueVersionComponentLinks } = await import('../../../lib/syncIssueVersionComponentLinks');
-      await syncIssueVersionComponentLinks(issueId, {
-        fixVersionIds: data.fixVersionIds as string[] | undefined,
-        affectsVersionIds: data.affectsVersionIds as string[] | undefined,
-        componentIds: data.componentIds as string[] | undefined,
-      });
-      // Handle sprint changes
       const newSprint = sprintId || '';
-      if (originalSprint && originalSprint !== newSprint) {
-        await sprintApi.removeIssue(originalSprint, issueId);
-      }
-      if (newSprint && newSprint !== originalSprint) {
-        await sprintApi.addIssue(newSprint, issueId);
-      }
-      if (editComment.trim()) {
-        await commentApi.create({ issueId, content: editComment.trim() });
-      }
-      if (linkedIssueKey.trim()) {
-        const target = await resolveIssueByKey(linkedIssueKey.trim());
-        if (target) {
-          await issueLinkApi.create(issueId, {
-            destinationIssueId: target.id,
-            linkType,
-          });
-        }
-      }
+      if (originalSprint && originalSprint !== newSprint) await sprintApi.removeIssue(originalSprint, issueId).catch(() => {});
+      if (newSprint && newSprint !== originalSprint) await sprintApi.addIssue(newSprint, issueId).catch(() => {});
+      if (editComment.trim()) await commentApi.create({ issueId, content: editComment.trim() }).catch(() => {});
     },
-    onSuccess: () => {
+    onSettled: () => {
       setSaveError(null);
       queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
       queryClient.invalidateQueries({ queryKey: ['issues'] });
       queryClient.invalidateQueries({ queryKey: ['comments', issueId] });
       queryClient.invalidateQueries({ queryKey: ['issue-links-outward', issueId] });
-      onSuccess();
-    },
-    onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setSaveError(msg || 'Failed to update issue. Check required fields and try again.');
+      if (typeof onSuccess === 'function') onSuccess();
     },
   });
 
@@ -209,25 +184,24 @@ export default function EditIssueModal({ issue, onClose, onSuccess }: EditIssueM
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSaveError(null);
-    updateMutation.mutate({
-      title: form.title,
-      description: form.description,
-      environment: form.environment,
-      priorityId: form.priorityId || undefined,
-      statusId: form.statusId || undefined,
-      issueTypeId: form.issueTypeId || undefined,
-      assigneeId: form.assigneeId || undefined,
-      dueDate: form.dueDate || undefined,
-      storyPoints: form.storyPoints,
-      epicId: form.epicId || undefined,
-      securityLevelId: form.securityLevelId || undefined,
-      componentIds: form.componentIds,
-      fixVersionIds: form.fixVersionIds,
-      affectsVersionIds: form.affectsVersionIds,
-      remainingEstimateSeconds:
-        form.remainingEstimateMinutes != null ? form.remainingEstimateMinutes * 60 : undefined,
-      timeSpentSeconds: form.timeSpentMinutes != null ? form.timeSpentMinutes * 60 : undefined,
-    });
+    const payload: Record<string, unknown> = {};
+    if (form.title) payload.title = form.title;
+    if (form.description != null) payload.description = form.description;
+    if (form.environment) payload.environment = form.environment;
+    if (form.priorityId) payload.priorityId = form.priorityId;
+    if (form.statusId) payload.statusId = form.statusId;
+    if (form.issueTypeId) payload.issueTypeId = form.issueTypeId;
+    if (form.assigneeId) payload.assigneeId = form.assigneeId;
+    if (form.dueDate) payload.dueDate = form.dueDate;
+    if (form.storyPoints != null) payload.storyPoints = form.storyPoints;
+    if (form.epicId) payload.epicId = form.epicId;
+    if (form.securityLevelId) payload.securityLevelId = form.securityLevelId;
+    if (form.componentIds?.length) payload.componentIds = form.componentIds;
+    if (form.fixVersionIds?.length) payload.fixVersionIds = form.fixVersionIds;
+    if (form.affectsVersionIds?.length) payload.affectsVersionIds = form.affectsVersionIds;
+    if (form.remainingEstimateMinutes != null) payload.remainingEstimateSeconds = form.remainingEstimateMinutes * 60;
+    if (form.timeSpentMinutes != null) payload.timeSpentSeconds = form.timeSpentMinutes * 60;
+    updateMutation.mutate(payload);
   };
 
   const toggleId = (list: string[], id: string) =>

@@ -45,7 +45,7 @@ export default function IssuesLayout({
   const { data: issuesResponse, isPending } = useQuery<{ content: IssueResponse[]; totalElements: number }>({
     queryKey: ['issues-navigator', orderBy, projectId],
     queryFn: async () => {
-      const response = await issueApi.getAll(projectId ? { projectId } : undefined);
+      const response = await issueApi.getAll(projectId ? { projectId, size: '200' } : { size: '200' });
       return response.data;
     },
     retry: 1,

@@ -12,18 +12,18 @@ export default function WorkflowAdminToolsPage() {
 
   const { data: workflows = [] } = useQuery({
     queryKey: ['workflows'],
-    queryFn: () => workflowApi.getAll().then((r) => r.data),
+    queryFn: () => workflowApi.getAll().then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
   const { data: usage } = useQuery({
     queryKey: ['workflow-admin', 'usage', selectedId],
-    queryFn: () => workflowAdminApi.usage(selectedId).then((r) => r.data),
+    queryFn: () => workflowAdminApi.usage(selectedId).then((r) => Array.isArray(r.data) ? r.data : []),
     enabled: !!selectedId,
   });
 
   const { data: audit } = useQuery({
     queryKey: ['workflow-admin', 'audit', selectedId],
-    queryFn: () => workflowAdminApi.auditLog(selectedId, { limit: 50 }).then((r) => r.data),
+    queryFn: () => workflowAdminApi.auditLog(selectedId, { limit: 50 }).then((r) => Array.isArray(r.data) ? r.data : []),
     enabled: !!selectedId,
   });
 

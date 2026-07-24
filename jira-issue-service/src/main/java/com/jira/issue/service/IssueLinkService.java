@@ -379,10 +379,16 @@ public class IssueLinkService {
         if (linkTypeName == null || linkTypeName.isBlank()) {
             return null;
         }
-        String normalized = linkTypeName.trim().toLowerCase();
-        return issueLinkTypeRepository.findByNameIgnoreCase(normalized)
-                .or(() -> issueLinkTypeRepository.findByNameIgnoreCase(normalized.replace('_', ' ')))
-                .map(IssueLinkType::getId)
-                .orElse(null);
+        String normalized = linkTypeName.trim();
+        // Try exact name match (case-insensitive)
+        var byName = issueLinkTypeRepository.findByNameIgnoreCase(normalized);
+        if (byName.isPresent()) return byName.get().getId();
+        // Try matching inward or outward description
+        for (var lt : issueLinkTypeRepository.findAll()) {
+            if (normalized.equalsIgnoreCase(lt.getInward()) || normalized.equalsIgnoreCase(lt.getOutward()) || normalized.equalsIgnoreCase(lt.getName())) {
+                return lt.getId();
+            }
+        }
+        return null;
     }
 }

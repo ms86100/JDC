@@ -68,4 +68,8 @@ public class CreateIssueRequest {
 
     // Migration support: preserve original issue key from source system
     private String issueKey;
+
+    // Migration support: preserve original timestamps
+    private String migrationCreatedAt;
+    private String migrationUpdatedAt;
 }

@@ -86,7 +86,9 @@ interface FullIssueResponse extends Omit<IssueResponse, 'watchers'> {
 
   // Versioning
   affectsVersions?: string[];
+  affectsVersionNames?: string[];
   fixVersions?: string[];
+  fixVersionNames?: string[];
 
   // Organization
   components?: string[];
@@ -151,6 +153,8 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
   const [showTransitionMenu, setShowTransitionMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState('');
 
   const { data: issue, isLoading } = useQuery({
     queryKey: ['issue', issueId],
@@ -214,6 +218,14 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
   const [transitionError, setTransitionError] = useState<string | null>(null);
 
   const [commentError, setCommentError] = useState<string | null>(null);
+
+  const saveDescriptionMutation = useMutation({
+    mutationFn: (description: string) => issueApi.update(issueId!, { description }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
+      setEditingDescription(false);
+    },
+  });
 
   const addCommentMutation = useMutation({
     mutationFn: (content: string) => commentApi.create({ issueId: issueId!, content }),
@@ -301,20 +313,38 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
   });
 
   const transitionMutation = useMutation({
-    mutationFn: (payload: {
+    mutationFn: async (payload: {
       transitionId: string;
+      toStatusId?: string;
       comment?: string;
       resolutionId?: string;
       screenInput?: Record<string, unknown>;
-    }) =>
-      issueApi.executeTransition({
-        issueId: issueId!,
-        projectId: issue!.projectId,
-        transitionId: payload.transitionId,
-        comment: payload.comment,
-        resolutionId: payload.resolutionId,
-        screenInput: payload.screenInput,
-      }),
+    }) => {
+      try {
+        const res = await issueApi.executeTransition({
+          issueId: issueId!,
+          projectId: issue!.projectId,
+          transitionId: payload.transitionId,
+          comment: payload.comment,
+          resolutionId: payload.resolutionId,
+          screenInput: payload.screenInput,
+        });
+        if (res.data && (res.data as { success?: boolean }).success !== false) {
+          return res;
+        }
+      } catch {
+        // workflow engine unavailable — fall through to direct PATCH
+      }
+      if (payload.toStatusId) {
+        return issueApi.transitionStatus(issueId!, issue!.projectId, {
+          statusId: payload.toStatusId,
+          transitionId: payload.transitionId,
+          comment: payload.comment,
+          resolutionId: payload.resolutionId,
+        });
+      }
+      throw new Error('Transition failed');
+    },
     onSuccess: () => {
       setTransitionError(null);
       queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
@@ -351,6 +381,7 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
       undefined;
     transitionMutation.mutate({
       transitionId: pendingTransition.id,
+      toStatusId: pendingTransition.toStatusId,
       comment: transitionComment || (screenInput.comment as string) || undefined,
       resolutionId,
       screenInput: Object.keys(screenInput).length > 0 ? screenInput : undefined,
@@ -671,7 +702,7 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
         {/* Meta info */}
         <div className="idc-issue-meta">
           <span className="idc-meta-key">{issue.issueKey}</span>
-          <span className="idc-meta-sep">—</span>
+          <span className="idc-meta-sep"> · </span>
           <span className="idc-meta-created">
             Created by {issue.reporterName || 'Unknown'} · {getRelativeTime(issue.createdAt)}
           </span>
@@ -743,15 +774,64 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
           <div className="idc-section">
             <div className="idc-section-header">
               <h3>Description</h3>
-              <button className="idc-section-btn">Edit</button>
+              {!editingDescription && (
+                <button
+                  className="idc-section-btn"
+                  onClick={() => {
+                    setDescriptionDraft(issue.description || '');
+                    setEditingDescription(true);
+                  }}
+                >
+                  Edit
+                </button>
+              )}
             </div>
             <div className="idc-description">
-              {issue.description ? (
-                <div className="idc-description-text" dangerouslySetInnerHTML={{ __html: issue.description }} />
+              {editingDescription ? (
+                <div>
+                  <textarea
+                    className="idc-description-textarea"
+                    value={descriptionDraft}
+                    onChange={(e) => setDescriptionDraft(e.target.value)}
+                    rows={6}
+                    autoFocus
+                    placeholder="Add a description..."
+                    style={{ width: '100%', padding: '8px 12px', fontSize: '14px', border: '2px solid #0052cc', borderRadius: '4px', resize: 'vertical', fontFamily: 'inherit' }}
+                  />
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    <button
+                      className="idc-section-btn"
+                      style={{ background: '#0052cc', color: '#fff', padding: '6px 16px', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
+                      disabled={saveDescriptionMutation.isPending}
+                      onClick={() => saveDescriptionMutation.mutate(descriptionDraft)}
+                    >
+                      {saveDescriptionMutation.isPending ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      className="idc-section-btn"
+                      style={{ padding: '6px 16px', borderRadius: '4px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}
+                      onClick={() => setEditingDescription(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <span className="idc-description-placeholder">
-                  Click to add description...
-                </span>
+                <div
+                  onClick={() => {
+                    setDescriptionDraft(issue.description || '');
+                    setEditingDescription(true);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {issue.description ? (
+                    <div className="idc-description-text" dangerouslySetInnerHTML={{ __html: issue.description }} />
+                  ) : (
+                    <span className="idc-description-placeholder">
+                      Click to add description...
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -963,13 +1043,13 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
                   <div className="idc-detail-item">
                     <span className="idc-detail-label">Affects Version</span>
                     <span className="idc-detail-value">
-                      {issue.affectsVersions?.length ? issue.affectsVersions.join(', ') : '-'}
+                      {issue.affectsVersionNames?.length ? issue.affectsVersionNames.join(', ') : issue.affectsVersions?.length ? issue.affectsVersions.join(', ') : '-'}
                     </span>
                   </div>
                   <div className="idc-detail-item">
                     <span className="idc-detail-label">Fix Version</span>
                     <span className="idc-detail-value">
-                      {issue.fixVersions?.length ? issue.fixVersions.join(', ') : '-'}
+                      {issue.fixVersionNames?.length ? issue.fixVersionNames.join(', ') : issue.fixVersions?.length ? issue.fixVersions.join(', ') : '-'}
                     </span>
                   </div>
                   <div className="idc-detail-item">
@@ -1153,8 +1233,7 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
               />
               <button
                 type="button"
-                className="idc-link-btn"
-                style={{ marginTop: 8, fontSize: '0.75rem' }}
+                className="icf-view-all-btn"
                 onClick={() => setActiveTab('details')}
               >
                 View all in Details tab →
@@ -1280,10 +1359,10 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
             <div className="idc-sidebar-item">
               <span className="idc-sidebar-label">Affects Version/s</span>
               <div className="idc-sidebar-value">
-                {issue.affectsVersions?.length ? (
+                {(issue.affectsVersionNames ?? issue.affectsVersions)?.length ? (
                   <div className="idc-version-list">
-                    {issue.affectsVersions.map(v => (
-                      <span key={v} className="idc-version-tag">{v}</span>
+                    {(issue.affectsVersionNames ?? issue.affectsVersions ?? []).map((v, i) => (
+                      <span key={i} className="idc-version-tag">{v}</span>
                     ))}
                   </div>
                 ) : (
@@ -1294,10 +1373,10 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
             <div className="idc-sidebar-item">
               <span className="idc-sidebar-label">Fix Version/s</span>
               <div className="idc-sidebar-value">
-                {issue.fixVersions?.length ? (
+                {(issue.fixVersionNames ?? issue.fixVersions)?.length ? (
                   <div className="idc-version-list">
-                    {issue.fixVersions.map(v => (
-                      <span key={v} className="idc-version-tag">{v}</span>
+                    {(issue.fixVersionNames ?? issue.fixVersions ?? []).map((v, i) => (
+                      <span key={i} className="idc-version-tag">{v}</span>
                     ))}
                   </div>
                 ) : (
@@ -1330,7 +1409,7 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
         <EditIssueModal
           issue={issue}
           onClose={() => setShowEditModal(false)}
-          onSave={() => {
+          onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
             setShowEditModal(false);
           }}

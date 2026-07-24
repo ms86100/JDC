@@ -71,12 +71,24 @@ spring:
           uri: http://jira-version-service:8096
           predicates:
             - Path=/versions/**
+          filters:
+            - RewritePath=/versions(?<path>/?.*), /api/versions$\{path}
+        - id: version-service-api
+          uri: http://jira-version-service:8096
+          predicates:
+            - Path=/api/versions/**
 
         # Component Service
         - id: component-service
           uri: http://jira-component-service:8097
           predicates:
             - Path=/components/**
+          filters:
+            - RewritePath=/components(?<path>/?.*), /api/components$\{path}
+        - id: component-service-api
+          uri: http://jira-component-service:8097
+          predicates:
+            - Path=/api/components/**
 
         # Workflow Service
         - id: workflow-service
@@ -179,12 +191,12 @@ spring:
           uri: http://jira-comment-service:8086
           predicates:
             - Path=/comments/**
+          filters:
+            - RewritePath=/comments(?<segment>/?.*), /api/comments$\{segment}
         - id: comment-service-api
           uri: http://jira-comment-service:8086
           predicates:
             - Path=/api/comments/**
-          filters:
-            - StripPrefix=1
 
         # Test Service
         - id: test-service
@@ -224,6 +236,12 @@ spring:
           uri: http://jira-attachment-service:8090
           predicates:
             - Path=/attachments/**
+          filters:
+            - RewritePath=/attachments(?<segment>/?.*), /api/attachments$\{segment}
+        - id: attachment-service-api
+          uri: http://jira-attachment-service:8090
+          predicates:
+            - Path=/api/attachments/**
 
         # WebSocket
         - id: issue-websocket

@@ -24,6 +24,7 @@ spring:
     locations: classpath:db/migration
     schemas: jira_version
     default-schema: jira_version
+    create-schemas: true
 
 management:
   endpoints:

@@ -33,7 +33,7 @@ const SECTIONS = [
 export default function WorkflowAdminHubPage() {
   const { data: workflows = [] } = useQuery({
     queryKey: ['workflows'],
-    queryFn: () => workflowApi.getAll().then((r) => r.data),
+    queryFn: () => workflowApi.getAll().then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
   return (

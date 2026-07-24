@@ -24,6 +24,7 @@ spring:
     locations: classpath:db/migration
     schemas: jira_component
     default-schema: jira_component
+    create-schemas: true
 
 management:
   endpoints:

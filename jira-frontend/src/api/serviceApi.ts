@@ -917,21 +917,21 @@ export const attachmentApi = {
   upload: (issueId: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return apiClient.post<AttachmentResponse>(`/attachments/issue/${issueId}`, formData, {
+    return apiClient.post<AttachmentResponse>(`/api/attachments/issue/${issueId}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
 
-  getForIssue: (issueId: string) => apiClient.get<AttachmentResponse[]>(`/attachments/issue/${issueId}`),
+  getForIssue: (issueId: string) => apiClient.get<AttachmentResponse[]>(`/api/attachments/issue/${issueId}`),
 
-  getMetadata: (attachmentId: string) => apiClient.get<AttachmentResponse>(`/attachments/${attachmentId}`),
+  getMetadata: (attachmentId: string) => apiClient.get<AttachmentResponse>(`/api/attachments/${attachmentId}`),
 
   download: (attachmentId: string) =>
-    apiClient.get(`/attachments/${attachmentId}/download`, { responseType: 'blob' }),
+    apiClient.get(`/api/attachments/${attachmentId}/download`, { responseType: 'blob' }),
 
-  delete: (attachmentId: string) => apiClient.delete(`/attachments/${attachmentId}`),
+  delete: (attachmentId: string) => apiClient.delete(`/api/attachments/${attachmentId}`),
 
-  deleteAllForIssue: (issueId: string) => apiClient.delete(`/attachments/issue/${issueId}`),
+  deleteAllForIssue: (issueId: string) => apiClient.delete(`/api/attachments/issue/${issueId}`),
 };
 
 // ============================================

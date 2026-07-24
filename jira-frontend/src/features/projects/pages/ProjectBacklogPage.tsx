@@ -42,7 +42,7 @@ export default function ProjectBacklogPage() {
     queryKey: ['backlog-issues', projectId],
     queryFn: async () => {
       try {
-        const res = await issueApi.getAll({ projectId });
+        const res = await issueApi.getAll({ projectId, size: '200' });
         const data = res.data;
         if (Array.isArray(data)) return data as IssueResponse[];
         return (data?.content ?? []) as IssueResponse[];

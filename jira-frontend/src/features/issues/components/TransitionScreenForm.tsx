@@ -64,7 +64,7 @@ export default function TransitionScreenForm({
 }: TransitionScreenFormProps) {
   const { data: resolutions } = useQuery({
     queryKey: ['resolutions'],
-    queryFn: () => resolutionApi.getAll().then((r) => r.data),
+    queryFn: () => resolutionApi.getAll().then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
   const fields = useMemo(() => {

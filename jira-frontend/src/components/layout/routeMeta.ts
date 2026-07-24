@@ -145,7 +145,7 @@ function enrichProjectMeta(
   const label = PROJECT_SECTION_LABELS[segment] ?? segment;
   return {
     ...meta,
-    title: `${projectLabel} — ${label}`,
+    title: `${projectLabel} · ${label}`,
     breadcrumbs: projectCrumbs(projectId, [{ label }], projectLabel),
   };
 }

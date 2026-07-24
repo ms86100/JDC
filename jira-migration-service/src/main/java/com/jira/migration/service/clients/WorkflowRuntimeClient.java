@@ -124,11 +124,12 @@ public class WorkflowRuntimeClient {
     }
 
     public void applyStatusInternal(UUID issueId, UUID projectId, UUID statusId) {
-        Map<String, Object> body = Map.of("statusId", statusId.toString());
+        Map<String, Object> body = new HashMap<>();
+        body.put("statusId", statusId.toString());
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-Workflow-Internal", "true");
         String url = issueServiceUrl + "/api/issues/" + issueId + "/workflow/internal";
-        restTemplate.exchange(url, HttpMethod.PATCH, new HttpEntity<>(body, headers), Map.class);
+        restTemplate.postForEntity(url, new HttpEntity<>(body, headers), Map.class);
     }
 }

@@ -3,17 +3,22 @@ import { fieldApi, VisibleFieldDto } from '../../../api/fieldApi';
 import './IssueCustomFieldsPanel.css';
 
 export interface IssueCustomFieldsPanelProps {
-  /** Issue UUID (required for API calls) */
   issueId: string;
   issueKey?: string;
   projectId?: string;
   issueTypeId?: string;
-  /** sidebar = right column; inline = Details tab body */
   variant?: 'sidebar' | 'inline';
 }
 
+function isEmpty(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value === 'string' && value.trim() === '') return true;
+  if (Array.isArray(value) && value.length === 0) return true;
+  return false;
+}
+
 function formatValue(value: unknown): string {
-  if (value == null) return '—';
+  if (isEmpty(value)) return 'None';
   if (Array.isArray(value)) return value.join(', ');
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
@@ -65,11 +70,11 @@ export default function IssueCustomFieldsPanel({
     retry: 1,
   });
 
-  const withValues = fields.filter((f) => f.value != null && String(f.value).trim() !== '');
+  const withValues = fields.filter((f) => !isEmpty(f.value));
 
   if (isLoading) {
     return (
-      <p className={`icf-muted icf-${variant}`} data-testid="issue-custom-fields-loading">
+      <p className="icf-status-msg" data-testid="issue-custom-fields-loading">
         Loading custom fields…
       </p>
     );
@@ -86,7 +91,7 @@ export default function IssueCustomFieldsPanel({
         ? 'Issue not found for custom field lookup.'
         : `Custom fields request failed (${status ?? 'error'}). Check migration-service logs.`;
     return (
-      <div className={`icf-error icf-${variant}`} data-testid="issue-custom-fields-error">
+      <div className="icf-error" data-testid="issue-custom-fields-error">
         <p>{msg}</p>
         {issueKey && (
           <p className="icf-hint">
@@ -99,45 +104,54 @@ export default function IssueCustomFieldsPanel({
 
   if (fields.length === 0) {
     return (
-      <div className={`icf-empty icf-${variant}`} data-testid="issue-custom-fields-empty">
-        <p className="icf-muted">No custom field values for this issue.</p>
-        <p className="icf-hint">
-          Re-import CSV with custom columns, or map fields under Admin → Custom fields. Values are stored in
-          migration-service, not on the core issue record.
-        </p>
+      <div className="icf-empty-state" data-testid="issue-custom-fields-empty">
+        <p className="icf-status-msg">No custom fields for this issue.</p>
       </div>
     );
   }
 
-  const grid = (
-    <div
-      className={variant === 'sidebar' ? 'icf-sidebar-grid' : 'idc-details-grid'}
-      data-testid="issue-custom-fields"
-    >
-      {fields.map((f) => (
-        <div
-          key={f.fieldKey}
-          className={variant === 'sidebar' ? 'icf-sidebar-item' : 'idc-detail-item'}
-        >
-          <span className={variant === 'sidebar' ? 'icf-label' : 'idc-detail-label'}>
-            {f.displayName || f.fieldKey}
-          </span>
-          <span className={variant === 'sidebar' ? 'icf-value' : 'idc-detail-value'}>
-            {formatValue(f.value)}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
+  if (variant === 'sidebar') {
+    return (
+      <div data-testid="issue-custom-fields">
+        {fields.map((f) => (
+          <div key={f.fieldKey} className="idc-sidebar-item">
+            <span className="idc-sidebar-label">
+              {f.displayName || f.fieldKey}
+            </span>
+            <div className="idc-sidebar-value">
+              {isEmpty(f.value) ? (
+                <span className="idc-no-value">None</span>
+              ) : (
+                <span>{formatValue(f.value)}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className={`icf-panel icf-${variant}`}>
-      {variant === 'inline' && (
-        <p className="icf-count">
-          {withValues.length} of {fields.length} field{fields.length !== 1 ? 's' : ''} with values
-        </p>
-      )}
-      {grid}
+    <div data-testid="issue-custom-fields">
+      <p className="icf-count">
+        {withValues.length} of {fields.length} field{fields.length !== 1 ? 's' : ''} with values
+      </p>
+      <div className="idc-details-grid">
+        {fields.map((f) => (
+          <div key={f.fieldKey} className="idc-detail-item">
+            <span className="idc-detail-label">
+              {f.displayName || f.fieldKey}
+            </span>
+            <span className="idc-detail-value">
+              {isEmpty(f.value) ? (
+                <span className="idc-no-value">None</span>
+              ) : (
+                formatValue(f.value)
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -57,7 +57,7 @@ export default function ComponentsManager({
 
   const { data: users = [] } = useQuery({
     queryKey: ['admin-users-component-lead'],
-    queryFn: () => adminApi.getUsers().then((r) => r.data),
+    queryFn: () => adminApi.getUsers().then((r) => Array.isArray(r.data) ? r.data : r.data?.content ?? []),
     staleTime: 60_000,
   });
 

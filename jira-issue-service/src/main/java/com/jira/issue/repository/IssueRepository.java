@@ -21,8 +21,9 @@ public interface IssueRepository extends JpaRepository<Issue, UUID>, JpaSpecific
 
     Optional<Issue> findByIssueKey(String issueKey);
 
-    @Query("SELECT MAX(CAST(SUBSTRING(i.issueKey, LENGTH(:projectKey) + 2) AS integer)) " +
-           "FROM Issue i WHERE i.issueKey LIKE :projectKey || '-%'")
+    @Query(value = "SELECT MAX(CAST(SUBSTRING(issue_key, LENGTH(:projectKey) + 2) AS integer)) " +
+           "FROM jira_issue.issues WHERE issue_key ~ CONCAT(:projectKey, '-[0-9]+$')",
+           nativeQuery = true)
     Optional<Integer> findMaxIssueNumberByProjectKey(@Param("projectKey") String projectKey);
 
     /**
@@ -30,7 +31,7 @@ public interface IssueRepository extends JpaRepository<Issue, UUID>, JpaSpecific
      * Uses pessimistic locking to prevent race conditions in issue key generation.
      */
     @Query(value = "SELECT MAX(CAST(SUBSTRING(issue_key, LENGTH(:projectKey) + 2) AS integer)) " +
-           "FROM jira_issue.issues WHERE issue_key LIKE CONCAT(:projectKey, '-%') FOR UPDATE",
+           "FROM jira_issue.issues WHERE issue_key ~ CONCAT(:projectKey, '-[0-9]+$') FOR UPDATE",
            nativeQuery = true)
     Optional<Integer> findMaxIssueNumberByProjectKeyForUpdate(@Param("projectKey") String projectKey);
 

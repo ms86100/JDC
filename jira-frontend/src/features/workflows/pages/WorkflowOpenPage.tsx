@@ -19,7 +19,7 @@ export default function WorkflowOpenPage() {
 
   const { data: workflows = [], isLoading } = useQuery({
     queryKey: ['workflows'],
-    queryFn: () => workflowApi.getAll().then((r) => r.data),
+    queryFn: () => workflowApi.getAll().then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
   const filtered = useMemo(

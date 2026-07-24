@@ -41,6 +41,7 @@ public class IssueService {
     private final LabelService labelService;
     private final LabelRepository labelRepository;
     private final SecurityLevelService securityLevelService;
+    private final ChangeHistoryService changeHistoryService;
 
     @Value("${workflow.service.url}")
     private String workflowServiceUrl;
@@ -55,9 +56,12 @@ public class IssueService {
     @Value("${project.service.url}")
     private String projectServiceUrl;
 
+    @Value("${version.service.url:${project.service.url}}")
+    private String versionServiceUrl;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
-    private static final UUID DEFAULT_STATUS_ID = UUID.fromString("c0000000-0000-0000-0000-000000000001");
+    private static final UUID DEFAULT_STATUS_ID = UUID.fromString("00000000-0000-0000-0001-000000000002");
     private static final UUID DEFAULT_TYPE_ID = UUID.fromString("a0000000-0000-0000-0000-000000000001");
     private static final UUID DEFAULT_PRIORITY_ID = UUID.fromString("b0000000-0000-0000-0000-000000000003");
 
@@ -136,6 +140,20 @@ public class IssueService {
 
         issue = issueRepository.save(issue);
 
+        if (request.getMigrationCreatedAt() != null || request.getMigrationUpdatedAt() != null) {
+            try {
+                if (request.getMigrationCreatedAt() != null) {
+                    issue.setCreatedAt(java.time.LocalDateTime.parse(request.getMigrationCreatedAt().replace("Z", "")));
+                }
+                if (request.getMigrationUpdatedAt() != null) {
+                    issue.setUpdatedAt(java.time.LocalDateTime.parse(request.getMigrationUpdatedAt().replace("Z", "")));
+                }
+                issueRepository.save(issue);
+            } catch (Exception e) {
+                log.debug("Could not apply migration timestamps: {}", e.getMessage());
+            }
+        }
+
         if (request.getLabels() != null) {
             for (String label : request.getLabels()) {
                 if (label != null && !label.isBlank()) {
@@ -179,7 +197,7 @@ public class IssueService {
         if (request.getAffectsVersions() != null && request.getAffectsVersions().length > 0) {
             for (UUID versionId : request.getAffectsVersions()) {
                 if (!versionRepository.existsById(versionId)) {
-                    throw new ResourceNotFoundException("Version", "id", versionId);
+                    log.warn("Version {} not found locally — may be in version-service", versionId);
                 }
             }
         }
@@ -188,7 +206,7 @@ public class IssueService {
         if (request.getFixVersions() != null && request.getFixVersions().length > 0) {
             for (UUID versionId : request.getFixVersions()) {
                 if (!versionRepository.existsById(versionId)) {
-                    throw new ResourceNotFoundException("Version", "id", versionId);
+                    log.warn("Version {} not found locally — may be in version-service", versionId);
                 }
             }
         }
@@ -197,7 +215,7 @@ public class IssueService {
         if (request.getComponentIds() != null && request.getComponentIds().length > 0) {
             for (UUID componentId : request.getComponentIds()) {
                 if (!componentRepository.existsById(componentId)) {
-                    throw new ResourceNotFoundException("Component", "id", componentId);
+                    log.warn("Component {} not found locally — may be in component-service", componentId);
                 }
             }
         }
@@ -226,7 +244,7 @@ public class IssueService {
         if (request.getAffectsVersions() != null && request.getAffectsVersions().length > 0) {
             for (UUID versionId : request.getAffectsVersions()) {
                 if (!versionRepository.existsById(versionId)) {
-                    throw new ResourceNotFoundException("Version", "id", versionId);
+                    log.warn("Version {} not found locally — may be in version-service", versionId);
                 }
             }
         }
@@ -235,7 +253,7 @@ public class IssueService {
         if (request.getFixVersions() != null && request.getFixVersions().length > 0) {
             for (UUID versionId : request.getFixVersions()) {
                 if (!versionRepository.existsById(versionId)) {
-                    throw new ResourceNotFoundException("Version", "id", versionId);
+                    log.warn("Version {} not found locally — may be in version-service", versionId);
                 }
             }
         }
@@ -244,7 +262,7 @@ public class IssueService {
         if (request.getComponentIds() != null && request.getComponentIds().length > 0) {
             for (UUID componentId : request.getComponentIds()) {
                 if (!componentRepository.existsById(componentId)) {
-                    throw new ResourceNotFoundException("Component", "id", componentId);
+                    log.warn("Component {} not found locally — may be in component-service", componentId);
                 }
             }
         }
@@ -500,16 +518,21 @@ public class IssueService {
         // Validate foreign keys BEFORE applying updates
         validateForeignKeys(request);
 
-        if (request.getTitle() != null) {
+        List<com.jira.issue.dto.ChangeItemResponse> changes = new ArrayList<>();
+
+        if (request.getTitle() != null && !request.getTitle().equals(issue.getTitle())) {
+            changes.add(com.jira.issue.dto.ChangeItemResponse.builder().fieldType("jira").field("summary").oldString(issue.getTitle()).newString(request.getTitle()).build());
             issue.setTitle(request.getTitle());
         }
-        if (request.getDescription() != null) {
+        if (request.getDescription() != null && !java.util.Objects.equals(request.getDescription(), issue.getDescription())) {
+            changes.add(com.jira.issue.dto.ChangeItemResponse.builder().fieldType("jira").field("description").oldString(issue.getDescription() != null ? issue.getDescription().substring(0, Math.min(100, issue.getDescription().length())) : null).newString(request.getDescription().substring(0, Math.min(100, request.getDescription().length()))).build());
             issue.setDescription(request.getDescription());
         }
         if (request.getEnvironment() != null) {
             issue.setEnvironment(request.getEnvironment());
         }
-        if (request.getAssigneeId() != null) {
+        if (request.getAssigneeId() != null && !java.util.Objects.equals(request.getAssigneeId(), issue.getAssigneeId())) {
+            changes.add(com.jira.issue.dto.ChangeItemResponse.builder().fieldType("jira").field("assignee").oldValue(issue.getAssigneeId() != null ? issue.getAssigneeId().toString() : null).newValue(request.getAssigneeId().toString()).build());
             issue.setAssigneeId(request.getAssigneeId());
         }
         if (request.getPriorityId() != null) {
@@ -567,6 +590,14 @@ public class IssueService {
 
         issue = issueRepository.save(issue);
         log.info("Issue updated successfully: {}", issueId);
+
+        if (!changes.isEmpty()) {
+            try {
+                changeHistoryService.recordChange(issueId, null, "System", changes);
+            } catch (Exception e) {
+                log.warn("Could not record change history for issue {}: {}", issueId, e.getMessage());
+            }
+        }
         return mapToIssueResponse(issue);
     }
 
@@ -896,19 +927,21 @@ public class IssueService {
             builder.workRatio(Math.round(ratio * 100.0) / 100.0);
         }
 
-        // Load version names
+        // Load version names (local DB first, then version-service REST fallback)
         if (issue.getAffectsVersions() != null && issue.getAffectsVersions().length > 0) {
             List<String> versionNames = new ArrayList<>();
             for (UUID versionId : issue.getAffectsVersions()) {
-                versionRepository.findById(versionId).ifPresent(v -> versionNames.add(v.getName()));
+                versionNames.add(resolveVersionName(versionId));
             }
+            versionNames.removeIf(n -> n == null || n.isBlank());
             builder.affectsVersionNames(versionNames.isEmpty() ? null : versionNames.toArray(new String[0]));
         }
         if (issue.getFixVersions() != null && issue.getFixVersions().length > 0) {
             List<String> versionNames = new ArrayList<>();
             for (UUID versionId : issue.getFixVersions()) {
-                versionRepository.findById(versionId).ifPresent(v -> versionNames.add(v.getName()));
+                versionNames.add(resolveVersionName(versionId));
             }
+            versionNames.removeIf(n -> n == null || n.isBlank());
             builder.fixVersionNames(versionNames.isEmpty() ? null : versionNames.toArray(new String[0]));
         }
 
@@ -1174,6 +1207,23 @@ public class IssueService {
         return issueRepository.findAllById(uuidList).stream()
                 .map(this::mapToIssueResponse)
                 .collect(java.util.stream.Collectors.toList());
+    }
+
+    private String resolveVersionName(UUID versionId) {
+        var local = versionRepository.findById(versionId);
+        if (local.isPresent()) return local.get().getName();
+        try {
+            String url = versionServiceUrl + "/api/versions/" + versionId;
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> response = restTemplate.getForObject(url, java.util.Map.class);
+            if (response != null) {
+                Object name = response.get("name");
+                if (name != null) return name.toString();
+            }
+        } catch (Exception e) {
+            log.debug("Could not resolve version name for {}: {}", versionId, e.getMessage());
+        }
+        return null;
     }
 
     private String getProjectKey(UUID projectId) {

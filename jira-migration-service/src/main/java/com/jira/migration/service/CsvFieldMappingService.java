@@ -87,8 +87,11 @@ public class CsvFieldMappingService {
                 continue;
             }
 
-            String sourceKey = sourceColumn.toLowerCase(Locale.ROOT).trim();
+            String sourceKey = sourceColumn.toLowerCase(Locale.ROOT).trim().replace(" ", "_");
             String value = row.get(sourceKey);
+            if (value == null) {
+                value = row.get(sourceColumn.toLowerCase(Locale.ROOT).trim());
+            }
             if (value == null) {
                 value = row.get(sourceColumn);
             }
@@ -152,9 +155,9 @@ public class CsvFieldMappingService {
                         pendingAttachmentRefs.add(refEntry);
                     }
                 }
-            } else if (STANDARD_ISSUE_FIELD_KEYS.contains(key) || key.contains("custom field (")) {
-                if (key.contains("custom field (")) {
-                    String label = extractCustomFieldLabel(entry.getKey());
+            } else if (STANDARD_ISSUE_FIELD_KEYS.contains(key) || isCustomFieldKey(key)) {
+                if (isCustomFieldKey(key)) {
+                    String label = extractCustomFieldLabel(key);
                     customFields.put(normalizeCustomKey(label), value);
                 } else {
                     issueData.put(key, value);
@@ -185,9 +188,13 @@ public class CsvFieldMappingService {
         return issueData;
     }
 
+    private static boolean isCustomFieldKey(String key) {
+        return key.contains("custom field (") || key.contains("custom_field_(");
+    }
+
     private String extractCustomFieldLabel(String header) {
         java.util.regex.Matcher m = java.util.regex.Pattern
-                .compile("(?i)custom\\s+field\\s*\\(([^)]+)\\)")
+                .compile("(?i)custom[\\s_]+field[\\s_]*\\(?([^)]+)\\)")
                 .matcher(header);
         return m.find() ? m.group(1).trim() : header;
     }

@@ -317,7 +317,7 @@ function SettingsUsersRoles({ projectId, project }: { projectId: string; project
 
   const { data: users = [] } = useQuery({
     queryKey: ['admin-users-picker'],
-    queryFn: () => adminApi.getUsers().then((r) => r.data),
+    queryFn: () => adminApi.getUsers().then((r) => Array.isArray(r.data) ? r.data : r.data?.content ?? []),
   });
 
   const addMutation = useMutation({

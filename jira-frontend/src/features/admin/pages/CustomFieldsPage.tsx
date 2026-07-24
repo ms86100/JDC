@@ -206,7 +206,7 @@ export default function CustomFieldsPage() {
               </div>
               <div className="field-card-body">
                 <h4 className="field-name">{field.name}</h4>
-                <p className="field-description">{field.description || '—'}</p>
+                <p className="field-description">{field.description || 'No description'}</p>
               </div>
               <div className="field-card-footer">
                 <button

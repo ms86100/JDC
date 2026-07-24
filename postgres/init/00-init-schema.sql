@@ -24,6 +24,8 @@ CREATE SCHEMA IF NOT EXISTS jira_audit;
 CREATE SCHEMA IF NOT EXISTS jira_sprint;
 CREATE SCHEMA IF NOT EXISTS jira_plan;
 CREATE SCHEMA IF NOT EXISTS jira_admin;
+CREATE SCHEMA IF NOT EXISTS jira_version;
+CREATE SCHEMA IF NOT EXISTS jira_component;
 
 -- =============================================================================
 -- FUNCTIONS

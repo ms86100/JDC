@@ -74,7 +74,7 @@ export interface VersionReleaseNoteResponse {
   generatedAt?: string;
 }
 
-const BASE = '/versions';
+const BASE = '/api/versions';
 
 export const versionApi = {
   getByProject: (projectId: string, includeArchived = false) =>
