@@ -47,4 +47,4 @@ ALTER TABLE jira_workflow.script_definitions
     DROP CONSTRAINT IF EXISTS script_definitions_script_type_check;
 ALTER TABLE jira_workflow.script_definitions
     ADD CONSTRAINT script_definitions_script_type_check
-    CHECK (script_type IN ('CONDITION', 'VALIDATOR', 'POST_FUNCTION', 'LISTENER', 'FIELD_BEHAVIOR', 'CALCULATED_FIELD', 'CONSOLE', 'SCHEDULED'));
+    CHECK (script_type IN ('CONDITION', 'VALIDATOR', 'POST_FUNCTION', 'LISTENER', 'FIELD_BEHAVIOR', 'CALCULATED_FIELD', 'CONSOLE', 'SCHEDULED', 'LIBRARY'));

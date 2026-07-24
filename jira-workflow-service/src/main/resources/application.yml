@@ -81,6 +81,7 @@ jira:
     http-timeout-ms: 5000
     env-whitelist-keys: []
     scheduled-enabled: false
+    sql-write-enabled: false
     scheduled-poll-interval-ms: 30000
 
 logging:

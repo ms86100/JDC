@@ -596,6 +596,16 @@ public class JdcApi {
                 return jql(q, 100);
             } catch (Exception e) { return List.of(); }
         }
+
+        @HostAccess.Export
+        public int batch(String jqlQuery, int batchSize) {
+            try {
+                if (jqlQuery == null) return 0;
+                int size = Math.min(Math.max(batchSize, 10), MAX_RESULTS_CAP);
+                List<Map<String, Object>> results = jql(jqlQuery, size);
+                return results.size();
+            } catch (Exception e) { return 0; }
+        }
     }
 
     // === Sub-API: jdc.log ===

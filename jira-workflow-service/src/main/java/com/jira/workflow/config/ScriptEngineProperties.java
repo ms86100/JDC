@@ -27,4 +27,6 @@ public class ScriptEngineProperties {
 
     private boolean scheduledEnabled = false;
     private long scheduledPollIntervalMs = 30_000;
+
+    private boolean sqlWriteEnabled = false;
 }

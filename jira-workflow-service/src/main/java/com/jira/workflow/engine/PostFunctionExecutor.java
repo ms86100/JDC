@@ -81,7 +81,7 @@ public class PostFunctionExecutor {
             case WorkflowPostFunction.TYPE_LINK_ISSUE -> linkIssue(ctx, config);
             case WorkflowPostFunction.TYPE_UNLINK_ISSUE -> unlinkIssue(ctx, config);
             case WorkflowPostFunction.TYPE_AUTO_TRANSITION -> autoTransition(ctx, config);
-            case WorkflowPostFunction.TYPE_SEND_EMAIL -> log.debug("Send email post-function skipped (notification outbox handles alerts)");
+            case WorkflowPostFunction.TYPE_SEND_EMAIL -> sendEmail(ctx, config);
             case "CLONE_ISSUE" -> cloneIssue(ctx);
             case "ISSUE_MOVE" -> moveIssue(ctx, config);
             case "ADD_LABEL" -> addLabelPostFn(ctx, config);
@@ -279,6 +279,28 @@ public class PostFunctionExecutor {
         pluginCtx.put("comment", ctx.getComment());
         pluginCtx.put("resolutionId", ctx.getResolutionId() != null ? ctx.getResolutionId().toString() : null);
         return pluginCtx;
+    }
+
+    private void sendEmail(WorkflowContext ctx, Map<String, Object> config) {
+        String to = stringVal(config.get("to"), stringVal(config.get("email"), null));
+        String subject = stringVal(config.get("subject"), "Workflow Notification");
+        String body = stringVal(config.get("body"), stringVal(config.get("message"), ""));
+        if (to == null || to.isBlank()) {
+            log.debug("SEND_EMAIL skipped: no recipient specified");
+            return;
+        }
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("to", to);
+            payload.put("subject", subject);
+            payload.put("body", body);
+            payload.put("issueId", ctx.getIssueId().toString());
+            payload.put("isHtml", true);
+            integrationClient.fireWebhook(
+                    integrationClient.getNotificationServiceUrl() + "/api/notifications/email", payload);
+        } catch (Exception e) {
+            log.warn("SEND_EMAIL post-function failed: {}", e.getMessage());
+        }
     }
 
     private void unlinkIssue(WorkflowContext ctx, Map<String, Object> config) {

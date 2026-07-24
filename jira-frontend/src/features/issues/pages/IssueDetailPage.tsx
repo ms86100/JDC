@@ -17,6 +17,8 @@ import IssueMoveModal from '../components/IssueMoveModal';
 import IssueAdminMenu from '../components/IssueAdminMenu';
 import { useAuth } from '../../auth/context/AuthContext';
 import { rankForBottom, rankForTop } from '../utils/issueRank';
+import { useFieldBehaviors } from '../../../hooks/useFieldBehaviors';
+import { scriptApi } from '../../../api/scriptApi';
 import './IssueDetailPage.css';
 import '../styles/issues-layout.css';
 import '../components/IssueCustomFieldsPanel.css';
@@ -178,6 +180,14 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
   });
 
   const resolvedIssueUuid = issue?.id ?? (issueId?.match(/^[0-9a-f-]{36}$/i) ? issueId : undefined);
+
+  const { isFieldVisible, getFieldWarning, getFieldLabel } = useFieldBehaviors({
+    screenContext: 'VIEW',
+    projectId: issue?.projectId,
+    issueTypeId: issue?.issueTypeId,
+    issueData: issue as unknown as Record<string, unknown>,
+    enabled: !!issue,
+  });
 
   const { data: visibleCustomFields } = useQuery({
     queryKey: ['issue-visible-fields-count', resolvedIssueUuid, issue?.projectId, issue?.issueTypeId],

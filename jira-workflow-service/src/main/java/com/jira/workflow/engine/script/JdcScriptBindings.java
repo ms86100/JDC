@@ -31,6 +31,9 @@ public class JdcScriptBindings {
     @Value("${jira.services.user-url:http://jira-user-service:8082}")
     private String userServiceUrl;
 
+    @Value("${jira.services.confluence-url:}")
+    private String confluenceUrl;
+
     public Map<String, Object> buildBindings(Map<String, Object> workflowContext) {
         Map<String, Object> bindings = new HashMap<>();
 
@@ -42,11 +45,12 @@ public class JdcScriptBindings {
 
         bindings.put("http", new JdcHttpApi(properties));
         bindings.put("env", new JdcEnvApi(properties));
-        bindings.put("sql", new JdcSqlApi(scriptDataSources, true));
+        bindings.put("sql", new JdcSqlApi(scriptDataSources, !properties.isSqlWriteEnabled()));
         bindings.put("xml", new JdcXmlApi());
         bindings.put("vars", new JdcPersistentVarApi(persistentVarRepository, workflowContext));
         bindings.put("email", new JdcEmailApi(integrationClient.restTemplate(), notificationServiceUrl));
         bindings.put("ldap", new JdcLdapApi(integrationClient.restTemplate(), userServiceUrl));
+        bindings.put("confluence", new JdcConfluenceApi(integrationClient.restTemplate(), confluenceUrl));
 
         JdcIncludeApi includeApi = new JdcIncludeApi(scriptDefinitionRepository, graalScriptEngine);
         bindings.put("include", includeApi);

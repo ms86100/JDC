@@ -39,7 +39,8 @@ public class ScriptExecutionService {
     public ScriptResult executeConsole(String scriptBody, String scriptType, Map<String, Object> mockContext) {
         Map<String, Object> ctx = mockContext != null ? mockContext : Map.of();
         Map<String, Object> bindings = jdcScriptBindings.buildBindings(ctx);
-        ScriptResult result = graalScriptEngine.execute(scriptBody, bindings, properties.getConsoleTimeoutMs());
+        String resolvedBody = resolveIncludes(scriptBody);
+        ScriptResult result = graalScriptEngine.execute(resolvedBody, bindings, properties.getConsoleTimeoutMs());
 
         logExecution(null, "console-test", scriptType, "CONSOLE", ctx, result);
         return result;
@@ -75,10 +76,38 @@ public class ScriptExecutionService {
 
     private ScriptResult executeScript(ScriptDefinition script, Map<String, Object> ctx, String executionMode) {
         Map<String, Object> bindings = jdcScriptBindings.buildBindings(ctx);
-        ScriptResult result = graalScriptEngine.execute(script.getScriptKey(), script.getScriptBody(), bindings, properties.getTimeoutMs());
+        String resolvedBody = resolveIncludes(script.getScriptBody());
+        ScriptResult result = graalScriptEngine.execute(script.getScriptKey(), resolvedBody, bindings, properties.getTimeoutMs());
 
         logExecution(script.getId(), script.getScriptKey(), script.getScriptType(), executionMode, ctx, result);
         return result;
+    }
+
+    private String resolveIncludes(String scriptBody) {
+        if (scriptBody == null || !scriptBody.contains("include(")) return scriptBody;
+
+        StringBuilder resolved = new StringBuilder();
+        java.util.Set<String> included = new java.util.HashSet<>();
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                "(?:include\\.include|include)\\([\"']([a-z][a-z0-9-]{2,63})[\"']\\)");
+        java.util.regex.Matcher matcher = pattern.matcher(scriptBody);
+
+        while (matcher.find()) {
+            String key = matcher.group(1);
+            if (included.contains(key)) continue;
+            included.add(key);
+            scriptDefinitionRepository.findByScriptKey(key).ifPresent(lib -> {
+                if (Boolean.TRUE.equals(lib.getIsEnabled())) {
+                    resolved.append("// --- included: ").append(key).append(" ---\n");
+                    resolved.append(lib.getScriptBody()).append("\n");
+                }
+            });
+        }
+
+        if (resolved.isEmpty()) return scriptBody;
+        resolved.append("// --- main script ---\n");
+        resolved.append(scriptBody);
+        return resolved.toString();
     }
 
     private void logExecution(UUID scriptId, String scriptKey, String scriptType,

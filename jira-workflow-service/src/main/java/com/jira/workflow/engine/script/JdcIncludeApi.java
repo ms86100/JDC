@@ -48,4 +48,8 @@ public class JdcIncludeApi {
     public boolean hasIncludes() {
         return !included.isEmpty();
     }
+
+    public Set<String> getIncludedKeys() {
+        return java.util.Collections.unmodifiableSet(included);
+    }
 }

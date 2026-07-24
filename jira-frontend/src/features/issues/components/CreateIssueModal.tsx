@@ -6,6 +6,7 @@ import { componentApi } from '../../../api/componentApi';
 import { issueApi, CreateIssueRequest, IssueType, IssuePriority } from '../../../api/issueApi';
 import apiClient from '../../../api/axiosClient';
 import { appNotify } from '../../../lib/appNotify';
+import { useFieldBehaviors } from '../../../hooks/useFieldBehaviors';
 import './CreateIssueModal.css';
 
 interface CreateIssueModalProps {
@@ -129,6 +130,14 @@ export default function CreateIssueModal({
   const { data: components = [] } = useQuery({
     queryKey: ['project-components', form.projectId],
     queryFn: () => (form.projectId ? componentApi.getByProject(form.projectId) : []),
+    enabled: !!form.projectId,
+  });
+
+  const { isFieldVisible, isFieldRequired, isFieldReadOnly, getFieldWarning, getFieldLabel } = useFieldBehaviors({
+    screenContext: 'CREATE',
+    projectId: form.projectId || undefined,
+    issueTypeId: form.issueTypeId || undefined,
+    issueData: form as unknown as Record<string, unknown>,
     enabled: !!form.projectId,
   });
 
@@ -276,27 +285,44 @@ export default function CreateIssueModal({
                 />
               </div>
 
+              {isFieldVisible('description') && (
               <div className="ab-form-group">
-                <label className="ab-label">Description</label>
+                <label className="ab-label">{getFieldLabel('description') || 'Description'}{isFieldRequired('description') ? ' *' : ''}</label>
                 <textarea
                   className="ab-textarea"
                   value={form.description || ''}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Detailed description of the issue"
                   rows={4}
+                  readOnly={isFieldReadOnly('description')}
+                  required={isFieldRequired('description')}
                 />
+                {getFieldWarning('description') && (
+                  <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
+                    ⚠ {getFieldWarning('description')}
+                  </span>
+                )}
               </div>
+              )}
 
+              {isFieldVisible('environment') && (
               <div className="ab-form-group">
-                <label className="ab-label">Environment</label>
+                <label className="ab-label">{getFieldLabel('environment') || 'Environment'}</label>
                 <textarea
                   className="ab-textarea"
                   value={form.environment || ''}
                   onChange={(e) => setForm({ ...form, environment: e.target.value })}
                   placeholder="Environment where the issue was found"
                   rows={2}
+                  readOnly={isFieldReadOnly('environment')}
                 />
+                {getFieldWarning('environment') && (
+                  <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
+                    ⚠ {getFieldWarning('environment')}
+                  </span>
+                )}
               </div>
+              )}
             </div>
 
             {/* RIGHT COLUMN - Additional fields */}

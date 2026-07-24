@@ -34,6 +34,11 @@ public class WorkflowIntegrationClient {
 
     public String getIssueServiceUrl() { return issueServiceUrl; }
 
+    @Value("${jira.services.notification-url:http://jira-notification-service:8087}")
+    private String notificationServiceUrl;
+
+    public String getNotificationServiceUrl() { return notificationServiceUrl; }
+
     @Value("${jira.services.comment-url:http://localhost:8086}")
     private String commentServiceUrl;
 
