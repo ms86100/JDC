@@ -50,6 +50,10 @@ public class BoardColumn {
     @Builder.Default
     private Boolean isHidden = false;
 
+    @Column(name = "show_days_in_column")
+    @Builder.Default
+    private Boolean showDaysInColumn = false;
+
     public static final String CATEGORY_TODO = "TODO";
     public static final String CATEGORY_IN_PROGRESS = "IN_PROGRESS";
     public static final String CATEGORY_IN_REVIEW = "IN_REVIEW";

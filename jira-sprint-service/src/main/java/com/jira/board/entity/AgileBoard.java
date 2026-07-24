@@ -59,6 +59,35 @@ public class AgileBoard {
     @Builder.Default
     private Integer daysOnBoard = 5;
 
+    @Column(name = "kanban_backlog_enabled")
+    @Builder.Default
+    private Boolean kanbanBacklogEnabled = false;
+
+    @Column(name = "sub_filter", columnDefinition = "TEXT")
+    private String subFilter;
+
+    @Column(name = "hide_completed_after_days")
+    @Builder.Default
+    private Integer hideCompletedAfterDays = 14;
+
+    @Column(name = "use_simplified_workflow")
+    @Builder.Default
+    private Boolean useSimplifiedWorkflow = false;
+
+    @Column(name = "time_tracking", length = 50)
+    @Builder.Default
+    private String timeTracking = "NONE";
+
+    @Column(length = 100)
+    private String timezone;
+
+    @Column(name = "working_days", length = 50)
+    @Builder.Default
+    private String workingDays = "MON,TUE,WED,THU,FRI";
+
+    @Column(name = "non_working_dates", columnDefinition = "TEXT")
+    private String nonWorkingDates;
+
     @Column(name = "last_viewed")
     private LocalDateTime lastViewed;
 
