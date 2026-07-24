@@ -1,0 +1,117 @@
+/* =========================================================================
+   Page & List Entrance Animations
+   Airbus DS motion language: fast (150ms), base (250ms), slow (350ms)
+   ========================================================================= */
+
+/* --- Page Entrance (fade + slide up) --- */
+@keyframes sa-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Apply to main content area children */
+.sa-page-enter,
+[class*="page-container"],
+[class*="page-content"],
+main > div:first-child {
+  animation: sa-page-enter var(--sa-motion-base, 250ms) ease-out;
+}
+
+/* --- Staggered List Items --- */
+@keyframes sa-list-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Table rows stagger */
+.ab-table tbody tr,
+[class*="issue-row"],
+[class*="list-item"],
+[class*="card-grid"] > * {
+  animation: sa-list-item-enter var(--sa-motion-base, 250ms) ease-out both;
+}
+
+/* Stagger delays for first 12 items */
+.ab-table tbody tr:nth-child(1), [class*="card-grid"] > *:nth-child(1) { animation-delay: 0ms; }
+.ab-table tbody tr:nth-child(2), [class*="card-grid"] > *:nth-child(2) { animation-delay: 30ms; }
+.ab-table tbody tr:nth-child(3), [class*="card-grid"] > *:nth-child(3) { animation-delay: 60ms; }
+.ab-table tbody tr:nth-child(4), [class*="card-grid"] > *:nth-child(4) { animation-delay: 90ms; }
+.ab-table tbody tr:nth-child(5), [class*="card-grid"] > *:nth-child(5) { animation-delay: 120ms; }
+.ab-table tbody tr:nth-child(6), [class*="card-grid"] > *:nth-child(6) { animation-delay: 150ms; }
+.ab-table tbody tr:nth-child(7), [class*="card-grid"] > *:nth-child(7) { animation-delay: 180ms; }
+.ab-table tbody tr:nth-child(8), [class*="card-grid"] > *:nth-child(8) { animation-delay: 210ms; }
+.ab-table tbody tr:nth-child(9), [class*="card-grid"] > *:nth-child(9) { animation-delay: 240ms; }
+.ab-table tbody tr:nth-child(10), [class*="card-grid"] > *:nth-child(10) { animation-delay: 270ms; }
+.ab-table tbody tr:nth-child(11), [class*="card-grid"] > *:nth-child(11) { animation-delay: 300ms; }
+.ab-table tbody tr:nth-child(12), [class*="card-grid"] > *:nth-child(12) { animation-delay: 330ms; }
+
+/* --- Card Grid Entrance --- */
+@keyframes sa-card-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+[class*="project-card"],
+[class*="board-card"],
+.ab-card {
+  animation: sa-card-enter var(--sa-motion-base, 250ms) ease-out both;
+}
+
+/* --- Kanban Column Entrance (stagger) --- */
+[class*="kanban-column"]:nth-child(1) { animation-delay: 0ms; }
+[class*="kanban-column"]:nth-child(2) { animation-delay: 60ms; }
+[class*="kanban-column"]:nth-child(3) { animation-delay: 120ms; }
+[class*="kanban-column"]:nth-child(4) { animation-delay: 180ms; }
+[class*="kanban-column"]:nth-child(5) { animation-delay: 240ms; }
+[class*="kanban-column"]:nth-child(6) { animation-delay: 300ms; }
+
+/* --- Skeleton to Content Crossfade --- */
+@keyframes sa-content-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* --- Number Count Up Animation --- */
+@keyframes sa-count-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+[class*="stat-value"],
+[class*="kpi-value"],
+.jdc-dash-stat-value {
+  animation: sa-count-up 400ms ease-out;
+}
+
+/* --- Respect reduced motion --- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

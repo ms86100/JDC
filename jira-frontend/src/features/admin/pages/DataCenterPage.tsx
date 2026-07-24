@@ -115,45 +115,58 @@ export default function DataCenterPage() {
             </tr>
           </thead>
           <tbody>
-            {clusterNodes?.map((node) => (
-              <tr key={node.id}>
-                <td>
-                  <div className="node-cell">
-                    <span className={`node-status ${node.nodeState.toLowerCase()}`}></span>
-                    <span className="node-name">{node.nodeName}</span>
-                  </div>
-                </td>
-                <td>{node.nodeIp}</td>
-                <td>{node.nodeType}</td>
-                <td>
-                  <span className={`admin-status admin-status-${node.nodeState === 'ONLINE' ? 'active' : 'inactive'}`}>
-                    {node.nodeState}
-                  </span>
-                </td>
-                <td>
-                  <div className="usage-bar">
-                    <div className="usage-bar-fill" style={{ width: `${node.cpuUsage}%` }}></div>
-                    <span className="usage-value">{node.cpuUsage}%</span>
-                  </div>
-                </td>
-                <td>
-                  <div className="usage-bar">
-                    <div className="usage-bar-fill" style={{ width: `${node.memoryUsage}%` }}></div>
-                    <span className="usage-value">{node.memoryUsage}%</span>
-                  </div>
-                </td>
-                <td>{new Date(node.lastHeartbeat).toLocaleString()}</td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="admin-btn-secondary">Drain</button>
-                    <button className="admin-btn-secondary">Details</button>
-                  </div>
-                </td>
-              </tr>
-            )) || (
-              <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '24px' }}>Loading...</td>
-              </tr>
+            {clusterNodes ? (
+              clusterNodes.map((node) => (
+                <tr key={node.id}>
+                  <td>
+                    <div className="node-cell">
+                      <span className={`node-status ${node.nodeState.toLowerCase()}`}></span>
+                      <span className="node-name">{node.nodeName}</span>
+                    </div>
+                  </td>
+                  <td>{node.nodeIp}</td>
+                  <td>{node.nodeType}</td>
+                  <td>
+                    <span className={`admin-status admin-status-${node.nodeState === 'ONLINE' ? 'active' : 'inactive'}`}>
+                      {node.nodeState}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="usage-bar">
+                      <div className="usage-bar-fill" style={{ width: `${node.cpuUsage}%` }}></div>
+                      <span className="usage-value">{node.cpuUsage}%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="usage-bar">
+                      <div className="usage-bar-fill" style={{ width: `${node.memoryUsage}%` }}></div>
+                      <span className="usage-value">{node.memoryUsage}%</span>
+                    </div>
+                  </td>
+                  <td>{new Date(node.lastHeartbeat).toLocaleString()}</td>
+                  <td>
+                    <div className="action-buttons">
+                      <button className="admin-btn-secondary">Drain</button>
+                      <button className="admin-btn-secondary">Details</button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <>
+                {[...Array(4)].map((_, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '12px 16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div className="ab-skeleton" style={{ height: 10, width: 10, borderRadius: '50%', flexShrink: 0 }} /><div className="ab-skeleton" style={{ height: 16, width: '60%', borderRadius: 'var(--sa-radius-sm)' }} /></div></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 100, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 60, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 22, width: 60, borderRadius: 12 }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 12, width: '80%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 12, width: '80%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '70%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 80, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                  </tr>
+                ))}
+              </>
             )}
           </tbody>
         </table>
@@ -183,43 +196,56 @@ export default function DataCenterPage() {
             </tr>
           </thead>
           <tbody>
-            {scheduledJobs?.map((job) => (
-              <tr key={job.id}>
-                <td>
-                  <div className="job-name">{job.jobName}</div>
-                  <div className="job-description">{job.description}</div>
-                </td>
-                <td>{job.jobType}</td>
-                <td>
-                  {job.cronExpression || (job.intervalMs ? `Every ${job.intervalMs / 1000}s` : 'Manual')}
-                </td>
-                <td>
-                  <div className="job-status">
-                    {job.isRunning ? (
-                      <span className="admin-status admin-status-pending">Running</span>
-                    ) : job.isEnabled ? (
-                      <span className="admin-status admin-status-active">Enabled</span>
-                    ) : (
-                      <span className="admin-status admin-status-inactive">Disabled</span>
-                    )}
-                  </div>
-                </td>
-                <td>{job.lastRunAt ? new Date(job.lastRunAt).toLocaleString() : 'Never'}</td>
-                <td>{job.nextRunAt ? new Date(job.nextRunAt).toLocaleString() : '-'}</td>
-                <td>{job.lastDurationMs ? `${(job.lastDurationMs / 1000).toFixed(1)}s` : '-'}</td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="admin-btn-secondary" disabled={job.isRunning}>Run Now</button>
-                    <button className="admin-btn-secondary">
-                      {job.isEnabled ? 'Disable' : 'Enable'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )) || (
-              <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '24px' }}>Loading...</td>
-              </tr>
+            {scheduledJobs ? (
+              scheduledJobs.map((job) => (
+                <tr key={job.id}>
+                  <td>
+                    <div className="job-name">{job.jobName}</div>
+                    <div className="job-description">{job.description}</div>
+                  </td>
+                  <td>{job.jobType}</td>
+                  <td>
+                    {job.cronExpression || (job.intervalMs ? `Every ${job.intervalMs / 1000}s` : 'Manual')}
+                  </td>
+                  <td>
+                    <div className="job-status">
+                      {job.isRunning ? (
+                        <span className="admin-status admin-status-pending">Running</span>
+                      ) : job.isEnabled ? (
+                        <span className="admin-status admin-status-active">Enabled</span>
+                      ) : (
+                        <span className="admin-status admin-status-inactive">Disabled</span>
+                      )}
+                    </div>
+                  </td>
+                  <td>{job.lastRunAt ? new Date(job.lastRunAt).toLocaleString() : 'Never'}</td>
+                  <td>{job.nextRunAt ? new Date(job.nextRunAt).toLocaleString() : '-'}</td>
+                  <td>{job.lastDurationMs ? `${(job.lastDurationMs / 1000).toFixed(1)}s` : '-'}</td>
+                  <td>
+                    <div className="action-buttons">
+                      <button className="admin-btn-secondary" disabled={job.isRunning}>Run Now</button>
+                      <button className="admin-btn-secondary">
+                        {job.isEnabled ? 'Disable' : 'Enable'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <>
+                {[...Array(5)].map((_, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '70%', borderRadius: 'var(--sa-radius-sm)', marginBottom: 4 }} /><div className="ab-skeleton" style={{ height: 12, width: '50%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 60, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 80, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 22, width: 60, borderRadius: 12 }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '70%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '70%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 40, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 100, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                  </tr>
+                ))}
+              </>
             )}
           </tbody>
         </table>

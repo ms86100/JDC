@@ -235,7 +235,17 @@ export default function PermissionsPage() {
           </thead>
           <tbody>
             {loadingPermissions ? (
-              <tr><td colSpan={5} className="loading-cell">Loading...</td></tr>
+              <>
+                {[...Array(6)].map((_, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '12px 16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div className="ab-skeleton" style={{ height: 24, width: 24, borderRadius: 'var(--sa-radius-sm)', flexShrink: 0 }} /><div className="ab-skeleton" style={{ height: 16, width: '60%', borderRadius: 'var(--sa-radius-sm)' }} /></div></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '70%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 60, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 80, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 100, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                  </tr>
+                ))}
+              </>
             ) : permissionSchemes?.length === 0 ? (
               <tr><td colSpan={5} className="empty-cell">No permission schemes found</td></tr>
             ) : (
@@ -315,7 +325,17 @@ export default function PermissionsPage() {
           </thead>
           <tbody>
             {loadingNotifications ? (
-              <tr><td colSpan={5} className="loading-cell">Loading...</td></tr>
+              <>
+                {[...Array(6)].map((_, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '12px 16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div className="ab-skeleton" style={{ height: 24, width: 24, borderRadius: 'var(--sa-radius-sm)', flexShrink: 0 }} /><div className="ab-skeleton" style={{ height: 16, width: '60%', borderRadius: 'var(--sa-radius-sm)' }} /></div></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '70%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 60, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 50, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 100, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                  </tr>
+                ))}
+              </>
             ) : notificationSchemes?.length === 0 ? (
               <tr><td colSpan={5} className="empty-cell">No notification schemes found</td></tr>
             ) : (
@@ -395,7 +415,17 @@ export default function PermissionsPage() {
           </thead>
           <tbody>
             {loadingSecurity ? (
-              <tr><td colSpan={5} className="loading-cell">Loading...</td></tr>
+              <>
+                {[...Array(6)].map((_, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '12px 16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div className="ab-skeleton" style={{ height: 24, width: 24, borderRadius: 'var(--sa-radius-sm)', flexShrink: 0 }} /><div className="ab-skeleton" style={{ height: 16, width: '60%', borderRadius: 'var(--sa-radius-sm)' }} /></div></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '70%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 60, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 50, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 100, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                  </tr>
+                ))}
+              </>
             ) : securitySchemes?.length === 0 ? (
               <tr><td colSpan={5} className="empty-cell">No security schemes found</td></tr>
             ) : (

@@ -9,6 +9,7 @@ import workflowEngineApi, {
   ValidationResult,
 } from '../../../api/workflowEngineApi';
 import { WorkflowVisualizer } from '../components/WorkflowVisualizer';
+import { appNotify } from '../../../lib/appNotify';
 import './WorkflowBuilderPage.css';
 
 // ========== Utility Functions ==========
@@ -672,7 +673,7 @@ export const WorkflowBuilderPage: React.FC = () => {
 
   const startDrawingTransition = useCallback(() => {
     if (!workflowData.initialStateId) {
-      alert('Please set an initial state first');
+      appNotify.warning('Please set an initial state first');
       return;
     }
     setIsDrawingTransition(true);

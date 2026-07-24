@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useJiraUsers, useJiraGroups } from '../hooks/useAdminApi';
 import type { JiraUser } from '../hooks/useAdminApi';
+import { appNotify } from '../../../lib/appNotify';
 import './JiraUserBrowser.css';
 
 export default function JiraUserBrowser() {
@@ -39,7 +40,7 @@ export default function JiraUserBrowser() {
         <div className="user-browser-header">
           <h1 className="user-browser-title">Users</h1>
           <div className="user-browser-actions">
-            <button className="btn-secondary" onClick={() => alert('Invite users feature coming soon')}>Invite users</button>
+            <button className="btn-secondary" onClick={() => appNotify.info('Invite users feature coming soon')}>Invite users</button>
             <Link to="/admin/users/create" className="btn-primary">Create user</Link>
           </div>
         </div>
@@ -132,9 +133,19 @@ export default function JiraUserBrowser() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr>
-                <td colSpan={7} className="loading-cell">Loading...</td>
-              </tr>
+              <>
+                {[...Array(8)].map((_, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '12px 16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div className="ab-skeleton" style={{ height: 32, width: 32, borderRadius: '50%', flexShrink: 0 }} /><div className="ab-skeleton" style={{ height: 16, width: '60%', borderRadius: 'var(--sa-radius-sm)' }} /></div></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '70%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '50%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '40%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '30%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '50%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 40, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                  </tr>
+                ))}
+              </>
             ) : data?.content?.length === 0 ? (
               <tr>
                 <td colSpan={7} className="empty-cell">No users found</td>

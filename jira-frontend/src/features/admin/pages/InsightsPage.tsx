@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { appNotify } from '../../../lib/appNotify';
 import './AdminReportsInsights.css';
 
 type Range = '7d' | '30d' | '90d';
@@ -74,7 +75,7 @@ export default function InsightsPage() {
           </div>
         </div>
         <div className="ab-analytics-toolbar-right">
-          <button type="button" className="dc-btn dc-btn-secondary" onClick={() => alert('Export ready!')}>
+          <button type="button" className="dc-btn dc-btn-secondary" onClick={() => appNotify.success('Export ready!')}>
             Export dashboard
           </button>
           <Link to="/admin/reports" className="dc-btn dc-btn-sm dc-btn-secondary" style={{ textDecoration: 'none' }}>

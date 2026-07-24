@@ -18,7 +18,7 @@
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(20, 23, 29, 0.18);
   border: 1px solid transparent;
-  background: #fff;
+  background: var(--sa-n0, #fff);
   pointer-events: auto;
   animation: sa-toast-in 0.2s ease-out;
 }
@@ -35,23 +35,23 @@
 }
 
 .sa-toast--success {
-  border-color: #b3df72;
-  background: #f3f9ed;
+  border-color: var(--sa-success-500);
+  background: var(--sa-success-50);
 }
 
 .sa-toast--error {
-  border-color: #ff8f73;
+  border-color: var(--sa-danger-500);
   background: var(--sa-danger-50);
 }
 
 .sa-toast--warning {
-  border-color: #ffc400;
-  background: #fff7e6;
+  border-color: var(--sa-warn-500);
+  background: var(--sa-warn-50);
 }
 
 .sa-toast--info {
-  border-color: #7fa5db;
-  background: #eef3fb;
+  border-color: var(--sa-brand-400);
+  background: var(--sa-brand-50);
 }
 
 .sa-toast__icon {
@@ -77,12 +77,12 @@
 }
 
 .sa-toast--warning .sa-toast__icon {
-  background: #ff991f;
+  background: var(--sa-warn-500);
   color: #fff;
 }
 
 .sa-toast--info .sa-toast__icon {
-  background: #2f6ac0;
+  background: var(--sa-brand-500);
   color: #fff;
 }
 
@@ -100,7 +100,7 @@
   background: transparent;
   font-size: 18px;
   line-height: 1;
-  color: #5b6573;
+  color: var(--sa-n600);
   cursor: pointer;
   padding: 0 2px;
 }

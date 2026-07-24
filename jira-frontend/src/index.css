@@ -29,6 +29,9 @@
 @import './styles/ui-polish.css';
 @import './features/boards/styles/kanban-board.css';
 
+/* Page & list entrance animations */
+@import './styles/animations.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../api/axiosClient';
+import { appNotify } from '../../../lib/appNotify';
 import {
   Monitor, Layers, Settings, Plus, Trash2, Save, RotateCcw, Edit2, Eye, EyeOff,
   ChevronRight, ChevronDown, GripVertical, X, Check, AlertCircle, Search,
@@ -732,7 +733,7 @@ const ScreenConfigPage: React.FC<ScreenConfigPageProps> = ({ projectId }) => {
 
     const screenType = prompt('Enter screen type (CREATE, EDIT, VIEW, SEARCH):', 'CREATE');
     if (!screenType || !['CREATE', 'EDIT', 'VIEW', 'SEARCH'].includes(screenType.toUpperCase())) {
-      alert('Invalid screen type');
+      appNotify.error('Invalid screen type');
       return;
     }
 
@@ -765,7 +766,7 @@ const ScreenConfigPage: React.FC<ScreenConfigPageProps> = ({ projectId }) => {
 
   const handleAddScreenToScheme = (scheme: ScreenScheme) => {
     if (screens.length === 0) {
-      alert('No screens available. Create a screen first.');
+      appNotify.warning('No screens available. Create a screen first.');
       return;
     }
 
@@ -774,7 +775,7 @@ const ScreenConfigPage: React.FC<ScreenConfigPageProps> = ({ projectId }) => {
 
     const screenOptions = screens.filter(s => s.screenType === screenType.toUpperCase());
     if (screenOptions.length === 0) {
-      alert(`No screens available with type ${screenType.toUpperCase()}. Create one first.`);
+      appNotify.warning(`No screens available with type ${screenType.toUpperCase()}. Create one first.`);
       return;
     }
 

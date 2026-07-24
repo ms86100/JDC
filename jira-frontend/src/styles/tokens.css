@@ -281,3 +281,138 @@
     --sa-motion-slow: 0ms;
   }
 }
+
+/* =========================================================================
+   Dark Mode — Airbus Industrial Dark Theme
+   Activates via: data-theme="dark" on <html>, or prefers-color-scheme: dark
+   ========================================================================= */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    /* Brand stays the same — Airbus blue is constant */
+    --sa-brand-50:  #0d1f3c;
+    --sa-brand-100: #122a4e;
+    --sa-brand-200: #1a3a6b;
+    --sa-brand-300: #2554a0;
+    --sa-brand-400: #4a7fd4;
+    --sa-brand-500: #6ea0e8;
+    --sa-brand-600: #93b9ef;
+    --sa-brand-700: #b8d2f5;
+    --sa-brand-800: #dce8fa;
+    --sa-brand-900: #f0f4fc;
+
+    /* Neutrals — inverted */
+    --sa-n0:    #1a1d23;
+    --sa-n50:   #1e2128;
+    --sa-n100:  #262a33;
+    --sa-n200:  #2f3440;
+    --sa-n300:  #3d4455;
+    --sa-n400:  #4d566a;
+    --sa-n500:  #6b778c;
+    --sa-n600:  #8993a4;
+    --sa-n700:  #a5adba;
+    --sa-n800:  #c1c7d0;
+    --sa-n900:  #dfe1e6;
+    --sa-n1000: #ebecf0;
+
+    /* Semantic — toned for dark backgrounds */
+    --sa-success-50:  #0d2818;
+    --sa-success-100: #133d24;
+    --sa-success-500: #36b37e;
+    --sa-success-700: #57d9a3;
+
+    --sa-warn-50:  #2a2000;
+    --sa-warn-100: #3d2e00;
+    --sa-warn-500: #ffab00;
+    --sa-warn-600: #ffc400;
+    --sa-warn-700: #ffe380;
+
+    --sa-danger-50:  #2d0a0a;
+    --sa-danger-100: #4a1111;
+    --sa-danger-500: #ff5630;
+    --sa-danger-700: #ff8f73;
+
+    --sa-info-50:  #0d1f3c;
+    --sa-info-100: #122a4e;
+    --sa-info-500: #6ea0e8;
+    --sa-info-700: #93b9ef;
+
+    /* Elevation — darker shadows */
+    --sa-elev-1: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    --sa-elev-2: 0 4px 12px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.25);
+    --sa-elev-3: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+    --sa-elev-4: 0 12px 40px rgba(0, 0, 0, 0.45), 0 4px 8px rgba(0, 0, 0, 0.3);
+
+    /* Surface overlay */
+    --sa-surface-overlay: rgba(0, 0, 0, 0.6);
+    --sa-surface-sunken: #161920;
+    --sa-glass-bg: rgba(26, 29, 35, 0.8);
+
+    /* Focus ring for dark */
+    --sa-focus-ring: 0 0 0 2px var(--sa-n100), 0 0 0 4px var(--sa-brand-500);
+
+    /* Scrollbar */
+    --sa-scroll-thumb: var(--sa-n400);
+    --sa-scroll-thumb-hover: var(--sa-n500);
+  }
+}
+
+/* Explicit dark theme class (for manual toggle) */
+[data-theme="dark"] {
+  --sa-brand-50:  #0d1f3c;
+  --sa-brand-100: #122a4e;
+  --sa-brand-200: #1a3a6b;
+  --sa-brand-300: #2554a0;
+  --sa-brand-400: #4a7fd4;
+  --sa-brand-500: #6ea0e8;
+  --sa-brand-600: #93b9ef;
+  --sa-brand-700: #b8d2f5;
+  --sa-brand-800: #dce8fa;
+  --sa-brand-900: #f0f4fc;
+
+  --sa-n0:    #1a1d23;
+  --sa-n50:   #1e2128;
+  --sa-n100:  #262a33;
+  --sa-n200:  #2f3440;
+  --sa-n300:  #3d4455;
+  --sa-n400:  #4d566a;
+  --sa-n500:  #6b778c;
+  --sa-n600:  #8993a4;
+  --sa-n700:  #a5adba;
+  --sa-n800:  #c1c7d0;
+  --sa-n900:  #dfe1e6;
+  --sa-n1000: #ebecf0;
+
+  --sa-success-50:  #0d2818;
+  --sa-success-100: #133d24;
+  --sa-success-500: #36b37e;
+  --sa-success-700: #57d9a3;
+
+  --sa-warn-50:  #2a2000;
+  --sa-warn-100: #3d2e00;
+  --sa-warn-500: #ffab00;
+  --sa-warn-600: #ffc400;
+  --sa-warn-700: #ffe380;
+
+  --sa-danger-50:  #2d0a0a;
+  --sa-danger-100: #4a1111;
+  --sa-danger-500: #ff5630;
+  --sa-danger-700: #ff8f73;
+
+  --sa-info-50:  #0d1f3c;
+  --sa-info-100: #122a4e;
+  --sa-info-500: #6ea0e8;
+  --sa-info-700: #93b9ef;
+
+  --sa-elev-1: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --sa-elev-2: 0 4px 12px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.25);
+  --sa-elev-3: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --sa-elev-4: 0 12px 40px rgba(0, 0, 0, 0.45), 0 4px 8px rgba(0, 0, 0, 0.3);
+
+  --sa-surface-overlay: rgba(0, 0, 0, 0.6);
+  --sa-surface-sunken: #161920;
+  --sa-glass-bg: rgba(26, 29, 35, 0.8);
+  --sa-focus-ring: 0 0 0 2px var(--sa-n100), 0 0 0 4px var(--sa-brand-500);
+  --sa-scroll-thumb: var(--sa-n400);
+  --sa-scroll-thumb-hover: var(--sa-n500);
+}

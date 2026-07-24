@@ -122,9 +122,16 @@ export default function JiraGroupsBrowser() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr>
-                <td colSpan={4} className="loading-cell">Loading...</td>
-              </tr>
+              <>
+                {[...Array(8)].map((_, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '60%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 40, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '40%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 80, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                  </tr>
+                ))}
+              </>
             ) : data?.content?.length === 0 ? (
               <tr>
                 <td colSpan={4} className="empty-cell">No groups found</td>

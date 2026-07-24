@@ -1,4 +1,5 @@
 import React from 'react';
+import { appNotify } from '../../../lib/appNotify';
 
 type CardLayout = 'FULL' | 'COMPACT' | 'MINI';
 type ViewMode = 'board' | 'swimlane';
@@ -120,7 +121,7 @@ export default function BoardHeader({
         </button>
 
         {/* Keyboard Shortcuts Help */}
-        <button className="ab-btn ab-btn-ghost ab-btn-icon" onClick={() => alert('Keyboard shortcuts: C=Create, /=Search, J/K=Navigate')} title="Keyboard Shortcuts">
+        <button className="ab-btn ab-btn-ghost ab-btn-icon" onClick={() => appNotify.info('Keyboard shortcuts: C=Create, /=Search, J/K=Navigate')} title="Keyboard Shortcuts">
           <span className="ab-shortcut-hint">?</span>
         </button>
       </div>

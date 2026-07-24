@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { issueLinkApi, IssueLinkResponse } from '../../../api/issueLinkApi';
 import { resolveIssueByKey } from '../../../api/issueLookup';
+import { appNotify } from '../../../lib/appNotify';
 
 interface IssueLinksTabProps {
   issueId: string;
@@ -73,10 +74,10 @@ export default function IssueLinksTab({ issueId }: IssueLinksTabProps) {
           linkType,
         });
       } else {
-        alert('Issue not found. Please enter a valid issue key.');
+        appNotify.error('Issue not found. Please enter a valid issue key.');
       }
     } catch (error) {
-      alert('Could not find the issue. Please check the issue key.');
+      appNotify.error('Could not find the issue. Please check the issue key.');
     }
   };
 

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectApi, ProjectResponse } from '../../../api/projectApi';
 import ProjectWorkflowSchemePanel from '../components/ProjectWorkflowSchemePanel';
 import '../styles/ProjectSettingsPage.css';
+import { appNotify } from '../../../lib/appNotify';
 import '../../workflows/pages/workflow-management.css';
 
 type SettingsTab = 'details' | 'members' | 'workflows' | 'components' | 'versions' | 'permissions';
@@ -190,7 +191,7 @@ export default function ProjectSettingsPage() {
             <div className="ab-card">
               <div className="ab-card-header">
                 <h3 className="ab-card-title">Project Members</h3>
-                <button className="ab-btn ab-btn-primary btn-sm" onClick={() => alert('Add member coming soon!')}>Add Member</button>
+                <button className="ab-btn ab-btn-primary btn-sm" onClick={() => appNotify.info('Add member coming soon!')}>Add Member</button>
               </div>
               <div className="ab-card-body">
                 <div className="ab-members-list">
@@ -206,7 +207,7 @@ export default function ProjectSettingsPage() {
                   )}
                   <div className="ab-empty-state-sm">
                     <p>No additional members added yet.</p>
-                    <button className="ab-btn ab-btn-secondary btn-sm" onClick={() => alert('Add members coming soon!')}>Add Members</button>
+                    <button className="ab-btn ab-btn-secondary btn-sm" onClick={() => appNotify.info('Add members coming soon!')}>Add Members</button>
                   </div>
                 </div>
               </div>
@@ -238,7 +239,7 @@ export default function ProjectSettingsPage() {
             <div className="ab-card">
               <div className="ab-card-header">
                 <h3 className="ab-card-title">Project Components</h3>
-                <button className="ab-btn ab-btn-primary btn-sm" onClick={() => alert('Add component coming soon!')}>Add Component</button>
+                <button className="ab-btn ab-btn-primary btn-sm" onClick={() => appNotify.info('Add component coming soon!')}>Add Component</button>
               </div>
               <div className="ab-card-body">
                 <div className="ab-empty-state-sm">
@@ -255,7 +256,7 @@ export default function ProjectSettingsPage() {
             <div className="ab-card">
               <div className="ab-card-header">
                 <h3 className="ab-card-title">Project Versions</h3>
-                <button className="ab-btn ab-btn-primary btn-sm" onClick={() => alert('Add version coming soon!')}>Add Version</button>
+                <button className="ab-btn ab-btn-primary btn-sm" onClick={() => appNotify.info('Add version coming soon!')}>Add Version</button>
               </div>
               <div className="ab-card-body">
                 <div className="ab-empty-state-sm">

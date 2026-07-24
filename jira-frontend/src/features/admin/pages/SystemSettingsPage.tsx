@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import AdminLayout from '../components/AdminLayout';
 import { migrationSettingsApi } from '../../../api/serviceApi';
 import { migrationPath } from '../../migration/utils/migrationDeepLinks';
+import { appNotify } from '../../../lib/appNotify';
 import './SystemSettingsPage.css';
 
 type TabType = 'general' | 'appearance' | 'attachments' | 'time-tracking' | 'subtasks' | 'import' | 'licensing';
@@ -97,7 +98,7 @@ export default function SystemSettingsPage() {
         </div>
       </div>
       <div className="settings-actions">
-        <button className="admin-btn-primary" onClick={() => alert('General settings saved!')}>Save Changes</button>
+        <button className="admin-btn-primary" onClick={() => appNotify.success('General settings saved!')}>Save Changes</button>
       </div>
     </div>
   );
@@ -113,7 +114,7 @@ export default function SystemSettingsPage() {
           </div>
           <div className="logo-upload">
             <div className="logo-preview">J</div>
-            <button className="admin-btn-secondary" onClick={() => alert('Logo change coming soon!')}>Change Logo</button>
+            <button className="admin-btn-secondary" onClick={() => appNotify.info('Logo change coming soon!')}>Change Logo</button>
           </div>
         </div>
         <div className="setting-item">
@@ -134,12 +135,12 @@ export default function SystemSettingsPage() {
           </div>
           <div className="logo-upload">
             <div className="logo-preview small">J</div>
-            <button className="admin-btn-secondary" onClick={() => alert('Icon upload coming soon!')}>Upload Icon</button>
+            <button className="admin-btn-secondary" onClick={() => appNotify.info('Icon upload coming soon!')}>Upload Icon</button>
           </div>
         </div>
       </div>
       <div className="settings-actions">
-        <button className="admin-btn-primary" onClick={() => alert('General settings saved!')}>Save Changes</button>
+        <button className="admin-btn-primary" onClick={() => appNotify.success('General settings saved!')}>Save Changes</button>
       </div>
     </div>
   );
@@ -223,7 +224,7 @@ export default function SystemSettingsPage() {
       </div>
 
       <div className="settings-actions">
-        <button className="admin-btn-primary" onClick={() => alert('General settings saved!')}>Save Changes</button>
+        <button className="admin-btn-primary" onClick={() => appNotify.success('General settings saved!')}>Save Changes</button>
       </div>
     </div>
   );
@@ -269,7 +270,7 @@ export default function SystemSettingsPage() {
         </div>
       </div>
       <div className="settings-actions">
-        <button className="admin-btn-primary" onClick={() => alert('General settings saved!')}>Save Changes</button>
+        <button className="admin-btn-primary" onClick={() => appNotify.success('General settings saved!')}>Save Changes</button>
       </div>
     </div>
   );
@@ -310,7 +311,7 @@ export default function SystemSettingsPage() {
         </div>
       </div>
       <div className="settings-actions">
-        <button className="admin-btn-primary" onClick={() => alert('General settings saved!')}>Save Changes</button>
+        <button className="admin-btn-primary" onClick={() => appNotify.success('General settings saved!')}>Save Changes</button>
       </div>
     </div>
   );
@@ -381,7 +382,7 @@ export default function SystemSettingsPage() {
         </div>
       </div>
       <div className="settings-actions">
-        <button className="admin-btn-primary" onClick={() => alert('Apply license!')}>Apply License</button>
+        <button className="admin-btn-primary" onClick={() => appNotify.info('Apply license!')}>Apply License</button>
       </div>
     </div>
   );

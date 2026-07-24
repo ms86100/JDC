@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import AdminLayout from '../components/AdminLayout';
 import apiClient from '../../../api/axiosClient';
+import { appNotify } from '../../../lib/appNotify';
 import './AutomationPage.css';
 
 // ==================== Types ====================
@@ -501,7 +502,7 @@ export default function AutomationPage() {
                       <span className="duration">{log.executionTimeMs}ms</span>
                     </td>
                     <td>
-                      <button className="ab-btn ab-btn-ghost ab-btn-sm" onClick={() => alert('View details for: ' + log.ruleName)}>
+                      <button className="ab-btn ab-btn-ghost ab-btn-sm" onClick={() => appNotify.info('View details for: ' + log.ruleName)}>
                         View Details
                       </button>
                     </td>
@@ -552,7 +553,7 @@ export default function AutomationPage() {
               </div>
 
               <div className="settings-actions">
-                <button className="ab-btn ab-btn-primary" onClick={() => alert('Settings saved!')}>Save Settings</button>
+                <button className="ab-btn ab-btn-primary" onClick={() => appNotify.success('Settings saved!')}>Save Settings</button>
               </div>
             </div>
           </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import workflowEngineApi, { WorkflowDefinitionResponse } from '../../../api/workflowEngineApi';
+import { appNotify } from '../../../lib/appNotify';
 import './WorkflowListPage.css';
 
 interface WorkflowListPageProps {
@@ -68,7 +69,7 @@ export const WorkflowListPage: React.FC<WorkflowListPageProps> = ({ projectId })
     mutationFn: (id: string) => workflowEngineApi.deleteDefinition(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflow-definitions'] }),
     onError: (error: Error) => {
-      alert(`Failed to delete: ${error.message}`);
+      appNotify.error(`Failed to delete: ${error.message}`);
     },
   });
 

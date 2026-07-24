@@ -50,9 +50,18 @@ export default function PrioritiesPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '24px' }}>Loading...</td>
-                </tr>
+                <>
+                  {[...Array(6)].map((_, i) => (
+                    <tr key={i}>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 28, width: 28, borderRadius: '50%' }} /></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '60%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '80%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 60, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 50, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 80, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    </tr>
+                  ))}
+                </>
               ) : filteredPriorities.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '24px' }}>No priorities found</td>

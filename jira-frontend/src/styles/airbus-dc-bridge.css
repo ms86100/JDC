@@ -42,3 +42,40 @@
   --jdc-shadow-raised: var(--sa-elev-2);
   --jdc-shadow-modal: var(--sa-elev-3);
 }
+
+/* Dark mode bridge — header stays navy in both modes */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --jdc-header-bg: #0a1628;
+    --jdc-header-hover: #0f1e38;
+    --jdc-page-bg: var(--sa-n50);
+    --jdc-surface: var(--sa-n0);
+    --jdc-surface-alt: var(--sa-n50);
+    --jdc-bg: var(--sa-n50);
+    --jdc-border: var(--sa-n200);
+    --jdc-border-strong: var(--sa-n400);
+    --jdc-text: var(--sa-n1000);
+    --jdc-text-subtle: var(--sa-n600);
+    --jdc-text-muted: var(--sa-n500);
+    --jdc-shadow-card: var(--sa-elev-1);
+    --jdc-shadow-raised: var(--sa-elev-2);
+    --jdc-shadow-modal: var(--sa-elev-3);
+  }
+}
+
+[data-theme="dark"] {
+  --jdc-header-bg: #0a1628;
+  --jdc-header-hover: #0f1e38;
+  --jdc-page-bg: var(--sa-n50);
+  --jdc-surface: var(--sa-n0);
+  --jdc-surface-alt: var(--sa-n50);
+  --jdc-bg: var(--sa-n50);
+  --jdc-border: var(--sa-n200);
+  --jdc-border-strong: var(--sa-n400);
+  --jdc-text: var(--sa-n1000);
+  --jdc-text-subtle: var(--sa-n600);
+  --jdc-text-muted: var(--sa-n500);
+  --jdc-shadow-card: var(--sa-elev-1);
+  --jdc-shadow-raised: var(--sa-elev-2);
+  --jdc-shadow-modal: var(--sa-elev-3);
+}

@@ -60,6 +60,26 @@ const BoardsPage: React.FC = () => {
   const planningSprints = sprints?.filter(s => s.status === 'PLANNING') || [];
   const completedSprints = sprints?.filter(s => s.status === 'COMPLETED') || [];
 
+  if (isLoading) {
+    return (
+      <div style={{ padding: 'var(--sa-space-6)' }}>
+        <div style={{ marginBottom: 'var(--sa-space-4)' }}>
+          <div className="ab-skeleton" style={{ height: 28, width: 200, marginBottom: 'var(--sa-space-3)' }} />
+          <div className="ab-skeleton" style={{ height: 16, width: 360 }} />
+        </div>
+        <div style={{ display: 'flex', gap: 'var(--sa-space-3)', marginBottom: 'var(--sa-space-6)' }}>
+          <div className="ab-skeleton" style={{ height: 36, width: 140, borderRadius: 'var(--sa-radius-md)' }} />
+          <div className="ab-skeleton" style={{ height: 36, width: 100, borderRadius: 'var(--sa-radius-md)' }} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sa-space-4)' }}>
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="ab-skeleton" style={{ height: 100, borderRadius: 'var(--sa-radius-md)' }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">

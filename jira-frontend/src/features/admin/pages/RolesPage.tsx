@@ -155,7 +155,17 @@ export default function RolesPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={5} className="loading-cell">Loading...</td></tr>
+                <>
+                  {[...Array(6)].map((_, i) => (
+                    <tr key={i}>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '50%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '70%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 60, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 22, width: 50, borderRadius: 12 }} /></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 80, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    </tr>
+                  ))}
+                </>
               ) : roles?.length === 0 ? (
                 <tr><td colSpan={5} className="empty-cell">No roles found. Click "Add Role" to create one.</td></tr>
               ) : (

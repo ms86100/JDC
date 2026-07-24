@@ -127,11 +127,19 @@ const AuditLogsPage: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                    Loading audit logs...
-                  </td>
-                </tr>
+                <>
+                  {[...Array(8)].map((_, i) => (
+                    <tr key={i}>
+                      <td className="px-6 py-4"><div className="ab-skeleton" style={{ height: 16, width: '80%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td className="px-6 py-4"><div className="ab-skeleton" style={{ height: 16, width: '60%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td className="px-6 py-4"><div className="ab-skeleton" style={{ height: 22, width: 60, borderRadius: 12 }} /></td>
+                      <td className="px-6 py-4"><div className="ab-skeleton" style={{ height: 16, width: '50%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td className="px-6 py-4"><div className="ab-skeleton" style={{ height: 16, width: 70, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td className="px-6 py-4"><div className="ab-skeleton" style={{ height: 16, width: '40%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td className="px-6 py-4"><div className="ab-skeleton" style={{ height: 16, width: 40, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    </tr>
+                  ))}
+                </>
               ) : data?.content?.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-500">

@@ -5,6 +5,7 @@ import { versionApi } from '../../../api/versionApi';
 import { componentApi } from '../../../api/componentApi';
 import { issueApi, CreateIssueRequest, IssueType, IssuePriority } from '../../../api/issueApi';
 import apiClient from '../../../api/axiosClient';
+import { appNotify } from '../../../lib/appNotify';
 import './CreateIssueModal.css';
 
 interface CreateIssueModalProps {
@@ -174,7 +175,7 @@ export default function CreateIssueModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.projectId || !form.title || !form.issueTypeId) {
-      alert('Please fill in required fields');
+      appNotify.warning('Please fill in required fields');
       return;
     }
     createMutation.mutate(form);

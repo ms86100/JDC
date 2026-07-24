@@ -76,9 +76,18 @@ export default function StatusesPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '24px' }}>Loading...</td>
-                </tr>
+                <>
+                  {[...Array(8)].map((_, i) => (
+                    <tr key={i}>
+                      <td style={{ padding: '12px 16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div className="ab-skeleton" style={{ height: 24, width: 24, borderRadius: '50%', flexShrink: 0 }} /><div className="ab-skeleton" style={{ height: 16, width: '50%', borderRadius: 'var(--sa-radius-sm)' }} /></div></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: '70%', borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 22, width: 80, borderRadius: 12 }} /></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 60, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 30, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                      <td style={{ padding: '12px 16px' }}><div className="ab-skeleton" style={{ height: 16, width: 100, borderRadius: 'var(--sa-radius-sm)' }} /></td>
+                    </tr>
+                  ))}
+                </>
               ) : filteredStatuses.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '24px' }}>No statuses found</td>

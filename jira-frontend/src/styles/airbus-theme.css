@@ -1104,3 +1104,18 @@ body {
   border-radius: 50%;
   border: 2px solid var(--sa-n0);
 }
+
+/* --- Dark Mode Overrides --- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) img,
+  [data-theme="dark"] img {
+    filter: brightness(0.9);
+  }
+}
+
+[data-theme="dark"] .ab-card,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ab-card {
+    border-color: var(--sa-n300);
+  }
+}

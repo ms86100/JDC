@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { appNotify } from '../../../lib/appNotify';
 import './AdminReportsInsights.css';
 
 type ReportFilter = 'all' | 'standard' | 'scheduled' | 'recent';
@@ -102,7 +103,7 @@ export default function ReportsPage() {
     setIsGenerating(true);
     setTimeout(() => {
       setIsGenerating(false);
-      alert(`Report ${reportId} generated successfully!`);
+      appNotify.success(`Report ${reportId} generated successfully!`);
     }, 1500);
   };
 
@@ -111,7 +112,7 @@ export default function ReportsPage() {
   };
 
   const handleNewCustomReport = () => {
-    alert('Custom report builder coming soon!');
+    appNotify.info('Custom report builder coming soon!');
   };
 
   return (
@@ -267,7 +268,7 @@ export default function ReportsPage() {
                     <td>{row.size}</td>
                     <td>
                       {row.status === 'ready' && (
-                        <button type="button" className="dc-btn dc-btn-sm dc-btn-secondary" onClick={() => alert('Download ready!')}>
+                        <button type="button" className="dc-btn dc-btn-sm dc-btn-secondary" onClick={() => appNotify.success('Download ready!')}>
                           Download
                         </button>
                       )}
