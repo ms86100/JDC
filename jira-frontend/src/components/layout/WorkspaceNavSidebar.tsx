@@ -172,19 +172,7 @@ export const WorkspaceNavSidebar: React.FC<{
                   key={`${i.id ?? 'ctx'}-${i.path}-${idx}`}
                   to={i.path}
                   title={collapsed ? i.name : undefined}
-                  className="sa-context-link"
-                  style={{
-                    display: 'flex',
-                    padding: collapsed ? '8px' : '5px 14px',
-                    margin: '1px 8px',
-                    borderRadius: 'var(--sa-radius-sm)',
-                    fontSize: 'var(--sa-fs-sm)',
-                    fontWeight: 500,
-                    textDecoration: 'none',
-                    justifyContent: collapsed ? 'center' : 'flex-start',
-                    background: active ? 'rgba(255,255,255,0.14)' : 'transparent',
-                    borderLeft: active ? '2px solid #66a3ff' : '2px solid transparent',
-                  }}
+                  className={`sa-context-link${active ? ' is-active' : ''}${collapsed ? ' is-collapsed' : ''}`}
                 >
                   {collapsed ? i.name.charAt(0).toUpperCase() : i.name}
                 </Link>
@@ -196,7 +184,7 @@ export const WorkspaceNavSidebar: React.FC<{
         <div className="sa-workspace-nav-section-title">Work</div>
         {WORKSPACE_NAV_CATEGORIES.map((cat) => renderCategoryButton(cat))}
 
-        <div className="sa-workspace-nav-section-title" style={{ marginTop: 8 }}>
+        <div className="sa-workspace-nav-section-title">
           Operations
         </div>
         {WORKSPACE_NAV_OPERATIONS.map((cat) => renderCategoryButton(cat))}

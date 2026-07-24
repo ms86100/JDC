@@ -381,12 +381,32 @@ header.sa-header {
 }
 
 .sa-workspace-context .sa-context-link {
-  color: rgba(255, 255, 255, 0.85) !important;
+  display: flex;
+  padding: 5px 14px;
+  margin: 1px 8px;
+  border-radius: var(--sa-radius-sm);
+  font-size: var(--sa-fs-sm);
+  font-weight: 500;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.85);
+  border-left: 2px solid transparent;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 
-.sa-workspace-context .sa-context-link[style*='brand'] {
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: #fff !important;
+.sa-workspace-context .sa-context-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.sa-workspace-context .sa-context-link.is-active {
+  background: rgba(255, 255, 255, 0.14);
+  border-left-color: #66a3ff;
+  color: #fff;
+}
+
+.sa-workspace-context .sa-context-link.is-collapsed {
+  padding: 8px;
+  justify-content: center;
 }
 
 .sa-workspace-sidebar-collapse {
@@ -427,12 +447,10 @@ header.sa-header {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* --- Sidebar: smooth slide-in flyout, clean surface, active accent bar --- */
+/* --- Sidebar: keep navy gradient, smooth transitions, refined shadow --- */
 .sa-workspace-nav-rail {
-  background: var(--sa-n0, #fff);
-  border-right: 1px solid var(--sa-n200, #e0e4ea);
-  box-shadow: 2px 0 12px rgba(0, 32, 91, 0.06);
-  transition: background 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.22s ease;
 }
 
 .sa-workspace-nav-flyout {
@@ -540,42 +558,27 @@ header.sa-header {
 
 /* --- Mobile Responsive --- */
 @media (max-width: 768px) {
-  .sa-ws-sidebar,
-  [class*="workspace-sidebar"],
-  [class*="nav-sidebar"] {
+  .sa-workspace-nav {
     position: fixed;
     left: -280px;
     top: 48px;
     bottom: 0;
     z-index: var(--sa-z-modal, 1200);
     transition: left var(--sa-motion-base, 250ms) ease-out;
+    width: 260px;
+  }
+
+  .sa-workspace-nav.sa-workspace-nav--mobile-open {
+    left: 0;
     box-shadow: var(--sa-elev-3);
   }
 
-  .sa-ws-sidebar.open,
-  [class*="workspace-sidebar"].open,
-  [class*="nav-sidebar"].open {
-    left: 0;
-  }
-
-  .sa-ws-header-nav,
-  [class*="header-nav-links"] {
+  .sa-dc-primary-nav {
     display: none;
-  }
-
-  .sa-ws-main,
-  [class*="main-content"] {
-    margin-left: 0 !important;
-    padding: var(--sa-space-3);
   }
 }
 
 @media (max-width: 480px) {
-  .sa-ws-main,
-  [class*="main-content"] {
-    padding: var(--sa-space-2);
-  }
-
   .ab-card-header {
     flex-direction: column;
     align-items: flex-start;
