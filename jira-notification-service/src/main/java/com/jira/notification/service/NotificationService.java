@@ -83,10 +83,11 @@ public class NotificationService {
                     emailService.sendSprintCompletedEmail(notification.getUserId(), notificationData);
                     break;
                 default:
-                    emailService.sendBulkNotificationEmail(
+                    emailService.sendGenericNotificationEmail(
                             notification.getUserId(),
                             notification.getTitle(),
-                            notification.getMessage()
+                            notification.getMessage(),
+                            notificationData
                     );
             }
         } catch (Exception e) {

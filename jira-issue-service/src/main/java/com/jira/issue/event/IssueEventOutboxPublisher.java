@@ -17,6 +17,27 @@ public class IssueEventOutboxPublisher {
     private final IssueRealtimeBroadcaster realtimeBroadcaster;
 
     @Transactional
+    public void publish(String eventType, UUID issueId, UUID projectId, String payload) {
+        try {
+            repository.save(IssueEventOutbox.builder()
+                    .eventType(eventType)
+                    .issueId(issueId)
+                    .projectId(projectId)
+                    .payload(payload)
+                    .published(false)
+                    .build());
+        } catch (Exception e) {
+            log.warn("Issue outbox unavailable for {} on issue {}: {}", eventType, issueId, e.getMessage());
+        }
+        try {
+            realtimeBroadcaster.publish(eventType, issueId, projectId);
+        } catch (Exception e) {
+            log.warn("Realtime broadcast failed for {} on issue {}: {}", eventType, issueId, e.getMessage());
+        }
+        log.debug("Processed issue event {} for issue {}", eventType, issueId);
+    }
+
+    @Transactional
     public void publish(String eventType, UUID issueId, UUID projectId) {
         try {
             repository.save(IssueEventOutbox.builder()

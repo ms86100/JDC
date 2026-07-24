@@ -64,6 +64,20 @@ public class IssueEventOutboxPoller {
         payload.put("issueId", row.getIssueId() != null ? row.getIssueId().toString() : null);
         payload.put("projectId", row.getProjectId() != null ? row.getProjectId().toString() : null);
 
+        if (row.getPayload() != null && !row.getPayload().isBlank()) {
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> extra = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readValue(row.getPayload(), Map.class);
+                if (extra.containsKey("actorUserId")) {
+                    payload.put("actorUserId", extra.get("actorUserId").toString());
+                }
+                payload.put("eventPayload", extra);
+            } catch (Exception e) {
+                log.debug("Could not parse outbox payload: {}", e.getMessage());
+            }
+        }
+
         notifySearch(payload);
         notifyNotification(row, payload);
     }

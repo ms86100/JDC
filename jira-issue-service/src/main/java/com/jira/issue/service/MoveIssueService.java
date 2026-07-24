@@ -78,9 +78,12 @@ public class MoveIssueService {
                 sourceProjectKey, targetProjectKey, oldIssueKey, newIssueKey);
 
         try {
-            eventOutboxPublisher.publish("ISSUE_MOVED", issue.getId(), targetProjectId);
+            String movePayload = String.format(
+                    "{\"oldProjectId\":\"%s\",\"newProjectId\":\"%s\",\"oldKey\":\"%s\",\"newKey\":\"%s\",\"oldProjectKey\":\"%s\",\"newProjectKey\":\"%s\"}",
+                    sourceProjectId, targetProjectId, oldIssueKey, newIssueKey, sourceProjectKey, targetProjectKey);
+            eventOutboxPublisher.publish("ISSUE_MOVED", issue.getId(), targetProjectId, movePayload);
         } catch (Exception e) {
-            log.warn("Failed to publish ISSUE_MOVED event for {}: {}", issue.getId(), e.getMessage());
+            log.error("Failed to publish ISSUE_MOVED event for {}: {}", issue.getId(), e.getMessage(), e);
         }
 
         return issueService.getIssue(issue.getId());

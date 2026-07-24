@@ -84,6 +84,16 @@ public class EmailService {
         ));
     }
 
+    @Async
+    public void sendGenericNotificationEmail(UUID userId, String title, String message,
+                                              Map<String, Object> context) {
+        Map<String, Object> vars = new java.util.HashMap<>(context);
+        vars.put("subject", title);
+        vars.put("title", title);
+        vars.put("message", message);
+        sendTemplatedEmail(userId, "generic-notification", vars);
+    }
+
     private void sendTemplatedEmail(UUID userId, String templateName, Map<String, Object> variables) {
         try {
             String email = getUserEmail(userId);

@@ -36,11 +36,14 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
-        <!-- SAML 2.0 SSO Support — uncomment when OpenSAML is available in Artifactory -->
-        <!-- <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-saml2-service-provider</artifactId>
-        </dependency> -->
+        <!-- SAML 2.0 SSO Support
+             Requires OpenSAML from Shibboleth repo. When available, uncomment:
+             <dependency>
+                 <groupId>org.springframework.security</groupId>
+                 <artifactId>spring-security-saml2-service-provider</artifactId>
+             </dependency>
+             Until then, SAML is implemented via custom SamlResponseHandler
+             that processes SAML assertions using standard XML parsing. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>

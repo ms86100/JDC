@@ -31,6 +31,7 @@ import RolesPage from '../pages/RolesPage';
 import SessionsPage from '../pages/SessionsPage';
 import PasswordPolicyPage from '../pages/PasswordPolicyPage';
 import ApplicationLinksPage from '../pages/ApplicationLinksPage';
+import SamlConfigPage from '../pages/SamlConfigPage';
 import EditUserPage from '../pages/EditUserPage';
 import GroupMembersPage from '../pages/GroupMembersPage';
 
@@ -120,6 +121,8 @@ export default function AdminRoutes() {
       <Route path="webhooks" element={<Navigate to="/tests/webhooks" replace />} />
       <Route path="application-links" element={<ApplicationLinksPage />} />
       <Route path="links" element={<Navigate to="/admin/application-links" replace />} />
+      <Route path="system/sso" element={<SamlConfigPage />} />
+      <Route path="sso" element={<Navigate to="/admin/system/sso" replace />} />
 
       {/* Test Management (admin menu → workspace routes) */}
       <Route path="tests" element={<Navigate to="/tests" replace />} />

@@ -84,6 +84,7 @@ const CATEGORIES_BY_KEY: Record<string, AdminCategory> = {
     key: 'addons', label: 'Applications', icon: '⚡',
     items: [
       { label: 'Application links', path: '/admin/application-links' },
+      { label: 'SSO / SAML', path: '/admin/system/sso' },
       { label: 'Automation', path: '/admin/automation' },
       { label: 'Webhooks', path: '/admin/webhooks' },
       { label: 'Outgoing mail', path: '/admin/mail' },
