@@ -23,7 +23,11 @@ public class ValidatorExecutor {
             "PARENT_STATUS",
             "ATTACHMENT_REQUIRED",
             WorkflowValidator.TYPE_ATTACHMENT_COUNT,
-            WorkflowValidator.TYPE_SCRIPT
+            WorkflowValidator.TYPE_SCRIPT,
+            "DATE_RANGE",
+            "TIME_TRACKING",
+            "SUBTASK_RESOLUTION",
+            "LINKED_ISSUE_RESOLUTION"
     )));
 
     private final WorkflowValidatorRepository workflowValidatorRepository;
@@ -117,6 +121,57 @@ public class ValidatorExecutor {
             int count = integrationClient.countAttachments(ctx.getIssueId());
             if (count < min) {
                 return customMessage != null ? customMessage : "At least " + min + " attachment(s) required";
+            }
+            return null;
+        }
+        if ("DATE_RANGE".equals(type)) {
+            String field = validator.getFieldName();
+            Object val = screen.getOrDefault(field, issue.get(field));
+            if (val != null) {
+                String data = validator.getValidatorData();
+                if (data != null && data.contains(",")) {
+                    String[] parts = data.split(",", 2);
+                    String valStr = val.toString();
+                    if (valStr.compareTo(parts[0].trim()) < 0 || valStr.compareTo(parts[1].trim()) > 0) {
+                        return customMessage != null ? customMessage : "Field " + field + " must be between " + parts[0].trim() + " and " + parts[1].trim();
+                    }
+                }
+            }
+            return null;
+        }
+        if ("TIME_TRACKING".equals(type)) {
+            Object estimate = screen.getOrDefault("originalEstimate", issue.get("originalEstimate"));
+            if (estimate == null || estimate.toString().isBlank() || "0".equals(estimate.toString())) {
+                return customMessage != null ? customMessage : "Time tracking estimate is required";
+            }
+            return null;
+        }
+        if ("SUBTASK_RESOLUTION".equals(type)) {
+            Object subtasks = issue.get("subtasks");
+            if (subtasks instanceof List<?> list && !list.isEmpty()) {
+                for (Object st : list) {
+                    if (st instanceof Map<?, ?> m) {
+                        Object res = m.get("resolutionId");
+                        Object status = m.containsKey("statusName") ? m.get("statusName") : m.get("status");
+                        if ((res == null || res.toString().isBlank()) &&
+                                !"Done".equalsIgnoreCase(String.valueOf(status)) &&
+                                !"Closed".equalsIgnoreCase(String.valueOf(status))) {
+                            return customMessage != null ? customMessage : "All subtasks must be resolved before this transition";
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+        if ("LINKED_ISSUE_RESOLUTION".equals(type)) {
+            List<Map<String, Object>> links = integrationClient.fetchLinkedIssuesForWorkflow(ctx.getIssueId());
+            for (Map<String, Object> link : links) {
+                Object status = link.get("statusName");
+                if (status != null && !"Done".equalsIgnoreCase(status.toString()) &&
+                        !"Closed".equalsIgnoreCase(status.toString()) &&
+                        !"Resolved".equalsIgnoreCase(status.toString())) {
+                    return customMessage != null ? customMessage : "All linked issues must be resolved";
+                }
             }
             return null;
         }

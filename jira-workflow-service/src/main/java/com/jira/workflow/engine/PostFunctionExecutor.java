@@ -79,9 +79,13 @@ public class PostFunctionExecutor {
             case WorkflowPostFunction.TYPE_STORE_ISSUE -> applyStatus(ctx);
             case WorkflowPostFunction.TYPE_CREATE_SUBTASK -> integrationClient.createSubtask(ctx, config);
             case WorkflowPostFunction.TYPE_LINK_ISSUE -> linkIssue(ctx, config);
-            case WorkflowPostFunction.TYPE_UNLINK_ISSUE -> log.debug("Unlink issue not yet implemented");
+            case WorkflowPostFunction.TYPE_UNLINK_ISSUE -> unlinkIssue(ctx, config);
             case WorkflowPostFunction.TYPE_AUTO_TRANSITION -> autoTransition(ctx, config);
             case WorkflowPostFunction.TYPE_SEND_EMAIL -> log.debug("Send email post-function skipped (notification outbox handles alerts)");
+            case "CLONE_ISSUE" -> cloneIssue(ctx);
+            case "ISSUE_MOVE" -> moveIssue(ctx, config);
+            case "ADD_LABEL" -> addLabelPostFn(ctx, config);
+            case "REMOVE_LABEL" -> removeLabelPostFn(ctx, config);
             case WorkflowPostFunction.TYPE_SCRIPT_POST_FUNCTION -> executeScript(ctx, config);
             case WorkflowPostFunction.TYPE_TRIGGER_WEBHOOK -> triggerWebhook(ctx, config);
             case WorkflowPostFunction.TYPE_TRIGGER_AUTOMATION -> triggerAutomation(ctx, config);
@@ -275,6 +279,43 @@ public class PostFunctionExecutor {
         pluginCtx.put("comment", ctx.getComment());
         pluginCtx.put("resolutionId", ctx.getResolutionId() != null ? ctx.getResolutionId().toString() : null);
         return pluginCtx;
+    }
+
+    private void unlinkIssue(WorkflowContext ctx, Map<String, Object> config) {
+        Object linkId = config.get("linkId");
+        if (linkId != null) {
+            try {
+                integrationClient.restTemplate().delete(
+                        integrationClient.getIssueServiceUrl() + "/api/issues/links/" + linkId);
+            } catch (Exception e) {
+                log.warn("Failed to unlink issue: {}", e.getMessage());
+            }
+        }
+    }
+
+    private void cloneIssue(WorkflowContext ctx) {
+        integrationClient.cloneIssue(ctx.getIssueId());
+    }
+
+    private void moveIssue(WorkflowContext ctx, Map<String, Object> config) {
+        Object targetProjectId = config.get("targetProjectId");
+        if (targetProjectId != null) {
+            integrationClient.moveIssue(ctx.getIssueId(), UUID.fromString(targetProjectId.toString()));
+        }
+    }
+
+    private void addLabelPostFn(WorkflowContext ctx, Map<String, Object> config) {
+        Object label = config.get("label");
+        if (label != null) {
+            integrationClient.addLabel(ctx.getIssueId(), label.toString());
+        }
+    }
+
+    private void removeLabelPostFn(WorkflowContext ctx, Map<String, Object> config) {
+        Object label = config.get("label");
+        if (label != null) {
+            integrationClient.removeLabel(ctx.getIssueId(), label.toString());
+        }
     }
 
     private Map<String, Object> changeItem(String field, String oldVal, String newVal, String oldStr, String newStr) {

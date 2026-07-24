@@ -25,12 +25,14 @@ public class WorkflowIntegrationClient {
 
     private final PatchCapableRestTemplate patchCapableRestTemplate;
 
-    private RestTemplate restTemplate() {
+    public RestTemplate restTemplate() {
         return patchCapableRestTemplate.get();
     }
 
     @Value("${jira.services.issue-url:http://localhost:8084}")
     private String issueServiceUrl;
+
+    public String getIssueServiceUrl() { return issueServiceUrl; }
 
     @Value("${jira.services.comment-url:http://localhost:8086}")
     private String commentServiceUrl;

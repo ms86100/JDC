@@ -84,6 +84,28 @@ export interface ScriptSchedule {
   createdAt: string;
 }
 
+export interface ScriptListener {
+  id: string;
+  scriptId: string;
+  eventType: string;
+  projectFilter?: string;
+  issueTypeFilter?: string;
+  isEnabled: boolean;
+  executionOrder: number;
+  createdAt: string;
+}
+
+export interface ScriptFieldBehavior {
+  id: string;
+  scriptId: string;
+  screenContext: string;
+  projectId?: string;
+  issueTypeId?: string;
+  isEnabled: boolean;
+  executionOrder: number;
+  createdAt: string;
+}
+
 const BASE = '/api/workflow/scripts';
 
 export const scriptApi = {
@@ -150,4 +172,31 @@ export const scriptApi = {
 
   toggleSchedule: (scriptId: string) =>
     apiClient.patch<ScriptSchedule>(`${BASE}/${scriptId}/schedule/toggle`),
+
+  // Listeners
+  getListeners: (scriptId: string) =>
+    apiClient.get<ScriptListener[]>(`${BASE}/${scriptId}/listeners`),
+
+  createListener: (scriptId: string, data: { eventType: string; projectFilter?: string; issueTypeFilter?: string }) =>
+    apiClient.post<ScriptListener>(`${BASE}/${scriptId}/listeners`, data),
+
+  deleteListener: (listenerId: string) =>
+    apiClient.delete(`${BASE}/listeners/${listenerId}`),
+
+  // Field Behaviors
+  getFieldBehaviors: (scriptId: string) =>
+    apiClient.get<ScriptFieldBehavior[]>(`${BASE}/${scriptId}/field-behaviors`),
+
+  createFieldBehavior: (scriptId: string, data: { screenContext: string; projectId?: string; issueTypeId?: string }) =>
+    apiClient.post<ScriptFieldBehavior>(`${BASE}/${scriptId}/field-behaviors`, data),
+
+  deleteFieldBehavior: (behaviorId: string) =>
+    apiClient.delete(`${BASE}/field-behaviors/${behaviorId}`),
+
+  evaluateFieldBehaviors: (data: { screenContext: string; projectId?: string; issueTypeId?: string; issueData?: Record<string, unknown>; userId?: string }) =>
+    apiClient.post<{ fields: Array<{ fieldName: string; visible?: boolean; required?: boolean; readOnly?: boolean; defaultValue?: unknown }> }>(`${BASE}/field-behaviors/evaluate`, data),
+
+  // Execute by key (for external integrations)
+  executeByKey: (scriptKey: string, context?: Record<string, unknown>) =>
+    apiClient.post<ScriptConsoleResponse>(`${BASE}/execute-by-key/${scriptKey}`, context || {}),
 };

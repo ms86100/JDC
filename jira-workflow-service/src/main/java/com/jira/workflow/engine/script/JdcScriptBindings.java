@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,6 +17,7 @@ public class JdcScriptBindings {
 
     private final WorkflowIntegrationClient integrationClient;
     private final ScriptEngineProperties properties;
+    private final Map<String, DataSource> scriptDataSources;
 
     public Map<String, Object> buildBindings(Map<String, Object> workflowContext) {
         Map<String, Object> bindings = new HashMap<>();
@@ -28,6 +30,7 @@ public class JdcScriptBindings {
 
         bindings.put("http", new JdcHttpApi(properties));
         bindings.put("env", new JdcEnvApi(properties));
+        bindings.put("sql", new JdcSqlApi(scriptDataSources, true));
 
         bindings.put("issueId", workflowContext.get("issueId"));
         bindings.put("projectId", workflowContext.get("projectId"));
