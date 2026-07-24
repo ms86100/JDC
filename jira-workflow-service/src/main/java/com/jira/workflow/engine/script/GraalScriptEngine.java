@@ -18,6 +18,7 @@ public class GraalScriptEngine {
 
     private final ScriptEngineProperties properties;
     private final Engine graalEngine;
+    private final HostAccess hostAccess;
     private final ScheduledExecutorService timeoutScheduler;
     private final ConcurrentHashMap<String, Source> sourceCache = new ConcurrentHashMap<>();
 
@@ -25,6 +26,11 @@ public class GraalScriptEngine {
         this.properties = properties;
         this.graalEngine = Engine.newBuilder("js")
                 .option("engine.WarnInterpreterOnly", "false")
+                .build();
+        this.hostAccess = HostAccess.newBuilder(HostAccess.EXPLICIT)
+                .allowArrayAccess(true)
+                .allowListAccess(true)
+                .allowMapAccess(true)
                 .build();
         this.timeoutScheduler = Executors.newScheduledThreadPool(2, r -> {
             Thread t = new Thread(r, "script-timeout");
@@ -53,11 +59,7 @@ public class GraalScriptEngine {
 
         try (Context context = Context.newBuilder("js")
                 .engine(graalEngine)
-                .allowHostAccess(HostAccess.newBuilder(HostAccess.EXPLICIT)
-                        .allowArrayAccess(true)
-                        .allowListAccess(true)
-                        .allowMapAccess(true)
-                        .build())
+                .allowHostAccess(hostAccess)
                 .allowHostClassLookup(className -> false)
                 .allowIO(false)
                 .allowCreateThread(false)
@@ -130,9 +132,14 @@ public class GraalScriptEngine {
     public void parseOnly(String scriptBody) {
         try (Context context = Context.newBuilder("js")
                 .engine(graalEngine)
-                .allowHostAccess(HostAccess.EXPLICIT)
+                .allowHostAccess(hostAccess)
                 .allowHostClassLookup(className -> false)
                 .allowIO(false)
+                .allowCreateThread(false)
+                .allowNativeAccess(false)
+                .allowCreateProcess(false)
+                .allowEnvironmentAccess(EnvironmentAccess.NONE)
+                .allowPolyglotAccess(PolyglotAccess.NONE)
                 .build()) {
             Source source = Source.newBuilder("js", scriptBody, "validation").buildLiteral();
             context.parse(source);
