@@ -179,8 +179,8 @@ public class SearchIndexOptimizationService {
 
     /**
      * Vacuum the search index to reclaim space.
+     * Note: No @Transactional - PostgreSQL forbids VACUUM inside a transaction.
      */
-    @Transactional
     public Map<String, Object> vacuumIndex() {
         log.info("Running VACUUM on search index...");
 

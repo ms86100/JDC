@@ -187,6 +187,9 @@ public class DocumentService {
 
     @Transactional
     public LegalArchiveResponse updateLegalArchiveStatus(UUID archiveId, String status) {
+        if (!VALID_ARCHIVE_STATUSES.contains(status)) {
+            throw new IllegalArgumentException("Invalid archive status: " + status + ". Allowed: " + VALID_ARCHIVE_STATUSES);
+        }
         log.info("Updating legal archive {} status to {}", archiveId, status);
         LegalArchive archive = legalArchiveRepository.findById(archiveId)
                 .orElseThrow(() -> new ResourceNotFoundException("LegalArchive", "id", archiveId));
@@ -232,6 +235,9 @@ public class DocumentService {
         log.info("Activating legal hold: {}", holdId);
         LegalHold hold = legalHoldRepository.findById(holdId)
                 .orElseThrow(() -> new ResourceNotFoundException("LegalHold", "id", holdId));
+        if (!"PENDING".equals(hold.getStatus())) {
+            throw new IllegalStateException("Only PENDING holds can be activated. Current status: " + hold.getStatus());
+        }
         hold.setStatus("ACTIVE");
         hold = legalHoldRepository.save(hold);
         return toLegalHoldResponse(hold);
@@ -242,6 +248,9 @@ public class DocumentService {
         log.info("Releasing legal hold: {} by user {}", holdId, userId);
         LegalHold hold = legalHoldRepository.findById(holdId)
                 .orElseThrow(() -> new ResourceNotFoundException("LegalHold", "id", holdId));
+        if (!"ACTIVE".equals(hold.getStatus())) {
+            throw new IllegalStateException("Only ACTIVE holds can be released. Current status: " + hold.getStatus());
+        }
         hold.setStatus("RELEASED");
         hold.setReleasedAt(java.time.LocalDateTime.now());
         hold.setReleasedBy(userId);
