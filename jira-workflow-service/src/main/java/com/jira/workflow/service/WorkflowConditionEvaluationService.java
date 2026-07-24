@@ -295,12 +295,17 @@ public class WorkflowConditionEvaluationService {
         }
 
         Map<String, Object> scriptContext = new HashMap<>();
-        scriptContext.put("issueId", context.getIssue() != null ? context.getIssue().get("id") : null);
+        scriptContext.put("issueId", context.getIssueId() != null ? context.getIssueId().toString()
+                : (context.getIssue() != null ? context.getIssue().get("id") : null));
         scriptContext.put("projectId", context.getProjectId() != null ? context.getProjectId().toString() : null);
         scriptContext.put("userId", context.getCurrentUserId() != null ? context.getCurrentUserId().toString() : null);
         scriptContext.put("transitionId", context.getTransitionId() != null ? context.getTransitionId().toString() : null);
-        scriptContext.put("fields", context.getIssueFields());
+        scriptContext.put("currentStatusId", context.getCurrentStatusId() != null ? context.getCurrentStatusId().toString() : null);
+        scriptContext.put("fromStatusId", context.getPreviousStatusId() != null ? context.getPreviousStatusId().toString() : null);
         scriptContext.put("previousStatusId", context.getPreviousStatusId() != null ? context.getPreviousStatusId().toString() : null);
+        scriptContext.put("issueData", context.getIssue() != null ? context.getIssue() : (context.getIssueFields() != null ? context.getIssueFields() : Map.of()));
+        scriptContext.put("userData", Map.of("groups", context.getCurrentUserGroups() != null ? context.getCurrentUserGroups() : Set.of()));
+        scriptContext.put("screenInput", context.getScreenInput() != null ? context.getScreenInput() : Map.of());
 
         return pluginRegistry.evaluateCondition(scriptKey, scriptContext);
     }

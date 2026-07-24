@@ -75,7 +75,7 @@ public class ScriptExecutionService {
 
     private ScriptResult executeScript(ScriptDefinition script, Map<String, Object> ctx, String executionMode) {
         Map<String, Object> bindings = jdcScriptBindings.buildBindings(ctx);
-        ScriptResult result = graalScriptEngine.execute(script.getScriptBody(), bindings, properties.getTimeoutMs());
+        ScriptResult result = graalScriptEngine.execute(script.getScriptKey(), script.getScriptBody(), bindings, properties.getTimeoutMs());
 
         logExecution(script.getId(), script.getScriptKey(), script.getScriptType(), executionMode, ctx, result);
         return result;

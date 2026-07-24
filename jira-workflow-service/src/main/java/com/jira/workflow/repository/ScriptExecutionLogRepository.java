@@ -16,4 +16,8 @@ public interface ScriptExecutionLogRepository extends JpaRepository<ScriptExecut
     Page<ScriptExecutionLog> findByScriptKeyOrderByCreatedAtDesc(String scriptKey, Pageable pageable);
 
     Page<ScriptExecutionLog> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    void deleteByCreatedAtBefore(java.time.LocalDateTime cutoff);
+
+    long countByCreatedAtBefore(java.time.LocalDateTime cutoff);
 }

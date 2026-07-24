@@ -32,8 +32,9 @@ export default function WorkflowScriptsPage() {
     try {
       const res = await scriptApi.list();
       setScripts(res.data);
-    } catch {
-      /* ignore */
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to load';
+      alert(msg);
     } finally {
       setLoading(false);
     }
@@ -102,8 +103,9 @@ export default function WorkflowScriptsPage() {
       }
       setShowModal(false);
       fetchScripts();
-    } catch {
-      /* ignore */
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to load';
+      alert(msg);
     } finally {
       setSaving(false);
     }

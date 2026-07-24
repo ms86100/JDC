@@ -388,20 +388,27 @@ public class JdcApi {
 
     public class SearchApi {
 
+        private static final int MAX_RESULTS_CAP = 500;
+
         @HostAccess.Export
         public List<Map<String, Object>> jql(String query, int maxResults) {
             try {
                 if (query == null) return List.of();
-                return client.searchIssuesJql(query, maxResults > 0 ? maxResults : 50);
+                int capped = Math.min(Math.max(maxResults, 1), MAX_RESULTS_CAP);
+                return client.searchIssuesJql(query, capped);
             } catch (Exception e) { return List.of(); }
         }
 
         @HostAccess.Export
         public List<Map<String, Object>> findIssues(String projectKey, String statusName) {
             try {
+                if (projectKey == null || !projectKey.matches("^[A-Za-z][A-Za-z0-9_-]{0,30}$")) {
+                    return List.of();
+                }
                 String q = "project = \"" + projectKey + "\"";
                 if (statusName != null && !statusName.isBlank()) {
-                    q += " AND status = \"" + statusName + "\"";
+                    String sanitized = statusName.replaceAll("[\"\\\\]", "");
+                    q += " AND status = \"" + sanitized + "\"";
                 }
                 return jql(q, 100);
             } catch (Exception e) { return List.of(); }

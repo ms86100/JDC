@@ -10,66 +10,81 @@ import java.util.stream.Collectors;
 public class JdcConsole {
 
     private static final Logger log = LoggerFactory.getLogger("jdc.script.console");
+    private static final int MAX_CAPTURE_SIZE = 65536;
     private final StringBuilder capturedOutput = new StringBuilder();
+    private boolean truncated = false;
 
     @HostAccess.Export
     public void log(Object... args) {
         String msg = formatArgs(args);
-        capturedOutput.append("[LOG] ").append(msg).append('\n');
-        log.info("[script] {}", msg);
+        capture("LOG", msg);
+        JdcConsole.log.info("[script] {}", sanitize(msg));
     }
 
     @HostAccess.Export
     public void info(Object... args) {
         String msg = formatArgs(args);
-        capturedOutput.append("[INFO] ").append(msg).append('\n');
-        log.info("[script] {}", msg);
+        capture("INFO", msg);
+        JdcConsole.log.info("[script] {}", sanitize(msg));
     }
 
     @HostAccess.Export
     public void debug(Object... args) {
         String msg = formatArgs(args);
-        capturedOutput.append("[DEBUG] ").append(msg).append('\n');
-        log.debug("[script] {}", msg);
+        capture("DEBUG", msg);
+        JdcConsole.log.debug("[script] {}", sanitize(msg));
     }
 
     @HostAccess.Export
     public void warn(Object... args) {
         String msg = formatArgs(args);
-        capturedOutput.append("[WARN] ").append(msg).append('\n');
-        log.warn("[script] {}", msg);
+        capture("WARN", msg);
+        JdcConsole.log.warn("[script] {}", sanitize(msg));
     }
 
     @HostAccess.Export
     public void error(Object... args) {
         String msg = formatArgs(args);
-        capturedOutput.append("[ERROR] ").append(msg).append('\n');
-        log.error("[script] {}", msg);
+        capture("ERROR", msg);
+        JdcConsole.log.error("[script] {}", sanitize(msg));
     }
 
     @HostAccess.Export
     public void table(Object data) {
         String msg = String.valueOf(data);
-        capturedOutput.append("[TABLE] ").append(msg).append('\n');
-        log.info("[script:table] {}", msg);
+        capture("TABLE", msg);
+        JdcConsole.log.info("[script:table] {}", sanitize(msg));
     }
 
     @HostAccess.Export
     public void dir(Object obj) {
         String msg = String.valueOf(obj);
-        capturedOutput.append("[DIR] ").append(msg).append('\n');
-        log.info("[script:dir] {}", msg);
+        capture("DIR", msg);
+        JdcConsole.log.info("[script:dir] {}", sanitize(msg));
     }
 
     @HostAccess.Export
     public void trace(Object... args) {
         String msg = formatArgs(args);
-        capturedOutput.append("[TRACE] ").append(msg).append('\n');
-        log.debug("[script:trace] {}", msg);
+        capture("TRACE", msg);
+        JdcConsole.log.debug("[script:trace] {}", sanitize(msg));
     }
 
     public String getCapturedOutput() {
-        return capturedOutput.toString();
+        String output = capturedOutput.toString();
+        return truncated ? output + "\n[output truncated at 64KB]" : output;
+    }
+
+    private void capture(String level, String msg) {
+        if (!truncated && capturedOutput.length() < MAX_CAPTURE_SIZE) {
+            capturedOutput.append('[').append(level).append("] ").append(sanitize(msg)).append('\n');
+        } else {
+            truncated = true;
+        }
+    }
+
+    private String sanitize(String msg) {
+        return msg.replace("\r\n", " ").replace("\n", " ").replace("\r", " ");
     }
 
     private String formatArgs(Object[] args) {

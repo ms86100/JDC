@@ -355,6 +355,10 @@ public class WorkflowIntegrationClient {
     }
 
     public Map<String, Object> fetchIssueByKey(String issueKey) {
+        if (issueKey == null || !issueKey.matches("^[A-Za-z][A-Za-z0-9_]+-\\d+$")) {
+            log.warn("Invalid issue key format: {}", issueKey);
+            return new HashMap<>();
+        }
         try {
             Map<?, ?> response = restTemplate().getForObject(
                     issueServiceUrl + "/api/issues/by-key/" + issueKey, Map.class);
@@ -431,6 +435,10 @@ public class WorkflowIntegrationClient {
     }
 
     public Map<String, Object> fetchProjectByKey(String projectKey) {
+        if (projectKey == null || !projectKey.matches("^[A-Za-z][A-Za-z0-9_-]{0,30}$")) {
+            log.warn("Invalid project key format: {}", projectKey);
+            return new HashMap<>();
+        }
         try {
             Map<?, ?> response = restTemplate().getForObject(
                     projectServiceUrl + "/api/projects/key/" + projectKey, Map.class);

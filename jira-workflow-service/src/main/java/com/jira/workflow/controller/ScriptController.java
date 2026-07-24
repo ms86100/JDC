@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,6 +29,7 @@ import java.util.UUID;
 @RequestMapping("/api/workflow/scripts")
 @RequiredArgsConstructor
 @Slf4j
+@PreAuthorize("hasAnyRole('ADMIN', 'SYSTEM_ADMIN')")
 @Tag(name = "Workflow Scripts", description = "CRUD and execution of JavaScript workflow scripts (JDC Script Engine)")
 public class ScriptController {
 
@@ -153,12 +155,12 @@ public class ScriptController {
         if (scriptBody == null || scriptBody.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("valid", false, "error", "Script body is required"));
         }
-        ScriptResult result = graalScriptEngine.execute(
-                "\"use strict\";\n" + scriptBody, Map.of("jdc", Map.of(), "console", Map.of()), 2000);
-        if (result.success()) {
+        try {
+            graalScriptEngine.parseOnly(scriptBody);
             return ResponseEntity.ok(Map.of("valid", true));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("valid", false, "error", e.getMessage()));
         }
-        return ResponseEntity.ok(Map.of("valid", false, "error", result.errorMessage()));
     }
 
     // === Import/Export ===

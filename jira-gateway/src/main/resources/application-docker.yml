@@ -95,6 +95,10 @@ spring:
           uri: http://jira-workflow-service:8085
           predicates:
             - Path=/workflows/**
+        - id: workflow-script-service
+          uri: http://jira-workflow-service:8085
+          predicates:
+            - Path=/api/workflow/scripts/**
 
         # Sprint Service
         - id: sprint-service

@@ -4,19 +4,21 @@ import com.jira.workflow.entity.ScriptDefinition;
 import com.jira.workflow.entity.ScriptSchedule;
 import com.jira.workflow.repository.ScriptDefinitionRepository;
 import com.jira.workflow.repository.ScriptScheduleRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PreDestroy;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 @ConditionalOnProperty(name = "jira.scripting.scheduled-enabled", havingValue = "true")
 public class ScheduledScriptExecutor {
@@ -24,6 +26,27 @@ public class ScheduledScriptExecutor {
     private final ScriptScheduleRepository scheduleRepository;
     private final ScriptDefinitionRepository scriptDefinitionRepository;
     private final ScriptExecutionService executionService;
+    private final ExecutorService scriptPool;
+
+    public ScheduledScriptExecutor(ScriptScheduleRepository scheduleRepository,
+                                    ScriptDefinitionRepository scriptDefinitionRepository,
+                                    ScriptExecutionService executionService) {
+        this.scheduleRepository = scheduleRepository;
+        this.scriptDefinitionRepository = scriptDefinitionRepository;
+        this.executionService = executionService;
+        this.scriptPool = Executors.newFixedThreadPool(4, r -> {
+            Thread t = new Thread(r, "scheduled-script");
+            t.setDaemon(true);
+            return t;
+        });
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        scriptPool.shutdown();
+        try { scriptPool.awaitTermination(10, TimeUnit.SECONDS); }
+        catch (InterruptedException ignored) { scriptPool.shutdownNow(); }
+    }
 
     @Scheduled(fixedDelayString = "${jira.scripting.scheduled-poll-interval-ms:30000}")
     public void pollAndExecute() {
@@ -31,40 +54,45 @@ public class ScheduledScriptExecutor {
                 .findByIsEnabledTrueAndNextRunAtBefore(LocalDateTime.now());
 
         for (ScriptSchedule schedule : due) {
-            try {
-                ScriptDefinition script = scriptDefinitionRepository.findById(schedule.getScriptId())
-                        .orElse(null);
-                if (script == null || !Boolean.TRUE.equals(script.getIsEnabled())) {
-                    log.warn("Scheduled script {} not found or disabled, skipping", schedule.getScriptId());
-                    continue;
-                }
+            schedule.setNextRunAt(calculateNextRun(schedule.getCronExpression()));
+            scheduleRepository.save(schedule);
 
-                Map<String, Object> ctx = Map.of(
-                        "scheduleId", schedule.getId().toString(),
-                        "executionMode", "SCHEDULED"
-                );
+            scriptPool.submit(() -> executeScheduledScript(schedule));
+        }
+    }
 
-                ScriptResult result = executionService.executeByKey(script.getScriptKey(), ctx, "SCHEDULED");
-
-                schedule.setLastRunAt(LocalDateTime.now());
-                schedule.setLastSuccess(result.success());
-                schedule.setLastResult(result.success()
-                        ? String.valueOf(result.value())
-                        : result.errorMessage());
-                schedule.setRunCount(schedule.getRunCount() + 1);
-                schedule.setNextRunAt(calculateNextRun(schedule.getCronExpression()));
-                scheduleRepository.save(schedule);
-
-                log.info("Scheduled script '{}' executed: success={}, time={}ms",
-                        script.getScriptKey(), result.success(), result.executionMs());
-
-            } catch (Exception e) {
-                log.error("Scheduled script {} failed unexpectedly", schedule.getId(), e);
-                schedule.setLastSuccess(false);
-                schedule.setLastResult(e.getMessage());
-                schedule.setNextRunAt(calculateNextRun(schedule.getCronExpression()));
-                scheduleRepository.save(schedule);
+    private void executeScheduledScript(ScriptSchedule schedule) {
+        try {
+            ScriptDefinition script = scriptDefinitionRepository.findById(schedule.getScriptId())
+                    .orElse(null);
+            if (script == null || !Boolean.TRUE.equals(script.getIsEnabled())) {
+                log.warn("Scheduled script {} not found or disabled", schedule.getScriptId());
+                return;
             }
+
+            Map<String, Object> ctx = Map.of(
+                    "scheduleId", schedule.getId().toString(),
+                    "executionMode", "SCHEDULED"
+            );
+
+            ScriptResult result = executionService.executeByKey(script.getScriptKey(), ctx, "SCHEDULED");
+
+            schedule.setLastRunAt(LocalDateTime.now());
+            schedule.setLastSuccess(result.success());
+            schedule.setLastResult(result.success()
+                    ? String.valueOf(result.value())
+                    : result.errorMessage());
+            schedule.setRunCount(schedule.getRunCount() + 1);
+            scheduleRepository.save(schedule);
+
+            log.info("Scheduled script '{}' executed: success={}, time={}ms",
+                    script.getScriptKey(), result.success(), result.executionMs());
+
+        } catch (Exception e) {
+            log.error("Scheduled script {} failed unexpectedly", schedule.getId(), e);
+            schedule.setLastSuccess(false);
+            schedule.setLastResult(e.getMessage());
+            scheduleRepository.save(schedule);
         }
     }
 

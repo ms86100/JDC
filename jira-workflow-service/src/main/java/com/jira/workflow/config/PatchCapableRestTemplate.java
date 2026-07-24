@@ -4,16 +4,17 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-/**
- * RestTemplate that supports PATCH (default HttpURLConnection on some JDKs rejects PATCH).
- */
+import java.time.Duration;
+
 @Component
 public class PatchCapableRestTemplate {
 
     private final RestTemplate restTemplate;
 
     public PatchCapableRestTemplate() {
-        this.restTemplate = new RestTemplate(new JdkClientHttpRequestFactory());
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory();
+        factory.setReadTimeout(Duration.ofSeconds(10));
+        this.restTemplate = new RestTemplate(factory);
     }
 
     public RestTemplate get() {

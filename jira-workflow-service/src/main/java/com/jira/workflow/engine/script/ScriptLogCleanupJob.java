@@ -1,0 +1,34 @@
+package com.jira.workflow.engine.script;
+
+import com.jira.workflow.config.ScriptEngineProperties;
+import com.jira.workflow.repository.ScriptExecutionLogRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class ScriptLogCleanupJob {
+
+    private final ScriptExecutionLogRepository executionLogRepository;
+    private final ScriptEngineProperties properties;
+
+    @Scheduled(cron = "0 0 2 * * *")
+    @Transactional
+    public void cleanupOldLogs() {
+        int retentionDays = properties.getLogRetentionDays();
+        if (retentionDays <= 0) return;
+
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(retentionDays);
+        long count = executionLogRepository.countByCreatedAtBefore(cutoff);
+        if (count > 0) {
+            executionLogRepository.deleteByCreatedAtBefore(cutoff);
+            log.info("Cleaned up {} script execution logs older than {} days", count, retentionDays);
+        }
+    }
+}

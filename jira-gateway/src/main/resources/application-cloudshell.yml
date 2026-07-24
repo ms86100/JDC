@@ -123,6 +123,10 @@ spring:
           uri: http://workflow-service:8085
           predicates:
             - Path=/api/workflows/**
+        - id: workflow-script-service
+          uri: http://workflow-service:8085
+          predicates:
+            - Path=/api/workflow/scripts/**
 
         # Admin Service
         - id: admin-service

@@ -34,7 +34,7 @@ const DEFAULT_CONTEXT = JSON.stringify(
 );
 
 export default function ScriptConsole({ initialScript = '', initialType = 'CONDITION' }: ScriptConsoleProps) {
-  const [scriptBody, setScriptBody] = useState(initialScript || '// Write your JDC Script here\n// Available API: jdc.getIssue(), jdc.getIssueField(), jdc.setIssueField(), etc.\n\nvar priority = jdc.getIssueField("priority");\npriority === "Critical";\n');
+  const [scriptBody, setScriptBody] = useState(initialScript || '// JDC Script — Available APIs:\n// jdc.issue: getCurrentIssue(), getFieldValue(), setFieldValue(), getComments(), getHistory(), addComment()\n// jdc.project: getCurrentProject(), getProjectByKey(), getVersions(), getComponents()\n// jdc.user: getCurrentUser(), getUser(), isInGroup(), hasPermission(), getUserGroups()\n// jdc.search: jql(query, maxResults), findIssues(projectKey, statusName)\n// jdc.workflow: getCurrentTransition(), getAllStatuses()\n// jdc.log: info(), warn(), error(), debug()\n// http: get(url, headers), post(url, body, headers) — whitelisted domains only\n// console: log(), info(), warn(), error(), debug()\n\nvar priority = jdc.issue.getFieldValue("priority");\npriority === "Critical";\n');
   const [contextJson, setContextJson] = useState(DEFAULT_CONTEXT);
   const [scriptType, setScriptType] = useState(initialType);
   const [result, setResult] = useState<ScriptConsoleResponse | null>(null);

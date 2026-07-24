@@ -2,6 +2,7 @@ package com.jira.workflow.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,11 +15,15 @@ import lombok.NoArgsConstructor;
 public class CreateScriptRequest {
 
     @NotBlank(message = "Script name is required")
+    @Size(max = 255, message = "Script name must be 255 characters or less")
     private String name;
 
+    @Size(max = 2000, message = "Description must be 2000 characters or less")
     private String description;
 
     @NotBlank(message = "Script type is required")
+    @Pattern(regexp = "^(CONDITION|VALIDATOR|POST_FUNCTION)$",
+            message = "Script type must be CONDITION, VALIDATOR, or POST_FUNCTION")
     private String scriptType;
 
     @NotBlank(message = "Script key is required")
@@ -27,5 +32,6 @@ public class CreateScriptRequest {
     private String scriptKey;
 
     @NotBlank(message = "Script body is required")
+    @Size(max = 65536, message = "Script body must be 64KB or less")
     private String scriptBody;
 }

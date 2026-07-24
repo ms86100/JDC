@@ -1,9 +1,9 @@
 package com.jira.workflow.engine.script;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jira.workflow.config.ScriptEngineProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.graalvm.polyglot.*;
+import org.graalvm.polyglot.Source;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PreDestroy;
@@ -14,10 +14,12 @@ import java.util.concurrent.*;
 @Slf4j
 public class GraalScriptEngine {
 
+    private static final int MAX_RESULT_DEPTH = 20;
+
     private final ScriptEngineProperties properties;
     private final Engine graalEngine;
     private final ScheduledExecutorService timeoutScheduler;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ConcurrentHashMap<String, Source> sourceCache = new ConcurrentHashMap<>();
 
     public GraalScriptEngine(ScriptEngineProperties properties) {
         this.properties = properties;
@@ -38,12 +40,16 @@ public class GraalScriptEngine {
     }
 
     public ScriptResult execute(String scriptBody, Map<String, Object> bindings, long timeoutMs) {
+        return execute(null, scriptBody, bindings, timeoutMs);
+    }
+
+    public ScriptResult execute(String scriptKey, String scriptBody, Map<String, Object> bindings, long timeoutMs) {
         if (!properties.isEnabled()) {
             return ScriptResult.error("Script engine is disabled", 0);
         }
 
         long start = System.currentTimeMillis();
-        JdcConsole console = (JdcConsole) bindings.get("console");
+        JdcConsole console = bindings.get("console") instanceof JdcConsole c ? c : null;
 
         try (Context context = Context.newBuilder("js")
                 .engine(graalEngine)
@@ -58,6 +64,7 @@ public class GraalScriptEngine {
                 .allowNativeAccess(false)
                 .allowCreateProcess(false)
                 .allowEnvironmentAccess(EnvironmentAccess.NONE)
+                .allowPolyglotAccess(PolyglotAccess.NONE)
                 .resourceLimits(ResourceLimits.newBuilder()
                         .statementLimit(properties.getMaxStatements(), null)
                         .build())
@@ -70,10 +77,11 @@ public class GraalScriptEngine {
                 jsBindings.putMember(entry.getKey(), entry.getValue());
             }
 
-            Value result = executeWithTimeout(context, scriptBody, timeoutMs);
+            Source source = getOrCompileSource(scriptKey, scriptBody);
+            Value result = executeWithTimeout(context, source, timeoutMs);
             long elapsed = System.currentTimeMillis() - start;
             String consoleOutput = console != null ? console.getCapturedOutput() : null;
-            return ScriptResult.success(convertResult(result), elapsed, consoleOutput);
+            return ScriptResult.success(convertResult(result, 0), elapsed, consoleOutput);
 
         } catch (PolyglotException e) {
             long elapsed = System.currentTimeMillis() - start;
@@ -84,7 +92,7 @@ public class GraalScriptEngine {
             }
             log.warn("Script execution error after {}ms: {}", elapsed, e.getMessage());
             return ScriptResult.error("Script error: " + e.getMessage(), elapsed, consoleOutput);
-        } catch (Exception e) {
+        } catch (Exception | StackOverflowError e) {
             long elapsed = System.currentTimeMillis() - start;
             String consoleOutput = console != null ? console.getCapturedOutput() : null;
             log.error("Script execution failed after {}ms: {}", elapsed, e.getMessage());
@@ -92,19 +100,47 @@ public class GraalScriptEngine {
         }
     }
 
-    private Value executeWithTimeout(Context context, String scriptBody, long timeoutMs) {
-        ScheduledFuture<?> cancelTask = timeoutScheduler.schedule(
-                () -> context.close(true),
-                timeoutMs, TimeUnit.MILLISECONDS);
+    private Source getOrCompileSource(String scriptKey, String scriptBody) {
+        if (scriptKey == null) {
+            return Source.create("js", scriptBody);
+        }
+        return sourceCache.compute(scriptKey, (k, existing) -> {
+            if (existing != null && existing.getCharacters().toString().equals(scriptBody)) {
+                return existing;
+            }
+            return Source.newBuilder("js", scriptBody, scriptKey).buildLiteral();
+        });
+    }
+
+    public void invalidateCache(String scriptKey) {
+        sourceCache.remove(scriptKey);
+    }
+
+    private Value executeWithTimeout(Context context, Source source, long timeoutMs) {
+        ScheduledFuture<?> cancelTask = timeoutScheduler.schedule(() -> {
+            try { context.close(true); } catch (Exception ignored) {}
+        }, timeoutMs, TimeUnit.MILLISECONDS);
         try {
-            return context.eval("js", scriptBody);
+            return context.eval(source);
         } finally {
             cancelTask.cancel(false);
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private Object convertResult(Value value) {
+    public void parseOnly(String scriptBody) {
+        try (Context context = Context.newBuilder("js")
+                .engine(graalEngine)
+                .allowHostAccess(HostAccess.EXPLICIT)
+                .allowHostClassLookup(className -> false)
+                .allowIO(false)
+                .build()) {
+            Source source = Source.newBuilder("js", scriptBody, "validation").buildLiteral();
+            context.parse(source);
+        }
+    }
+
+    private Object convertResult(Value value, int depth) {
+        if (depth > MAX_RESULT_DEPTH) return "[max depth exceeded]";
         if (value == null || value.isNull()) return null;
         if (value.isBoolean()) return value.asBoolean();
         if (value.isString()) return value.asString();
@@ -114,15 +150,17 @@ public class GraalScriptEngine {
         }
         if (value.hasArrayElements()) {
             List<Object> list = new ArrayList<>();
-            for (long i = 0; i < value.getArraySize(); i++) {
-                list.add(convertResult(value.getArrayElement(i)));
+            for (long i = 0; i < Math.min(value.getArraySize(), 1000); i++) {
+                list.add(convertResult(value.getArrayElement(i), depth + 1));
             }
             return list;
         }
         if (value.hasMembers()) {
             Map<String, Object> map = new LinkedHashMap<>();
+            int count = 0;
             for (String key : value.getMemberKeys()) {
-                map.put(key, convertResult(value.getMember(key)));
+                if (count++ >= 200) break;
+                map.put(key, convertResult(value.getMember(key), depth + 1));
             }
             return map;
         }

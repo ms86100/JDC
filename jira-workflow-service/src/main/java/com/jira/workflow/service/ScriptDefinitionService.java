@@ -1,6 +1,7 @@
 package com.jira.workflow.service;
 
 import com.jira.workflow.dto.*;
+import com.jira.workflow.engine.script.GraalScriptEngine;
 import com.jira.workflow.engine.script.ScriptPluginRegistrar;
 import com.jira.workflow.entity.ScriptDefinition;
 import com.jira.workflow.entity.ScriptExecutionLog;
@@ -28,12 +29,14 @@ public class ScriptDefinitionService {
     private final ScriptVersionRepository scriptVersionRepository;
     private final ScriptExecutionLogRepository executionLogRepository;
     private final ScriptPluginRegistrar scriptPluginRegistrar;
+    private final GraalScriptEngine graalScriptEngine;
 
     @Transactional
     public ScriptResponse createScript(CreateScriptRequest request, UUID createdBy) {
         if (scriptDefinitionRepository.existsByScriptKey(request.getScriptKey())) {
             throw new IllegalArgumentException("Script key already exists: " + request.getScriptKey());
         }
+        validateSyntax(request.getScriptBody());
 
         ScriptDefinition script = ScriptDefinition.builder()
                 .name(request.getName())
@@ -80,6 +83,7 @@ public class ScriptDefinitionService {
             script.setIsEnabled(request.getIsEnabled());
         }
         if (request.getScriptBody() != null && !request.getScriptBody().equals(script.getScriptBody())) {
+            validateSyntax(request.getScriptBody());
             script.setScriptBody(request.getScriptBody());
             script.setVersion(script.getVersion() + 1);
             bodyChanged = true;
@@ -97,6 +101,7 @@ public class ScriptDefinitionService {
                     .createdBy(updatedBy)
                     .build();
             scriptVersionRepository.save(version);
+            graalScriptEngine.invalidateCache(saved.getScriptKey());
         }
 
         scriptPluginRegistrar.refreshScript(saved);
@@ -110,6 +115,7 @@ public class ScriptDefinitionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Script", "id", id));
         log.info("Deleting script '{}' (key: {})", script.getName(), script.getScriptKey());
         scriptPluginRegistrar.unregisterScript(script);
+        graalScriptEngine.invalidateCache(script.getScriptKey());
         scriptDefinitionRepository.delete(script);
     }
 
@@ -202,6 +208,14 @@ public class ScriptDefinitionService {
     public Page<ScriptExecutionLogResponse> getAllExecutionLogs(Pageable pageable) {
         return executionLogRepository.findAllByOrderByCreatedAtDesc(pageable)
                 .map(this::mapLogToResponse);
+    }
+
+    private void validateSyntax(String scriptBody) {
+        try {
+            graalScriptEngine.parseOnly(scriptBody);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Script syntax error: " + e.getMessage());
+        }
     }
 
     private ScriptResponse mapToResponse(ScriptDefinition entity) {
