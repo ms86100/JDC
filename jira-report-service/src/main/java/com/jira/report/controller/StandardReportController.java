@@ -13,7 +13,6 @@ import java.util.UUID;
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class StandardReportController {
 
     private final StandardReportService reportService;

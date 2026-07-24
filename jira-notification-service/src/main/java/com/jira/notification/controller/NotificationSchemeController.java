@@ -26,7 +26,8 @@ public class NotificationSchemeController {
             @Valid @RequestBody CreateNotificationSchemeRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         log.info("POST /api/notification-schemes - Creating notification scheme: {}", request.getName());
-        UUID createdBy = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID createdBy = userId;
         NotificationSchemeResponse response = schemeService.createScheme(request, createdBy);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

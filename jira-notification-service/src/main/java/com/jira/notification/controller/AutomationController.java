@@ -26,7 +26,8 @@ public class AutomationController {
             @Valid @RequestBody CreateAutomationRuleRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         log.info("POST /api/automation/rules - Creating automation rule: {}", request.getName());
-        UUID createdBy = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID createdBy = userId;
         AutomationRuleResponse response = automationService.createRule(request, createdBy);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

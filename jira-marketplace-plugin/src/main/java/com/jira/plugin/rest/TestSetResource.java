@@ -7,7 +7,7 @@ import javax.ws.rs.core.Response;
 @Path("/test-management")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class TestSetResource {
+public interface TestSetResource {
 
     @POST
     @Path("/test-sets")

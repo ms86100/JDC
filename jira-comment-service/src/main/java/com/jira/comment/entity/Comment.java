@@ -10,7 +10,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "comments", schema = "jira_comment")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -26,6 +26,7 @@ public class SprintService {
     private final SprintRepository sprintRepository;
     private final SprintIssueRepository sprintIssueRepository;
     private final AgileBoardRepository agileBoardRepository;
+    private final org.springframework.web.client.RestTemplate restTemplate;
 
     @Transactional
     public SprintResponse createSprint(CreateSprintRequest request, UUID createdBy) {
@@ -257,11 +258,14 @@ public class SprintService {
                 .orElseThrow(() -> new ResourceNotFoundException("Sprint not found: " + sprintId));
     }
 
+    @org.springframework.beans.factory.annotation.Value("${admin.service.url:http://jira-admin-service:8093}")
+    private String adminServiceUrl;
+
     private boolean isParallelSprintsEnabled() {
         try {
-            String url = "http://jira-admin-service:8093/api/admin/settings/PARALLEL_SPRINTS_ENABLED";
+            String url = adminServiceUrl + "/api/admin/settings/PARALLEL_SPRINTS_ENABLED";
             @SuppressWarnings("unchecked")
-            java.util.Map<String, Object> response = new org.springframework.web.client.RestTemplate()
+            java.util.Map<String, Object> response = restTemplate
                     .getForObject(url, java.util.Map.class);
             if (response != null && response.get("settingValue") != null) {
                 return "true".equalsIgnoreCase(response.get("settingValue").toString());

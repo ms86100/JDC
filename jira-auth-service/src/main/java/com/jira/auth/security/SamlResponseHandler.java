@@ -7,10 +7,15 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+import javax.xml.crypto.dsig.XMLSignature;
+import javax.xml.crypto.dsig.XMLSignatureFactory;
+import javax.xml.crypto.dsig.dom.DOMValidateContext;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.*;
 
 @Component
@@ -18,18 +23,28 @@ import java.util.*;
 @Slf4j
 public class SamlResponseHandler {
 
-    public SamlAssertionResult parseResponse(String samlResponseBase64) {
+    /**
+     * Parses and verifies a Base64-encoded SAML response.
+     *
+     * @param samlResponseBase64 the Base64-encoded SAML response XML
+     * @param idpCertificate     the IdP's X.509 certificate (PEM format) used to verify the XML signature
+     * @return the assertion result containing the parsed user identity or an error
+     */
+    public SamlAssertionResult parseResponse(String samlResponseBase64, String idpCertificate) {
         try {
             byte[] decoded = Base64.getDecoder().decode(samlResponseBase64);
             String xml = new String(decoded, StandardCharsets.UTF_8);
-            return parseXml(xml);
+            return parseXml(xml, idpCertificate);
+        } catch (SecurityException e) {
+            log.error("SAML signature verification failed: {}", e.getMessage());
+            return SamlAssertionResult.failure(e.getMessage());
         } catch (Exception e) {
             log.error("Failed to parse SAML response: {}", e.getMessage());
             return SamlAssertionResult.failure("Failed to parse SAML response: " + e.getMessage());
         }
     }
 
-    private SamlAssertionResult parseXml(String xml) throws Exception {
+    private SamlAssertionResult parseXml(String xml, String idpCertificate) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(true);
         factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
@@ -39,7 +54,8 @@ public class SamlResponseHandler {
         DocumentBuilder builder = factory.newDocumentBuilder();
         Document doc = builder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
 
-        Element root = doc.getDocumentElement();
+        // Verify the XML digital signature BEFORE extracting any assertions
+        verifySignature(doc, idpCertificate);
 
         String status = extractStatus(doc);
         if (!"urn:oasis:names:tc:SAML:2.0:status:Success".equals(status)) {
@@ -56,6 +72,50 @@ public class SamlResponseHandler {
         String sessionIndex = extractSessionIndex(doc);
 
         return SamlAssertionResult.success(nameId, issuer, sessionIndex, attributes);
+    }
+
+    /**
+     * Verifies the XML digital signature on the SAML response using the IdP's certificate.
+     * This MUST be called before any assertion data is trusted.
+     *
+     * @param doc               the parsed SAML response DOM document
+     * @param idpCertificateStr the IdP's X.509 certificate in PEM format
+     * @throws SecurityException if the signature is missing, invalid, or verification fails
+     */
+    private void verifySignature(Document doc, String idpCertificateStr) throws Exception {
+        // Find the Signature element in the SAML response
+        NodeList signatureNodes = doc.getElementsByTagNameNS(XMLSignature.XMLNS, "Signature");
+        if (signatureNodes.getLength() == 0) {
+            throw new SecurityException("SAML response is not signed");
+        }
+
+        // Parse the IdP X.509 certificate from PEM format
+        String certPem = idpCertificateStr
+                .replace("-----BEGIN CERTIFICATE-----", "")
+                .replace("-----END CERTIFICATE-----", "")
+                .replaceAll("\\s", "");
+        byte[] certBytes = Base64.getDecoder().decode(certPem);
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        X509Certificate cert = (X509Certificate)
+                cf.generateCertificate(new ByteArrayInputStream(certBytes));
+
+        // Create the validation context with the IdP's public key and the Signature element
+        XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
+        DOMValidateContext valContext =
+                new DOMValidateContext(cert.getPublicKey(), signatureNodes.item(0));
+
+        // Unmarshal and validate the XML signature
+        XMLSignature signature = fac.unmarshalXMLSignature(valContext);
+
+        if (!signature.validate(valContext)) {
+            log.warn("SAML signature core validation failed. Checking reference validity...");
+            // Log details to aid debugging without leaking sensitive data
+            boolean coreValid = signature.getSignatureValue().validate(valContext);
+            log.warn("SAML signature core validity: {}", coreValid);
+            throw new SecurityException("SAML response signature verification failed");
+        }
+
+        log.debug("SAML response signature verified successfully");
     }
 
     private String extractStatus(Document doc) {

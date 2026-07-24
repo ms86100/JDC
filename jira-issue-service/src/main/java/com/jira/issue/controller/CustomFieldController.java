@@ -17,7 +17,6 @@ import java.util.UUID;
 @RequestMapping("/api/custom-fields")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class CustomFieldController {
 
     private final CustomFieldDefinitionService definitionService;

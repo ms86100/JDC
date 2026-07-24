@@ -8,7 +8,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "groups")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

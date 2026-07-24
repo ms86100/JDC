@@ -17,7 +17,6 @@ import java.util.UUID;
 @RequestMapping("/api/dashboards")
 @RequiredArgsConstructor
 @Tag(name = "Dashboards", description = "Dashboard management API")
-@CrossOrigin(origins = "*")
 public class DashboardController {
 
     private final DashboardService dashboardService;
@@ -43,9 +42,9 @@ public class DashboardController {
     @Operation(summary = "Create dashboard", description = "Create a new dashboard")
     public ResponseEntity<DashboardResponse> createDashboard(
             @RequestBody CreateDashboardRequest request,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+            @RequestHeader(value = "X-User-Id") UUID userId) {
         return new ResponseEntity<>(
-                dashboardService.createDashboard(userId != null ? userId : UUID.randomUUID(), request),
+                dashboardService.createDashboard(userId, request),
                 HttpStatus.CREATED);
     }
 

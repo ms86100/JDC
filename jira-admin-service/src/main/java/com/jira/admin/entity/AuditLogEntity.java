@@ -6,7 +6,9 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "audit_logs")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -19,7 +19,6 @@ import java.util.UUID;
 @RequestMapping("/api/issues/{issueId}/history")
 @RequiredArgsConstructor
 @Tag(name = "Change History", description = "Issue change history API")
-@CrossOrigin(origins = "*")
 public class ChangeHistoryController {
 
     private final ChangeHistoryService changeHistoryService;

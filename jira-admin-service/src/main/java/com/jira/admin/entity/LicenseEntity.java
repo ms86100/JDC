@@ -6,7 +6,9 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "licenses")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

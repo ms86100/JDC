@@ -1,6 +1,9 @@
 package com.jira.report.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -14,7 +17,9 @@ import java.util.UUID;
         @Index(name = "idx_time_report_user_id", columnList = "user_id")
     }
 )
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

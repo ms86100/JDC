@@ -317,15 +317,17 @@ public class PermissionResolutionService {
     }
 
     private boolean hasPermissionKey(String permissionId, String permissionKey) {
-        // This would normally query the permissions table
-        // For now, we'll store permission keys alongside IDs in grants
-        // A more complete implementation would join with permissions table
-        return true;  // Placeholder - actual implementation would check DB
+        if (permissionId == null || permissionKey == null) {
+            return false;
+        }
+        // The permissionId field on grant entities stores the permission key directly
+        // (e.g., "BROWSE_PROJECTS", "EDIT_ISSUES") so compare directly
+        return permissionKey.equals(permissionId);
     }
 
     private String getPermissionKey(String permissionId) {
-        // Placeholder - actual implementation would query permissions table
-        return null;
+        // The permissionId field on grant entities stores the permission key directly
+        return permissionId;
     }
 
     private boolean isGroup(String holderId) {

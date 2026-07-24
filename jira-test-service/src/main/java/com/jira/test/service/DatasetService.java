@@ -641,18 +641,63 @@ public class DatasetService {
             expr = expr.replace("${" + columns.get(i) + "}", row.get(i) != null ? row.get(i) : "0");
             expr = expr.replace("#{" + columns.get(i) + "}", row.get(i) != null ? row.get(i) : "0");
         }
-
-        // Simple arithmetic evaluation
-        expr = expr.replaceAll("([0-9.]+)\\s*\\+\\s*([0-9.]+)", "$1+$2");
-        expr = expr.replaceAll("([0-9.]+)\\s*-\\s*([0-9.]+)", "$1-$2");
-        expr = expr.replaceAll("([0-9.]+)\\s*\\*\\s*([0-9.]+)", "$1*$2");
-        expr = expr.replaceAll("([0-9.]+)\\s*/\\s*([0-9.]+)", "$1/$2");
-
+        if (!expr.matches("[0-9.+\\-*/() ]+")) {
+            return expression;
+        }
         try {
-            return String.valueOf(new javax.script.ScriptEngineManager().getEngineByName("JavaScript").eval(expr));
+            double result = evaluateArithmetic(expr.trim());
+            if (result == Math.floor(result) && !Double.isInfinite(result)) {
+                return String.valueOf((long) result);
+            }
+            return String.valueOf(result);
         } catch (Exception e) {
             return expression;
         }
+    }
+
+    private double evaluateArithmetic(String expr) {
+        expr = expr.trim();
+        if (expr.startsWith("(") && findMatchingParen(expr, 0) == expr.length() - 1) {
+            return evaluateArithmetic(expr.substring(1, expr.length() - 1));
+        }
+        int pos = -1;
+        int depth = 0;
+        for (int i = expr.length() - 1; i >= 0; i--) {
+            char c = expr.charAt(i);
+            if (c == ')') depth++;
+            else if (c == '(') depth--;
+            else if (depth == 0 && (c == '+' || c == '-') && i > 0) { pos = i; break; }
+        }
+        if (pos > 0) {
+            double left = evaluateArithmetic(expr.substring(0, pos));
+            double right = evaluateArithmetic(expr.substring(pos + 1));
+            return expr.charAt(pos) == '+' ? left + right : left - right;
+        }
+        for (int i = expr.length() - 1; i >= 0; i--) {
+            char c = expr.charAt(i);
+            if (c == ')') depth++;
+            else if (c == '(') depth--;
+            else if (depth == 0 && (c == '*' || c == '/')) { pos = i; break; }
+        }
+        if (pos > 0) {
+            double left = evaluateArithmetic(expr.substring(0, pos));
+            double right = evaluateArithmetic(expr.substring(pos + 1));
+            if (expr.charAt(pos) == '/') {
+                if (right == 0) throw new ArithmeticException("Division by zero");
+                return left / right;
+            }
+            return left * right;
+        }
+        return Double.parseDouble(expr);
+    }
+
+    private int findMatchingParen(String expr, int openPos) {
+        int depth = 0;
+        for (int i = openPos; i < expr.length(); i++) {
+            if (expr.charAt(i) == '(') depth++;
+            else if (expr.charAt(i) == ')') { depth--; if (depth == 0) return i; }
+        }
+        return -1;
     }
 
     private int compareNumeric(String v1, String v2) {

@@ -9,7 +9,9 @@ import lombok.*;
  */
 @Entity
 @Table(name = "workflows")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

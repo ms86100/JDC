@@ -365,14 +365,19 @@ public class JQLParser {
         };
     }
 
+    private String escapeSqlValue(String value) {
+        if (value == null) return "";
+        return value.replace("'", "''").replace("\\", "\\\\");
+    }
+
     private String handleIssueKey(String field, String operator, String value) {
         if (operator.equalsIgnoreCase("IN") || operator.equalsIgnoreCase("NOT IN")) {
             List<String> keys = parseInList(value);
-            String keyList = String.join(",", keys.stream().map(k -> "'" + k + "'").toList());
+            String keyList = String.join(",", keys.stream().map(k -> "'" + escapeSqlValue(k) + "'").toList());
             String not = operator.equalsIgnoreCase("NOT IN") ? "NOT " : "";
             return field + " " + not + "IN (" + keyList + ")";
         }
-        return field + " " + operator + " '" + value + "'";
+        return field + " " + operator + " '" + escapeSqlValue(value) + "'";
     }
 
     private String handleIssueKeyIn(String field, String value) {
@@ -388,41 +393,41 @@ public class JQLParser {
     private String handleProject(String field, String operator, String value) {
         if (operator.equalsIgnoreCase("IN") || operator.equalsIgnoreCase("NOT IN")) {
             List<String> projects = parseInList(value);
-            String projectList = String.join(",", projects.stream().map(p -> "'" + p + "'").toList());
+            String projectList = String.join(",", projects.stream().map(p -> "'" + escapeSqlValue(p) + "'").toList());
             String not = operator.equalsIgnoreCase("NOT IN") ? "NOT " : "";
-            return "project_id IN (SELECT id FROM jira_project.projects WHERE project_key IN (" + projectList + "))";
+            return "project_id " + not + "IN (SELECT id FROM jira_project.projects WHERE project_key IN (" + projectList + "))";
         }
-        return "project_id IN (SELECT id FROM jira_project.projects WHERE project_key = '" + value + "')";
+        return "project_id IN (SELECT id FROM jira_project.projects WHERE project_key = '" + escapeSqlValue(value) + "')";
     }
 
     private String handleStatus(String field, String operator, String value) {
         if (operator.equalsIgnoreCase("IN") || operator.equalsIgnoreCase("NOT IN")) {
             List<String> statuses = parseInList(value);
-            String statusList = String.join(",", statuses.stream().map(s -> "'" + s + "'").toList());
+            String statusList = String.join(",", statuses.stream().map(s -> "'" + escapeSqlValue(s) + "'").toList());
             String not = operator.equalsIgnoreCase("NOT IN") ? "NOT " : "";
-            return "status_id IN (SELECT id FROM jira_issue.issue_status WHERE name IN (" + statusList + "))";
+            return "status_id " + not + "IN (SELECT id FROM jira_issue.issue_status WHERE name IN (" + statusList + "))";
         }
-        return "status_id IN (SELECT id FROM jira_issue.issue_status WHERE name = '" + value + "')";
+        return "status_id IN (SELECT id FROM jira_issue.issue_status WHERE name = '" + escapeSqlValue(value) + "')";
     }
 
     private String handleIssueType(String field, String operator, String value) {
         if (operator.equalsIgnoreCase("IN") || operator.equalsIgnoreCase("NOT IN")) {
             List<String> types = parseInList(value);
-            String typeList = String.join(",", types.stream().map(t -> "'" + t + "'").toList());
+            String typeList = String.join(",", types.stream().map(t -> "'" + escapeSqlValue(t) + "'").toList());
             String not = operator.equalsIgnoreCase("NOT IN") ? "NOT " : "";
-            return "issue_type_id IN (SELECT id FROM jira_issue.issue_type WHERE name IN (" + typeList + "))";
+            return "issue_type_id " + not + "IN (SELECT id FROM jira_issue.issue_type WHERE name IN (" + typeList + "))";
         }
-        return "issue_type_id IN (SELECT id FROM jira_issue.issue_type WHERE name = '" + value + "')";
+        return "issue_type_id IN (SELECT id FROM jira_issue.issue_type WHERE name = '" + escapeSqlValue(value) + "')";
     }
 
     private String handlePriority(String field, String operator, String value) {
         if (operator.equalsIgnoreCase("IN") || operator.equalsIgnoreCase("NOT IN")) {
             List<String> priorities = parseInList(value);
-            String priorityList = String.join(",", priorities.stream().map(p -> "'" + p + "'").toList());
+            String priorityList = String.join(",", priorities.stream().map(p -> "'" + escapeSqlValue(p) + "'").toList());
             String not = operator.equalsIgnoreCase("NOT IN") ? "NOT " : "";
-            return "priority_id IN (SELECT id FROM jira_issue.issue_priority WHERE name IN (" + priorityList + "))";
+            return "priority_id " + not + "IN (SELECT id FROM jira_issue.issue_priority WHERE name IN (" + priorityList + "))";
         }
-        return "priority_id IN (SELECT id FROM jira_issue.issue_priority WHERE name = '" + value + "')";
+        return "priority_id IN (SELECT id FROM jira_issue.issue_priority WHERE name = '" + escapeSqlValue(value) + "')";
     }
 
     private String handleUser(String field, String operator, String value) {
@@ -434,7 +439,7 @@ public class JQLParser {
 
         if (operator.equalsIgnoreCase("IN") || operator.equalsIgnoreCase("NOT IN")) {
             List<String> users = parseInList(value);
-            String userList = String.join(",", users.stream().map(u -> "'" + u + "'").toList());
+            String userList = String.join(",", users.stream().map(u -> "'" + escapeSqlValue(u) + "'").toList());
             String not = operator.equalsIgnoreCase("NOT IN") ? "NOT " : "";
             return column + " " + not + "IN (SELECT id FROM jira_user.users WHERE username IN (" + userList + "))";
         }
@@ -451,7 +456,7 @@ public class JQLParser {
             }
         }
 
-        return column + " IN (SELECT id FROM jira_user.users WHERE username = '" + value + "')";
+        return column + " IN (SELECT id FROM jira_user.users WHERE username = '" + escapeSqlValue(value) + "')";
     }
 
     private String handleDate(String field, String operator, String value) {
@@ -490,7 +495,7 @@ public class JQLParser {
             LocalDate date = LocalDate.parse(value.replace("\"", ""));
             return "'" + date.toString() + "'";
         } catch (Exception e) {
-            return "'" + value + "'";
+            return "'" + escapeSqlValue(value) + "'";
         }
     }
 
@@ -527,50 +532,56 @@ public class JQLParser {
     }
 
     private String handleText(String field, String operator, String value) {
+        String escaped = escapeSqlValue(value);
         if (operator.equals("~")) {
-            return field + " ILIKE '%" + value.replace("'", "''") + "%'";
+            return field + " ILIKE '%" + escaped + "%'";
         }
         if (operator.equals("!~")) {
-            return field + " NOT ILIKE '%" + value.replace("'", "''") + "%'";
+            return field + " NOT ILIKE '%" + escaped + "%'";
         }
         if (operator.equals("=")) {
-            return field + " = '" + value.replace("'", "''") + "'";
+            return field + " = '" + escaped + "'";
         }
-        return field + " ILIKE '%" + value.replace("'", "''") + "%'";
+        return field + " ILIKE '%" + escaped + "%'";
     }
 
     private String handleLabels(String field, String operator, String value) {
         // Simplified label handling
-        return "id IN (SELECT issue_id FROM jira_issue.label WHERE name = '" + value.replace("'", "''") + "')";
+        return "id IN (SELECT issue_id FROM jira_issue.label WHERE name = '" + escapeSqlValue(value) + "')";
     }
 
     private String handleNumber(String field, String operator, String value) {
+        try {
+            Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid numeric value: " + value);
+        }
         return field + " " + operator + " " + value;
     }
 
     private String handleSprint(String field, String operator, String value) {
         if (operator.equalsIgnoreCase("IN") || operator.equalsIgnoreCase("NOT IN")) {
             List<String> sprints = parseInList(value);
-            String sprintList = String.join(",", sprints.stream().map(s -> "'" + s + "'").toList());
+            String sprintList = String.join(",", sprints.stream().map(s -> "'" + escapeSqlValue(s) + "'").toList());
             String not = operator.equalsIgnoreCase("NOT IN") ? "NOT " : "";
             return "sprint_id " + not + "IN (SELECT id FROM jira_sprint.sprints WHERE name IN (" + sprintList + "))";
         }
-        return "sprint_id IN (SELECT id FROM jira_sprint.sprints WHERE name = '" + value + "')";
+        return "sprint_id IN (SELECT id FROM jira_sprint.sprints WHERE name = '" + escapeSqlValue(value) + "')";
     }
 
     private String handleEpic(String field, String operator, String value) {
         if (operator.equalsIgnoreCase("IN") || operator.equalsIgnoreCase("NOT IN")) {
             List<String> epics = parseInList(value);
-            String epicList = String.join(",", epics.stream().map(e -> "'" + e + "'").toList());
+            String epicList = String.join(",", epics.stream().map(e -> "'" + escapeSqlValue(e) + "'").toList());
             String not = operator.equalsIgnoreCase("NOT IN") ? "NOT " : "";
             return "epic_id " + not + "IN (SELECT id FROM jira_issue.issues WHERE issue_key IN (" + epicList + "))";
         }
-        return "epic_id IN (SELECT id FROM jira_issue.issues WHERE issue_key = '" + value + "')";
+        return "epic_id IN (SELECT id FROM jira_issue.issues WHERE issue_key = '" + escapeSqlValue(value) + "')";
     }
 
     private String handleCustomField(String field, String operator, String value) {
-        String fieldId = field.substring(3);
-        String escaped = value != null ? value.replace("'", "''") : "";
+        String fieldId = escapeSqlValue(field.substring(3));
+        String escaped = escapeSqlValue(value);
 
         if (operator.equalsIgnoreCase("IS")) {
             if ("EMPTY".equalsIgnoreCase(value) || "NULL".equalsIgnoreCase(value)) {
@@ -599,7 +610,7 @@ public class JQLParser {
 
         if ("IN".equalsIgnoreCase(operator) || "NOT IN".equalsIgnoreCase(operator)) {
             List<String> values = parseInList(value);
-            String valueList = String.join(",", values.stream().map(v -> "'" + v.replace("'", "''") + "'").toList());
+            String valueList = String.join(",", values.stream().map(v -> "'" + escapeSqlValue(v) + "'").toList());
             String not = operator.equalsIgnoreCase("NOT IN") ? "NOT " : "";
             return "i.id " + not + "IN (SELECT cfv.issue_id FROM jira_issue.custom_field_values cfv WHERE cfv.field_id = '" + fieldId
                     + "' AND cfv.value @> ANY(ARRAY[" + valueList + "]::jsonb[]))";
@@ -618,7 +629,7 @@ public class JQLParser {
     private String handleGeneric(String field, String operator, String value) {
         if (operator.equalsIgnoreCase("IN") || operator.equalsIgnoreCase("NOT IN")) {
             List<String> values = parseInList(value);
-            String valueList = String.join(",", values.stream().map(v -> "'" + v.replace("'", "''") + "'").toList());
+            String valueList = String.join(",", values.stream().map(v -> "'" + escapeSqlValue(v) + "'").toList());
             String not = operator.equalsIgnoreCase("NOT IN") ? "NOT " : "";
             return field + " " + not + "IN (" + valueList + ")";
         }
@@ -641,7 +652,7 @@ public class JQLParser {
             }
         }
 
-        return field + " " + operator + " '" + value.replace("'", "''") + "'";
+        return field + " " + operator + " '" + escapeSqlValue(value) + "'";
     }
 
     private List<String> parseInList(String value) {

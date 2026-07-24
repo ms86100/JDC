@@ -39,4 +39,6 @@ public interface ProjectVersionRepository extends JpaRepository<ProjectVersion, 
     long countByProjectId(@Param("projectId") UUID projectId);
 
     boolean existsByProjectIdAndNameAndIdNot(UUID projectId, String name, UUID excludeId);
+
+    boolean existsByProjectIdAndName(UUID projectId, String name);
 }

@@ -29,7 +29,6 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/security-levels")
 @RequiredArgsConstructor
 @Tag(name = "Security Level Members", description = "Security level member management endpoints")
-@CrossOrigin(origins = "*")
 public class SecurityLevelMemberController {
 
     private final SecurityLevelMemberRepository memberRepository;

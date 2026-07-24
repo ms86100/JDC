@@ -37,7 +37,7 @@ public class ProjectService {
     private final ProjectTemplateRepository projectTemplateRepository;
     private final TemplateSchemeDefaultRepository templateSchemeDefaultRepository;
     private final ProjectSchemeService projectSchemeService;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${issue.service.url}")
     private String issueServiceUrl;

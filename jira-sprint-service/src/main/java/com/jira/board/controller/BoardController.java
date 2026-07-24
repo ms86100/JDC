@@ -15,7 +15,6 @@ import java.util.UUID;
 @RequestMapping("/api/boards")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class BoardController {
 
     private final BoardService boardService;

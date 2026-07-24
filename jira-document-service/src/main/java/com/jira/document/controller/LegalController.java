@@ -18,7 +18,6 @@ import java.util.UUID;
 @RequestMapping("/api/legal")
 @RequiredArgsConstructor
 @Tag(name = "Legal", description = "Legal Archive and Legal Holds endpoints")
-@CrossOrigin(origins = "*")
 public class LegalController {
 
     private final DocumentService documentService;
@@ -29,7 +28,8 @@ public class LegalController {
     public ResponseEntity<LegalArchiveResponse> createLegalArchive(
             @Valid @RequestBody CreateLegalArchiveRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(documentService.createLegalArchive(request, actor));
     }
@@ -62,7 +62,8 @@ public class LegalController {
     public ResponseEntity<LegalHoldResponse> createLegalHold(
             @Valid @RequestBody CreateLegalHoldRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(documentService.createLegalHold(request, actor));
     }
@@ -100,7 +101,8 @@ public class LegalController {
             @Parameter(description = "Hold ID") @PathVariable UUID id,
             @RequestParam String reason,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.ok(documentService.releaseLegalHold(id, actor, reason));
     }
 }

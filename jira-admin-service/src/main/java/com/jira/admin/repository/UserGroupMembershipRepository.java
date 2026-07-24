@@ -19,4 +19,9 @@ public interface UserGroupMembershipRepository extends JpaRepository<UserGroupMe
 
     @Query("SELECT ugm.groupId FROM UserGroupMembershipEntity ugm WHERE ugm.userId = :userId")
     List<String> findGroupIdsByUserId(@Param("userId") String userId);
+
+    @Query("SELECT ugm.userId FROM UserGroupMembershipEntity ugm WHERE ugm.groupId = :groupId")
+    List<String> findUserIdsByGroupId(@Param("groupId") String groupId);
+
+    void deleteByUserIdAndGroupId(String userId, String groupId);
 }

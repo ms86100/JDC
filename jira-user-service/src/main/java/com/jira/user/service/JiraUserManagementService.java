@@ -2,6 +2,8 @@ package com.jira.user.service;
 
 import com.jira.user.dto.*;
 import com.jira.user.entity.*;
+import com.jira.user.exception.DuplicateResourceException;
+import com.jira.user.exception.ResourceNotFoundException;
 import com.jira.user.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -74,7 +76,7 @@ public class JiraUserManagementService {
                 .displayName(request.getFullName())
                 .firstName(nameParts[0])
                 .lastName(nameParts[1])
-                .passwordHash(request.getPassword() != null ? hashPassword(request.getPassword()) : generatePassword())
+                .passwordHash(hashPassword(request.getPassword() != null ? request.getPassword() : generatePassword()))
                 .active(true)
                 .lowerUserName(request.getUserName().toLowerCase())
                 .build();
@@ -300,24 +302,14 @@ public class JiraUserManagementService {
         return new String[]{fullName, ""};
     }
 
+    private final org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder passwordEncoder = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+
     private String hashPassword(String password) {
-        return "$2b$10$" + password.hashCode();
+        return passwordEncoder.encode(password);
     }
 
     private String generatePassword() {
         return UUID.randomUUID().toString().substring(0, 12);
     }
 
-    // Custom exceptions
-    public static class ResourceNotFoundException extends RuntimeException {
-        public ResourceNotFoundException(String message) {
-            super(message);
-        }
-    }
-
-    public static class DuplicateResourceException extends RuntimeException {
-        public DuplicateResourceException(String message) {
-            super(message);
-        }
-    }
 }

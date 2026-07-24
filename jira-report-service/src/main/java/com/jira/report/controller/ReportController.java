@@ -18,7 +18,6 @@ import java.util.UUID;
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
 @Tag(name = "Reports", description = "Report generation and management endpoints")
-@CrossOrigin(origins = "*")
 public class ReportController {
 
     private final ReportService reportService;
@@ -29,7 +28,8 @@ public class ReportController {
     public ResponseEntity<TimeTrackingReportResponse> generateTimeTrackingReport(
             @Valid @RequestBody TimeTrackingReportRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(reportService.generateTimeTrackingReport(request, actor));
     }
@@ -38,7 +38,8 @@ public class ReportController {
     @Operation(summary = "Get user's time tracking reports", description = "Returns all time tracking reports for the current user")
     public ResponseEntity<List<TimeTrackingReportResponse>> getTimeTrackingReports(
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.ok(reportService.getTimeTrackingReportsByUser(actor));
     }
 
@@ -101,7 +102,8 @@ public class ReportController {
     public ResponseEntity<SavedReportResponse> saveReport(
             @Valid @RequestBody SaveReportRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(reportService.saveReport(request, actor));
     }
@@ -110,15 +112,18 @@ public class ReportController {
     @Operation(summary = "Get saved reports", description = "Returns all saved reports for the current user")
     public ResponseEntity<List<SavedReportResponse>> getSavedReports(
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.ok(reportService.getSavedReports(actor));
     }
 
     @DeleteMapping("/saved/{id}")
     @Operation(summary = "Delete saved report", description = "Deletes a saved report configuration")
     public ResponseEntity<Void> deleteSavedReport(
-            @Parameter(description = "Report ID") @PathVariable UUID id) {
-        reportService.deleteSavedReport(id);
+            @Parameter(description = "Report ID") @PathVariable UUID id,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        reportService.deleteSavedReport(id, userId);
         return ResponseEntity.noContent().build();
     }
 }

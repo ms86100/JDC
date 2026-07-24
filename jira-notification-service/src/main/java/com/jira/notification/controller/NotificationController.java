@@ -21,14 +21,14 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
-    @PostMapping("/notifications")
+    @PostMapping
     public ResponseEntity<NotificationResponse> createNotification(@Valid @RequestBody NotificationEvent event) {
         log.info("POST /api/notifications - Creating notification for user: {}", event.getUserId());
         NotificationResponse response = notificationService.createNotification(event);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/notifications")
+    @GetMapping
     public ResponseEntity<Page<NotificationResponse>> getNotifications(
             @RequestParam UUID userId,
             @RequestParam(required = false) Boolean read,

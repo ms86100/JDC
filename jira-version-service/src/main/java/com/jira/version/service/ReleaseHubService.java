@@ -16,7 +16,7 @@ public class ReleaseHubService {
     @Value("${issue.service.url:http://jira-issue-service:8084}")
     private String issueServiceUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @SuppressWarnings("unchecked")
     public Map<String, Object> getReleaseStatus(UUID versionId) {

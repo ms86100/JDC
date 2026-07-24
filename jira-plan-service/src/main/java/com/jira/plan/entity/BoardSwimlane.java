@@ -1,6 +1,9 @@
 package com.jira.plan.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.*;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -14,7 +17,9 @@ import java.util.UUID;
 @Table(name = "board_swimlanes", schema = "jira_plan", indexes = {
     @Index(name = "idx_board_swimlanes_board", columnList = "board_id")
 })
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

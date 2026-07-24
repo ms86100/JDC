@@ -16,7 +16,7 @@ public class StandardReportService {
     @Value("${issue.service.url:http://jira-issue-service:8084}")
     private String issueServiceUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @SuppressWarnings("unchecked")
     public Map<String, Object> getCreatedVsResolved(UUID projectId, String period, String startDate, String endDate) {
@@ -191,7 +191,14 @@ public class StandardReportService {
         if (ts.length() < 10) return null;
         return switch (period != null ? period.toUpperCase() : "MONTHLY") {
             case "DAILY" -> ts.substring(0, 10);
-            case "WEEKLY" -> ts.substring(0, 7) + "-W" + (Integer.parseInt(ts.substring(8, 10)) / 7 + 1);
+            case "WEEKLY" -> {
+                try {
+                    java.time.LocalDate date = java.time.LocalDate.parse(ts.substring(0, 10));
+                    yield ts.substring(0, 4) + "-W" + String.format("%02d", date.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR));
+                } catch (Exception e) {
+                    yield ts.substring(0, 7) + "-W?";
+                }
+            }
             case "MONTHLY" -> ts.substring(0, 7);
             default -> ts.substring(0, 7);
         };

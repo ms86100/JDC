@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
-public class UpdateTestStatusFunction extends AbstractJiraIssueFunction {
+public class UpdateTestStatusFunction extends AbstractIssueFunction {
 
     private static final Logger log = LoggerFactory.getLogger(UpdateTestStatusFunction.class);
 

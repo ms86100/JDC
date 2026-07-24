@@ -29,7 +29,7 @@ public class CiCdIntegrationService {
     private final IssueStatusRepository issueStatusRepository;
     private final ProjectRepository projectRepository;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     // ==================== Webhook Endpoints ====================
 

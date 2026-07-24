@@ -1,5 +1,6 @@
 package com.jira.issue.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -17,10 +18,11 @@ import java.util.UUID;
  * Resolves Jira {@code membersOf("group")} to user UUIDs via user-service.
  */
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class JqlGroupResolver {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${user.service.url:http://localhost:8082}")
     private String userServiceUrl;

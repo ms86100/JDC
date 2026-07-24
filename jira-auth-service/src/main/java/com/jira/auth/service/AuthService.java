@@ -84,6 +84,11 @@ public class AuthService {
             throw new AuthException("Invalid refresh token");
         }
 
+        String tokenType = tokenProvider.getTokenType(refreshToken);
+        if (!"refresh".equals(tokenType)) {
+            throw new AuthException("Token is not a refresh token");
+        }
+
         UUID userId = tokenProvider.getUserIdFromToken(refreshToken);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AuthException("User not found"));

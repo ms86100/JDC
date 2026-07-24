@@ -24,6 +24,7 @@ public class UserManagementService {
 
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
+    private final UserGroupMembershipRepository userGroupMembershipRepository;
     private final ProjectRoleRepository projectRoleRepository;
     private final GlobalPermissionRepository globalPermissionRepository;
     private final LdapConfigurationRepository ldapConfigurationRepository;
@@ -164,9 +165,15 @@ public class UserManagementService {
 
     @Transactional(readOnly = true)
     public List<UserEntity> getGroupMembers(String groupId) {
-        GroupEntity group = groupRepository.findById(groupId)
+        groupRepository.findById(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("Group not found: " + groupId));
-        return new ArrayList<>(group.getUsers());
+        // Query through the membership repository since the GroupEntity users field is transient
+        List<String> userIds = userGroupMembershipRepository.findUserIdsByGroupId(groupId);
+        return userIds.stream()
+                .map(userRepository::findById)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -193,8 +200,17 @@ public class UserManagementService {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
-        group.getUsers().add(user);
-        groupRepository.save(group);
+        // Check if membership already exists to avoid duplicates
+        if (userGroupMembershipRepository.existsByUserIdAndGroupId(userId, groupId)) {
+            throw new IllegalArgumentException("User " + user.getUsername() + " is already a member of group " + group.getGroupName());
+        }
+
+        // Persist membership through the repository
+        UserGroupMembershipEntity membership = UserGroupMembershipEntity.builder()
+                .userId(userId)
+                .groupId(groupId)
+                .build();
+        userGroupMembershipRepository.save(membership);
 
         createAuditLog("ADD_USER", "GROUP", groupId, group.getGroupName(), null,
             "User " + user.getUsername() + " added to group", "SUCCESS");
@@ -208,8 +224,13 @@ public class UserManagementService {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
-        group.getUsers().remove(user);
-        groupRepository.save(group);
+        // Verify membership exists before removing
+        if (!userGroupMembershipRepository.existsByUserIdAndGroupId(userId, groupId)) {
+            throw new IllegalArgumentException("User " + user.getUsername() + " is not a member of group " + group.getGroupName());
+        }
+
+        // Remove membership through the repository
+        userGroupMembershipRepository.deleteByUserIdAndGroupId(userId, groupId);
 
         createAuditLog("REMOVE_USER", "GROUP", groupId, group.getGroupName(), null,
             "User " + user.getUsername() + " removed from group", "SUCCESS");

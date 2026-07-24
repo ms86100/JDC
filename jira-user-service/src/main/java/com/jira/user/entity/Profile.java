@@ -10,7 +10,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "profiles", schema = "jira_user")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

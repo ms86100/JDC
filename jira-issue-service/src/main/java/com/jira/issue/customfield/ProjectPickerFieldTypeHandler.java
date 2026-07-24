@@ -17,7 +17,7 @@ public class ProjectPickerFieldTypeHandler extends AbstractCustomFieldTypeHandle
     @Value("${project.service.url}")
     private String projectServiceUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Override
     public String getType() { return "projectpicker"; }

@@ -18,7 +18,6 @@ import java.util.UUID;
 @RequestMapping("/api/legal-holds")
 @RequiredArgsConstructor
 @Tag(name = "Legal Holds", description = "Legal Hold management endpoints")
-@CrossOrigin(origins = "*")
 public class LegalHoldController {
 
     private final DocumentService documentService;
@@ -28,7 +27,8 @@ public class LegalHoldController {
     public ResponseEntity<LegalHoldResponse> createLegalHold(
             @Valid @RequestBody CreateLegalHoldRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(documentService.createLegalHold(request, actor));
     }
@@ -46,7 +46,8 @@ public class LegalHoldController {
             @Parameter(description = "Hold ID") @PathVariable UUID id,
             @RequestParam(required = false) String reason,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.ok(documentService.releaseLegalHold(id, actor, reason));
     }
 

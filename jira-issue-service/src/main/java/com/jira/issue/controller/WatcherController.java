@@ -22,7 +22,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Issue Watchers", description = "Watcher management for issues")
-@CrossOrigin(origins = "*")
 public class WatcherController {
 
     private final WatcherService watcherService;

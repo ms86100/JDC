@@ -5,7 +5,9 @@ import lombok.*;
 
 @Entity
 @Table(name = "notification_events")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

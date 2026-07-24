@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class IssueServiceClient {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${jira.issue-service-url:http://localhost:8084}")
@@ -100,6 +100,88 @@ public class IssueServiceClient {
                 .filter(i -> isCompletedStatus(i.getStatusName()))
                 .mapToInt(i -> i.getStoryPoints() != null ? i.getStoryPoints() : 0)
                 .sum();
+    }
+
+    // --- bulk-operation helpers ---
+
+    /**
+     * Delete an issue via the issue service REST API.
+     */
+    public void deleteIssue(UUID issueId) {
+        String url = issueServiceUrl + "/api/issues/" + issueId;
+        HttpHeaders headers = new HttpHeaders();
+        // Service-to-service call: use a system user ID
+        headers.set("X-User-Id", "00000000-0000-0000-0000-000000000000");
+        try {
+            restTemplate.exchange(url, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
+            log.info("Deleted issue {} via issue-service", issueId);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete issue " + issueId + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Update issue fields (assignee, priority, labels) via PUT to the issue service.
+     */
+    public void updateIssueFields(UUID issueId, Map<String, Object> fields) {
+        String url = issueServiceUrl + "/api/issues/" + issueId;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("X-User-Id", "00000000-0000-0000-0000-000000000000");
+        try {
+            restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(fields, headers), Map.class);
+            log.info("Updated fields on issue {}: {}", issueId, fields.keySet());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update issue " + issueId + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Update issue status via the issue service workflow endpoint.
+     */
+    public void updateIssueStatus(UUID issueId, UUID projectId, String statusName) {
+        UUID statusId = resolveStatusIdByName(statusName);
+        if (statusId == null) {
+            throw new RuntimeException("Could not resolve status name: " + statusName);
+        }
+        patchStatus(issueId, projectId, statusId);
+        log.info("Updated status on issue {} to {}", issueId, statusName);
+    }
+
+    /**
+     * Clone an issue via the issue service REST API.
+     * Returns the cloned issue key or throws on failure.
+     */
+    public String cloneIssue(UUID issueId, UUID targetProjectId, boolean keepAttachments) {
+        try {
+            String url;
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-User-Id", "00000000-0000-0000-0000-000000000000");
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            ResponseEntity<Map<String, Object>> response;
+            if (targetProjectId != null) {
+                url = issueServiceUrl + "/api/issues/" + issueId + "/clone-to-project?targetProjectId=" + targetProjectId;
+                response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(headers),
+                        new ParameterizedTypeReference<>() {});
+            } else {
+                url = issueServiceUrl + "/api/issues/" + issueId + "/clone?includeAttachments=" + keepAttachments;
+                response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(headers),
+                        new ParameterizedTypeReference<>() {});
+            }
+
+            Map<String, Object> body = response.getBody();
+            if (body != null) {
+                // Try to get the clone's issue key from the response
+                Object cloneKey = body.get("issueKey");
+                if (cloneKey == null) cloneKey = body.get("key");
+                if (cloneKey == null) cloneKey = body.get("id");
+                return cloneKey != null ? cloneKey.toString() : "cloned";
+            }
+            return "cloned";
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to clone issue " + issueId + ": " + e.getMessage(), e);
+        }
     }
 
     // --- internals ---
@@ -235,6 +317,7 @@ public class IssueServiceClient {
     private IssueData mapToIssueData(Map<String, Object> response) {
         IssueData data = new IssueData();
         data.setId(parseUUID(response.get("id")));
+        data.setProjectId(parseUUID(response.get("projectId")));
         data.setIssueKey(stringVal(response.get("issueKey"), response.get("key")));
         data.setTitle(stringVal(response.get("title"), ""));
         data.setStoryPoints(intVal(response.get("storyPoints")));
@@ -305,6 +388,7 @@ public class IssueServiceClient {
     @Data
     public static class IssueData {
         private UUID id;
+        private UUID projectId;
         private String issueKey;
         private String title;
         private Integer storyPoints;

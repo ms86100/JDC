@@ -21,7 +21,6 @@ import java.util.UUID;
 @RequestMapping("/api/issues/links")
 @RequiredArgsConstructor
 @Tag(name = "Issue Links", description = "Issue linking management API")
-@CrossOrigin(origins = "*")
 public class IssueLinkController {
 
     private final IssueLinkService issueLinkService;

@@ -25,7 +25,16 @@ public class NotificationDispatchService {
     private final NotificationSchemeEventRepository schemeEventRepository;
     private final NotificationPreferenceRepository preferenceRepository;
     private final NotificationService notificationService;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    @org.springframework.beans.factory.annotation.Value("${issue.service.url:http://jira-issue-service:8084}")
+    private String issueServiceUrl;
+
+    @org.springframework.beans.factory.annotation.Value("${user.service.url:http://jira-user-service:8082}")
+    private String userServiceUrl;
+
+    @org.springframework.beans.factory.annotation.Value("${project.service.url:http://jira-project-service:8083}")
+    private String projectServiceUrl;
 
     @Transactional
     public void dispatchIssueEvent(String eventType, UUID issueId, UUID projectId,
@@ -221,7 +230,7 @@ public class NotificationDispatchService {
             return Collections.emptyMap();
         }
         try {
-            String url = String.format("http://jira-issue-service:8084/api/issues/%s", issueId);
+            String url = String.format(issueServiceUrl + "/api/issues/%s", issueId);
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
             return response != null ? response : Collections.emptyMap();
         } catch (Exception e) {
@@ -255,7 +264,7 @@ public class NotificationDispatchService {
     @SuppressWarnings("unchecked")
     private void expandGroupMembers(Set<UUID> recipients, UUID groupId) {
         try {
-            String url = String.format("http://jira-user-service:8082/rest/admin/1.0/groups/%s/members", groupId);
+            String url = String.format(userServiceUrl + "/rest/admin/1.0/groups/%s/members", groupId);
             List<Map<String, Object>> members = restTemplate.getForObject(url, List.class);
             if (members != null) {
                 for (Map<String, Object> member : members) {
@@ -271,7 +280,7 @@ public class NotificationDispatchService {
     @SuppressWarnings("unchecked")
     private void expandGroupMembersByName(Set<UUID> recipients, String groupName) {
         try {
-            String url = String.format("http://jira-user-service:8082/rest/admin/1.0/groups?name=%s", groupName);
+            String url = String.format(userServiceUrl + "/rest/admin/1.0/groups?name=%s", groupName);
             Map<String, Object> group = restTemplate.getForObject(url, Map.class);
             if (group != null && group.get("id") != null) {
                 expandGroupMembers(recipients, UUID.fromString(group.get("id").toString()));
@@ -289,7 +298,7 @@ public class NotificationDispatchService {
         }
         try {
             UUID projectId = projectIdObj instanceof UUID ? (UUID) projectIdObj : UUID.fromString(projectIdObj.toString());
-            String url = String.format("http://jira-project-service:8083/api/projects/%s/roles/%s/members", projectId, roleId);
+            String url = String.format(projectServiceUrl + "/api/projects/%s/roles/%s/members", projectId, roleId);
             List<Map<String, Object>> members = restTemplate.getForObject(url, List.class);
             if (members != null) {
                 for (Map<String, Object> member : members) {

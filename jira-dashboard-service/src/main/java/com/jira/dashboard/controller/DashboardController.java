@@ -20,7 +20,6 @@ import java.util.UUID;
 @RequestMapping("/api/dashboards")
 @RequiredArgsConstructor
 @Tag(name = "Dashboards", description = "Dashboard and Gadget management endpoints")
-@CrossOrigin(origins = "*")
 public class DashboardController {
 
     private final DashboardService dashboardService;
@@ -30,7 +29,8 @@ public class DashboardController {
     public ResponseEntity<DashboardResponse> createDashboard(
             @Valid @RequestBody CreateDashboardRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         DashboardResponse response = dashboardService.createDashboard(request, actor);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
@@ -41,7 +41,8 @@ public class DashboardController {
             @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.ok(dashboardService.getDashboardsByOwner(actor, PageRequest.of(page, size)));
     }
 
@@ -49,7 +50,8 @@ public class DashboardController {
     @Operation(summary = "Get accessible dashboards", description = "Returns all dashboards the user can access")
     public ResponseEntity<List<DashboardResponse>> getAccessibleDashboards(
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.ok(dashboardService.getAccessibleDashboards(actor));
     }
 
@@ -57,7 +59,8 @@ public class DashboardController {
     @Operation(summary = "Get favorite dashboards", description = "Returns user's favorite dashboards")
     public ResponseEntity<List<DashboardResponse>> getFavoriteDashboards(
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.ok(dashboardService.getFavoriteDashboards(actor));
     }
 
@@ -74,7 +77,8 @@ public class DashboardController {
             @Parameter(description = "Dashboard ID") @PathVariable UUID id,
             @RequestBody UpdateDashboardRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.ok(dashboardService.updateDashboard(id, request, actor));
     }
 
@@ -99,7 +103,8 @@ public class DashboardController {
     public ResponseEntity<DashboardResponse> toggleFavorite(
             @Parameter(description = "Dashboard ID") @PathVariable UUID id,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.ok(dashboardService.toggleFavorite(id, actor));
     }
 

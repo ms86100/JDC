@@ -17,7 +17,7 @@ services:
     container_name: jira-postgres
     environment:
       POSTGRES_USER: jiraadmin
-      POSTGRES_PASSWORD: jirapass123
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-jirapass}
       POSTGRES_DB: jira_platform
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -41,7 +41,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
     networks:
       - jira-network
     depends_on:
@@ -98,7 +98,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JWT_SECRET: jira-platform-super-secret-key-that-is-at-least-256-bits-long
     networks:
       - jira-network
@@ -117,7 +117,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       AUTH_SERVICE_URL: http://auth-service:8081
     networks:
       - jira-network
@@ -138,7 +138,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       AUTH_SERVICE_URL: http://auth-service:8081
     networks:
       - jira-network
@@ -159,7 +159,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       AUTH_SERVICE_URL: http://auth-service:8081
     networks:
       - jira-network
@@ -180,7 +180,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       AUTH_SERVICE_URL: http://auth-service:8081
     networks:
       - jira-network
@@ -201,7 +201,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       AUTH_SERVICE_URL: http://auth-service:8081
     networks:
       - jira-network
@@ -222,7 +222,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       AUTH_SERVICE_URL: http://auth-service:8081
     networks:
       - jira-network
@@ -243,7 +243,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       AUTH_SERVICE_URL: http://auth-service:8081
     networks:
       - jira-network
@@ -264,7 +264,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       AUTH_SERVICE_URL: http://auth-service:8081
     networks:
       - jira-network
@@ -285,7 +285,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
     volumes:
       - attachment_data:/var/jira/attachments
     networks:
@@ -307,7 +307,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       AUTH_SERVICE_URL: http://auth-service:8081
     networks:
       - jira-network
@@ -328,7 +328,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       AUTH_SERVICE_URL: http://auth-service:8081
     networks:
       - jira-network
@@ -349,7 +349,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       AUTH_SERVICE_URL: http://auth-service:8081
     networks:
       - jira-network
@@ -371,7 +371,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       AUTH_SERVICE_URL: http://auth-service:8081
     networks:
       - jira-network
@@ -392,7 +392,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       AUTH_SERVICE_URL: http://auth-service:8081
     networks:
       - jira-network

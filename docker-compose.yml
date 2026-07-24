@@ -13,7 +13,7 @@ services:
     command: postgres -c max_connections=300
     environment:
       POSTGRES_USER: jiraadmin
-      POSTGRES_PASSWORD: jirapass123
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-jirapass}
       POSTGRES_DB: jira_platform
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -74,7 +74,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
       JWT_SECRET: jira-platform-super-secret-key-that-is-at-least-256-bits-long
       JWT_EXPIRATION_MS: 86400000
@@ -104,7 +104,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
     networks:
       - jira-network
@@ -133,7 +133,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
     networks:
       - jira-network
@@ -162,7 +162,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
       WORKFLOW_SERVICE_URL: http://workflow-service:8085
       PROJECT_SERVICE_URL: http://project-service:8083
@@ -196,7 +196,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
       ISSUE_SERVICE_URL: http://jira-issue-service:8084
       COMMENT_SERVICE_URL: http://jira-comment-service:8086
@@ -230,7 +230,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
     networks:
       - jira-network
@@ -259,7 +259,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
     networks:
       - jira-network
@@ -288,7 +288,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
     networks:
       - jira-network
@@ -317,7 +317,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
     networks:
       - jira-network
@@ -349,7 +349,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       ATTACHMENT_STORAGE_PATH: /var/jira/attachments
       JAVA_OPTS: -Xms128m -Xmx256m
     volumes:
@@ -384,7 +384,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
     networks:
       - jira-network
@@ -416,7 +416,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
     networks:
       - jira-network
@@ -448,7 +448,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
     networks:
       - jira-network
@@ -480,7 +480,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
     networks:
       - jira-network
@@ -512,7 +512,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
     networks:
       - jira-network
@@ -545,7 +545,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx256m
       GATEWAY_SERVICE_URL: http://jira-gateway:8080
       AUTH_SERVICE_URL: http://jira-auth-service:8081

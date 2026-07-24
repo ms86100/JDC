@@ -36,15 +36,8 @@ public class AttachmentService {
     @Value("${cdn.base-url:}")
     private String cdnBaseUrl;
 
-    private final List<String> allowedTypes = List.of(
-            "image/png", "image/jpeg", "image/gif", "image/webp",
-            "application/pdf", "text/plain",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/vnd.ms-excel",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/zip", "application/x-zip-compressed"
-    );
+    @Value("${jira.attachment.allowed-types:image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip,application/x-zip-compressed}")
+    private List<String> allowedTypes;
 
     @Transactional
     public AttachmentResponse uploadAttachment(UUID issueId, MultipartFile file, UUID uploaderId, String uploaderName) {

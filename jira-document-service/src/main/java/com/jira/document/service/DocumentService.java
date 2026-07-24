@@ -105,7 +105,9 @@ public class DocumentService {
     @Transactional
     public void deleteDocument(UUID documentId) {
         log.info("Deleting document: {}", documentId);
-        documentRepository.deleteById(documentId);
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document", "id", documentId));
+        documentRepository.delete(document);
     }
 
     // Version Management

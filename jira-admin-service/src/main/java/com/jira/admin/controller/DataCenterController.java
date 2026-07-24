@@ -18,7 +18,6 @@ import java.util.Map;
 @RequestMapping("/api/admin/datacenter")
 @RequiredArgsConstructor
 @Tag(name = "Data Center Administration", description = "Data Center Management API")
-@CrossOrigin(origins = "*")
 public class DataCenterController {
 
     private final DataCenterService dataCenterService;

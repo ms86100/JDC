@@ -5,7 +5,9 @@ import lombok.*;
 
 @Entity
 @Table(name = "issue_types")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

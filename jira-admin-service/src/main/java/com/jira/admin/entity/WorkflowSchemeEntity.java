@@ -8,7 +8,9 @@ import lombok.*;
  */
 @Entity
 @Table(name = "workflow_schemes")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

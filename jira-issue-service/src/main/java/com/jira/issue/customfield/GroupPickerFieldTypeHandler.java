@@ -17,7 +17,7 @@ public class GroupPickerFieldTypeHandler extends AbstractCustomFieldTypeHandler 
     @Value("${user.service.url:http://jira-user-service:8082}")
     private String userServiceUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Override
     public String getType() { return "grouppicker"; }

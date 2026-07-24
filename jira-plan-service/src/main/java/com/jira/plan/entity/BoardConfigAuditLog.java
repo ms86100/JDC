@@ -1,6 +1,9 @@
 package com.jira.plan.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -17,7 +20,9 @@ import java.util.UUID;
     @Index(name = "idx_board_audit_board", columnList = "board_id"),
     @Index(name = "idx_board_audit_created", columnList = "created_at")
 })
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

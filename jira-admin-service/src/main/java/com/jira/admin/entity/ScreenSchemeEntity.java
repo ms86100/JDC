@@ -6,7 +6,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "screen_schemes")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -1,9 +1,11 @@
 package com.jira.user.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
@@ -11,7 +13,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "directories", schema = "jira_admin")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -63,6 +67,4 @@ public class Directory {
     @Column(name = "last_sync_at")
     private LocalDateTime lastSyncAt;
 
-    @Column(name = "sync_status", length = 20)
-    private String syncStatus;
-}
+  

@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,8 +25,6 @@ public class PortalService {
     private final CustomerRequestRepository customerRequestRepository;
     private final RequestTypeRepository requestTypeRepository;
     private final PortalCommentRepository portalCommentRepository;
-
-    private static final AtomicInteger requestCounter = new AtomicInteger(0);
 
     // Portal Management
     @Transactional
@@ -245,8 +242,9 @@ public class PortalService {
 
     // Response Mappings
     private String generateRequestKey(String portalKey) {
-        int counter = requestCounter.incrementAndGet();
-        return portalKey + "-" + counter;
+        String prefix = portalKey != null ? portalKey : "REQ";
+        long count = customerRequestRepository.count() + 1;
+        return prefix + "-" + count;
     }
 
     private CustomerPortalResponse toCustomerPortalResponse(CustomerPortal portal) {

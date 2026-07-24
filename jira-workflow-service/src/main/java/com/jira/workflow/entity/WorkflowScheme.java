@@ -12,7 +12,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "workflow_schemes", schema = "jira_workflow")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -1,6 +1,7 @@
 package com.jira.issue.service;
 
 import com.jira.issue.security.PermissionCheckResult;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -10,8 +11,11 @@ import java.util.Map;
 import java.util.UUID;
 
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class ProjectPermissionClient {
+
+    private final RestTemplate restTemplate;
 
     @Value("${project.service.url}")
     private String projectServiceUrl;
@@ -22,8 +26,6 @@ public class ProjectPermissionClient {
      */
     @Value("${jira.permissions.fail-open:false}")
     private boolean failOpen;
-
-    private final RestTemplate restTemplate = new RestTemplate();
 
     public boolean isFailOpen() {
         return failOpen;

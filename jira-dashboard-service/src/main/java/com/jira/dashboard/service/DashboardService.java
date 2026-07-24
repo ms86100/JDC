@@ -177,7 +177,7 @@ public class DashboardService {
     public GadgetInstanceResponse addGadgetToDashboard(UUID dashboardId, CreateGadgetInstanceRequest request) {
         log.info("Adding gadget {} to dashboard {}", request.getGadgetId(), dashboardId);
 
-        gadgetInstanceRepository.findById(dashboardId)
+        dashboardRepository.findById(dashboardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Dashboard", "id", dashboardId));
 
         Gadget gadget = gadgetRepository.findById(request.getGadgetId())

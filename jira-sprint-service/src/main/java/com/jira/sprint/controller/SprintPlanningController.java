@@ -25,7 +25,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Sprint Planning", description = "Sprint planning and backlog management")
-@CrossOrigin(origins = "*")
 public class SprintPlanningController {
 
     private final SprintPlanningService sprintPlanningService;

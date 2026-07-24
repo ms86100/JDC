@@ -14,7 +14,6 @@ import java.util.UUID;
 @RequestMapping("/api/jql")
 @RequiredArgsConstructor
 @Tag(name = "JQL Search", description = "Unified JQL search contract (GET and POST)")
-@CrossOrigin(origins = "*")
 public class JqlSearchController {
 
     private final IssueService issueService;

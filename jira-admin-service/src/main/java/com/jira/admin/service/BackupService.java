@@ -22,7 +22,7 @@ public class BackupService {
 
     private final BackupRepository backupRepository;
     private final BackupScheduleRepository backupScheduleRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${jira.services.project-url:http://localhost:8083}")
     private String projectServiceUrl;

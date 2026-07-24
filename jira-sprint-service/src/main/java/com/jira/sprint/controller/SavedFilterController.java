@@ -19,7 +19,6 @@ import java.util.UUID;
 @RequestMapping("/api/filters")
 @RequiredArgsConstructor
 @Tag(name = "Saved Filters", description = "Saved filters and subscriptions API")
-@CrossOrigin(origins = "*")
 public class SavedFilterController {
 
     private final SavedFilterService savedFilterService;

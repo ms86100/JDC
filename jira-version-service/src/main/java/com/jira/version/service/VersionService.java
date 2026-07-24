@@ -53,7 +53,7 @@ public class VersionService {
     @Transactional
     public VersionResponse createVersion(CreateVersionRequest request) {
         // Check for duplicate name
-        if (versionRepository.existsByProjectIdAndNameAndIdNot(request.getProjectId(), request.getName(), null)) {
+        if (versionRepository.existsByProjectIdAndName(request.getProjectId(), request.getName())) {
             throw new DuplicateResourceException("Version with name '" + request.getName() + "' already exists in this project");
         }
 

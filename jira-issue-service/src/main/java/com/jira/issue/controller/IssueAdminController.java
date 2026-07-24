@@ -19,7 +19,6 @@ import java.util.UUID;
 @RequestMapping("/api/admin/issues")
 @RequiredArgsConstructor
 @Tag(name = "Issue Administration", description = "Admin endpoints for issue types")
-@CrossOrigin(origins = "*")
 public class IssueAdminController {
 
     private final IssueTypeService issueTypeService;

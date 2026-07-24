@@ -29,7 +29,7 @@ public class VersionService {
     @Value("${project.service.url}")
     private String projectServiceUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Transactional
     public VersionResponse createVersion(CreateVersionRequest request, UUID currentUserId) {

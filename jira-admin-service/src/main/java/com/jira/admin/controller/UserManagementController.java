@@ -19,7 +19,6 @@ import java.util.Map;
 @RequestMapping("/api/admin/users")
 @RequiredArgsConstructor
 @Tag(name = "User Management", description = "User Administration API")
-@CrossOrigin(origins = "*")
 public class UserManagementController {
 
     private final UserManagementService userManagementService;

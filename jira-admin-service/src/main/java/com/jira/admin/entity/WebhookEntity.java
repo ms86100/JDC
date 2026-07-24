@@ -10,7 +10,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "webhooks", schema = "jira_admin")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

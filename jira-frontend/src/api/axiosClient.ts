@@ -38,7 +38,10 @@ apiClient.interceptors.request.use((config) => {
     /* ignore */
   }
   if (!config.headers['X-User-Id']) {
-    config.headers['X-User-Id'] = '11111111-1111-1111-1111-111111111111';
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      config.headers['X-User-Id'] = userId;
+    }
   }
   return config;
 });

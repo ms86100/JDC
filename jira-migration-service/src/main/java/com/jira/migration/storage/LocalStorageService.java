@@ -320,7 +320,7 @@ public class LocalStorageService implements AttachmentStorageService {
         String extension = getFileExtension(sanitizedFileName);
         String baseName = extension.isEmpty() ? attachmentId : attachmentId + "." + extension;
 
-        return String.format("%s/%d/%02d/%s/%s",
+        return String.format("%d/%02d/%s/%s",
                 yearMonth.getYear(),
                 yearMonth.getMonthValue(),
                 issueId,

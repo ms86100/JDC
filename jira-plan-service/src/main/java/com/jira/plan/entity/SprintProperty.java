@@ -1,6 +1,9 @@
 package com.jira.plan.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -13,7 +16,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "sprint_properties", schema = "jira_plan",
     uniqueConstraints = @UniqueConstraint(columnNames = {"sprint_id", "property_key"}))
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

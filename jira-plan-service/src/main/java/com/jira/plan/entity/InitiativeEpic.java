@@ -1,6 +1,9 @@
 package com.jira.plan.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -13,7 +16,9 @@ import java.util.UUID;
         @Index(name = "idx_initiative_epic", columnList = "initiative_id, epic_id"),
         @Index(name = "idx_epic_initiative", columnList = "epic_id, initiative_id")
 })
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -7,7 +7,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "projects")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -20,7 +20,6 @@ import java.util.UUID;
 @RequestMapping("/api/issues/{issueId}/labels")
 @RequiredArgsConstructor
 @Tag(name = "Labels", description = "Issue label management API")
-@CrossOrigin(origins = "*")
 public class LabelController {
 
     private final LabelService labelService;

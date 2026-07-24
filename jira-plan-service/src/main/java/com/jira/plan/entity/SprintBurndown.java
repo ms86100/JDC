@@ -1,6 +1,9 @@
 package com.jira.plan.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -16,7 +19,9 @@ import java.util.UUID;
     @Index(name = "idx_sprint_burndown_sprint", columnList = "sprint_id"),
     @Index(name = "idx_sprint_burndown_date", columnList = "snapshot_date")
 })
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

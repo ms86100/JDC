@@ -8,7 +8,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "notification_schemes")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

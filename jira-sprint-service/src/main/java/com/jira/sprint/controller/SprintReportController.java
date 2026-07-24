@@ -16,7 +16,6 @@ import java.util.UUID;
 @RequestMapping("/api/sprints/reports")
 @RequiredArgsConstructor
 @Tag(name = "Sprint Reports", description = "Sprint reports and analytics API")
-@CrossOrigin(origins = "*")
 public class SprintReportController {
 
     private final SprintReportService sprintReportService;

@@ -20,7 +20,7 @@ import java.util.*;
 public class SavedFilterService {
 
     private final SavedFilterRepository savedFilterRepository;
-    private final Map<UUID, FilterSubscriptionResponse> subscriptions = new HashMap<>();
+    private final Map<UUID, FilterSubscriptionResponse> subscriptions = new java.util.concurrent.ConcurrentHashMap<>();
 
     @PostConstruct
     void seedSystemFilters() {

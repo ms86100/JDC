@@ -2,6 +2,7 @@ package com.jira.workflow.engine;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -10,10 +11,11 @@ import org.springframework.web.client.RestTemplate;
 import java.util.*;
 
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class ProjectNotificationSchemeClient {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${jira.services.project-url:http://localhost:8083}")

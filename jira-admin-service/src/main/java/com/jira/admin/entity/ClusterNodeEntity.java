@@ -5,7 +5,9 @@ import lombok.*;
 
 @Entity
 @Table(name = "cluster_nodes")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

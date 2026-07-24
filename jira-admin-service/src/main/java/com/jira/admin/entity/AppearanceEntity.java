@@ -5,7 +5,9 @@ import lombok.*;
 
 @Entity
 @Table(name = "appearance_settings")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

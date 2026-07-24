@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 public class JQLSearchService {
 
     private final JQLParser jqlParser;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     private static final String ISSUE_SERVICE_URL = "http://jira-issue-service:8084";
 

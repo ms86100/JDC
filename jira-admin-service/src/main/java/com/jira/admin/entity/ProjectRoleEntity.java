@@ -7,7 +7,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "project_roles")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

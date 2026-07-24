@@ -23,7 +23,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Issue Clone & Move", description = "Clone and move issue operations")
-@CrossOrigin(origins = "*")
 public class CloneMoveController {
 
     private final CloneIssueService cloneIssueService;

@@ -19,7 +19,6 @@ import java.util.UUID;
 @RequestMapping("/api/issues/hierarchy")
 @RequiredArgsConstructor
 @Tag(name = "Issue Hierarchy", description = "Issue parent-child hierarchy management")
-@CrossOrigin(origins = "*")
 public class IssueHierarchyController {
 
     private final IssueHierarchyService issueHierarchyService;

@@ -1,6 +1,9 @@
 package com.jira.plan.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -13,7 +16,9 @@ import java.util.UUID;
     indexes = {
         @Index(name = "idx_cfs_board_date", columnList = "board_id, snapshot_date")
     })
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

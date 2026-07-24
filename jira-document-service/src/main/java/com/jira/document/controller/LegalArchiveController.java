@@ -18,7 +18,6 @@ import java.util.UUID;
 @RequestMapping("/api/legal-archives")
 @RequiredArgsConstructor
 @Tag(name = "Legal Archives", description = "Legal Archive management endpoints")
-@CrossOrigin(origins = "*")
 public class LegalArchiveController {
 
     private final DocumentService documentService;
@@ -28,7 +27,8 @@ public class LegalArchiveController {
     public ResponseEntity<LegalArchiveResponse> createLegalArchive(
             @Valid @RequestBody CreateLegalArchiveRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(documentService.createLegalArchive(request, actor));
     }

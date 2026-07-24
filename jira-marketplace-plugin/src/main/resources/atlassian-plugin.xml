@@ -87,7 +87,7 @@
 
     <!-- Condition for Test Issue Types -->
     <condition key="test-issue-condition" class="com.jira.plugin.conditions.TestIssueCondition">
-        <-or>
+        <or>
             <issue-type id="Test"/>
             <issue-type id="TestSet"/>
             <issue-type id="TestPlan"/>

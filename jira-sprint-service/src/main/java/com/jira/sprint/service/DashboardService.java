@@ -12,7 +12,7 @@ import java.util.*;
 @Service
 public class DashboardService {
 
-    private final Map<UUID, DashboardResponse> dashboards = new HashMap<>();
+    private final Map<UUID, DashboardResponse> dashboards = new java.util.concurrent.ConcurrentHashMap<>();
 
     public DashboardService() {
         // Initialize with default dashboard

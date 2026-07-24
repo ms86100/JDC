@@ -2,6 +2,9 @@ package com.jira.migration.entity.field;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.EqualsAndHashCode;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -16,7 +19,9 @@ import java.util.*;
 @Entity
 @Table(name = "custom_field_options", schema = "jira_migration",
         uniqueConstraints = @UniqueConstraint(columnNames = {"custom_field_id", "parent_option_id", "value"}))
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

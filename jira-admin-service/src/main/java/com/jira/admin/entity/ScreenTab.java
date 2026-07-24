@@ -6,7 +6,9 @@ import lombok.*;
 
 @Entity
 @Table(name = "screen_tabs")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

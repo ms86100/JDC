@@ -16,7 +16,6 @@ import java.util.List;
 @RequestMapping("/api/admin/webhooks")
 @RequiredArgsConstructor
 @Tag(name = "Webhooks", description = "System Webhook Management API")
-@CrossOrigin(origins = "*")
 public class WebhookController {
 
     private final WebhookDispatchService webhookDispatchService;

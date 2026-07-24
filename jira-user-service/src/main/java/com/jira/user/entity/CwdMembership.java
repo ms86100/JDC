@@ -1,9 +1,11 @@
 package com.jira.user.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
@@ -11,7 +13,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "cwd_membership", schema = "jira_admin")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -34,7 +38,4 @@ public class CwdMembership {
     private LocalDateTime createdDate;
 
     @PrePersist
-    protected void onCreate() {
-        if (createdDate == null) createdDate = LocalDateTime.now();
-    }
-}
+    protected void onCreate() 

@@ -1,6 +1,9 @@
 package com.jira.portal.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -14,7 +17,9 @@ import java.util.UUID;
         @Index(name = "idx_request_type_issue_type", columnList = "issue_type")
     }
 )
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

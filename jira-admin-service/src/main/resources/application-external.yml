@@ -4,8 +4,8 @@ spring:
       on-profile: external
   datasource:
     url: jdbc:postgresql://in0-eplmdb-v01:5432/systems
-    username: systems_admin
-    password: Hcu4ieD8R13qaf7JVSsu
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: none

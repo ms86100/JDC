@@ -8,7 +8,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "application_access", schema = "jira_admin")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

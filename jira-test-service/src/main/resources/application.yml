@@ -6,8 +6,8 @@ spring:
     name: jira-test-service
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:jira_platform}
-    username: ${DB_USERNAME:jiraadmin}
-    password: ${DB_PASSWORD:jirapass123}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -56,11 +56,11 @@ logging:
 
 issue:
   service:
-    url: http://${DB_HOST:-postgres}:${DB_PORT:-5432}
+    url: ${ISSUE_SERVICE_URL:http://jira-issue-service:8084}
 
 project:
   service:
-    url: http://${DB_HOST:-postgres}:${DB_PORT:-5432}
+    url: ${PROJECT_SERVICE_URL:http://jira-project-service:8083}
 
 test:
   storage:

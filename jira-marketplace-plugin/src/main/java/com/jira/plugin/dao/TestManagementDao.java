@@ -5,6 +5,7 @@ import com.atlassian.plugin.spring.scanner.annotation.ComponentImport;
 import net.java.amateros.xray.entities.TestEntity;
 import net.java.amateros.xray.entities.TestStepEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 

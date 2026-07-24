@@ -20,7 +20,7 @@ public interface LegalHoldRepository extends JpaRepository<LegalHold, UUID> {
     @Query("SELECT lh FROM LegalHold lh WHERE lh.status = :status")
     List<LegalHold> findByStatus(@Param("status") String status);
 
-    @Query("SELECT lh FROM LegalHold lh WHERE lh.custodianIds @> :custodianId::uuid[]")
+    @Query(value = "SELECT * FROM legal_holds lh WHERE lh.custodian_ids @> ARRAY[CAST(:custodianId AS uuid)]", nativeQuery = true)
     List<LegalHold> findByCustodianContaining(@Param("custodianId") UUID custodianId);
 
     @Query("SELECT lh FROM LegalHold lh WHERE lh.status = 'ACTIVE' AND lh.endDate <= :date")
@@ -29,6 +29,6 @@ public interface LegalHoldRepository extends JpaRepository<LegalHold, UUID> {
     @Query("SELECT lh FROM LegalHold lh WHERE lh.initiatedBy = :userId")
     List<LegalHold> findByInitiatedBy(@Param("userId") UUID userId);
 
-    @Query("SELECT lh FROM LegalHold lh WHERE lh.projectIds @> :projectId::uuid[]")
+    @Query(value = "SELECT * FROM legal_holds lh WHERE lh.project_ids @> ARRAY[CAST(:projectId AS uuid)]", nativeQuery = true)
     List<LegalHold> findByProjectContaining(@Param("projectId") UUID projectId);
 }

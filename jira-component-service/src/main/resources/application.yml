@@ -6,8 +6,8 @@ spring:
     name: jira-component-service
   datasource:
     url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:jira_platform}
-    username: ${DB_USERNAME:jiraadmin}
-    password: ${DB_PASSWORD:jirapass123}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

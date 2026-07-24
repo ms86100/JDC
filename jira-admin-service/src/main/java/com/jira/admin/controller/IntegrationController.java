@@ -16,7 +16,6 @@ import java.util.Map;
 @RequestMapping("/api/integration")
 @RequiredArgsConstructor
 @Tag(name = "Integration", description = "Application links and cross-product integration")
-@CrossOrigin(origins = "*")
 public class IntegrationController {
 
     private final IntegrationService integrationService;

@@ -1,5 +1,6 @@
 package com.jira.workflow.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
@@ -24,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * a configurable TTL and refreshed lazily.
  */
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class WorkflowStatusCatalog {
 
@@ -50,7 +52,7 @@ public class WorkflowStatusCatalog {
             "DONE", "#00875A"
     );
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${jira.services.issue-url:http://localhost:8084}")
     private String issueServiceUrl;

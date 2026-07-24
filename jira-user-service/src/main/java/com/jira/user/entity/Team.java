@@ -9,7 +9,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "teams", schema = "jira_user")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

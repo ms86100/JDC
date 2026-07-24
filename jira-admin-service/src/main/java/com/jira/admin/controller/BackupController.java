@@ -18,7 +18,6 @@ import java.util.UUID;
 @RequestMapping("/api/admin/backup")
 @RequiredArgsConstructor
 @Tag(name = "Backup & Restore", description = "System Backup and Restore API")
-@CrossOrigin(origins = "*")
 public class BackupController {
 
     private final BackupService backupService;

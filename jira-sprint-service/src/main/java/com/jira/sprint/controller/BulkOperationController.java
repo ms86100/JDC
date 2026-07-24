@@ -16,7 +16,6 @@ import java.util.UUID;
 @RequestMapping("/api/bulk-operations")
 @RequiredArgsConstructor
 @Tag(name = "Bulk Operations", description = "Bulk issue operations API")
-@CrossOrigin(origins = "*")
 public class BulkOperationController {
 
     private final BulkOperationService bulkOperationService;

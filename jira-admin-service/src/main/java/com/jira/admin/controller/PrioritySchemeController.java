@@ -17,7 +17,6 @@ import java.util.Map;
 @RequestMapping("/api/admin/priority-schemes")
 @RequiredArgsConstructor
 @Tag(name = "Priority Schemes", description = "Priority Scheme Management API")
-@CrossOrigin(origins = "*")
 public class PrioritySchemeController {
 
     private final PrioritySchemeService prioritySchemeService;

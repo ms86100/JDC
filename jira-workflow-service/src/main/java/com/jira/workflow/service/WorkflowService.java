@@ -31,7 +31,7 @@ public class WorkflowService {
     private final WorkflowPostFunctionRepository workflowPostFunctionRepository;
     private final WorkflowLayoutEdgeSyncService workflowLayoutEdgeSyncService;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String ISSUE_SERVICE_URL = "http://jira-issue-service:8084";

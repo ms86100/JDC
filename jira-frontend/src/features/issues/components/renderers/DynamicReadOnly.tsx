@@ -42,9 +42,8 @@ function safeRichText(input: any, allowHtml: boolean): React.ReactNode {
   const str = String(input);
   const sanitized = str
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/on\w+="[^"]*"/gi, '')
-    .replace(/on\w+='[^']*'/gi, '')
-    .replace(/javascript:/gi, '');
+    .replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
+    .replace(/javascript\s*:/gi, '');
 
   return <span dangerouslySetInnerHTML={{ __html: sanitized }} />;
 }

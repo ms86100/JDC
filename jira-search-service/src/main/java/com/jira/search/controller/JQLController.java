@@ -21,7 +21,6 @@ import java.util.Map;
 @RequestMapping("/api/jql")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class JQLController {
 
     private final JQLSearchService jqlSearchService;

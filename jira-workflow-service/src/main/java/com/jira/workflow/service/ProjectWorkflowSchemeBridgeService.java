@@ -31,7 +31,7 @@ public class ProjectWorkflowSchemeBridgeService {
 
     private final ProjectWorkflowSchemeRepository projectWorkflowSchemeRepository;
     private final WorkflowSchemeRepository workflowSchemeRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${jira.services.project-url:http://localhost:8083}")
     private String projectServiceUrl;

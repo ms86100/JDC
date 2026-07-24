@@ -20,7 +20,6 @@ import java.util.UUID;
 @RequestMapping("/api/documents")
 @RequiredArgsConstructor
 @Tag(name = "Documents", description = "Document management endpoints")
-@CrossOrigin(origins = "*")
 public class DocumentController {
 
     private final DocumentService documentService;
@@ -30,7 +29,8 @@ public class DocumentController {
     public ResponseEntity<DocumentResponse> createDocument(
             @Valid @RequestBody CreateDocumentRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(documentService.createDocument(request, actor));
     }
@@ -48,7 +48,8 @@ public class DocumentController {
             @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.ok(documentService.getDocumentsByOwner(actor, PageRequest.of(page, size)));
     }
 
@@ -65,7 +66,8 @@ public class DocumentController {
             @Parameter(description = "Document ID") @PathVariable UUID id,
             @Valid @RequestBody CreateDocumentRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.ok(documentService.updateDocument(id, request, actor));
     }
 
@@ -98,7 +100,8 @@ public class DocumentController {
             @Parameter(description = "Document ID") @PathVariable UUID id,
             @RequestBody com.jira.document.dto.CreateDocumentRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(documentService.createVersion(id, request.getContent(), "Updated", actor));
     }

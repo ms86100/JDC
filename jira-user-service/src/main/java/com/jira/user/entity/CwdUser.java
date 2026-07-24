@@ -1,9 +1,11 @@
 package com.jira.user.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
@@ -11,7 +13,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "cwd_user", schema = "jira_admin")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -78,8 +82,4 @@ public class CwdUser {
     @PreUpdate
     protected void onUpdate() {
         updatedDate = LocalDateTime.now();
-        if (lowerUserName == null && userName != null) {
-            lowerUserName = userName.toLowerCase();
-        }
-    }
-}
+        if (lowerUserName == null && userName != 

@@ -26,7 +26,7 @@ public class ReportService {
     private final ProjectReportRepository projectReportRepository;
     private final SavedReportRepository savedReportRepository;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     private static final String ISSUE_SERVICE_URL = "http://localhost:8084";
     private static final String SPRINT_SERVICE_URL = "http://localhost:8085";
@@ -184,9 +184,14 @@ public class ReportService {
     }
 
     @Transactional
-    public void deleteSavedReport(UUID reportId) {
-        log.info("Deleting saved report: {}", reportId);
-        savedReportRepository.deleteById(reportId);
+    public void deleteSavedReport(UUID reportId, UUID userId) {
+        log.info("Deleting saved report: {} by user: {}", reportId, userId);
+        SavedReport report = savedReportRepository.findById(reportId)
+                .orElseThrow(() -> new ResourceNotFoundException("SavedReport", "id", reportId));
+        if (userId != null && !report.getOwnerId().equals(userId)) {
+            throw new IllegalArgumentException("Not authorized to delete this report");
+        }
+        savedReportRepository.delete(report);
     }
 
     private TimeTrackingReportResponse toTimeTrackingReportResponse(TimeTrackingReport report) {

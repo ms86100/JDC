@@ -18,8 +18,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on: !override []
 
   user-service:
@@ -27,8 +27,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -38,8 +38,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -49,8 +49,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -60,8 +60,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -71,8 +71,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -82,8 +82,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -93,8 +93,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -104,8 +104,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -115,8 +115,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -126,8 +126,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -137,8 +137,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -148,8 +148,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -159,8 +159,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -170,8 +170,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -181,8 +181,8 @@ services:
       DB_HOST: in0-eplmdb-v01
       DB_PORT: 5432
       DB_NAME: systems
-      DB_USERNAME: systems_admin
-      DB_PASSWORD: Hcu4ieD8R13qaf7JVSsu
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       auth-service:
         condition: service_healthy

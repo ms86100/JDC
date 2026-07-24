@@ -20,7 +20,9 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "workflows", schema = "jira_workflow")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

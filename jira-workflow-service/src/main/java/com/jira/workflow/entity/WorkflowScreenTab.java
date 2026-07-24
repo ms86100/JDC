@@ -10,7 +10,9 @@ import java.util.UUID;
 @Table(name = "workflow_screen_tabs", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"screen_id", "order_index"})
 })
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -24,7 +24,7 @@ import java.util.Map;
 @Slf4j
 public class IssueSchemeBridgeService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${jira.services.project-url:http://localhost:8083}")
     private String projectServiceUrl;

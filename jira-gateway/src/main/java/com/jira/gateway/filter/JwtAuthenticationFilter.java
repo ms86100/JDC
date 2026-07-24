@@ -33,35 +33,18 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     private static final List<String> PUBLIC_PATHS = List.of(
+            // Auth endpoints
             "/api/auth/login",
             "/api/auth/register",
             "/api/auth/refresh",
-            "/auth/login",
-            "/auth/register",
-            "/auth/refresh",
-            "/auth/me",
-            // Public API paths
-            "/api/migration",
-            "/api/migration/**",
-            "/migration/**",
-            "/api/plans/**",
-            "/plans/**",
-            "/api/programs/**",
-            "/programs/**",
-            "/api/templates/**",
-            "/templates/**",
-            "/api/sprints/**",
-            "/sprints/**",
-            "/api/boards/**",
-            "/boards/**",
-            "/ws/**",
             // Swagger/OpenAPI
-            "/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-ui.html",
             "/v3/api-docs/**",
+            "/swagger-ui/**",
+            "/swagger-resources/**",
             // Actuator health
-            "/actuator/health"
+            "/actuator/health",
+            // WebSocket
+            "/ws/**"
     );
 
     @Override

@@ -1,6 +1,9 @@
 package com.jira.user.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -9,7 +12,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "organization_members", schema = "jira_user")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -33,6 +38,4 @@ public class OrganizationMember {
     private OffsetDateTime joinedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "org_id", insertable = false, updatable = false)
-    private Organization organization;
-}
+    @JoinColumn(name = "org_id", in

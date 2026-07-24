@@ -10,7 +10,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "attachments", schema = "jira_attachment")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

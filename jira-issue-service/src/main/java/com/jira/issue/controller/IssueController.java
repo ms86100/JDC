@@ -32,7 +32,6 @@ import java.util.UUID;
 @RequestMapping("/api/issues")
 @RequiredArgsConstructor
 @Tag(name = "Issues", description = "Issue management endpoints")
-@CrossOrigin(origins = "*")
 public class IssueController {
 
     private final IssueService issueService;
@@ -267,7 +266,10 @@ public class IssueController {
      * In a production system, this would use a shared permission service or local cache.
      */
     private static UUID resolveUserId(UUID userId) {
-        return userId != null ? userId : UUID.fromString("00000000-0000-0000-0000-000000000001");
+        if (userId == null) {
+            throw new IllegalArgumentException("X-User-Id header is required");
+        }
+        return userId;
     }
 
     private void requirePermission(UUID userId, UUID projectId, String permission) {

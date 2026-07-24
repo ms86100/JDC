@@ -21,7 +21,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Issue Voting", description = "Vote for/against issues")
-@CrossOrigin(origins = "*")
 public class IssueVoteController {
 
     private final VoteService voteService;

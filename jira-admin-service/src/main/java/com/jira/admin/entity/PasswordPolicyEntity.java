@@ -5,7 +5,9 @@ import lombok.*;
 
 @Entity
 @Table(name = "password_policies")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

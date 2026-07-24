@@ -1,5 +1,6 @@
 package com.jira.issue.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -12,13 +13,14 @@ import java.util.*;
  * Delegates security level validation and access checks to jira-project-service.
  */
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class SecurityLevelService {
 
+    private final RestTemplate restTemplate;
+
     @Value("${project.service.url}")
     private String projectServiceUrl;
-
-    private final RestTemplate restTemplate = new RestTemplate();
 
     /**
      * Get security levels that the user can assign to issues.
@@ -86,8 +88,7 @@ public class SecurityLevelService {
 
         } catch (Exception e) {
             log.warn("Failed to check level access for user {} level {}: {}", userId, levelId, e.getMessage());
-            // Fail open to allow issue operations in development
-            return true;
+            return false; // Fail-closed for security
         }
     }
 

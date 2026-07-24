@@ -137,6 +137,18 @@ export interface IssueDetailPageProps {
   onClose?: () => void;
 }
 
+/**
+ * Sanitize HTML content to prevent XSS attacks.
+ * Strips script tags, event handlers (quoted and unquoted), and javascript: URLs.
+ */
+const sanitizeHtml = (html: string | undefined | null): string => {
+  if (!html) return '';
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
+    .replace(/javascript\s*:/gi, '');
+};
+
 export default function IssueDetailPage(props?: IssueDetailPageProps) {
   const outletContext = useOutletContext<{ embedded?: boolean }>() ?? {};
   const embedded = props?.embedded ?? outletContext?.embedded ?? false;
@@ -825,7 +837,7 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
                   style={{ cursor: 'pointer' }}
                 >
                   {issue.description ? (
-                    <div className="idc-description-text" dangerouslySetInnerHTML={{ __html: issue.description }} />
+                    <div className="idc-description-text" dangerouslySetInnerHTML={{ __html: sanitizeHtml(issue.description) }} />
                   ) : (
                     <span className="idc-description-placeholder">
                       Click to add description...

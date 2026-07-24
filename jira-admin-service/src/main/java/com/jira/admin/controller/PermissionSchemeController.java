@@ -19,7 +19,6 @@ import java.util.List;
 @RequestMapping("/api/admin/permission-schemes")
 @RequiredArgsConstructor
 @Tag(name = "Permission Schemes", description = "Permission Scheme Management API")
-@CrossOrigin(origins = "*")
 public class PermissionSchemeController {
 
     private final PermissionSchemeService permissionSchemeService;

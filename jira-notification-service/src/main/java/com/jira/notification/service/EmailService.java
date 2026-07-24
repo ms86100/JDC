@@ -35,8 +35,10 @@ public class EmailService {
     private final JavaMailSender mailSender;
     private final SpringTemplateEngine templateEngine;
     private final EmailQueueRepository emailQueueRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
-    private static final String USER_SERVICE_URL = "http://jira-user-service:8082";
+    private final RestTemplate restTemplate;
+
+    @Value("${user.service.url:http://jira-user-service:8082}")
+    private String userServiceUrl;
 
     @Value("${notification.email.from:noreply@jira.local}")
     private String fromAddress;
@@ -248,7 +250,7 @@ public class EmailService {
 
     private String getUserEmail(UUID userId) {
         try {
-            String url = USER_SERVICE_URL + "/api/users/" + userId;
+            String url = userServiceUrl + "/api/users/" + userId;
             var response = restTemplate.getForObject(url, java.util.Map.class);
             if (response != null) {
                 return (String) response.get("email");

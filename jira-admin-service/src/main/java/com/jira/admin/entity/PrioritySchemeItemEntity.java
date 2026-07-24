@@ -5,7 +5,9 @@ import lombok.*;
 
 @Entity
 @Table(name = "priority_scheme_items", schema = "jira_admin")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -24,7 +24,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "WIP Limits", description = "WIP limit management for Kanban boards")
-@CrossOrigin(origins = "*")
 public class WipLimitController {
 
     private final WipLimitService wipLimitService;

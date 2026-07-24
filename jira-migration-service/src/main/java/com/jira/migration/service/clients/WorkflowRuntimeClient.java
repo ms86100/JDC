@@ -1,5 +1,6 @@
 package com.jira.migration.service.clients;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -13,10 +14,11 @@ import org.springframework.web.client.RestTemplate;
 import java.util.*;
 
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class WorkflowRuntimeClient {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${jira.services.workflow-url:http://localhost:8085}")
     private String workflowServiceUrl;

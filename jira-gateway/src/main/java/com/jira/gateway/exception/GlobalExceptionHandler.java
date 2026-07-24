@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.server.ResponseStatusException;
@@ -13,6 +14,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
+@Component
 @Order(-2)
 public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
 

@@ -2,6 +2,9 @@ package com.jira.migration.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.EqualsAndHashCode;
 
 import java.time.Instant;
 
@@ -11,7 +14,9 @@ import java.time.Instant;
  */
 @Entity
 @Table(name = "leader_elections", schema = "jira_migration")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

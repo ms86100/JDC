@@ -34,7 +34,7 @@ public class CFDSnapshotScheduler {
     @Value("${cfd.snapshot.enabled:true}")
     private boolean snapshotEnabled;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Scheduled(cron = "${cfd.snapshot.cron:0 0 2 * * *}")
     @Transactional

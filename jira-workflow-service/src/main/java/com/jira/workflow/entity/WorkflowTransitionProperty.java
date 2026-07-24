@@ -11,7 +11,9 @@ import java.util.UUID;
 @Table(name = "workflow_transition_properties", schema = "jira_workflow", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"transition_id", "property_key"})
 })
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -5,7 +5,9 @@ import lombok.*;
 
 @Entity
 @Table(name = "field_configuration_items")
-@Data
+@Getter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

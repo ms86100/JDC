@@ -60,7 +60,7 @@ public class IssueService {
     @Value("${version.service.url:${project.service.url}}")
     private String versionServiceUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     private static final UUID DEFAULT_STATUS_ID = UUID.fromString("00000000-0000-0000-0001-000000000002");
     private static final UUID DEFAULT_TYPE_ID = UUID.fromString("a0000000-0000-0000-0000-000000000001");
@@ -864,8 +864,7 @@ public class IssueService {
             String url = String.format("%s/api/workflows/project/%s/validate-transition?fromStatus=%s&toStatus=%s",
                     workflowServiceUrl, projectId, fromStatusId, toStatusId);
 
-            RestTemplate restTemplate = new RestTemplate();
-            ResponseEntity<ValidationResponse> response = restTemplate.getForEntity(url, ValidationResponse.class);
+            ResponseEntity<ValidationResponse> response = this.restTemplate.getForEntity(url, ValidationResponse.class);
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return response.getBody().isValid();
@@ -884,17 +883,10 @@ public class IssueService {
 
     private String generateIssueKey(String projectKey) {
         String normalizedKey = projectKey.substring(0, Math.min(projectKey.length(), 6)).toUpperCase();
-
-        // Use synchronized block to prevent race conditions in key generation
-        // The database query uses SELECT FOR UPDATE to lock the row during read-modify-write
-        synchronized (this) {
-            Integer maxNumber = issueRepository.findMaxIssueNumberByProjectKey(normalizedKey)
-                    .orElse(0);
-
-            int nextNumber = (maxNumber != null ? maxNumber : 0) + 1;
-
-            return normalizedKey + "-" + nextNumber;
-        }
+        Integer maxNumber = issueRepository.findMaxIssueNumberByProjectKeyForUpdate(normalizedKey)
+                .orElse(0);
+        int nextNumber = (maxNumber != null ? maxNumber : 0) + 1;
+        return normalizedKey + "-" + nextNumber;
     }
 
     private IssueResponse mapToIssueResponse(Issue issue) {

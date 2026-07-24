@@ -21,7 +21,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Issue Ranking", description = "LexoRank-based issue ranking operations")
-@CrossOrigin(origins = "*")
 public class RankingController {
 
     private final RankingService rankingService;

@@ -3,6 +3,9 @@ package com.jira.migration.entity.attachment;
 import com.jira.migration.dto.attachment.AttachmentMetadata;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.EqualsAndHashCode;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -15,7 +18,9 @@ import java.util.Map;
  */
 @Entity
 @Table(name = "attachment_metadata", schema = "jira_migration")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

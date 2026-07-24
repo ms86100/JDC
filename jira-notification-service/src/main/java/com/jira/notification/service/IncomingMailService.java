@@ -25,10 +25,13 @@ import java.util.stream.Collectors;
 public class IncomingMailService {
 
     private final IncomingMailHandlerRepository handlerRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
-    private static final String ISSUE_SERVICE_URL = "http://jira-issue-service:8084";
-    private static final String COMMENT_SERVICE_URL = "http://jira-comment-service:8086";
+    @org.springframework.beans.factory.annotation.Value("${issue.service.url:http://jira-issue-service:8084}")
+    private String issueServiceUrl;
+
+    @org.springframework.beans.factory.annotation.Value("${comment.service.url:http://jira-comment-service:8086}")
+    private String commentServiceUrl;
     private static final Pattern ISSUE_KEY_PATTERN = Pattern.compile("\\[([A-Z][A-Z0-9]+-\\d+)]");
 
     @Transactional
@@ -306,7 +309,7 @@ public class IncomingMailService {
                 issueRequest.put("reporterId", handler.getDefaultReporterId().toString());
             }
 
-            restTemplate.postForObject(ISSUE_SERVICE_URL + "/api/issues", issueRequest, Map.class);
+            restTemplate.postForObject(issueServiceUrl + "/api/issues", issueRequest, Map.class);
             log.info("Created issue from email: {}", parsed.subject);
         } catch (Exception e) {
             log.error("Failed to create issue from email: {}", e.getMessage());
@@ -327,7 +330,7 @@ public class IncomingMailService {
                     commentRequest.put("authorId", handler.getDefaultReporterId().toString());
                 }
 
-                restTemplate.postForObject(COMMENT_SERVICE_URL + "/api/comments", commentRequest, Map.class);
+                restTemplate.postForObject(commentServiceUrl + "/api/comments", commentRequest, Map.class);
                 log.info("Added comment to issue {} from email", issueKey);
             } catch (Exception e) {
                 log.error("Failed to add comment to issue {}: {}", issueKey, e.getMessage());

@@ -24,7 +24,16 @@ public class SamlAcsController {
             @RequestParam("SAMLResponse") String samlResponse) {
         log.info("SAML ACS received for registration: {}", registrationId);
 
-        SamlAssertionResult result = samlResponseHandler.parseResponse(samlResponse);
+        // Look up the SAML configuration to get the IdP certificate for signature verification
+        var config = samlConfigService.getByRegistrationId(registrationId);
+        if (!config.getEnabled()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "saml_configuration_disabled",
+                    "message", "SAML configuration is disabled for registration: " + registrationId));
+        }
+
+        SamlAssertionResult result = samlResponseHandler.parseResponse(
+                samlResponse, config.getIdpCertificate());
 
         if (!result.success()) {
             log.error("SAML assertion failed: {}", result.errorMessage());

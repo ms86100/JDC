@@ -10,7 +10,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "notification_scheme_events", schema = "jira_notification",
         uniqueConstraints = @UniqueConstraint(columnNames = {"scheme_id", "event_type", "recipient_type"}))
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

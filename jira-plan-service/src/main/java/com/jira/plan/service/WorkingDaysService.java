@@ -211,16 +211,17 @@ public class WorkingDaysService {
      * Add working days to a date.
      */
     public LocalDate addWorkingDays(LocalDate start, long days, WorkingDays config) {
+        if (days == 0) return start;
         LocalDate result = start;
         long added = 0;
-
-        while (added < days) {
-            result = result.plusDays(1);
+        long target = Math.abs(days);
+        int step = days > 0 ? 1 : -1;
+        while (added < target) {
+            result = result.plusDays(step);
             if (config.isWorkingDay(result) && !isHoliday(result, config)) {
                 added++;
             }
         }
-
         return result;
     }
 

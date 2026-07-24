@@ -24,7 +24,6 @@ import java.util.*;
 @RequestMapping("/api/admin/health")
 @Slf4j
 @Tag(name = "Health Check", description = "System health and monitoring endpoints")
-@CrossOrigin(origins = "*")
 public class HealthCheckController {
 
     private final DataSource dataSource;

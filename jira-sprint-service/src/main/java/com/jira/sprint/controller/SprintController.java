@@ -43,7 +43,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Sprints (DEPRECATED)", description = "⚠️ DEPRECATED: Use jira-plan-service instead")
-@CrossOrigin(origins = "*")
 @Deprecated
 public class SprintController {
 

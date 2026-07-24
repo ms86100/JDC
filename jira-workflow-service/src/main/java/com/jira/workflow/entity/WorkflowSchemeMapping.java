@@ -9,7 +9,9 @@ import java.util.UUID;
 @Table(name = "workflow_scheme_mappings", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"scheme_id", "issue_type_id"})
 })
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

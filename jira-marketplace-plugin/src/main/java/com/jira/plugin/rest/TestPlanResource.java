@@ -7,7 +7,7 @@ import javax.ws.rs.core.Response;
 @Path("/test-management")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class TestPlanResource {
+public interface TestPlanResource {
 
     @POST
     @Path("/test-plans")

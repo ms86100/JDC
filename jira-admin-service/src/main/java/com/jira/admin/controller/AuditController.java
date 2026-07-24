@@ -21,7 +21,6 @@ import java.util.Map;
 @RequestMapping("/api/admin/audit")
 @RequiredArgsConstructor
 @Tag(name = "Audit Logs", description = "Audit Log API")
-@CrossOrigin(origins = "*")
 public class AuditController {
 
     private final AuditService auditService;

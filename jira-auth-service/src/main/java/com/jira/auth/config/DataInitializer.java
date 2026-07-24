@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -29,7 +30,11 @@ public class DataInitializer implements CommandLineRunner {
         ensureRoleExists("ROLE_ADMIN");
         ensureRoleExists("ROLE_USER");
 
-        createAdminUserIfNotExists("ms86100", "admin@test.local", "admin123");
+        String adminPassword = System.getenv("ADMIN_PASSWORD");
+        if (adminPassword == null || adminPassword.isBlank()) {
+            adminPassword = UUID.randomUUID().toString();
+        }
+        createAdminUserIfNotExists("ms86100", "admin@test.local", adminPassword);
     }
 
     private void ensureRoleExists(String roleName) {
@@ -76,6 +81,6 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
 
         userRepository.save(admin);
-        log.info("Created admin user: {} / {} (ADMIN role)", username, password);
+        log.info("Created admin user: {} (ADMIN role)", username);
     }
 }

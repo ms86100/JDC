@@ -20,7 +20,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "External Page Links", description = "Confluence / external page linking for issues, epics, and sprints")
-@CrossOrigin(origins = "*")
 public class ExternalPageLinkController {
 
     private final ExternalPageLinkService externalPageLinkService;

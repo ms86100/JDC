@@ -62,7 +62,6 @@ public class SecurityConfig {
                     "/auth/login",
                     "/auth/register",
                     "/auth/refresh",
-                    "/auth/me",
                     "/auth/saml/callback",
                     "/actuator/**",
                     "/swagger-ui/**",

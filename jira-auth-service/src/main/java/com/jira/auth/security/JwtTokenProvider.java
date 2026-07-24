@@ -87,6 +87,15 @@ public class JwtTokenProvider {
         }
     }
 
+    public String getTokenType(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+        return claims.get("type", String.class);
+    }
+
     public long getExpirationMs() {
         return expirationMs;
     }

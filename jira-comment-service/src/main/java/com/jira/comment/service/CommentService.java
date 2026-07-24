@@ -149,8 +149,15 @@ public class CommentService {
     public Page<CommentResponse> getCommentsByIssueIdPaginated(UUID issueId, Pageable pageable, Boolean internal) {
         log.debug("Fetching paginated comments for issue: {} with internal filter: {}", issueId, internal);
         if (internal != null) {
-            Page<Comment> filteredComments = commentRepository.findRootCommentsByIssueId(issueId, pageable);
-            return filteredComments.map(this::mapToResponse);
+            Page<Comment> commentPage = commentRepository.findRootCommentsByIssueId(issueId, pageable);
+            // Filter by internal flag in memory since no specific query exists
+            List<Comment> filtered = commentPage.getContent().stream()
+                    .filter(c -> internal.equals(c.getInternal()))
+                    .collect(Collectors.toList());
+            return new org.springframework.data.domain.PageImpl<>(
+                    filtered.stream().map(this::mapToResponse).collect(Collectors.toList()),
+                    pageable,
+                    commentPage.getTotalElements());
         }
         return getCommentsByIssueIdPaginated(issueId, pageable);
     }

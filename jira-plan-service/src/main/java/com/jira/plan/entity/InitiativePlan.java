@@ -1,6 +1,9 @@
 package com.jira.plan.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -10,7 +13,9 @@ import java.util.UUID;
 @Table(name = "initiative_plans", schema = "jira_plan", indexes = {
         @Index(name = "idx_initiative_plan", columnList = "initiative_id, plan_id")
 })
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

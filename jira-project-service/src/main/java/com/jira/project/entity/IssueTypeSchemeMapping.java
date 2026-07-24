@@ -1,6 +1,9 @@
 package com.jira.project.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.*;
 
 import java.io.Serializable;
@@ -9,7 +12,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "issue_type_scheme_issue_types", schema = "jira_project")
 @IdClass(IssueTypeSchemeMapping.IdClass.class)
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -2,6 +2,9 @@ package com.jira.dashboard.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.EqualsAndHashCode;
 
 import java.util.UUID;
 
@@ -12,7 +15,9 @@ import java.util.UUID;
         @Index(name = "idx_gadget_module_key", columnList = "module_key")
     }
 )
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

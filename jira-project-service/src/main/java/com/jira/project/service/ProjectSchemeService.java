@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ProjectSchemeService {
 
+    private final ProjectRepository projectRepository;
     private final ProjectSchemeRepository projectSchemeRepository;
     private final IssueTypeSchemeRepository issueTypeSchemeRepository;
     private final IssueTypeSchemeMappingRepository issueTypeSchemeMappingRepository;
@@ -473,8 +474,6 @@ public class ProjectSchemeService {
 
         return projectSchemeRepository.save(scheme);
     }
-
-    private ProjectRepository projectRepository;
 
     /**
      * Resolves CREATE/EDIT/VIEW screen IDs for a project. Issue-type-specific overrides

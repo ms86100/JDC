@@ -28,7 +28,7 @@ public class ComponentService {
     @Value("${project.service.url}")
     private String projectServiceUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Transactional
     public ComponentResponse createComponent(CreateComponentRequest request) {

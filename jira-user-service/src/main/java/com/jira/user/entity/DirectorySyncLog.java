@@ -1,9 +1,11 @@
 package com.jira.user.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
@@ -11,7 +13,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "directory_sync_logs", schema = "jira_user")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -50,7 +54,4 @@ public class DirectorySyncLog {
 
     @PrePersist
     protected void onCreate() {
-        if (startedAt == null) startedAt = LocalDateTime.now();
-        if (status == null) status = "RUNNING";
-    }
-}
+        if (startedAt == null) startedAt = 

@@ -16,7 +16,6 @@ import java.util.UUID;
 @RequestMapping("/api/admin/application-access")
 @RequiredArgsConstructor
 @Tag(name = "Application Access", description = "Application Access Control API")
-@CrossOrigin(origins = "*")
 public class ApplicationAccessController {
 
     private final ApplicationAccessService applicationAccessService;

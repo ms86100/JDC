@@ -25,7 +25,7 @@ import java.util.Map;
 public class IssueEventOutboxPoller {
 
     private final IssueEventOutboxRepository repository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${search.service.url:http://localhost:8088}")
     private String searchServiceUrl;

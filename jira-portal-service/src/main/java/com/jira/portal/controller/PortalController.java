@@ -20,7 +20,6 @@ import java.util.UUID;
 @RequestMapping("/api/portals")
 @RequiredArgsConstructor
 @Tag(name = "Portals", description = "Customer Portal management endpoints")
-@CrossOrigin(origins = "*")
 public class PortalController {
 
     private final PortalService portalService;
@@ -31,7 +30,8 @@ public class PortalController {
     public ResponseEntity<CustomerPortalResponse> createPortal(
             @Valid @RequestBody CreatePortalRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(portalService.createPortal(request, actor));
     }
@@ -68,7 +68,8 @@ public class PortalController {
     public ResponseEntity<CustomerPortalResponse> publishPortal(
             @Parameter(description = "Portal ID") @PathVariable UUID id,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.ok(portalService.publishPortal(id, actor));
     }
 
@@ -110,7 +111,8 @@ public class PortalController {
             @Parameter(description = "Request ID") @PathVariable UUID id,
             @RequestParam String status,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        UUID actor = userId != null ? userId : UUID.randomUUID();
+        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        UUID actor = userId;
         return ResponseEntity.ok(portalService.updateRequestStatus(id, status, actor));
     }
 

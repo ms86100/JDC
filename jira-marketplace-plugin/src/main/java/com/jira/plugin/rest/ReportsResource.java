@@ -9,7 +9,7 @@ import java.util.Map;
 @Path("/test-management")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class ReportsResource {
+public interface ReportsResource {
 
     @GET
     @Path("/reports/summary")

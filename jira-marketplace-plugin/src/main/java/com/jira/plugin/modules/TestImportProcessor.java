@@ -7,8 +7,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TestImportProcessor implements ModuleDescriptor<ModuleDescriptor> {
 
-    public TestImportProcessor(@ComponentImport TestImportProcessor self) {
-        // Required for Spring scanning
+    public TestImportProcessor() {
     }
 
     public void processCucumberImport(byte[] featureContent) {

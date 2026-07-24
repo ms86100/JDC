@@ -179,9 +179,12 @@ export interface CsvTemplateResponse {
 
 const migrationUserHeaders = (opts?: { targetProjectId?: string }) => {
   const headers: Record<string, string> = {
-    'X-User-Id': localStorage.getItem('userId') || '00000000-0000-0000-0000-000000000001',
     'X-Migration-Role': localStorage.getItem('migrationRole') || 'MIGRATION_OPERATOR',
   };
+  const userId = localStorage.getItem('userId');
+  if (userId) {
+    headers['X-User-Id'] = userId;
+  }
   const token = localStorage.getItem('accessToken');
   if (token) {
     headers.Authorization = `Bearer ${token}`;

@@ -22,7 +22,7 @@ public class IssueAvailableTransitionsService {
 
     private final IssueService issueService;
     private final IssueStatusRepository issueStatusRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${workflow.service.url}")
     private String workflowServiceUrl;

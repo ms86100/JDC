@@ -7,7 +7,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "workflow_audit_log", schema = "jira_workflow")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

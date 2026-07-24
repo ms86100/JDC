@@ -22,7 +22,7 @@ services:
     container_name: jira-postgres
     environment:
       POSTGRES_USER: jiraadmin
-      POSTGRES_PASSWORD: jirapass123
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-jirapass}
       POSTGRES_DB: jira_platform
     volumes:
       - postgres_migration_dev_data:/var/lib/postgresql/data
@@ -48,7 +48,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx384m
       JWT_SECRET: jira-platform-super-secret-key-that-is-at-least-256-bits-long
       JWT_EXPIRATION_MS: 86400000
@@ -76,7 +76,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx384m
     networks:
       - jira-network
@@ -103,7 +103,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx384m
     networks:
       - jira-network
@@ -132,7 +132,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx384m
     networks:
       - jira-network
@@ -159,7 +159,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx384m
       WORKFLOW_SERVICE_URL: http://workflow-service:8085
       PROJECT_SERVICE_URL: http://project-service:8083
@@ -210,7 +210,7 @@ services:
       DB_PORT: 5432
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
-      DB_PASSWORD: jirapass123
+      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms128m -Xmx512m
     networks:
       - jira-network

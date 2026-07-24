@@ -1,6 +1,7 @@
 package com.jira.issue.service;
 
 import com.jira.issue.dto.CreateIssueRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -9,13 +10,14 @@ import org.springframework.web.client.RestTemplate;
 import java.util.*;
 
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class IssueFieldConfigurationClient {
 
+    private final RestTemplate restTemplate;
+
     @Value("${project.service.url}")
     private String projectServiceUrl;
-
-    private final RestTemplate restTemplate = new RestTemplate();
 
     @SuppressWarnings("unchecked")
     public List<String> validateCreate(UUID projectId, CreateIssueRequest request) {

@@ -21,7 +21,7 @@ import java.util.Optional;
 public class ProjectCatalogSyncService {
 
     private final ProjectRepository projectRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${jira.services.project-url:http://localhost:8083}")
     private String projectServiceUrl;

@@ -20,7 +20,6 @@ import java.util.UUID;
 @RequestMapping("/api/issues/{issueId}/worklogs")
 @RequiredArgsConstructor
 @Tag(name = "Worklogs", description = "Issue worklog management API")
-@CrossOrigin(origins = "*")
 public class WorklogController {
 
     private final WorklogService worklogService;

@@ -25,7 +25,7 @@ public class WebhookDispatchService {
 
     private final WebhookRepository webhookRepository;
     private final WebhookDeliveryLogRepository deliveryLogRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final int MAX_RETRY_ATTEMPTS = 3;

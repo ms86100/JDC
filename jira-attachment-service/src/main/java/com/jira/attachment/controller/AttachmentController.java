@@ -22,7 +22,6 @@ import java.util.UUID;
 @RequestMapping("/api/attachments")
 @RequiredArgsConstructor
 @Tag(name = "Attachments", description = "Issue attachment management API")
-@CrossOrigin(origins = "*")
 public class AttachmentController {
 
     private final AttachmentService attachmentService;

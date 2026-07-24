@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/admin/issues")
 @RequiredArgsConstructor
 @Tag(name = "Issue Administration", description = "Issue Configuration API")
-@CrossOrigin(origins = "*")
 public class IssueAdministrationController {
 
     private final IssueAdministrationService issueAdministrationService;

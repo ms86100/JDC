@@ -1,5 +1,6 @@
 package com.jira.issue.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -17,10 +18,11 @@ import java.util.UUID;
  * Posts enterprise audit events to jira-audit-service (Jira DC audit trail parity).
  */
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class AuditIntegrationClient {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${audit.service.url:http://localhost:8089}")
     private String auditServiceUrl;

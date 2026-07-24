@@ -1,5 +1,6 @@
 package com.jira.workflow.engine;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -12,10 +13,11 @@ import java.util.UUID;
  * Resolves project permissions via jira-project-service (Jira DC permission scheme).
  */
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class ProjectPermissionClient {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${jira.services.project-url:http://localhost:8083}")
     private String projectServiceUrl;
