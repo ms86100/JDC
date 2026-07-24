@@ -47,4 +47,9 @@ public class SprintReportResponse {
     // Velocity data
     private BurndownResponse burndown;
     private VelocityResponse velocity;
+
+    // Scope change tracking
+    private List<String> issuesAddedDuringSprint;
+    private List<String> issuesRemovedDuringSprint;
+    private List<String> issuesNotCompleted;
 }

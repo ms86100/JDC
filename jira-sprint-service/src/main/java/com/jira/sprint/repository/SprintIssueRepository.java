@@ -15,4 +15,8 @@ public interface SprintIssueRepository extends JpaRepository<SprintIssue, UUID> 
     Optional<SprintIssue> findBySprintIdAndIssueId(UUID sprintId, UUID issueId);
     void deleteBySprintIdAndIssueId(UUID sprintId, UUID issueId);
     int countBySprintId(UUID sprintId);
+
+    List<SprintIssue> findBySprintIdAndRemovedAtIsNull(UUID sprintId);
+    List<SprintIssue> findBySprintIdAndRemovedAtIsNotNull(UUID sprintId);
+    List<SprintIssue> findBySprintIdAndAddedAtAfter(UUID sprintId, java.time.LocalDateTime after);
 }

@@ -186,8 +186,23 @@ public class SprintService {
 
     @Transactional
     public void removeIssueFromSprint(UUID sprintId, UUID issueId) {
-        sprintIssueRepository.deleteBySprintIdAndIssueId(sprintId, issueId);
-        log.info("Removed issue {} from sprint {}", issueId, sprintId);
+        removeIssueFromSprint(sprintId, issueId, null);
+    }
+
+    @Transactional
+    public void removeIssueFromSprint(UUID sprintId, UUID issueId, String reason) {
+        sprintIssueRepository.findBySprintIdAndIssueId(sprintId, issueId).ifPresentOrElse(
+                sprintIssue -> {
+                    sprintIssue.setRemovedAt(java.time.LocalDateTime.now());
+                    sprintIssue.setRemovedReason(reason);
+                    sprintIssueRepository.save(sprintIssue);
+                    log.info("Soft-removed issue {} from sprint {} (reason: {})", issueId, sprintId, reason);
+                },
+                () -> {
+                    sprintIssueRepository.deleteBySprintIdAndIssueId(sprintId, issueId);
+                    log.info("Removed issue {} from sprint {}", issueId, sprintId);
+                }
+        );
     }
 
     @Transactional(readOnly = true)

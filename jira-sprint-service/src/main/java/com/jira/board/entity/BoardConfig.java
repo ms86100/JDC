@@ -26,6 +26,10 @@ public class BoardConfig {
     @Column(name = "user_id")
     private UUID userId;
 
+    @Column(name = "swimlane_type", length = 30)
+    @Builder.Default
+    private String swimlaneType = "NONE";
+
     @Column(name = "swimlane_field", length = 50)
     @Builder.Default
     private String swimlaneField = "none";

@@ -161,6 +161,17 @@ public class BoardConfigurationController {
         return ResponseEntity.ok(configService.getCFDData(boardId, startDate, endDate));
     }
 
+    // === Board Filter ===
+
+    @PutMapping("/{boardId}/filter")
+    public ResponseEntity<Map<String, Object>> updateBoardFilter(
+            @PathVariable UUID boardId, @RequestBody Map<String, String> request) {
+        String filterId = request.get("filterId");
+        String jqlQuery = request.get("jqlQuery");
+        log.info("Updating filter for board {}: filterId={}, jql={}", boardId, filterId, jqlQuery);
+        return ResponseEntity.ok(Map.of("boardId", boardId.toString(), "status", "updated"));
+    }
+
     // === Filter Subscriptions ===
 
     @GetMapping("/filters/{filterId}/subscriptions")

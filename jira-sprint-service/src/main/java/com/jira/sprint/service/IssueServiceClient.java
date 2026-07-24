@@ -308,7 +308,10 @@ public class IssueServiceClient {
         private String issueKey;
         private String title;
         private Integer storyPoints;
+        private Integer businessValue;
+        private Long originalEstimate;
         private String statusName;
+        private String statusCategory;
         private String priorityName;
         private String issueTypeName;
         private UUID assigneeId;

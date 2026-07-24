@@ -129,6 +129,9 @@ public class SprintReportService {
                 .issuesByAssignee(issuesByAssignee)
                 .burndown(burndown)
                 .velocity(velocity)
+                .issuesAddedDuringSprint(getScopeAddedIssueKeys(sprint))
+                .issuesRemovedDuringSprint(getScopeRemovedIssueKeys(sprintId))
+                .issuesNotCompleted(getNotCompletedIssueKeys(sprintIssues))
                 .build();
     }
 
@@ -154,27 +157,43 @@ public class SprintReportService {
 
     private BurndownResponse generateBurndownData(Sprint sprint, List<SprintIssue> sprintIssues,
                                                    int totalPoints, int completedPoints) {
+        return generateBurndownData(sprint, sprintIssues, totalPoints, completedPoints, null, null);
+    }
+
+    private BurndownResponse generateBurndownData(Sprint sprint, List<SprintIssue> sprintIssues,
+                                                   int totalPoints, int completedPoints,
+                                                   String workingDays, String nonWorkingDates) {
         List<BurndownDataPoint> dailyData = new ArrayList<>();
 
         LocalDate startDate = sprint.getStartDate() != null ? sprint.getStartDate() : LocalDate.now().minusDays(7);
         LocalDate endDate = sprint.getEndDate() != null ? sprint.getEndDate() : LocalDate.now().plusDays(7);
         LocalDate today = LocalDate.now();
 
-        // Calculate total days and ideal burn rate
-        long totalDays = ChronoUnit.DAYS.between(startDate, endDate);
-        if (totalDays <= 0) totalDays = 14; // Default 2 week sprint
-        double idealDailyBurn = totalPoints / (double) totalDays;
+        Set<java.time.DayOfWeek> workDays = parseWorkingDays(workingDays);
+        Set<LocalDate> holidays = parseNonWorkingDates(nonWorkingDates);
+
+        long totalWorkingDays = countWorkingDays(startDate, endDate, workDays, holidays);
+        if (totalWorkingDays <= 0) totalWorkingDays = 10;
+        double idealBurnPerWorkDay = totalPoints / (double) totalWorkingDays;
 
         int remainingPoints = totalPoints;
         LocalDate currentDate = startDate;
-        int dayIndex = 0;
+        int workDayIndex = 0;
 
         while (!currentDate.isAfter(endDate)) {
-            double idealPoints = Math.max(0, totalPoints - (idealDailyBurn * dayIndex));
+            boolean isWorkDay = workDays.contains(currentDate.getDayOfWeek()) && !holidays.contains(currentDate);
 
-            // Simulate actual burndown based on current completion
+            double idealPoints;
+            if (isWorkDay) {
+                idealPoints = Math.max(0, totalPoints - (idealBurnPerWorkDay * workDayIndex));
+                workDayIndex++;
+            } else {
+                idealPoints = workDayIndex > 0
+                        ? Math.max(0, totalPoints - (idealBurnPerWorkDay * (workDayIndex)))
+                        : totalPoints;
+            }
+
             if (currentDate.isAfter(today)) {
-                // Future dates - use trend projection
                 remainingPoints = (int) Math.max(0, idealPoints);
             }
 
@@ -190,9 +209,7 @@ public class SprintReportService {
                     .build();
 
             dailyData.add(point);
-
             currentDate = currentDate.plusDays(1);
-            dayIndex++;
         }
 
         return BurndownResponse.builder()
@@ -294,11 +311,22 @@ public class SprintReportService {
     }
 
     private int getIssueStoryPoints(UUID issueId) {
+        return getIssueEstimation(issueId, "STORY_POINTS");
+    }
+
+    private int getIssueEstimation(UUID issueId, String estimationStatistic) {
         try {
             IssueServiceClient.IssueData issue = issueServiceClient.getIssue(issueId);
-            return issue.getStoryPoints() != null ? issue.getStoryPoints() : 0;
+            if (estimationStatistic == null) estimationStatistic = "STORY_POINTS";
+            return switch (estimationStatistic.toUpperCase()) {
+                case "STORY_POINTS" -> issue.getStoryPoints() != null ? issue.getStoryPoints() : 0;
+                case "BUSINESS_VALUE" -> issue.getBusinessValue() != null ? issue.getBusinessValue() : 0;
+                case "ORIGINAL_TIME_ESTIMATE" -> issue.getOriginalEstimate() != null ? issue.getOriginalEstimate().intValue() : 0;
+                case "ISSUE_COUNT" -> 1;
+                default -> issue.getStoryPoints() != null ? issue.getStoryPoints() : 0;
+            };
         } catch (Exception e) {
-            log.warn("Failed to get story points for {}: {}", issueId, e.getMessage());
+            log.warn("Failed to get estimation for {}: {}", issueId, e.getMessage());
             return 0;
         }
     }
@@ -405,5 +433,108 @@ public class SprintReportService {
         }
 
         return assigneeCounts;
+    }
+
+    private Set<java.time.DayOfWeek> parseWorkingDays(String workingDays) {
+        Set<java.time.DayOfWeek> days = new LinkedHashSet<>();
+        if (workingDays == null || workingDays.isBlank()) {
+            days.add(java.time.DayOfWeek.MONDAY);
+            days.add(java.time.DayOfWeek.TUESDAY);
+            days.add(java.time.DayOfWeek.WEDNESDAY);
+            days.add(java.time.DayOfWeek.THURSDAY);
+            days.add(java.time.DayOfWeek.FRIDAY);
+            return days;
+        }
+        for (String d : workingDays.split(",")) {
+            try {
+                days.add(java.time.DayOfWeek.valueOf(d.trim().toUpperCase()));
+            } catch (IllegalArgumentException ignored) {
+                try {
+                    days.add(java.time.DayOfWeek.valueOf(expandDayAbbrev(d.trim())));
+                } catch (IllegalArgumentException ignored2) {}
+            }
+        }
+        return days.isEmpty() ? Set.of(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY,
+                java.time.DayOfWeek.WEDNESDAY, java.time.DayOfWeek.THURSDAY, java.time.DayOfWeek.FRIDAY) : days;
+    }
+
+    private String expandDayAbbrev(String abbrev) {
+        return switch (abbrev.toUpperCase()) {
+            case "MON" -> "MONDAY";
+            case "TUE" -> "TUESDAY";
+            case "WED" -> "WEDNESDAY";
+            case "THU" -> "THURSDAY";
+            case "FRI" -> "FRIDAY";
+            case "SAT" -> "SATURDAY";
+            case "SUN" -> "SUNDAY";
+            default -> abbrev;
+        };
+    }
+
+    private Set<LocalDate> parseNonWorkingDates(String nonWorkingDates) {
+        Set<LocalDate> dates = new HashSet<>();
+        if (nonWorkingDates == null || nonWorkingDates.isBlank()) return dates;
+        try {
+            String clean = nonWorkingDates.replaceAll("[\\[\\]\"]", "");
+            for (String d : clean.split(",")) {
+                if (!d.trim().isEmpty()) {
+                    dates.add(LocalDate.parse(d.trim()));
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not parse non-working dates: {}", e.getMessage());
+        }
+        return dates;
+    }
+
+    private long countWorkingDays(LocalDate start, LocalDate end, Set<java.time.DayOfWeek> workDays, Set<LocalDate> holidays) {
+        long count = 0;
+        LocalDate d = start;
+        while (!d.isAfter(end)) {
+            if (workDays.contains(d.getDayOfWeek()) && !holidays.contains(d)) {
+                count++;
+            }
+            d = d.plusDays(1);
+        }
+        return count;
+    }
+
+    private List<String> getScopeAddedIssueKeys(Sprint sprint) {
+        if (sprint.getStartDate() == null) return List.of();
+        java.time.LocalDateTime sprintStart = sprint.getStartDate().atStartOfDay();
+        List<SprintIssue> added = sprintIssueRepository.findBySprintIdAndAddedAtAfter(sprint.getId(), sprintStart);
+        return added.stream()
+                .map(si -> {
+                    try {
+                        return issueServiceClient.getIssue(si.getIssueId()).getIssueKey();
+                    } catch (Exception e) { return si.getIssueId().toString(); }
+                })
+                .collect(Collectors.toList());
+    }
+
+    private List<String> getScopeRemovedIssueKeys(UUID sprintId) {
+        List<SprintIssue> removed = sprintIssueRepository.findBySprintIdAndRemovedAtIsNotNull(sprintId);
+        return removed.stream()
+                .map(si -> {
+                    try {
+                        return issueServiceClient.getIssue(si.getIssueId()).getIssueKey();
+                    } catch (Exception e) { return si.getIssueId().toString(); }
+                })
+                .collect(Collectors.toList());
+    }
+
+    private List<String> getNotCompletedIssueKeys(List<SprintIssue> sprintIssues) {
+        return sprintIssues.stream()
+                .filter(si -> si.getRemovedAt() == null)
+                .filter(si -> {
+                    String status = getIssueStatus(si.getIssueId());
+                    return !"Done".equalsIgnoreCase(status) && !"Completed".equalsIgnoreCase(status) && !"Closed".equalsIgnoreCase(status);
+                })
+                .map(si -> {
+                    try {
+                        return issueServiceClient.getIssue(si.getIssueId()).getIssueKey();
+                    } catch (Exception e) { return si.getIssueId().toString(); }
+                })
+                .collect(Collectors.toList());
     }
 }
