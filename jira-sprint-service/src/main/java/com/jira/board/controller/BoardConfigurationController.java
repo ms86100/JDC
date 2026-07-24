@@ -2,6 +2,7 @@ package com.jira.board.controller;
 
 import com.jira.board.entity.*;
 import com.jira.board.service.BoardConfigurationService;
+import com.jira.board.service.ControlChartService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class BoardConfigurationController {
 
     private final BoardConfigurationService configService;
+    private final ControlChartService controlChartService;
 
     // === Administrators ===
 
@@ -159,6 +161,18 @@ public class BoardConfigurationController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return ResponseEntity.ok(configService.getCFDData(boardId, startDate, endDate));
+    }
+
+    // === Control Chart ===
+
+    @GetMapping("/{boardId}/reports/control-chart")
+    public ResponseEntity<Map<String, Object>> getControlChart(
+            @PathVariable UUID boardId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) UUID projectId) {
+        UUID effectiveProjectId = projectId != null ? projectId : boardId;
+        return ResponseEntity.ok(controlChartService.getControlChart(boardId, effectiveProjectId, startDate, endDate));
     }
 
     // === Board Filter ===
