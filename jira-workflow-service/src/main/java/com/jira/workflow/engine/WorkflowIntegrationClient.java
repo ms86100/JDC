@@ -53,14 +53,36 @@ public class WorkflowIntegrationClient {
     @Value("${jira.services.component-url:http://jira-component-service:8097}")
     private String componentServiceUrl;
 
+    @Value("${jira.services.test-url:http://jira-test-service:8095}")
+    private String testServiceUrl;
+
+    /**
+     * Fetch issue data from issue-service first, then fall back to test-service.
+     * Test-service hosts VVO, HLVVO, TechEvent, BenchDefect, ProblemReport entities
+     * which also expose {@code /api/issues/{id}} via WorkflowInternalController.
+     */
     public Map<String, Object> fetchIssue(UUID issueId) {
+        // Try issue-service first
         try {
             Map<?, ?> response = restTemplate().getForObject(issueServiceUrl + "/api/issues/" + issueId, Map.class);
-            return response != null ? castMap(response) : new HashMap<>();
+            if (response != null && !response.isEmpty()) {
+                return castMap(response);
+            }
         } catch (Exception e) {
-            log.error("Failed to fetch issue {}: {}", issueId, e.getMessage());
-            return new HashMap<>();
+            log.debug("Issue {} not found in issue-service, trying test-service: {}", issueId, e.getMessage());
         }
+
+        // Fall back to test-service (VVO, HLVVO, TechEvent, BenchDefect, ProblemReport)
+        try {
+            Map<?, ?> response = restTemplate().getForObject(testServiceUrl + "/api/issues/" + issueId, Map.class);
+            if (response != null && !response.isEmpty()) {
+                return castMap(response);
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch issue {} from both issue-service and test-service: {}", issueId, e.getMessage());
+        }
+
+        return new HashMap<>();
     }
 
     @SuppressWarnings("unchecked")
@@ -131,12 +153,34 @@ public class WorkflowIntegrationClient {
         }
     }
 
+    /**
+     * Update issue status via internal workflow endpoint.
+     * Tries issue-service first, then falls back to test-service for V&V entities.
+     */
     public void updateIssueWorkflowInternal(UUID issueId, Map<String, Object> body) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-Workflow-Internal", "true");
-        String url = issueServiceUrl + "/api/issues/" + issueId + "/workflow/internal";
-        restTemplate().exchange(url, HttpMethod.PATCH, new HttpEntity<>(body, headers), Map.class);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+        // Try issue-service first
+        try {
+            String url = issueServiceUrl + "/api/issues/" + issueId + "/workflow/internal";
+            restTemplate().exchange(url, HttpMethod.PATCH, entity, Map.class);
+            return;
+        } catch (Exception e) {
+            log.debug("Issue {} not in issue-service for workflow update, trying test-service: {}",
+                    issueId, e.getMessage());
+        }
+
+        // Fall back to test-service
+        try {
+            String url = testServiceUrl + "/api/issues/" + issueId + "/workflow/internal";
+            restTemplate().exchange(url, HttpMethod.PATCH, entity, Map.class);
+        } catch (Exception e) {
+            log.error("Failed to update issue {} via both issue-service and test-service: {}",
+                    issueId, e.getMessage());
+        }
     }
 
     public void updateIssueStatusInternal(UUID issueId, UUID projectId, UUID statusId, Map<String, Object> extra) {
@@ -167,6 +211,9 @@ public class WorkflowIntegrationClient {
         }
     }
 
+    /**
+     * Record transition history. Tries issue-service, then test-service.
+     */
     public void recordIssueTransitionHistory(
             UUID issueId,
             UUID projectId,
@@ -179,27 +226,37 @@ public class WorkflowIntegrationClient {
             String comment,
             boolean success,
             String errorMessage) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("X-Workflow-Internal", "true");
+        Map<String, Object> body = new HashMap<>();
+        body.put("projectId", projectId != null ? projectId.toString() : null);
+        body.put("workflowId", workflowId != null ? workflowId.toString() : null);
+        body.put("transitionId", transitionId != null ? transitionId.toString() : null);
+        body.put("transitionName", transitionName);
+        body.put("fromStatusId", fromStatusId != null ? fromStatusId.toString() : null);
+        body.put("toStatusId", toStatusId != null ? toStatusId.toString() : null);
+        body.put("userId", userId != null ? userId.toString() : null);
+        body.put("comment", comment);
+        body.put("success", success);
+        body.put("errorMessage", errorMessage);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+        String historyPath = "/api/issues/" + issueId + "/transitions/history/internal";
+
+        // Try issue-service first
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("X-Workflow-Internal", "true");
-            Map<String, Object> body = new HashMap<>();
-            body.put("projectId", projectId != null ? projectId.toString() : null);
-            body.put("workflowId", workflowId != null ? workflowId.toString() : null);
-            body.put("transitionId", transitionId != null ? transitionId.toString() : null);
-            body.put("transitionName", transitionName);
-            body.put("fromStatusId", fromStatusId != null ? fromStatusId.toString() : null);
-            body.put("toStatusId", toStatusId != null ? toStatusId.toString() : null);
-            body.put("userId", userId != null ? userId.toString() : null);
-            body.put("comment", comment);
-            body.put("success", success);
-            body.put("errorMessage", errorMessage);
-            restTemplate().postForObject(
-                    issueServiceUrl + "/api/issues/" + issueId + "/transitions/history/internal",
-                    new HttpEntity<>(body, headers),
-                    Map.class);
+            restTemplate().postForObject(issueServiceUrl + historyPath, entity, Map.class);
+            return;
         } catch (Exception e) {
-            log.warn("Could not record issue transition history for {}: {}", issueId, e.getMessage());
+            log.debug("Issue {} transition history not recorded in issue-service, trying test-service", issueId);
+        }
+
+        // Fall back to test-service
+        try {
+            restTemplate().postForObject(testServiceUrl + historyPath, entity, Map.class);
+        } catch (Exception e) {
+            log.warn("Could not record issue transition history for {} in either service: {}",
+                    issueId, e.getMessage());
         }
     }
 

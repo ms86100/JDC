@@ -54,6 +54,7 @@ springdoc:
 jira:
   services:
     issue-url: ${ISSUE_SERVICE_URL:http://jira-issue-service:8084}
+    test-url: ${TEST_SERVICE_URL:http://jira-test-service:8095}
     comment-url: ${COMMENT_SERVICE_URL:http://jira-comment-service:8086}
     attachment-url: ${ATTACHMENT_SERVICE_URL:http://jira-attachment-service:8090}
     admin-url: ${ADMIN_SERVICE_URL:http://jira-admin-service:8093}

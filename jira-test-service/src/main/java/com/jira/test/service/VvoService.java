@@ -402,8 +402,11 @@ public class VvoService {
         // Validate both exist
         vvoRepo.findById(vvoId)
                 .orElseThrow(() -> new ResourceNotFoundException("VVO", "id", vvoId));
-        testRequestRepo.findById(testRequestId)
+        TestRequest testRequest = testRequestRepo.findById(testRequestId)
                 .orElseThrow(() -> new ResourceNotFoundException("TestRequest", "id", testRequestId));
+
+        // Enforce frozen status: when TestRequest is DONE (frozen=true), links cannot be modified
+        enforceFrozenCheck(testRequest);
 
         if (linkRepo.existsByVvoIdAndTestRequestId(vvoId, testRequestId)) {
             log.info("Link already exists between VVO {} and Test Request {}", vvoId, testRequestId);
@@ -422,8 +425,26 @@ public class VvoService {
     @Transactional
     public void unlinkVvoFromTestRequest(UUID vvoId, UUID testRequestId) {
         log.info("Unlinking VVO {} from Test Request {}", vvoId, testRequestId);
+
+        // Validate TestRequest exists and enforce frozen check
+        TestRequest testRequest = testRequestRepo.findById(testRequestId)
+                .orElseThrow(() -> new ResourceNotFoundException("TestRequest", "id", testRequestId));
+        enforceFrozenCheck(testRequest);
+
         linkRepo.deleteByVvoIdAndTestRequestId(vvoId, testRequestId);
         log.info("Unlinked VVO {} from Test Request {}", vvoId, testRequestId);
+    }
+
+    /**
+     * Enforce that when a TestRequest is in DONE status (frozen=true),
+     * VVO links cannot be added or removed.
+     */
+    private void enforceFrozenCheck(TestRequest testRequest) {
+        if (Boolean.TRUE.equals(testRequest.getFrozen()) || "DONE".equalsIgnoreCase(testRequest.getStatus())) {
+            throw new IllegalStateException(
+                    "TestRequest " + testRequest.getIssueKey() + " is frozen (status=DONE). "
+                            + "VVO links cannot be added or removed.");
+        }
     }
 
     @Transactional(readOnly = true)

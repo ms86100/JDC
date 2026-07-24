@@ -37,4 +37,8 @@ public interface TestExecutionRepository extends JpaRepository<TestExecution, UU
     List<TestExecution> findByExecutedAtAfter(@Param("since") LocalDateTime since);
 
     boolean existsByProjectId(UUID projectId);
+
+    List<TestExecution> findByTestPlanId(UUID testPlanId);
+
+    boolean existsByTestPlanIdAndTestIdAndTestEnv(UUID testPlanId, UUID testId, String testEnv);
 }

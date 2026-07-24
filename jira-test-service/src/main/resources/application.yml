@@ -62,6 +62,10 @@ project:
   service:
     url: ${PROJECT_SERVICE_URL:http://jira-project-service:8083}
 
+workflow:
+  service:
+    url: ${WORKFLOW_SERVICE_URL:http://jira-workflow-service:8085}
+
 test:
   storage:
     type: LOCAL

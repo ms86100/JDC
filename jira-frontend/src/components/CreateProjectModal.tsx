@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './CreateProjectModal.css';
+import { chartColors } from '../utils/chartColors';
 
 interface Template {
   id: string;
@@ -25,7 +26,7 @@ const SOFTWARE_TEMPLATES: Template[] = [
     name: 'Kanban software development',
     description: 'For teams that use Kanban to visualize work, limit work-in-progress, and maximize efficiency.',
     icon: '📋',
-    color: '#00875a',
+    color: chartColors.success,
   },
   {
     id: 'basic',
@@ -33,7 +34,7 @@ const SOFTWARE_TEMPLATES: Template[] = [
     name: 'Basic software development',
     description: 'A simplified project for tracking and managing software development tasks and bugs.',
     icon: '💻',
-    color: '#6554c0',
+    color: chartColors.purple,
   },
 ];
 
@@ -52,7 +53,7 @@ const BUSINESS_TEMPLATES: Template[] = [
     name: 'Task management',
     description: 'Track and manage everyday tasks that your team works on throughout the day.',
     icon: '✓',
-    color: '#00b8d9',
+    color: chartColors.teal,
   },
   {
     id: 'process_management',

@@ -7,6 +7,7 @@ import JQLAutocomplete from '../components/JQLAutocomplete';
 import SavedFilters from '../components/SavedFilters';
 import SearchExport from '../components/SearchExport';
 import FilterSubscriptions from '../components/FilterSubscriptions';
+import { chartColors } from '../../../utils/chartColors';
 
 const QUICK_FILTERS = [
   { id: 'my-issues', label: 'My Issues', jql: 'assignee = currentUser()' },
@@ -167,11 +168,11 @@ export default function EnhancedSearchPage() {
   // Get priority icon
   const getPriorityIcon = (priority: string | undefined) => {
     switch (priority?.toLowerCase()) {
-      case 'highest': case 'critical': return { icon: '🔴', color: '#dc3545' };
-      case 'high': return { icon: '🟠', color: '#fd7e14' };
-      case 'medium': return { icon: '🟡', color: '#ffc107' };
-      case 'low': case 'lowest': return { icon: '🟢', color: '#28a745' };
-      default: return { icon: '⚪', color: '#6c757d' };
+      case 'highest': case 'critical': return { icon: '🔴', color: chartColors.danger };
+      case 'high': return { icon: '🟠', color: chartColors.orange };
+      case 'medium': return { icon: '🟡', color: chartColors.warning };
+      case 'low': case 'lowest': return { icon: '🟢', color: chartColors.success };
+      default: return { icon: '⚪', color: chartColors.neutral600 };
     }
   };
 

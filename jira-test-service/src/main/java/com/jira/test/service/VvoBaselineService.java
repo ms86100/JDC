@@ -2,6 +2,7 @@ package com.jira.test.service;
 
 import com.jira.test.dto.BaselineSummaryResponse;
 import com.jira.test.dto.BulkOperationResponse;
+import com.jira.test.dto.WorkflowTransitionResult;
 import com.jira.test.entity.VvoDefinition;
 import com.jira.test.repository.HlvvoDefinitionRepository;
 import com.jira.test.repository.VvoDefinitionRepository;
@@ -21,6 +22,7 @@ public class VvoBaselineService {
 
     private final VvoDefinitionRepository vvoRepo;
     private final HlvvoDefinitionRepository hlvvoRepo;
+    private final WorkflowBridgeService workflowBridge;
 
     /**
      * Step 1: Tag VVOs with a baseline (Fix Version).
@@ -73,6 +75,7 @@ public class VvoBaselineService {
 
     /**
      * Step 2: Bulk transition VVOs from VERIFIED to RELEASED for a given baseline.
+     * Uses the workflow bridge to execute each transition through the workflow engine.
      */
     @Transactional
     public BulkOperationResponse publishBaseline(UUID projectId, UUID fixVersionId) {
@@ -89,9 +92,15 @@ public class VvoBaselineService {
             }
 
             if ("VERIFIED".equals(vvo.getStatus())) {
-                vvo.setStatus("RELEASED");
-                vvoRepo.save(vvo);
-                success++;
+                WorkflowTransitionResult result = workflowBridge.executeTransition(
+                        "VVO", vvo.getId(), "RELEASED", null,
+                        "Released as part of baseline " + fixVersionId);
+                if (result.isSuccess()) {
+                    success++;
+                } else {
+                    errors.add("VVO " + vvo.getIssueKey() + ": " + result.getErrorMessage());
+                    failed++;
+                }
             } else if ("RELEASED".equals(vvo.getStatus()) || "CANCELLED".equals(vvo.getStatus())) {
                 // Already in acceptable terminal state, skip silently
             } else {
@@ -186,6 +195,7 @@ public class VvoBaselineService {
     /**
      * Supersede the original VVO when a clone transitions to VERIFIED or RELEASED.
      * Called as a side-effect of status transitions on cloned VVOs.
+     * Uses the workflow bridge to execute the supersede transition through the engine.
      */
     @Transactional
     public void supersedeOriginal(UUID cloneId) {
@@ -198,10 +208,15 @@ public class VvoBaselineService {
 
         vvoRepo.findById(clone.getCloneSourceId()).ifPresent(original -> {
             if (!"SUPERSEDED".equals(original.getStatus())) {
-                original.setStatus("SUPERSEDED");
-                vvoRepo.save(original);
-                log.info("Superseded original VVO {} (replaced by {} v{})",
-                        original.getIssueKey(), clone.getIssueKey(), clone.getVvoVersion());
+                WorkflowTransitionResult result = workflowBridge.executeTransition(
+                        "VVO", original.getId(), "SUPERSEDED", null,
+                        "Superseded by clone " + clone.getIssueKey() + " v" + clone.getVvoVersion());
+                if (result.isSuccess()) {
+                    log.info("Superseded original VVO {} (replaced by {} v{})",
+                            original.getIssueKey(), clone.getIssueKey(), clone.getVvoVersion());
+                } else {
+                    log.warn("Failed to supersede VVO {}: {}", original.getIssueKey(), result.getErrorMessage());
+                }
             }
         });
     }

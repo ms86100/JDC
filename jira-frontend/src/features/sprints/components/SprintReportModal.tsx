@@ -491,8 +491,8 @@ export default function SprintReportModal({ sprintId, sprintName, boardId, onClo
           text-align: center;
         }
 
-        .ab-metric-success { border-left: 3px solid #22c55e; }
-        .ab-metric-primary { border-left: 3px solid #3b82f6; }
+        .ab-metric-success { border-left: 3px solid ${chartColors.success}; }
+        .ab-metric-primary { border-left: 3px solid ${chartColors.primary}; }
 
         .ab-metric-value {
           font-size: var(--ab-font-size-2xl);
@@ -556,15 +556,15 @@ export default function SprintReportModal({ sprintId, sprintName, boardId, onClo
           color: var(--ab-gray-700);
         }
 
-        .ab-point-completed { color: #22c55e; }
-        .ab-point-remaining { color: #f59e0b; }
+        .ab-point-completed { color: ${chartColors.success}; }
+        .ab-point-remaining { color: ${chartColors.warning}; }
 
         .ab-burn-rate {
           display: flex;
           align-items: center;
           gap: var(--ab-spacing-md);
           padding: var(--ab-spacing-md);
-          background: linear-gradient(135deg, #fef3c7, #fde68a);
+          background: linear-gradient(135deg, ${chartColors.neutral50}, ${chartColors.warning});
           border-radius: var(--ab-radius-md);
         }
 
@@ -573,12 +573,12 @@ export default function SprintReportModal({ sprintId, sprintName, boardId, onClo
         .ab-burn-value {
           font-size: var(--ab-font-size-lg);
           font-weight: 600;
-          color: #92400e;
+          color: ${chartColors.warningDark};
         }
 
         .ab-burn-label {
           font-size: var(--ab-font-size-xs);
-          color: #a16207;
+          color: ${chartColors.warningDark};
         }
 
         .ab-burndown-stats {

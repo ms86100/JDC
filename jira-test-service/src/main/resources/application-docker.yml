@@ -69,6 +69,10 @@ project:
   service:
     url: http://project-service:8083
 
+workflow:
+  service:
+    url: ${WORKFLOW_SERVICE_URL:http://workflow-service:8085}
+
 test:
   storage:
     type: LOCAL
@@ -78,3 +82,4 @@ test:
 services:
   issueServiceUrl: ${ISSUE_SERVICE_URL:http://issue-service:8084}
   projectServiceUrl: ${PROJECT_SERVICE_URL:http://project-service:8083}
+  workflowServiceUrl: ${WORKFLOW_SERVICE_URL:http://workflow-service:8085}

@@ -21,6 +21,10 @@ project:
   service:
     url: http://localhost:8083
 
+workflow:
+  service:
+    url: http://localhost:8085
+
 logging:
   level:
     com.jira.test: INFO

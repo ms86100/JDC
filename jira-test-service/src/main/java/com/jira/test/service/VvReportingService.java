@@ -2,16 +2,23 @@ package com.jira.test.service;
 
 import com.jira.test.dto.*;
 import com.jira.test.entity.BenchDefect;
+import com.jira.test.entity.Component;
 import com.jira.test.entity.ProblemReport;
 import com.jira.test.entity.RequirementLink;
 import com.jira.test.entity.TechEvent;
+import com.jira.test.entity.TestComponentMapping;
+import com.jira.test.entity.TestExecution;
+import com.jira.test.entity.TestIssue;
 import com.jira.test.entity.VvoDefinition;
 import com.jira.test.repository.BenchDefectRepository;
+import com.jira.test.repository.ComponentRepository;
 import com.jira.test.repository.HlvvoDefinitionRepository;
 import com.jira.test.repository.ProblemReportRepository;
 import com.jira.test.repository.RequirementLinkRepository;
 import com.jira.test.repository.TechEventRepository;
+import com.jira.test.repository.TestComponentMappingRepository;
 import com.jira.test.repository.TestExecutionRepository;
+import com.jira.test.repository.TestIssueRepository;
 import com.jira.test.repository.VvoDefinitionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -38,6 +46,9 @@ public class VvReportingService {
     private final ProblemReportRepository problemReportRepo;
     private final TestExecutionRepository testExecutionRepo;
     private final RequirementLinkRepository requirementLinkRepo;
+    private final TestIssueRepository testIssueRepo;
+    private final TestComponentMappingRepository testComponentMappingRepo;
+    private final ComponentRepository componentRepo;
 
     // === VVO Coverage Report ===
     // Shows VVOs grouped by component/cluster with test status and linked defects
@@ -289,11 +300,71 @@ public class VvReportingService {
     public String exportForPlanning(UUID testPlanId) {
         log.info("Generating planning export for test plan {}", testPlanId);
 
+        List<TestExecution> executions = testExecutionRepo.findByTestPlanId(testPlanId);
+
+        // Aggregate by {componentName, testEnv (test means), priority}
+        // Key: "componentName|testEnv|priority" -> total estimated hours
+        Map<String, Double> aggregation = new HashMap<>();
+        Map<String, Integer> countMap = new HashMap<>();
+
+        // Default estimated duration per test execution (hours) when no explicit duration exists
+        double defaultDurationHours = 1.0;
+
+        for (TestExecution exec : executions) {
+            String testEnv = exec.getTestEnv() != null ? exec.getTestEnv() : "Unspecified";
+
+            // Look up the test to get its priority and component
+            String priority = "Unspecified";
+            String componentName = "Unspecified";
+
+            if (exec.getTestId() != null) {
+                TestIssue test = testIssueRepo.findById(exec.getTestId()).orElse(null);
+                if (test != null) {
+                    if (test.getPriority() != null && !test.getPriority().isEmpty()) {
+                        priority = test.getPriority();
+                    }
+
+                    // Resolve component name from TestComponentMapping
+                    List<TestComponentMapping> mappings = testComponentMappingRepo.findByTestId(test.getId());
+                    if (!mappings.isEmpty()) {
+                        UUID componentId = mappings.get(0).getComponentId();
+                        Component comp = componentRepo.findById(componentId).orElse(null);
+                        if (comp != null) {
+                            componentName = comp.getComponentName();
+                        }
+                    }
+                }
+            }
+
+            String key = componentName + "|" + testEnv + "|" + priority;
+            aggregation.merge(key, defaultDurationHours, Double::sum);
+            countMap.merge(key, 1, Integer::sum);
+        }
+
         StringBuilder csv = new StringBuilder();
-        csv.append("Component,Test Means,Priority,Estimated Duration (hours)\n");
-        // Placeholder -- actual implementation would aggregate TestExecution
-        // originalEstimate by component/testMeans/priority from the given test plan
-        log.info("Export for planning generated for test plan {}", testPlanId);
+        csv.append("Component,Test Means,Priority,Test Count,Estimated Duration (hours)\n");
+
+        // Sort keys for deterministic output
+        aggregation.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(entry -> {
+                    String[] parts = entry.getKey().split("\\|", -1);
+                    String comp = parts[0];
+                    String testMeans = parts[1];
+                    String prio = parts[2];
+                    int count = countMap.getOrDefault(entry.getKey(), 0);
+                    double hours = entry.getValue();
+
+                    csv.append(escapeCsv(comp)).append(",");
+                    csv.append(escapeCsv(testMeans)).append(",");
+                    csv.append(escapeCsv(prio)).append(",");
+                    csv.append(count).append(",");
+                    csv.append(String.format("%.1f", hours));
+                    csv.append("\n");
+                });
+
+        log.info("Export for planning generated for test plan {}: {} rows from {} executions",
+                testPlanId, aggregation.size(), executions.size());
         return csv.toString();
     }
 

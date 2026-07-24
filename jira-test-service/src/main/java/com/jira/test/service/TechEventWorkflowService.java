@@ -1,5 +1,6 @@
 package com.jira.test.service;
 
+import com.jira.test.dto.WorkflowTransitionResult;
 import com.jira.test.entity.BenchDefect;
 import com.jira.test.entity.ProblemReport;
 import com.jira.test.entity.TechEvent;
@@ -12,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -23,56 +23,47 @@ public class TechEventWorkflowService {
     private final TechEventRepository techEventRepo;
     private final BenchDefectRepository benchDefectRepo;
     private final ProblemReportRepository problemReportRepo;
-
-    /**
-     * Allowed transitions per the M1668 workflow state machine.
-     */
-    private static final Map<String, List<String>> ALLOWED_TRANSITIONS = Map.ofEntries(
-            Map.entry("OPEN", List.of("UNDER_ORIGINATOR_ANALYSIS", "PROPOSED_FOR_CANCELLATION", "TO_BE_REFINED")),
-            Map.entry("UNDER_ORIGINATOR_ANALYSIS", List.of("UNDER_RESOLVER_ANALYSIS", "UNDER_TEST_MEAN_ANALYSIS", "PROPOSED_FOR_CANCELLATION", "TO_BE_REFINED")),
-            Map.entry("UNDER_RESOLVER_ANALYSIS", List.of("READY_FOR_REVIEW", "CLASSIFIED", "PROPOSED_FOR_CANCELLATION", "TO_BE_REFINED")),
-            Map.entry("UNDER_TEST_MEAN_ANALYSIS", List.of("UNDER_ORIGINATOR_ANALYSIS", "CLOSED", "CANCELLED")),
-            Map.entry("READY_FOR_REVIEW", List.of("CLASSIFIED", "UNDER_RESOLVER_ANALYSIS")),
-            Map.entry("CLASSIFIED", List.of("TO_BE_ASSESSED")),
-            Map.entry("TO_BE_ASSESSED", List.of("RESOLVED_CORRECTED", "RESOLVED_CONTAINED")),
-            Map.entry("RESOLVED_CORRECTED", List.of("CLOSED")),
-            Map.entry("RESOLVED_CONTAINED", List.of("UNDER_RESOLVER_ANALYSIS", "UNRESOLVED")),
-            Map.entry("PROPOSED_FOR_CANCELLATION", List.of("CANCELLED", "UNDER_ORIGINATOR_ANALYSIS")),
-            Map.entry("CANCELLED", List.of("OPEN")),
-            Map.entry("CLOSED", List.of("OPEN")),
-            Map.entry("TO_BE_REFINED", List.of("UNDER_ORIGINATOR_ANALYSIS")),
-            Map.entry("UNRESOLVED", List.of("UNDER_RESOLVER_ANALYSIS"))
-    );
+    private final WorkflowNotificationService notificationService;
+    private final WorkflowBridgeService workflowBridge;
 
     // ========== Status Transitions ==========
 
+    /**
+     * Transition a TechEvent status through the workflow engine.
+     * Delegates to WorkflowBridgeService which calls the workflow-service
+     * for condition/validator/post-function evaluation, falling back to
+     * local transition-map validation when the workflow-service is unavailable.
+     */
     @Transactional
     public TechEvent transitionStatus(UUID techEventId, String targetStatus, UUID userId, String comment) {
+        // Capture previous status before the bridge updates it
+        String previousStatus = workflowBridge.resolveCurrentStatus("TECH_EVENT", techEventId);
+
+        WorkflowTransitionResult result = workflowBridge.executeTransition(
+                "TECH_EVENT", techEventId, targetStatus, userId, comment);
+
+        if (!result.isSuccess()) {
+            throw new IllegalStateException(result.getErrorMessage());
+        }
+
+        // Re-fetch entity after bridge updated it
         TechEvent te = techEventRepo.findById(techEventId)
                 .orElseThrow(() -> new RuntimeException("TechEvent not found: " + techEventId));
 
-        validateTransition(te.getStatus(), targetStatus);
+        // Send notifications after successful transition
+        notificationService.notifyAfterTransition(
+                "TechEvent", te.getId(), te.getIssueKey(),
+                previousStatus, targetStatus, userId,
+                te.getAssigneeId(), comment);
 
-        String previousStatus = te.getStatus();
-        te.setStatus(targetStatus);
-
-        // Auto-set resolved_by on final states
-        if (List.of("CLOSED", "CANCELLED").contains(targetStatus)) {
-            te.setResolvedBy(userId);
+        // Send critical status notification if applicable
+        if (List.of("CANCELLED", "UNRESOLVED").contains(targetStatus)) {
+            notificationService.notifyCriticalStatusReached(
+                    "TechEvent", te.getId(), te.getIssueKey(),
+                    targetStatus, te.getAssigneeId());
         }
 
-        te = techEventRepo.save(te);
-        log.info("TechEvent {} transitioned {} -> {} by user {}",
-                te.getIssueKey(), previousStatus, targetStatus, userId);
         return te;
-    }
-
-    private void validateTransition(String fromStatus, String toStatus) {
-        List<String> validTargets = ALLOWED_TRANSITIONS.getOrDefault(fromStatus, List.of());
-        if (!validTargets.contains(toStatus)) {
-            throw new IllegalStateException(
-                    "Invalid transition from " + fromStatus + " to " + toStatus);
-        }
     }
 
     // ========== Supplier Analysis Action ==========
@@ -219,11 +210,11 @@ public class TechEventWorkflowService {
 
     // ========== Get available transitions for current status ==========
 
+    /**
+     * Get available transitions from the workflow engine, falling back to local map.
+     */
     @Transactional(readOnly = true)
     public List<String> getAvailableTransitions(UUID techEventId) {
-        TechEvent te = techEventRepo.findById(techEventId)
-                .orElseThrow(() -> new RuntimeException("TechEvent not found: " + techEventId));
-
-        return ALLOWED_TRANSITIONS.getOrDefault(te.getStatus(), List.of());
+        return workflowBridge.getAvailableTransitions("TECH_EVENT", techEventId);
     }
 }

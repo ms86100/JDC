@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ZoomIn, ZoomOut, Maximize2, RotateCcw } from 'lucide-react';
+import { chartColors } from '../../../utils/chartColors';
 
 export interface GraphNode {
   id: string;
@@ -45,11 +46,11 @@ const DependencyGraph: React.FC<DependencyGraphProps> = ({
 
   const getImpactColor = (level?: string): string => {
     switch (level) {
-      case 'CRITICAL': return '#dc2626';
-      case 'HIGH': return '#ea580c';
-      case 'MEDIUM': return '#ca8a04';
-      case 'LOW': return '#16a34a';
-      default: return '#6b7280';
+      case 'CRITICAL': return chartColors.danger;
+      case 'HIGH': return chartColors.orange;
+      case 'MEDIUM': return chartColors.warningDark;
+      case 'LOW': return chartColors.success;
+      default: return chartColors.neutral600;
     }
   };
 
@@ -214,19 +215,19 @@ const DependencyGraph: React.FC<DependencyGraphProps> = ({
         <div className="text-xs font-semibold mb-2">Impact Level</div>
         <div className="flex flex-col gap-1 text-xs">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#dc2626' }} />
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: chartColors.danger }} />
             <span>Critical</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ea580c' }} />
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: chartColors.orange }} />
             <span>High</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ca8a04' }} />
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: chartColors.warningDark }} />
             <span>Medium</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#16a34a' }} />
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: chartColors.success }} />
             <span>Low</span>
           </div>
         </div>
@@ -252,7 +253,7 @@ const DependencyGraph: React.FC<DependencyGraphProps> = ({
               refY="3.5"
               orient="auto"
             >
-              <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280" />
+              <polygon points="0 0, 10 3.5, 0 7" fill={chartColors.neutral600} />
             </marker>
             <marker
               id="arrowhead-active"
@@ -262,7 +263,7 @@ const DependencyGraph: React.FC<DependencyGraphProps> = ({
               refY="3.5"
               orient="auto"
             >
-              <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
+              <polygon points="0 0, 10 3.5, 0 7" fill={chartColors.primary} />
             </marker>
           </defs>
 
@@ -284,7 +285,7 @@ const DependencyGraph: React.FC<DependencyGraphProps> = ({
                     y1={sourceNode.y}
                     x2={targetNode.x}
                     y2={targetNode.y}
-                    stroke={isHighlighted ? '#3b82f6' : '#9ca3af'}
+                    stroke={isHighlighted ? chartColors.primary : chartColors.neutral400}
                     markerEnd={isHighlighted ? 'url(#arrowhead-active)' : 'url(#arrowhead)'}
                     style={getEdgeStyle(edge)}
                   />
@@ -294,7 +295,7 @@ const DependencyGraph: React.FC<DependencyGraphProps> = ({
                       y={midY - 5}
                       textAnchor="middle"
                       fontSize="10"
-                      fill="#6b7280"
+                      fill={chartColors.neutral600}
                     >
                       {edge.impactType === 'TRANSITIVE' ? '↔' : '⇢'}
                     </text>
@@ -349,7 +350,7 @@ const DependencyGraph: React.FC<DependencyGraphProps> = ({
                     textAnchor="middle"
                     fontSize="11"
                     fontWeight={isSelected || isHighlighted ? '600' : '400'}
-                    fill="#1f2937"
+                    fill={chartColors.neutral900}
                   >
                     {node.label.length > 20 ? node.label.substring(0, 17) + '...' : node.label}
                   </text>
