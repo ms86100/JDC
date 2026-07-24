@@ -1,9 +1,4 @@
-/* Tailwind FIRST — so custom CSS overrides Preflight reset */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Systems and Avionics — design tokens (must load after Tailwind base) */
+/* Systems and Avionics — design tokens (must load first) */
 @import './styles/tokens.css';
 
 /* Airbus Design System Theme */
@@ -34,5 +29,10 @@
 @import './styles/ui-polish.css';
 @import './features/boards/styles/kanban-board.css';
 
-/* Page & list entrance animations (load LAST for highest priority) */
+/* Page & list entrance animations */
 @import './styles/animations.css';
+
+/* Tailwind — loaded LAST but in base layer so custom CSS wins by specificity */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
