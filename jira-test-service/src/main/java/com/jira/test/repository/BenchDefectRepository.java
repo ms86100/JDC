@@ -20,4 +20,6 @@ public interface BenchDefectRepository extends JpaRepository<BenchDefect, UUID> 
     List<BenchDefect> findBySeverity(String severity);
 
     Optional<BenchDefect> findByIssueKey(String issueKey);
+
+    long countByProjectId(UUID projectId);
 }

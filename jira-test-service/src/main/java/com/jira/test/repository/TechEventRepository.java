@@ -26,4 +26,6 @@ public interface TechEventRepository extends JpaRepository<TechEvent, UUID> {
     List<TechEvent> findByProjectIdAndStatusIn(UUID projectId, List<String> statuses);
 
     long countByProjectIdAndStatus(UUID projectId, String status);
+
+    long countByProjectId(UUID projectId);
 }

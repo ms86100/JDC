@@ -20,4 +20,6 @@ public interface ProblemReportRepository extends JpaRepository<ProblemReport, UU
     List<ProblemReport> findByPrType(String prType);
 
     Optional<ProblemReport> findByIssueKey(String issueKey);
+
+    long countByProjectId(UUID projectId);
 }
