@@ -23,6 +23,7 @@ public class AttachmentResponse {
     private Long fileSize;
     private UUID uploaderId;
     private String uploaderName;
+    private String downloadUrl;
     private LocalDateTime createdAt;
 
     public String getFileSizeFormatted() {

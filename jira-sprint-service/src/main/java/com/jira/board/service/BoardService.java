@@ -1,11 +1,8 @@
 package com.jira.board.service;
 
 import com.jira.board.dto.*;
-import com.jira.board.entity.AgileBoard;
-import com.jira.board.entity.BoardColumn;
-import com.jira.board.entity.BoardSprint;
+import com.jira.board.entity.*;
 import com.jira.board.exception.ResourceNotFoundException;
-import com.jira.board.entity.BoardConfig;
 import com.jira.board.repository.AgileBoardRepository;
 import com.jira.board.repository.BoardColumnRepository;
 import com.jira.board.repository.BoardConfigRepository;
@@ -36,6 +33,7 @@ public class BoardService {
     private final SprintIssueRepository sprintIssueRepository;
     private final IssueServiceClient issueServiceClient;
     private final BoardConfigRepository boardConfigRepository;
+    private final BoardConfigurationService boardConfigurationService;
 
     // Default quick filters
     private static final List<BoardConfigResponse.QuickFilterConfig> DEFAULT_QUICK_FILTERS = Arrays.asList(
@@ -119,6 +117,112 @@ public class BoardService {
         AgileBoard board = findBoardById(boardId);
         boardRepository.delete(board);
         log.info("Deleted board: {}", boardId);
+    }
+
+    @Transactional
+    public AgileBoardResponse copyBoard(UUID boardId, String newName) {
+        AgileBoard source = findBoardById(boardId);
+
+        String targetName = (newName != null && !newName.isBlank())
+                ? newName
+                : source.getName() + " (Copy)";
+
+        AgileBoard copy = AgileBoard.builder()
+                .name(targetName)
+                .description(source.getDescription())
+                .projectId(source.getProjectId())
+                .boardType(source.getBoardType())
+                .filterId(source.getFilterId())
+                .jqlQuery(source.getJqlQuery())
+                .isDefault(false)
+                .allowAllIssues(source.getAllowAllIssues())
+                .cardLayout(source.getCardLayout())
+                .estimationStatistic(source.getEstimationStatistic())
+                .daysOnBoard(source.getDaysOnBoard())
+                .kanbanBacklogEnabled(source.getKanbanBacklogEnabled())
+                .subFilter(source.getSubFilter())
+                .hideCompletedAfterDays(source.getHideCompletedAfterDays())
+                .useSimplifiedWorkflow(source.getUseSimplifiedWorkflow())
+                .timeTracking(source.getTimeTracking())
+                .timezone(source.getTimezone())
+                .workingDays(source.getWorkingDays())
+                .nonWorkingDates(source.getNonWorkingDates())
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+        copy = boardRepository.save(copy);
+
+        copyColumns(source.getId(), copy.getId());
+        copySwimlanes(source.getId(), copy.getId());
+        copyCardColorRules(source.getId(), copy.getId());
+        copyCardFields(source.getId(), copy.getId());
+        copyIssueDetailFields(source.getId(), copy.getId());
+
+        log.info("Copied board {} -> {} ({})", boardId, copy.getId(), targetName);
+        return mapToResponse(copy);
+    }
+
+    private void copyColumns(UUID sourceId, UUID targetId) {
+        List<BoardColumn> columns = columnRepository.findByBoardIdOrderBySequenceAsc(sourceId);
+        for (BoardColumn col : columns) {
+            columnRepository.save(BoardColumn.builder()
+                    .boardId(targetId)
+                    .name(col.getName())
+                    .sequence(col.getSequence())
+                    .statusCategory(col.getStatusCategory())
+                    .isDone(col.getIsDone())
+                    .maxIssues(col.getMaxIssues())
+                    .color(col.getColor())
+                    .isCollapsible(col.getIsCollapsible())
+                    .isHidden(col.getIsHidden())
+                    .showDaysInColumn(col.getShowDaysInColumn())
+                    .build());
+        }
+    }
+
+    private void copySwimlanes(UUID sourceId, UUID targetId) {
+        List<BoardSwimlane> swimlanes = boardConfigurationService.getSwimlanes(sourceId);
+        for (BoardSwimlane sl : swimlanes) {
+            boardConfigurationService.createSwimlane(targetId, BoardSwimlane.builder()
+                    .name(sl.getName())
+                    .jqlQuery(sl.getJqlQuery())
+                    .description(sl.getDescription())
+                    .position(sl.getPosition())
+                    .build());
+        }
+    }
+
+    private void copyCardColorRules(UUID sourceId, UUID targetId) {
+        List<BoardCardColorRule> rules = boardConfigurationService.getCardColorRules(sourceId);
+        for (BoardCardColorRule rule : rules) {
+            boardConfigurationService.createCardColorRule(targetId, BoardCardColorRule.builder()
+                    .colorMethod(rule.getColorMethod())
+                    .matchValue(rule.getMatchValue())
+                    .color(rule.getColor())
+                    .position(rule.getPosition())
+                    .build());
+        }
+    }
+
+    private void copyCardFields(UUID sourceId, UUID targetId) {
+        List<BoardCardField> fields = boardConfigurationService.getCardFields(sourceId);
+        for (BoardCardField field : fields) {
+            boardConfigurationService.addCardField(targetId, BoardCardField.builder()
+                    .fieldId(field.getFieldId())
+                    .position(field.getPosition())
+                    .build());
+        }
+    }
+
+    private void copyIssueDetailFields(UUID sourceId, UUID targetId) {
+        List<BoardIssueDetailField> fields = boardConfigurationService.getIssueDetailFields(sourceId);
+        for (BoardIssueDetailField field : fields) {
+            boardConfigurationService.addIssueDetailField(targetId, BoardIssueDetailField.builder()
+                    .fieldId(field.getFieldId())
+                    .fieldGroup(field.getFieldGroup())
+                    .position(field.getPosition())
+                    .build());
+        }
     }
 
     @Transactional(readOnly = true)

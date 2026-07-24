@@ -1,24 +1,32 @@
 package com.jira.notification.service;
 
+import com.jira.notification.dto.EmailQueueResponse;
+import com.jira.notification.entity.EmailQueue;
+import com.jira.notification.exception.ResourceNotFoundException;
+import com.jira.notification.repository.EmailQueueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.context.Context;
 import org.springframework.web.client.RestTemplate;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Email notification service - sends real emails via SMTP
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -26,6 +34,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
     private final SpringTemplateEngine templateEngine;
+    private final EmailQueueRepository emailQueueRepository;
     private final RestTemplate restTemplate = new RestTemplate();
     private static final String USER_SERVICE_URL = "http://jira-user-service:8082";
 
@@ -94,6 +103,86 @@ public class EmailService {
         sendTemplatedEmail(userId, "generic-notification", vars);
     }
 
+    @Transactional
+    public void queueEmail(String recipientEmail, String subject, String bodyHtml) {
+        EmailQueue entry = EmailQueue.builder()
+                .recipientEmail(recipientEmail)
+                .subject(subject)
+                .bodyHtml(bodyHtml)
+                .status("QUEUED")
+                .retryCount(0)
+                .maxRetries(3)
+                .nextRetryAt(OffsetDateTime.now())
+                .build();
+
+        emailQueueRepository.save(entry);
+        log.debug("Queued email to {} with subject: {}", recipientEmail, subject);
+    }
+
+    @Scheduled(fixedDelay = 30000)
+    @Transactional
+    public void processQueue() {
+        OffsetDateTime now = OffsetDateTime.now();
+
+        List<EmailQueue> queued = emailQueueRepository.findReadyToSend(now);
+        List<EmailQueue> retryable = emailQueueRepository.findRetryable(now);
+
+        queued.addAll(retryable);
+
+        if (queued.isEmpty()) {
+            return;
+        }
+
+        log.info("Processing email queue: {} entries", queued.size());
+
+        for (EmailQueue entry : queued) {
+            sendQueuedEmail(entry);
+        }
+    }
+
+    @Transactional
+    public int flushQueue() {
+        OffsetDateTime future = OffsetDateTime.now().plusYears(1);
+        List<EmailQueue> queued = emailQueueRepository.findReadyToSend(future);
+        List<EmailQueue> retryable = emailQueueRepository.findRetryable(future);
+        queued.addAll(retryable);
+
+        log.info("Flushing email queue: {} entries", queued.size());
+
+        int processed = 0;
+        for (EmailQueue entry : queued) {
+            sendQueuedEmail(entry);
+            processed++;
+        }
+        return processed;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EmailQueueResponse> getQueueEntries(int page, int size, String status) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<EmailQueue> entries;
+        if (status != null && !status.isBlank()) {
+            entries = emailQueueRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
+        } else {
+            entries = emailQueueRepository.findAllByOrderByCreatedAtDesc(pageable);
+        }
+
+        return entries.map(this::mapToQueueResponse);
+    }
+
+    @Transactional
+    public void deleteQueueEntry(UUID entryId) {
+        log.info("Deleting email queue entry: {}", entryId);
+
+        if (!emailQueueRepository.existsById(entryId)) {
+            throw new ResourceNotFoundException("Email queue entry not found: " + entryId);
+        }
+
+        emailQueueRepository.deleteById(entryId);
+        log.info("Deleted email queue entry: {}", entryId);
+    }
+
     private void sendTemplatedEmail(UUID userId, String templateName, Map<String, Object> variables) {
         try {
             String email = getUserEmail(userId);
@@ -105,22 +194,56 @@ public class EmailService {
             Context context = new Context();
             variables.forEach(context::setVariable);
             String htmlContent = templateEngine.process("email/" + templateName, context);
+            String subject = (String) variables.getOrDefault("subject", "Jira Notification");
 
+            queueEmail(email, subject, htmlContent);
+
+        } catch (Exception e) {
+            log.error("Failed to queue email for user {}: {}", userId, e.getMessage());
+        }
+    }
+
+    private void sendQueuedEmail(EmailQueue entry) {
+        try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(fromAddress);
-            helper.setTo(email);
-            helper.setSubject((String) variables.getOrDefault("subject", "Jira Notification"));
-            helper.setText(htmlContent, true);
+            helper.setTo(entry.getRecipientEmail());
+            helper.setSubject(entry.getSubject());
+            helper.setText(entry.getBodyHtml(), true);
 
             mailSender.send(message);
-            log.info("Email sent successfully to {} for template {}", email, templateName);
+
+            entry.setStatus("SENT");
+            entry.setSentAt(OffsetDateTime.now());
+            emailQueueRepository.save(entry);
+
+            log.info("Email sent successfully to {}", entry.getRecipientEmail());
 
         } catch (MessagingException e) {
-            log.error("Failed to send email to user {}: {}", userId, e.getMessage());
+            handleSendFailure(entry, e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error sending email to user {}: {}", userId, e.getMessage());
+            handleSendFailure(entry, e.getMessage());
         }
+    }
+
+    private void handleSendFailure(EmailQueue entry, String errorMessage) {
+        entry.setRetryCount(entry.getRetryCount() + 1);
+        entry.setErrorMessage(errorMessage);
+
+        if (entry.getRetryCount() >= entry.getMaxRetries()) {
+            entry.setStatus("FAILED");
+            log.error("Email to {} permanently failed after {} retries: {}",
+                    entry.getRecipientEmail(), entry.getRetryCount(), errorMessage);
+        } else {
+            long backoffSeconds = (long) Math.pow(2, entry.getRetryCount()) * 30;
+            entry.setNextRetryAt(OffsetDateTime.now().plusSeconds(backoffSeconds));
+            log.warn("Email to {} failed (attempt {}/{}), next retry in {}s: {}",
+                    entry.getRecipientEmail(), entry.getRetryCount(), entry.getMaxRetries(),
+                    backoffSeconds, errorMessage);
+        }
+
+        emailQueueRepository.save(entry);
     }
 
     private String getUserEmail(UUID userId) {
@@ -140,5 +263,20 @@ public class EmailService {
         if (text == null) return "";
         if (text.length() <= maxLength) return text;
         return text.substring(0, maxLength) + "...";
+    }
+
+    private EmailQueueResponse mapToQueueResponse(EmailQueue entry) {
+        return EmailQueueResponse.builder()
+                .id(entry.getId())
+                .recipientEmail(entry.getRecipientEmail())
+                .subject(entry.getSubject())
+                .status(entry.getStatus())
+                .errorMessage(entry.getErrorMessage())
+                .retryCount(entry.getRetryCount())
+                .maxRetries(entry.getMaxRetries())
+                .createdAt(entry.getCreatedAt())
+                .sentAt(entry.getSentAt())
+                .nextRetryAt(entry.getNextRetryAt())
+                .build();
     }
 }

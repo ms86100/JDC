@@ -33,6 +33,9 @@ public class AttachmentService {
     @Value("${jira.attachment.storage.path:/var/jira/attachments}")
     private String storagePath;
 
+    @Value("${cdn.base-url:}")
+    private String cdnBaseUrl;
+
     private final List<String> allowedTypes = List.of(
             "image/png", "image/jpeg", "image/gif", "image/webp",
             "application/pdf", "text/plain",
@@ -163,6 +166,10 @@ public class AttachmentService {
     }
 
     private AttachmentResponse toResponse(Attachment attachment) {
+        String downloadUrl = (cdnBaseUrl != null && !cdnBaseUrl.isBlank())
+                ? cdnBaseUrl + "/attachments/" + attachment.getId()
+                : "/api/attachments/" + attachment.getId() + "/download";
+
         return AttachmentResponse.builder()
                 .id(attachment.getId())
                 .issueId(attachment.getIssueId())
@@ -174,6 +181,7 @@ public class AttachmentService {
                 .fileSize(attachment.getFileSize())
                 .uploaderId(attachment.getUploaderId())
                 .uploaderName(attachment.getUploaderName())
+                .downloadUrl(downloadUrl)
                 .createdAt(attachment.getCreatedAt())
                 .build();
     }

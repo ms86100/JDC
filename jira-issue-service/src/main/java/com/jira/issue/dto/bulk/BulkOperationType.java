@@ -6,5 +6,8 @@ public enum BulkOperationType {
     CLONE,
     MOVE_TO_SPRINT,
     ADD_LABELS,
-    DELETE
+    DELETE,
+    MOVE_TO_PROJECT,
+    WATCH,
+    UNWATCH
 }

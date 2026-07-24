@@ -342,6 +342,18 @@ spring:
           uri: http://localhost:8093
           predicates:
             - Path=/api/integration/**
+        - id: admin-directories-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/admin/directories/**
+        - id: admin-mail-handlers-service
+          uri: http://localhost:8087
+          predicates:
+            - Path=/api/admin/mail-handlers/**
+        - id: admin-mail-queue-service
+          uri: http://localhost:8087
+          predicates:
+            - Path=/api/admin/mail-queue/**
         - id: admin-service
           uri: http://localhost:8093
           predicates:

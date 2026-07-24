@@ -1,5 +1,6 @@
 package com.jira.issue.service;
 
+import com.jira.issue.client.ProjectServiceClient;
 import com.jira.issue.dto.ChangeItemResponse;
 import com.jira.issue.dto.IssueResponse;
 import com.jira.issue.entity.Issue;
@@ -29,9 +30,7 @@ public class MoveIssueService {
     private final ChangeHistoryService changeHistoryService;
     private final IssueEventOutboxPublisher eventOutboxPublisher;
     private final IssueService issueService;
-
-    @Value("${project.service.url}")
-    private String projectServiceUrl;
+    private final ProjectServiceClient projectServiceClient;
 
     @Value("${workflow.service.url}")
     private String workflowServiceUrl;
@@ -90,18 +89,7 @@ public class MoveIssueService {
     }
 
     private String getProjectKey(UUID projectId) {
-        try {
-            String url = String.format("%s/api/projects/%s", projectServiceUrl, projectId);
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
-            if (response != null && response.get("projectKey") != null) {
-                return response.get("projectKey").toString();
-            }
-            return null;
-        } catch (Exception e) {
-            log.warn("Failed to get project key for {}: {}", projectId, e.getMessage());
-            return null;
-        }
+        return projectServiceClient.getProjectKey(projectId);
     }
 
     private String generateIssueKey(String projectKey) {
@@ -111,37 +99,13 @@ public class MoveIssueService {
         return normalizedKey + "-" + nextNumber;
     }
 
-    @SuppressWarnings("unchecked")
     private void validateIssueTypeInTargetProject(Issue issue, UUID targetProjectId) {
         if (issue.getIssueType() == null) {
             return;
         }
-        try {
-            String url = String.format("%s/api/projects/%s", projectServiceUrl, targetProjectId);
-            Map<String, Object> project = restTemplate.getForObject(url, Map.class);
-            if (project != null && project.get("issueTypeSchemeId") != null) {
-                String schemeUrl = String.format("%s/api/projects/schemes/issue-type-schemes/%s/issue-types",
-                        projectServiceUrl, project.get("issueTypeSchemeId"));
-                try {
-                    List<Map<String, Object>> types = restTemplate.getForObject(schemeUrl, List.class);
-                    if (types != null && !types.isEmpty()) {
-                        boolean typeExists = types.stream()
-                                .anyMatch(t -> issue.getIssueType().getId().toString().equals(String.valueOf(t.get("id"))));
-                        if (!typeExists) {
-                            throw new IllegalArgumentException("Issue type '" + issue.getIssueType().getName()
-                                    + "' is not available in the target project's issue type scheme");
-                        }
-                    }
-                } catch (IllegalArgumentException e) {
-                    throw e;
-                } catch (Exception e) {
-                    log.debug("Could not validate issue type against scheme, allowing move: {}", e.getMessage());
-                }
-            }
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            log.debug("Could not fetch target project for type validation, allowing move: {}", e.getMessage());
+        if (!projectServiceClient.isIssueTypeValidInProject(targetProjectId, issue.getIssueType().getId())) {
+            throw new IllegalArgumentException("Issue type '" + issue.getIssueType().getName()
+                    + "' is not available in the target project's issue type scheme");
         }
     }
 

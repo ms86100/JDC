@@ -77,6 +77,10 @@ project:
   service:
     url: ${PROJECT_SERVICE_URL:http://${DB_HOST:-postgres}:${DB_PORT:-5432}}
 
+sprint:
+  service:
+    url: ${SPRINT_SERVICE_URL:http://jira-sprint-service:8091}
+
 jira:
   permissions:
     fail-open: false

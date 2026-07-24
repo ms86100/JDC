@@ -76,7 +76,7 @@ public class SprintController {
             @RequestParam(required = false) UUID projectId) {
         log.warn("DEPRECATED: /api/sprints GET called. Use /api/plans/boards/{{boardId}}/sprints");
         List<SprintResponse> sprints = projectId != null
-                ? sprintService.getSprintsByProject(projectId)
+                ? sprintService.getSprintsForProject(projectId)
                 : sprintService.getSprintsByProject(null);
         return deprecatedListResponse(sprints);
     }

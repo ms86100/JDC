@@ -66,4 +66,47 @@ public class DevInfoController {
                 payload.get("url"));
         return ResponseEntity.status(HttpStatus.CREATED).body(branch);
     }
+
+    // === SCM Webhook Endpoints ===
+
+    private final com.jira.issue.service.WebhookParserService webhookParserService;
+
+    @PostMapping("/api/dev-info/webhooks/github")
+    public ResponseEntity<Map<String, Object>> handleGitHubWebhook(
+            @RequestBody Map<String, Object> payload,
+            @RequestHeader(value = "X-GitHub-Event", required = false) String eventType) {
+        int linked = 0;
+        if ("push".equals(eventType)) {
+            linked = webhookParserService.parseGitHubPushEvent(payload);
+        } else if ("pull_request".equals(eventType)) {
+            linked = webhookParserService.parseGitHubPullRequestEvent(payload);
+        }
+        return ResponseEntity.ok(Map.of("status", "processed", "event", eventType != null ? eventType : "unknown", "linked", linked));
+    }
+
+    @PostMapping("/api/dev-info/webhooks/gitlab")
+    public ResponseEntity<Map<String, Object>> handleGitLabWebhook(
+            @RequestBody Map<String, Object> payload,
+            @RequestHeader(value = "X-Gitlab-Event", required = false) String eventType) {
+        int linked = 0;
+        if ("Push Hook".equals(eventType)) {
+            linked = webhookParserService.parseGitLabPushEvent(payload);
+        } else if ("Merge Request Hook".equals(eventType)) {
+            linked = webhookParserService.parseGitLabMergeRequestEvent(payload);
+        }
+        return ResponseEntity.ok(Map.of("status", "processed", "event", eventType != null ? eventType : "unknown", "linked", linked));
+    }
+
+    @PostMapping("/api/dev-info/webhooks/bitbucket")
+    public ResponseEntity<Map<String, Object>> handleBitbucketWebhook(
+            @RequestBody Map<String, Object> payload,
+            @RequestHeader(value = "X-Event-Key", required = false) String eventKey) {
+        int linked = 0;
+        if (eventKey != null && eventKey.startsWith("repo:push")) {
+            linked = webhookParserService.parseBitbucketPushEvent(payload);
+        } else if (eventKey != null && eventKey.startsWith("pullrequest:")) {
+            linked = webhookParserService.parseBitbucketPullRequestEvent(payload);
+        }
+        return ResponseEntity.ok(Map.of("status", "processed", "event", eventKey != null ? eventKey : "unknown", "linked", linked));
+    }
 }

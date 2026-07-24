@@ -67,6 +67,9 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+cdn:
+  base-url: ${CDN_BASE_URL:}
+
 logging:
   file:
     path: ${LOG_PATH:../../logs}/attachment

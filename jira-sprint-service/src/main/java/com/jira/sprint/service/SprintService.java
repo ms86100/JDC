@@ -1,5 +1,7 @@
 package com.jira.sprint.service;
 
+import com.jira.board.entity.AgileBoard;
+import com.jira.board.repository.AgileBoardRepository;
 import com.jira.sprint.dto.CreateSprintRequest;
 import com.jira.sprint.dto.SprintResponse;
 import com.jira.sprint.dto.UpdateSprintRequest;
@@ -13,9 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,6 +25,7 @@ public class SprintService {
 
     private final SprintRepository sprintRepository;
     private final SprintIssueRepository sprintIssueRepository;
+    private final AgileBoardRepository agileBoardRepository;
 
     @Transactional
     public SprintResponse createSprint(CreateSprintRequest request, UUID createdBy) {
@@ -54,6 +55,43 @@ public class SprintService {
                 sprints = sprintRepository.findAll();
             }
             return sprints.stream()
+                    .map(sprint -> enrichSprintResponseSafe(SprintResponse.from(sprint)))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching sprints for project {}: {}", projectId, e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<SprintResponse> getSprintsForProject(UUID projectId) {
+        try {
+            List<UUID> boardIds = agileBoardRepository.findByProjectId(projectId).stream()
+                    .map(AgileBoard::getId)
+                    .collect(Collectors.toList());
+
+            if (boardIds.isEmpty()) {
+                return sprintRepository.findByProjectIdOrderByCreatedAtDesc(projectId).stream()
+                        .map(sprint -> enrichSprintResponseSafe(SprintResponse.from(sprint)))
+                        .collect(Collectors.toList());
+            }
+
+            Set<UUID> seen = new LinkedHashSet<>();
+            List<Sprint> result = new ArrayList<>();
+
+            for (Sprint sprint : sprintRepository.findByBoardIdInOrderByCreatedAtDesc(boardIds)) {
+                if (seen.add(sprint.getId())) {
+                    result.add(sprint);
+                }
+            }
+
+            for (Sprint sprint : sprintRepository.findByProjectIdOrderByCreatedAtDesc(projectId)) {
+                if (seen.add(sprint.getId())) {
+                    result.add(sprint);
+                }
+            }
+
+            return result.stream()
                     .map(sprint -> enrichSprintResponseSafe(SprintResponse.from(sprint)))
                     .collect(Collectors.toList());
         } catch (Exception e) {

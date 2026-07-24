@@ -1,5 +1,6 @@
 package com.jira.issue.service;
 
+import com.jira.issue.client.ProjectServiceClient;
 import com.jira.issue.dto.CloneIssueResponse;
 import com.jira.issue.dto.IssueResponse;
 import com.jira.issue.entity.Issue;
@@ -8,13 +9,10 @@ import com.jira.issue.exception.ResourceNotFoundException;
 import com.jira.issue.repository.IssueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -25,11 +23,7 @@ public class CloneIssueService {
     private final IssueRepository issueRepository;
     private final IssueEventOutboxPublisher eventOutboxPublisher;
     private final IssueService issueService;
-
-    @Value("${project.service.url}")
-    private String projectServiceUrl;
-
-    private final RestTemplate restTemplate;
+    private final ProjectServiceClient projectServiceClient;
 
     @Transactional
     public CloneIssueResponse cloneIssue(UUID issueId, UUID userId, boolean includeComments, boolean includeAttachments) {
@@ -126,18 +120,7 @@ public class CloneIssueService {
     }
 
     private String getProjectKey(UUID projectId) {
-        try {
-            String url = String.format("%s/api/projects/%s", projectServiceUrl, projectId);
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
-            if (response != null && response.get("projectKey") != null) {
-                return response.get("projectKey").toString();
-            }
-            return null;
-        } catch (Exception e) {
-            log.warn("Failed to get project key for {}: {}", projectId, e.getMessage());
-            return null;
-        }
+        return projectServiceClient.getProjectKey(projectId);
     }
 
     private String generateIssueKey(String projectKey) {

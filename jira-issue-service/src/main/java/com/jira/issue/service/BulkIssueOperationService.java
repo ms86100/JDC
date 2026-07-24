@@ -13,9 +13,11 @@ import com.jira.issue.repository.IssueRepository;
 import com.jira.issue.repository.IssueStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -33,6 +35,12 @@ public class BulkIssueOperationService {
     private final WorkflowTransitionClient workflowTransitionClient;
     private final AuditIntegrationClient auditIntegrationClient;
     private final ProjectPermissionGuard permissionGuard;
+    private final MoveIssueService moveIssueService;
+    private final WatcherService watcherService;
+    private final RestTemplate restTemplate;
+
+    @Value("${sprint.service.url:http://jira-sprint-service:8091}")
+    private String sprintServiceUrl;
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public BulkOperationResponse execute(BulkOperationRequest request, UUID userId) {
@@ -99,8 +107,10 @@ public class BulkIssueOperationService {
             case DELETE -> permissionGuard.requirePermission(userId, projectId, "DELETE_ISSUES");
             case UPDATE_STATUS -> permissionGuard.requirePermission(userId, projectId, "RESOLVE_ISSUES");
             case CLONE -> permissionGuard.requirePermission(userId, projectId, "CREATE_ISSUES");
+            case MOVE_TO_PROJECT -> permissionGuard.requirePermission(userId, projectId, "MOVE_ISSUES");
             case UPDATE_FIELDS, ADD_LABELS, MOVE_TO_SPRINT ->
                     permissionGuard.requirePermission(userId, projectId, "EDIT_ISSUES");
+            case WATCH, UNWATCH -> permissionGuard.requirePermission(userId, projectId, "BROWSE_PROJECTS");
         }
     }
 
@@ -115,13 +125,10 @@ public class BulkIssueOperationService {
                 case ADD_LABELS -> bulkLabels(request, issue, userId);
                 case CLONE -> bulkClone(request, issue, userId);
                 case DELETE -> bulkDelete(issue, userId);
-                case MOVE_TO_SPRINT -> BulkOperationResultItem.builder()
-                        .issueId(issueId)
-                        .issueKey(issueKey)
-                        .success(false)
-                        .message("Move to sprint: assign sprint on board view (sprint API pending)")
-                        .errorCode("NOT_IMPLEMENTED")
-                        .build();
+                case MOVE_TO_SPRINT -> bulkMoveToSprint(request, issue, userId);
+                case MOVE_TO_PROJECT -> bulkMoveToProject(request, issue, userId);
+                case WATCH -> bulkWatch(issue, userId);
+                case UNWATCH -> bulkUnwatch(issue, userId);
             };
         } catch (Exception e) {
             log.warn("Bulk item failed for {}: {}", issueKey, e.getMessage());
@@ -252,6 +259,70 @@ public class BulkIssueOperationService {
                 .issueKey(issue.getIssueKey())
                 .success(true)
                 .message("Deleted")
+                .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private BulkOperationResultItem bulkMoveToSprint(BulkOperationRequest request, Issue issue, UUID userId) {
+        if (issue == null) {
+            throw new ResourceNotFoundException("Issue", "id", request.getIssueIds());
+        }
+        if (request.getSprintId() == null) {
+            throw new IllegalArgumentException("sprintId is required for MOVE_TO_SPRINT");
+        }
+        String url = String.format("%s/api/sprints/%s/issues", sprintServiceUrl, request.getSprintId());
+        Map<String, Object> payload = Map.of(
+                "issueIds", List.of(issue.getId().toString()),
+                "userId", userId.toString()
+        );
+        restTemplate.postForEntity(url, payload, Map.class);
+        return BulkOperationResultItem.builder()
+                .issueId(issue.getId())
+                .issueKey(issue.getIssueKey())
+                .success(true)
+                .message("Moved to sprint " + request.getSprintId())
+                .build();
+    }
+
+    private BulkOperationResultItem bulkMoveToProject(BulkOperationRequest request, Issue issue, UUID userId) {
+        if (issue == null) {
+            throw new ResourceNotFoundException("Issue", "id", request.getIssueIds());
+        }
+        if (request.getTargetProjectId() == null) {
+            throw new IllegalArgumentException("targetProjectId is required for MOVE_TO_PROJECT");
+        }
+        IssueResponse moved = moveIssueService.moveIssue(issue.getId(), request.getTargetProjectId(), userId);
+        return BulkOperationResultItem.builder()
+                .issueId(issue.getId())
+                .issueKey(issue.getIssueKey())
+                .success(true)
+                .message("Moved to project, new key: " + moved.getIssueKey())
+                .build();
+    }
+
+    private BulkOperationResultItem bulkWatch(Issue issue, UUID userId) {
+        if (issue == null) {
+            throw new ResourceNotFoundException("Issue", "id", null);
+        }
+        watcherService.addWatcher(issue.getId(), userId);
+        return BulkOperationResultItem.builder()
+                .issueId(issue.getId())
+                .issueKey(issue.getIssueKey())
+                .success(true)
+                .message("Watching")
+                .build();
+    }
+
+    private BulkOperationResultItem bulkUnwatch(Issue issue, UUID userId) {
+        if (issue == null) {
+            throw new ResourceNotFoundException("Issue", "id", null);
+        }
+        watcherService.removeWatcher(issue.getId(), userId);
+        return BulkOperationResultItem.builder()
+                .issueId(issue.getId())
+                .issueKey(issue.getIssueKey())
+                .success(true)
+                .message("Unwatched")
                 .build();
     }
 

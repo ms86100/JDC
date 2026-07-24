@@ -59,6 +59,15 @@ public class BoardController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{boardId}/copy")
+    public ResponseEntity<AgileBoardResponse> copyBoard(
+            @PathVariable UUID boardId,
+            @RequestBody(required = false) CopyBoardRequest request) {
+        log.info("Copying board: {}", boardId);
+        String newName = request != null ? request.getName() : null;
+        return ResponseEntity.ok(boardService.copyBoard(boardId, newName));
+    }
+
     @GetMapping("/{boardId}/issues")
     public ResponseEntity<List<BoardIssueResponse>> getBoardIssues(
             @PathVariable UUID boardId,

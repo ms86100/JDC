@@ -310,13 +310,17 @@ public class CiCdIntegrationService {
     // ==================== Helper Methods ====================
 
     private GitHubActionsResult fetchGitHubActionsResults(GitHubWebhookPayload payload) {
-        // In production, fetch from GitHub API
-        // https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}/jobs
         GitHubActionsResult result = new GitHubActionsResult();
-        result.totalTests = 100;
-        result.passed = 95;
-        result.failed = 5;
+        if (payload == null) {
+            throw new UnsupportedOperationException(
+                    "GitHub Actions API integration requires configuring github.api.token in application.yml");
+        }
+        result.totalTests = 0;
+        result.passed = 0;
+        result.failed = 0;
         result.skipped = 0;
+        log.info("GitHub Actions webhook received for workflow {} (test counts from GitHub API not yet integrated)",
+                payload.getWorkflowName());
         return result;
     }
 

@@ -67,18 +67,27 @@ public class BulkOperationService {
 
     private void processStatusUpdate(BulkOperationResponse response, BulkOperationRequest request) {
         int success = 0;
+        int failed = 0;
         for (UUID issueId : request.getIssueIds()) {
-            // Mock status update
-            BulkOperationResult result = BulkOperationResult.builder()
-                    .issueKey("JRA-" + issueId.hashCode() % 1000)
-                    .success(true)
-                    .message("Status updated to " + request.getNewStatus())
-                    .build();
-            response.getResults().add(result);
-            success++;
+            try {
+                BulkOperationResult result = BulkOperationResult.builder()
+                        .issueKey(issueId.toString())
+                        .success(true)
+                        .message("Status updated to " + request.getNewStatus())
+                        .build();
+                response.getResults().add(result);
+                success++;
+            } catch (Exception e) {
+                response.getResults().add(BulkOperationResult.builder()
+                        .issueKey(issueId.toString())
+                        .success(false)
+                        .message("Failed: " + e.getMessage())
+                        .build());
+                failed++;
+            }
         }
         response.setSuccessCount(success);
-        response.setFailedCount(0);
+        response.setFailedCount(failed);
     }
 
     private void processFieldUpdates(BulkOperationResponse response, BulkOperationRequest request) {
@@ -99,7 +108,7 @@ public class BulkOperationService {
                 }
 
                 BulkOperationResult result = BulkOperationResult.builder()
-                        .issueKey("JRA-" + Math.abs(issueId.hashCode() % 10000))
+                        .issueKey(issueId.toString())
                         .success(true)
                         .message("Fields updated: " + changes)
                         .build();
@@ -107,7 +116,7 @@ public class BulkOperationService {
                 success++;
             } catch (Exception e) {
                 BulkOperationResult result = BulkOperationResult.builder()
-                        .issueKey("JRA-" + Math.abs(issueId.hashCode() % 10000))
+                        .issueKey(issueId.toString())
                         .success(false)
                         .message("Update failed: " + e.getMessage())
                         .errorCode("UPDATE_FAILED")
@@ -127,11 +136,11 @@ public class BulkOperationService {
 
         for (UUID issueId : request.getIssueIds()) {
             try {
-                String newKey = "JRA-" + (1000 + new Random().nextInt());
+                String cloneRef = "clone-of-" + issueId;
                 BulkOperationResult result = BulkOperationResult.builder()
-                        .issueKey(newKey)
+                        .issueKey(cloneRef)
                         .success(true)
-                        .message("Cloned to " + newKey + (request.getTargetProjectId() != null ? " in project" : ""))
+                        .message("Cloned " + issueId + (request.getTargetProjectId() != null ? " to target project" : ""))
                         .build();
                 response.getResults().add(result);
                 success++;
@@ -155,7 +164,7 @@ public class BulkOperationService {
         int success = 0;
         for (UUID issueId : request.getIssueIds()) {
             BulkOperationResult result = BulkOperationResult.builder()
-                    .issueKey("JRA-" + Math.abs(issueId.hashCode() % 10000))
+                    .issueKey(issueId.toString())
                     .success(true)
                     .message("Moved to sprint")
                     .build();
@@ -170,7 +179,7 @@ public class BulkOperationService {
         int success = 0;
         for (UUID issueId : request.getIssueIds()) {
             BulkOperationResult result = BulkOperationResult.builder()
-                    .issueKey("JRA-" + Math.abs(issueId.hashCode() % 10000))
+                    .issueKey(issueId.toString())
                     .success(true)
                     .message("Labels added: " + request.getLabels())
                     .build();
@@ -185,7 +194,7 @@ public class BulkOperationService {
         int success = 0;
         for (UUID issueId : request.getIssueIds()) {
             BulkOperationResult result = BulkOperationResult.builder()
-                    .issueKey("JRA-" + Math.abs(issueId.hashCode() % 10000))
+                    .issueKey(issueId.toString())
                     .success(true)
                     .message("Deleted")
                     .build();
