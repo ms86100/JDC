@@ -100,6 +100,15 @@ export default defineConfig(({ mode }) => {
         // Tests
         '/tests': apiProxy(GATEWAY),
         '/api/tests': apiProxy(GATEWAY),
+        // Aircraft Design System (SYSDOPS) - test-service endpoints
+        '/api/vvo': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/hlvvo': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/tech-events': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/bench-defects': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/problem-reports': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/vv-reports': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/campaigns': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/test-requests': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
         // GraphQL
         '/graphql': apiProxy(env.VITE_ISSUE_SERVICE_URL || 'http://localhost:8084'),
         '/graphiql': apiProxy(env.VITE_ISSUE_SERVICE_URL || 'http://localhost:8084'),
