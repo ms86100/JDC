@@ -44,12 +44,24 @@ public class MultiUserPickerFieldTypeHandler extends AbstractCustomFieldTypeHand
         }
         for (String uid : userIds) {
             try {
-                UUID.fromString(uid);
+                UUID userId = UUID.fromString(uid);
+                if (!userExists(userId)) {
+                    return ValidationResult.error("User not found: " + uid);
+                }
             } catch (IllegalArgumentException e) {
                 return ValidationResult.error("Invalid user ID format: " + uid);
             }
         }
         return ValidationResult.success(userIds);
+    }
+
+    private boolean userExists(UUID userId) {
+        try {
+            restTemplate.getForObject(userServiceUrl + "/api/users/" + userId, Map.class);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @Override

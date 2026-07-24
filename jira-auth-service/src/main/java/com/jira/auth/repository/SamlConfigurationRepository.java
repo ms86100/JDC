@@ -16,4 +16,8 @@ public interface SamlConfigurationRepository extends JpaRepository<SamlConfigura
     List<SamlConfiguration> findByEnabledTrue();
 
     boolean existsByRegistrationId(String registrationId);
+
+    Optional<SamlConfiguration> findByEntityId(String entityId);
+
+    List<SamlConfiguration> findByEnabled(boolean enabled);
 }

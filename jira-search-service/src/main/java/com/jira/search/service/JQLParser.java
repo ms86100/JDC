@@ -59,7 +59,8 @@ public class JQLParser {
             "resolved", "resolutiondate", "votes", "watcher", "watchers", "comment",
             "attachment", "subtask", "parent", "project", "sprint", "epic", "epiclink",
             "epic name", "labels", "component", "fixversion", "affectsversion",
-            "linkedissue", "subtasks", "text"
+            "linkedissue", "subtasks", "text",
+            "cf"
     );
 
     private static final Pattern OPERATOR_PATTERN = Pattern.compile(
@@ -237,9 +238,18 @@ public class JQLParser {
     }
 
     private String normalizeFieldName(String field) {
-        field = field.toLowerCase().trim();
+        field = field.trim();
 
-        // Aliases
+        // Handle cf[fieldId] or customfield_xxx syntax
+        if (field.toLowerCase().startsWith("cf[") && field.endsWith("]")) {
+            return "cf:" + field.substring(3, field.length() - 1);
+        }
+        if (field.toLowerCase().startsWith("customfield_")) {
+            return "cf:" + field.substring("customfield_".length());
+        }
+
+        field = field.toLowerCase();
+
         return switch (field) {
             case "issuekey", "issue", "key" -> "issue_key";
             case "issuetype", "type" -> "issue_type";
@@ -332,6 +342,10 @@ public class JQLParser {
 
         if (value != null && value.toLowerCase().startsWith("issuefunction(")) {
             return handleIssueFunction(field, value);
+        }
+
+        if (field.startsWith("cf:")) {
+            return handleCustomField(field, operator, value);
         }
 
         return switch (field) {
@@ -552,6 +566,53 @@ public class JQLParser {
             return "epic_id " + not + "IN (SELECT id FROM jira_issue.issues WHERE issue_key IN (" + epicList + "))";
         }
         return "epic_id IN (SELECT id FROM jira_issue.issues WHERE issue_key = '" + value + "')";
+    }
+
+    private String handleCustomField(String field, String operator, String value) {
+        String fieldId = field.substring(3);
+        String escaped = value != null ? value.replace("'", "''") : "";
+
+        if (operator.equalsIgnoreCase("IS")) {
+            if ("EMPTY".equalsIgnoreCase(value) || "NULL".equalsIgnoreCase(value)) {
+                return "i.id NOT IN (SELECT cfv.issue_id FROM jira_issue.custom_field_values cfv WHERE cfv.field_id = '" + fieldId + "')";
+            }
+            if ("NOT EMPTY".equalsIgnoreCase(value)) {
+                return "i.id IN (SELECT cfv.issue_id FROM jira_issue.custom_field_values cfv WHERE cfv.field_id = '" + fieldId + "')";
+            }
+        }
+
+        if (operator.equalsIgnoreCase("IS NOT")) {
+            if ("EMPTY".equalsIgnoreCase(value) || "NULL".equalsIgnoreCase(value)) {
+                return "i.id IN (SELECT cfv.issue_id FROM jira_issue.custom_field_values cfv WHERE cfv.field_id = '" + fieldId + "')";
+            }
+        }
+
+        if ("~".equals(operator) || "CONTAINS".equalsIgnoreCase(operator)) {
+            return "i.id IN (SELECT cfv.issue_id FROM jira_issue.custom_field_values cfv WHERE cfv.field_id = '" + fieldId
+                    + "' AND CAST(cfv.value AS TEXT) ILIKE '%" + escaped + "%')";
+        }
+
+        if ("!~".equals(operator)) {
+            return "i.id NOT IN (SELECT cfv.issue_id FROM jira_issue.custom_field_values cfv WHERE cfv.field_id = '" + fieldId
+                    + "' AND CAST(cfv.value AS TEXT) ILIKE '%" + escaped + "%')";
+        }
+
+        if ("IN".equalsIgnoreCase(operator) || "NOT IN".equalsIgnoreCase(operator)) {
+            List<String> values = parseInList(value);
+            String valueList = String.join(",", values.stream().map(v -> "'" + v.replace("'", "''") + "'").toList());
+            String not = operator.equalsIgnoreCase("NOT IN") ? "NOT " : "";
+            return "i.id " + not + "IN (SELECT cfv.issue_id FROM jira_issue.custom_field_values cfv WHERE cfv.field_id = '" + fieldId
+                    + "' AND cfv.value @> ANY(ARRAY[" + valueList + "]::jsonb[]))";
+        }
+
+        String sqlOp = switch (operator) {
+            case "=" -> "=";
+            case "!=" -> "!=";
+            default -> "=";
+        };
+
+        return "i.id IN (SELECT cfv.issue_id FROM jira_issue.custom_field_values cfv WHERE cfv.field_id = '" + fieldId
+                + "' AND CAST(cfv.value AS TEXT) " + sqlOp + " '\"" + escaped + "\"')";
     }
 
     private String handleGeneric(String field, String operator, String value) {

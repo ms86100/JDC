@@ -31,10 +31,22 @@ public class GroupPickerFieldTypeHandler extends AbstractCustomFieldTypeHandler 
             return isRequired(config) ? ValidationResult.error("Value is required") : ValidationResult.success();
         }
         try {
-            UUID.fromString(value.toString());
+            UUID groupId = UUID.fromString(value.toString());
+            if (!groupExists(groupId)) {
+                return ValidationResult.error("Group not found: " + value);
+            }
             return ValidationResult.success(value);
         } catch (IllegalArgumentException e) {
             return ValidationResult.error("Invalid group ID format");
+        }
+    }
+
+    private boolean groupExists(UUID groupId) {
+        try {
+            restTemplate.getForObject(userServiceUrl + "/rest/admin/1.0/groups/" + groupId, Map.class);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 

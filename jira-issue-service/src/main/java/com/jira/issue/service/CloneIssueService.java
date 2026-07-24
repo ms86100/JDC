@@ -29,7 +29,7 @@ public class CloneIssueService {
     @Value("${project.service.url}")
     private String projectServiceUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Transactional
     public CloneIssueResponse cloneIssue(UUID issueId, UUID userId, boolean includeComments, boolean includeAttachments) {
@@ -141,12 +141,10 @@ public class CloneIssueService {
     }
 
     private String generateIssueKey(String projectKey) {
-        String normalizedKey = projectKey.substring(0, Math.min(projectKey.length(), 6)).toUpperCase();
-        synchronized (this) {
-            Integer maxNumber = issueRepository.findMaxIssueNumberByProjectKey(normalizedKey).orElse(0);
-            int nextNumber = (maxNumber != null ? maxNumber : 0) + 1;
-            return normalizedKey + "-" + nextNumber;
-        }
+        String normalizedKey = projectKey.toUpperCase();
+        Integer maxNumber = issueRepository.findMaxIssueNumberByProjectKeyForUpdate(normalizedKey).orElse(0);
+        int nextNumber = (maxNumber != null ? maxNumber : 0) + 1;
+        return normalizedKey + "-" + nextNumber;
     }
 
     private String extractProjectKeyFromIssueKey(String issueKey) {

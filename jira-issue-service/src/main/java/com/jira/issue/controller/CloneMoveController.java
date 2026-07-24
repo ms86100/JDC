@@ -56,8 +56,9 @@ public class CloneMoveController {
     @Operation(summary = "Move issue to another project", description = "Move an issue from one project to another")
     public ResponseEntity<IssueResponse> moveIssue(
             @Parameter(description = "Issue ID to move") @PathVariable UUID issueId,
-            @Parameter(description = "Target project ID") @RequestParam UUID targetProjectId,
+            @RequestBody java.util.Map<String, String> request,
             @Parameter(description = "User ID") @RequestHeader("X-User-Id") UUID userId) {
+        UUID targetProjectId = UUID.fromString(request.get("targetProjectId"));
         log.info("Moving issue {} to project {} by user {}", issueId, targetProjectId, userId);
         IssueResponse response = moveIssueService.moveIssue(issueId, targetProjectId, userId);
         return ResponseEntity.ok(response);

@@ -29,8 +29,8 @@ public class NotificationDispatchService {
 
     @Transactional
     public void dispatchIssueEvent(String eventType, UUID issueId, UUID projectId,
-                                   String title, String message) {
-        log.info("Dispatching issue event: type={}, issueId={}, projectId={}", eventType, issueId, projectId);
+                                   String title, String message, UUID actorUserId) {
+        log.info("Dispatching issue event: type={}, issueId={}, projectId={}, actor={}", eventType, issueId, projectId, actorUserId);
 
         NotificationScheme scheme = resolveScheme(projectId);
         if (scheme == null) {
@@ -52,6 +52,10 @@ public class NotificationDispatchService {
         if (recipientIds.isEmpty()) {
             log.debug("No recipients resolved for event {} on issue {}", eventType, issueId);
             return;
+        }
+
+        if (actorUserId != null) {
+            recipientIds.remove(actorUserId);
         }
 
         Set<UUID> optedOutUsers = getOptedOutUsers(recipientIds, eventType);
@@ -139,6 +143,18 @@ public class NotificationDispatchService {
                     break;
                 case "ALL_WATCHERS":
                     addWatchersFromContext(recipients, issueContext);
+                    break;
+                case "GROUP":
+                    if (schemeEvent.getRecipientId() != null) {
+                        expandGroupMembers(recipients, schemeEvent.getRecipientId());
+                    } else if (schemeEvent.getRecipientGroup() != null) {
+                        expandGroupMembersByName(recipients, schemeEvent.getRecipientGroup());
+                    }
+                    break;
+                case "PROJECT_ROLE":
+                    if (schemeEvent.getRecipientId() != null) {
+                        expandProjectRoleMembers(recipients, schemeEvent.getRecipientId(), issueContext);
+                    }
                     break;
                 default:
                     if (schemeEvent.getRecipientId() != null) {
@@ -234,5 +250,55 @@ public class NotificationDispatchService {
         String issueKey = context.getOrDefault("issueKey", issueId != null ? issueId.toString() : "").toString();
         String title = context.getOrDefault("title", "").toString();
         return String.format("[%s] %s — %s", issueKey, title, eventType.replace("_", " ").toLowerCase());
+    }
+
+    @SuppressWarnings("unchecked")
+    private void expandGroupMembers(Set<UUID> recipients, UUID groupId) {
+        try {
+            String url = String.format("http://jira-user-service:8082/rest/admin/1.0/groups/%s/members", groupId);
+            List<Map<String, Object>> members = restTemplate.getForObject(url, List.class);
+            if (members != null) {
+                for (Map<String, Object> member : members) {
+                    addUuidFromContext(recipients, member, "userId");
+                    addUuidFromContext(recipients, member, "id");
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to expand group {} members: {}", groupId, e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void expandGroupMembersByName(Set<UUID> recipients, String groupName) {
+        try {
+            String url = String.format("http://jira-user-service:8082/rest/admin/1.0/groups?name=%s", groupName);
+            Map<String, Object> group = restTemplate.getForObject(url, Map.class);
+            if (group != null && group.get("id") != null) {
+                expandGroupMembers(recipients, UUID.fromString(group.get("id").toString()));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to expand group '{}' members: {}", groupName, e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void expandProjectRoleMembers(Set<UUID> recipients, UUID roleId, Map<String, Object> issueContext) {
+        Object projectIdObj = issueContext.get("projectId");
+        if (projectIdObj == null) {
+            return;
+        }
+        try {
+            UUID projectId = projectIdObj instanceof UUID ? (UUID) projectIdObj : UUID.fromString(projectIdObj.toString());
+            String url = String.format("http://jira-project-service:8083/api/projects/%s/roles/%s/members", projectId, roleId);
+            List<Map<String, Object>> members = restTemplate.getForObject(url, List.class);
+            if (members != null) {
+                for (Map<String, Object> member : members) {
+                    addUuidFromContext(recipients, member, "userId");
+                    addUuidFromContext(recipients, member, "id");
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to expand project role {} members: {}", roleId, e.getMessage());
+        }
     }
 }

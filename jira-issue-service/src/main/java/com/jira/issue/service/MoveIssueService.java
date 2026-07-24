@@ -36,7 +36,7 @@ public class MoveIssueService {
     @Value("${workflow.service.url}")
     private String workflowServiceUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Transactional
     public IssueResponse moveIssue(UUID issueId, UUID targetProjectId, UUID userId) {
@@ -58,6 +58,8 @@ public class MoveIssueService {
             log.info("Issue {} is already in target project, no move needed", issueId);
             return issueService.getIssue(issueId);
         }
+
+        validateIssueTypeInTargetProject(issue, targetProjectId);
 
         String newIssueKey = generateIssueKey(targetProjectKey);
 
@@ -100,33 +102,72 @@ public class MoveIssueService {
     }
 
     private String generateIssueKey(String projectKey) {
-        String normalizedKey = projectKey.substring(0, Math.min(projectKey.length(), 6)).toUpperCase();
-        synchronized (this) {
-            Integer maxNumber = issueRepository.findMaxIssueNumberByProjectKey(normalizedKey).orElse(0);
-            int nextNumber = (maxNumber != null ? maxNumber : 0) + 1;
-            return normalizedKey + "-" + nextNumber;
+        String normalizedKey = projectKey.toUpperCase();
+        Integer maxNumber = issueRepository.findMaxIssueNumberByProjectKeyForUpdate(normalizedKey).orElse(0);
+        int nextNumber = (maxNumber != null ? maxNumber : 0) + 1;
+        return normalizedKey + "-" + nextNumber;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void validateIssueTypeInTargetProject(Issue issue, UUID targetProjectId) {
+        if (issue.getIssueType() == null) {
+            return;
+        }
+        try {
+            String url = String.format("%s/api/projects/%s", projectServiceUrl, targetProjectId);
+            Map<String, Object> project = restTemplate.getForObject(url, Map.class);
+            if (project != null && project.get("issueTypeSchemeId") != null) {
+                String schemeUrl = String.format("%s/api/projects/schemes/issue-type-schemes/%s/issue-types",
+                        projectServiceUrl, project.get("issueTypeSchemeId"));
+                try {
+                    List<Map<String, Object>> types = restTemplate.getForObject(schemeUrl, List.class);
+                    if (types != null && !types.isEmpty()) {
+                        boolean typeExists = types.stream()
+                                .anyMatch(t -> issue.getIssueType().getId().toString().equals(String.valueOf(t.get("id"))));
+                        if (!typeExists) {
+                            throw new IllegalArgumentException("Issue type '" + issue.getIssueType().getName()
+                                    + "' is not available in the target project's issue type scheme");
+                        }
+                    }
+                } catch (IllegalArgumentException e) {
+                    throw e;
+                } catch (Exception e) {
+                    log.debug("Could not validate issue type against scheme, allowing move: {}", e.getMessage());
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            log.debug("Could not fetch target project for type validation, allowing move: {}", e.getMessage());
         }
     }
 
+    @SuppressWarnings("unchecked")
     private UUID resolveTargetStatus(Issue issue, UUID targetProjectId) {
         if (issue.getStatus() == null) {
             return null;
         }
         try {
             String url = String.format(
-                    "%s/api/workflows/project/%s/validate-transition?fromStatus=%s&toStatus=%s",
-                    workflowServiceUrl, targetProjectId,
-                    issue.getStatus().getId(), issue.getStatus().getId());
-            restTemplate.getForObject(url, Map.class);
-            return issue.getStatus().getId();
+                    "%s/api/workflows/project/%s/statuses",
+                    workflowServiceUrl, targetProjectId);
+            List<Map<String, Object>> statuses = restTemplate.getForObject(url, List.class);
+            if (statuses != null) {
+                boolean currentStatusValid = statuses.stream()
+                        .anyMatch(s -> issue.getStatus().getId().toString().equals(String.valueOf(s.get("id"))));
+                if (currentStatusValid) {
+                    return issue.getStatus().getId();
+                }
+                return statuses.stream()
+                        .filter(s -> "TODO".equals(s.get("category")))
+                        .map(s -> UUID.fromString(String.valueOf(s.get("id"))))
+                        .findFirst()
+                        .orElse(issue.getStatus().getId());
+            }
         } catch (Exception e) {
-            log.info("Current status {} not valid in target project, falling back to default", issue.getStatus().getName());
-            return issueStatusRepository.findAll().stream()
-                    .filter(s -> "TODO".equals(s.getCategory()))
-                    .min((a, b) -> Integer.compare(a.getSequence(), b.getSequence()))
-                    .map(s -> s.getId())
-                    .orElse(issue.getStatus().getId());
+            log.info("Could not resolve target project statuses, keeping current: {}", e.getMessage());
         }
+        return issue.getStatus().getId();
     }
 
     private String extractProjectKeyFromIssueKey(String issueKey) {
@@ -159,7 +200,7 @@ public class MoveIssueService {
                     .build());
             changeHistoryService.recordChange(issueId, userId, null, changes);
         } catch (Exception e) {
-            log.warn("Failed to record move history for issue {}: {}", issueId, e.getMessage());
+            log.error("Failed to record move history for issue {}: {}", issueId, e.getMessage(), e);
         }
     }
 }

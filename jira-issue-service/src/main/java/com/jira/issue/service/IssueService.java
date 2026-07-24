@@ -42,6 +42,7 @@ public class IssueService {
     private final LabelRepository labelRepository;
     private final SecurityLevelService securityLevelService;
     private final ChangeHistoryService changeHistoryService;
+    private final com.jira.issue.event.IssueEventOutboxPublisher eventOutboxPublisher;
 
     @Value("${workflow.service.url}")
     private String workflowServiceUrl;
@@ -170,6 +171,13 @@ public class IssueService {
         }
 
         log.info("Issue created successfully: {}", issueKey);
+
+        try {
+            eventOutboxPublisher.publish("ISSUE_CREATED", issue.getId(), issue.getProjectId());
+        } catch (Exception e) {
+            log.warn("Failed to publish ISSUE_CREATED event for {}: {}", issueKey, e.getMessage());
+        }
+
         return mapToIssueResponse(issue);
     }
 
@@ -598,6 +606,13 @@ public class IssueService {
                 log.warn("Could not record change history for issue {}: {}", issueId, e.getMessage());
             }
         }
+
+        try {
+            eventOutboxPublisher.publish("ISSUE_UPDATED", issue.getId(), issue.getProjectId());
+        } catch (Exception e) {
+            log.warn("Failed to publish ISSUE_UPDATED event for {}: {}", issueId, e.getMessage());
+        }
+
         return mapToIssueResponse(issue);
     }
 
@@ -628,6 +643,12 @@ public class IssueService {
                 throw new InvalidTransitionException("Workflow service required when using transitionId only");
             }
             return updateIssueStatusDirect(issueId, newStatusId, projectId);
+        }
+
+        try {
+            eventOutboxPublisher.publish("ISSUE_TRANSITIONED", issueId, projectId);
+        } catch (Exception e) {
+            log.warn("Failed to publish ISSUE_TRANSITIONED event for {}: {}", issueId, e.getMessage());
         }
 
         return getIssue(issueId);
@@ -714,12 +735,19 @@ public class IssueService {
     public void deleteIssue(UUID issueId) {
         log.info("Deleting issue: {}", issueId);
 
-        if (!issueRepository.existsById(issueId)) {
-            throw new ResourceNotFoundException("Issue", "id", issueId);
-        }
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue", "id", issueId));
+
+        UUID projectId = issue.getProjectId();
 
         issueRepository.deleteById(issueId);
         log.info("Issue deleted successfully: {}", issueId);
+
+        try {
+            eventOutboxPublisher.publish("ISSUE_DELETED", issueId, projectId);
+        } catch (Exception e) {
+            log.warn("Failed to publish ISSUE_DELETED event for {}: {}", issueId, e.getMessage());
+        }
     }
 
     @Transactional

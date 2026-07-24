@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,7 +17,7 @@ import java.util.UUID;
 @RequestMapping("/api/admin/sso/saml")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
+@PreAuthorize("hasRole('ADMIN')")
 public class SamlConfigController {
 
     private final SamlConfigService samlConfigService;
@@ -51,6 +52,47 @@ public class SamlConfigController {
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         samlConfigService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/sp-metadata")
+    public ResponseEntity<Map<String, Object>> getSpMetadata() {
+        Map<String, Object> metadata = Map.of(
+                "entityId", "jira-platform-sp",
+                "acsUrl", "/login/saml2/sso",
+                "sloUrl", "/logout/saml2/slo",
+                "nameIdFormat", "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+                "note", "Full XML metadata available when spring-security-saml2-service-provider is on classpath"
+        );
+        return ResponseEntity.ok(metadata);
+    }
+
+    @PostMapping("/test")
+    public ResponseEntity<Map<String, Object>> testConnection(@RequestBody Map<String, Object> request) {
+        String idpSsoUrl = (String) request.get("idpSsoUrl");
+        if (idpSsoUrl == null || idpSsoUrl.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "idpSsoUrl is required"));
+        }
+        try {
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(idpSsoUrl).openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            int responseCode = conn.getResponseCode();
+            conn.disconnect();
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "idpSsoUrl", idpSsoUrl,
+                    "httpStatus", responseCode,
+                    "reachable", responseCode < 500
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of(
+                    "status", "error",
+                    "idpSsoUrl", idpSsoUrl,
+                    "message", e.getMessage(),
+                    "reachable", false
+            ));
+        }
     }
 
     @PostMapping("/test-auth")

@@ -103,6 +103,20 @@ public class CustomFieldController {
         return ResponseEntity.ok(definitionService.updateOption(optionId, update));
     }
 
+    @PutMapping("/options/{optionId}/disable")
+    public ResponseEntity<CustomFieldOption> disableOption(@PathVariable UUID optionId) {
+        CustomFieldOption update = new CustomFieldOption();
+        update.setDisabled(true);
+        return ResponseEntity.ok(definitionService.updateOption(optionId, update));
+    }
+
+    @PutMapping("/options/{optionId}/enable")
+    public ResponseEntity<CustomFieldOption> enableOption(@PathVariable UUID optionId) {
+        CustomFieldOption update = new CustomFieldOption();
+        update.setDisabled(false);
+        return ResponseEntity.ok(definitionService.updateOption(optionId, update));
+    }
+
     @DeleteMapping("/options/{optionId}")
     public ResponseEntity<Void> deleteOption(@PathVariable UUID optionId) {
         definitionService.deleteOption(optionId);
