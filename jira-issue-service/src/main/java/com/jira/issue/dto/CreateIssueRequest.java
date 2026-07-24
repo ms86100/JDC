@@ -45,8 +45,9 @@ public class CreateIssueRequest {
     private UUID[] affectsVersions;
     private UUID[] fixVersions;
 
-    // Story points and rank
+    // Story points, business value, and rank
     private Integer storyPoints;
+    private Integer businessValue;
     private String rank;
 
     // Time tracking (in seconds)

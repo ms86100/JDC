@@ -73,8 +73,9 @@ public class IssueResponse {
     private UUID[] fixVersions;
     private String[] fixVersionNames;
 
-    // Story points and rank (Agile section)
+    // Story points, business value, and rank (Agile section)
     private Integer storyPoints;
+    private Integer businessValue;
     private String rank;
 
     // Time tracking (sidebar)

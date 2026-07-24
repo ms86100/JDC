@@ -32,4 +32,10 @@ public class SprintIssue {
     @CreationTimestamp
     @Column(name = "added_at", updatable = false)
     private LocalDateTime addedAt;
+
+    @Column(name = "removed_at")
+    private LocalDateTime removedAt;
+
+    @Column(name = "removed_reason", length = 200)
+    private String removedReason;
 }

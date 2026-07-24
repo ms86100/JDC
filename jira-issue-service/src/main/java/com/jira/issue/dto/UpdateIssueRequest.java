@@ -49,7 +49,9 @@ public class UpdateIssueRequest {
     @Max(value = 10000, message = "Story points cannot exceed 10000")
     private Integer storyPoints;
 
-    private String rank;  // LexoRank format - no specific pattern validation needed
+    private Integer businessValue;
+
+    private String rank;
 
     // Time tracking (in seconds)
     @Min(value = 0, message = "Original estimate cannot be negative")

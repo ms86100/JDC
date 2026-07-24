@@ -94,9 +94,12 @@ public class Issue {
     @Builder.Default
     private UUID[] fixVersions = new UUID[]{};
 
-    // Story points and rank
+    // Story points, business value, and rank
     @Column(name = "story_points")
     private Integer storyPoints;
+
+    @Column(name = "business_value")
+    private Integer businessValue;
 
     @Column(length = 255)
     private String rank;

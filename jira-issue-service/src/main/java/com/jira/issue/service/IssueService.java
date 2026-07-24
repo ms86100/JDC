@@ -125,6 +125,7 @@ public class IssueService {
                 .fixVersions(request.getFixVersions())
                 // Story points and rank
                 .storyPoints(request.getStoryPoints())
+                .businessValue(request.getBusinessValue())
                 .rank(request.getRank())
                 // Time tracking
                 .originalEstimate(request.getOriginalEstimate())
@@ -571,6 +572,7 @@ public class IssueService {
 
         // Story points and rank
         if (request.getStoryPoints() != null) issue.setStoryPoints(request.getStoryPoints());
+        if (request.getBusinessValue() != null) issue.setBusinessValue(request.getBusinessValue());
         if (request.getRank() != null) issue.setRank(request.getRank());
 
         // Time tracking
@@ -918,6 +920,7 @@ public class IssueService {
                 .fixVersions(issue.getFixVersions())
                 // Story points and rank
                 .storyPoints(issue.getStoryPoints())
+                .businessValue(issue.getBusinessValue())
                 .rank(issue.getRank())
                 // Time tracking
                 .originalEstimate(issue.getOriginalEstimate())
