@@ -70,6 +70,7 @@ public class DataInitializer implements CommandLineRunner {
                 .username(username)
                 .email(email)
                 .passwordHash(passwordEncoder.encode(password))
+                .authProvider("LOCAL")
                 .active(true)
                 .roles(new java.util.HashSet<>(Set.of(adminRole, userRole)))
                 .build();

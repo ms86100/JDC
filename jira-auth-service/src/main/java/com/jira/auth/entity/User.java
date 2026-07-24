@@ -20,11 +20,22 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash")
     private String passwordHash;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean active = true;
+
+    @Column(name = "auth_provider", nullable = false)
+    @Builder.Default
+    private String authProvider = "LOCAL";
+
+    @Column(name = "saml_name_id")
+    private String samlNameId;
+
+    @Column(name = "saml_idp_id", length = 100)
+    private String samlIdpId;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

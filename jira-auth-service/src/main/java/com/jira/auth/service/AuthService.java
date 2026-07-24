@@ -35,6 +35,7 @@ public class AuthService {
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .authProvider("LOCAL")
                 .active(true)
                 .build();
 
