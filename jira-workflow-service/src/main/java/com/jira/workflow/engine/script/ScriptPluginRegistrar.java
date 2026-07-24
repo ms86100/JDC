@@ -58,20 +58,20 @@ public class ScriptPluginRegistrar implements ApplicationRunner {
     }
 
     public void refreshScript(ScriptDefinition script) {
+        unregisterAllTypes(script.getScriptKey());
         if (Boolean.TRUE.equals(script.getIsEnabled())) {
             registerScript(script);
-        } else {
-            unregisterScript(script);
         }
     }
 
     public void unregisterScript(ScriptDefinition script) {
-        String key = script.getScriptKey();
-        switch (script.getScriptType()) {
-            case ScriptDefinition.TYPE_CONDITION -> pluginRegistry.unregisterCondition(key);
-            case ScriptDefinition.TYPE_VALIDATOR -> pluginRegistry.unregisterValidator(key);
-            case ScriptDefinition.TYPE_POST_FUNCTION -> pluginRegistry.unregisterPostFunction(key);
-        }
-        log.info("Unregistered script: {} (type: {})", key, script.getScriptType());
+        unregisterAllTypes(script.getScriptKey());
+        log.info("Unregistered script: {} (type: {})", script.getScriptKey(), script.getScriptType());
+    }
+
+    private void unregisterAllTypes(String key) {
+        pluginRegistry.unregisterCondition(key);
+        pluginRegistry.unregisterValidator(key);
+        pluginRegistry.unregisterPostFunction(key);
     }
 }

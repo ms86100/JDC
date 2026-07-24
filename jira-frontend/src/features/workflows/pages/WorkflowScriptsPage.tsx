@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { scriptApi, ScriptDefinition, ScriptExecutionLog, ScriptVersion, ScriptSchedule } from '../../../api/scriptApi';
 import ScriptConsole from '../components/ScriptConsole';
@@ -276,8 +276,8 @@ export default function WorkflowScriptsPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {scripts.map((script) => (
-                  <>
-                    <tr key={script.id} className="hover:bg-gray-50">
+                  <Fragment key={script.id}>
+                    <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <div className="font-medium">{script.name}</div>
                         {script.description && <div className="text-xs text-gray-500 mt-0.5 truncate max-w-xs">{script.description}</div>}
@@ -353,7 +353,7 @@ export default function WorkflowScriptsPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

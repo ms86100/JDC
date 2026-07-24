@@ -126,11 +126,11 @@ export const workflowApi = {
   getTransitionsWithDetails: (workflowId: string) =>
     apiClient.get<WorkflowTransitionDetail[]>(`/api/workflows/${workflowId}/transitions-with-details`),
 
-  addCondition: (transitionId: string, data: { type: string; configuration?: Record<string, unknown> }) =>
+  addCondition: (transitionId: string, data: Record<string, unknown>) =>
     apiClient.post(`/api/workflows/transitions/${transitionId}/conditions`, data),
-  addValidator: (transitionId: string, data: { type: string; configuration?: Record<string, unknown> }) =>
+  addValidator: (transitionId: string, data: Record<string, unknown>) =>
     apiClient.post(`/api/workflows/transitions/${transitionId}/validators`, data),
-  addPostFunction: (transitionId: string, data: { type: string; configuration?: Record<string, unknown> }) =>
+  addPostFunction: (transitionId: string, data: Record<string, unknown>) =>
     apiClient.post(`/api/workflows/transitions/${transitionId}/post-functions`, data),
   deleteCondition: (transitionId: string, conditionId: string) =>
     apiClient.delete(`/api/workflows/transitions/${transitionId}/conditions/${conditionId}`),

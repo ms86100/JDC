@@ -145,6 +145,28 @@ public class ScriptController {
         return ResponseEntity.ok(scriptDefinitionService.listEnabledScriptsByType(type));
     }
 
+    // === Dashboard / Metrics ===
+
+    @GetMapping("/dashboard")
+    @Operation(summary = "Script engine dashboard metrics")
+    public ResponseEntity<Map<String, Object>> getDashboard() {
+        List<ScriptResponse> all = scriptDefinitionService.listScripts(null);
+        long total = all.size();
+        long enabled = all.stream().filter(ScriptResponse::getIsEnabled).count();
+        long conditions = all.stream().filter(s -> "CONDITION".equals(s.getScriptType())).count();
+        long validators = all.stream().filter(s -> "VALIDATOR".equals(s.getScriptType())).count();
+        long postFunctions = all.stream().filter(s -> "POST_FUNCTION".equals(s.getScriptType())).count();
+
+        Map<String, Object> dashboard = new java.util.LinkedHashMap<>();
+        dashboard.put("totalScripts", total);
+        dashboard.put("enabledScripts", enabled);
+        dashboard.put("disabledScripts", total - enabled);
+        dashboard.put("conditions", conditions);
+        dashboard.put("validators", validators);
+        dashboard.put("postFunctions", postFunctions);
+        return ResponseEntity.ok(dashboard);
+    }
+
     // === Validation ===
 
     @PostMapping("/validate")

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { workflowApi, WorkflowTransitionDetail } from '../../../api/workflowApi';
 import { scriptApi, ScriptDefinition } from '../../../api/scriptApi';
@@ -78,33 +78,34 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
 
   const addCondition = useMutation({
     mutationFn: () => {
-      const config: Record<string, string> = { type: isScriptCondition ? 'SCRIPT' : newCondition };
+      const conditionType = isScriptCondition ? 'SCRIPT' : newCondition;
+      const data: Record<string, unknown> = { conditionType };
       if (isScriptCondition && selectedConditionScript) {
-        config.value = selectedConditionScript;
-        config.scriptKey = selectedConditionScript;
+        data.value = selectedConditionScript;
       }
-      return workflowApi.addCondition(transition.id, config);
+      return workflowApi.addCondition(transition.id, data);
     },
     onSuccess: invalidate,
   });
   const addValidator = useMutation({
     mutationFn: () => {
-      const config: Record<string, string> = { type: isScriptValidator ? 'SCRIPT' : newValidator };
+      const validatorType = isScriptValidator ? 'SCRIPT' : newValidator;
+      const data: Record<string, unknown> = { validatorType };
       if (isScriptValidator && selectedValidatorScript) {
-        config.validatorData = selectedValidatorScript;
-        config.scriptKey = selectedValidatorScript;
+        data.validatorData = selectedValidatorScript;
       }
-      return workflowApi.addValidator(transition.id, config);
+      return workflowApi.addValidator(transition.id, data);
     },
     onSuccess: invalidate,
   });
   const addPostFn = useMutation({
     mutationFn: () => {
-      const config: Record<string, string> = { type: isScriptPostFn ? 'SCRIPT_POST_FUNCTION' : newPostFn };
+      const functionType = isScriptPostFn ? 'SCRIPT_POST_FUNCTION' : newPostFn;
+      const data: Record<string, unknown> = { functionType };
       if (isScriptPostFn && selectedPostFnScript) {
-        config.functionData = JSON.stringify({ scriptKey: selectedPostFnScript });
+        data.functionData = JSON.stringify({ scriptKey: selectedPostFnScript });
       }
-      return workflowApi.addPostFunction(transition.id, config);
+      return workflowApi.addPostFunction(transition.id, data);
     },
     onSuccess: invalidate,
   });
@@ -149,11 +150,8 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
                 {c.type}
                 {c.value && <span className="wf-script-badge"> ({c.value})</span>}
               </span>
-              <button
-                type="button"
-                className="ab-btn ab-btn-ghost ab-btn-sm"
-                onClick={() => workflowApi.deleteCondition(transition.id, c.id).then(invalidate)}
-              >
+              <button type="button" className="ab-btn ab-btn-ghost ab-btn-sm"
+                onClick={() => workflowApi.deleteCondition(transition.id, c.id).then(invalidate)}>
                 Remove
               </button>
             </li>
@@ -163,18 +161,13 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
           <select value={newCondition} onChange={(e) => setNewCondition(e.target.value)} className="ab-select">
             {conditionDefs.length === 0 && <option value="user_in_group">User in group (fallback)</option>}
             {conditionDefs.map((d) => (
-              <option key={getDefType(d)} value={getDefType(d)}>
-                {getDefName(d)}
-              </option>
+              <option key={getDefType(d)} value={getDefType(d)}>{getDefName(d)}</option>
             ))}
           </select>
           {isScriptCondition && renderScriptPicker(conditionScripts, selectedConditionScript, setSelectedConditionScript, 'script')}
-          <button
-            type="button"
-            className="ab-btn ab-btn-sm ab-btn-secondary"
+          <button type="button" className="ab-btn ab-btn-sm ab-btn-secondary"
             disabled={isScriptCondition && !selectedConditionScript}
-            onClick={() => addCondition.mutate()}
-          >
+            onClick={() => addCondition.mutate()}>
             Add
           </button>
         </div>
@@ -190,11 +183,8 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
                 {v.type}
                 {v.validatorData && <span className="wf-script-badge"> ({v.validatorData})</span>}
               </span>
-              <button
-                type="button"
-                className="ab-btn ab-btn-ghost ab-btn-sm"
-                onClick={() => workflowApi.deleteValidator(transition.id, v.id).then(invalidate)}
-              >
+              <button type="button" className="ab-btn ab-btn-ghost ab-btn-sm"
+                onClick={() => workflowApi.deleteValidator(transition.id, v.id).then(invalidate)}>
                 Remove
               </button>
             </li>
@@ -204,18 +194,13 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
           <select value={newValidator} onChange={(e) => setNewValidator(e.target.value)} className="ab-select">
             {validatorDefs.length === 0 && <option value="field_required">Field required (fallback)</option>}
             {validatorDefs.map((d) => (
-              <option key={getDefType(d)} value={getDefType(d)}>
-                {getDefName(d)}
-              </option>
+              <option key={getDefType(d)} value={getDefType(d)}>{getDefName(d)}</option>
             ))}
           </select>
           {isScriptValidator && renderScriptPicker(validatorScripts, selectedValidatorScript, setSelectedValidatorScript, 'script')}
-          <button
-            type="button"
-            className="ab-btn ab-btn-sm ab-btn-secondary"
+          <button type="button" className="ab-btn ab-btn-sm ab-btn-secondary"
             disabled={isScriptValidator && !selectedValidatorScript}
-            onClick={() => addValidator.mutate()}
-          >
+            onClick={() => addValidator.mutate()}>
             Add
           </button>
         </div>
@@ -231,11 +216,8 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
                 {p.type}
                 {p.functionData && <span className="wf-script-badge"> ({p.functionData})</span>}
               </span>
-              <button
-                type="button"
-                className="ab-btn ab-btn-ghost ab-btn-sm"
-                onClick={() => workflowApi.deletePostFunction(transition.id, p.id).then(invalidate)}
-              >
+              <button type="button" className="ab-btn ab-btn-ghost ab-btn-sm"
+                onClick={() => workflowApi.deletePostFunction(transition.id, p.id).then(invalidate)}>
                 Remove
               </button>
             </li>
@@ -252,18 +234,13 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
               </>
             )}
             {postFnDefs.map((d) => (
-              <option key={getDefType(d)} value={getDefType(d)}>
-                {getDefName(d)}
-              </option>
+              <option key={getDefType(d)} value={getDefType(d)}>{getDefName(d)}</option>
             ))}
           </select>
           {isScriptPostFn && renderScriptPicker(postFnScripts, selectedPostFnScript, setSelectedPostFnScript, 'script')}
-          <button
-            type="button"
-            className="ab-btn ab-btn-sm ab-btn-secondary"
+          <button type="button" className="ab-btn ab-btn-sm ab-btn-secondary"
             disabled={isScriptPostFn && !selectedPostFnScript}
-            onClick={() => addPostFn.mutate()}
-          >
+            onClick={() => addPostFn.mutate()}>
             Add
           </button>
         </div>
@@ -276,24 +253,15 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
           <select value={screenId} onChange={(e) => setScreenId(e.target.value)} className="ab-select">
             <option value="">No screen</option>
             {screens.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
+              <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
-          <button
-            type="button"
-            className="ab-btn ab-btn-sm ab-btn-secondary"
-            disabled={!screenId}
-            onClick={() => workflowApi.assignScreenToTransition(transition.id, screenId).then(invalidate)}
-          >
+          <button type="button" className="ab-btn ab-btn-sm ab-btn-secondary" disabled={!screenId}
+            onClick={() => workflowApi.assignScreenToTransition(transition.id, screenId).then(invalidate)}>
             Assign
           </button>
-          <button
-            type="button"
-            className="ab-btn ab-btn-sm ab-btn-ghost"
-            onClick={() => workflowApi.removeScreenFromTransition(transition.id).then(invalidate)}
-          >
+          <button type="button" className="ab-btn ab-btn-sm ab-btn-ghost"
+            onClick={() => workflowApi.removeScreenFromTransition(transition.id).then(invalidate)}>
             Remove
           </button>
         </div>
