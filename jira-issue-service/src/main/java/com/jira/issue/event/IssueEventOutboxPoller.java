@@ -104,9 +104,16 @@ public class IssueEventOutboxPoller {
         if (eventType == null) {
             return false;
         }
-        return eventType.contains("assign")
-                || eventType.contains("transition")
-                || eventType.contains("comment")
-                || eventType.contains("created");
+        String lower = eventType.toLowerCase();
+        return lower.contains("assign")
+                || lower.contains("transition")
+                || lower.contains("comment")
+                || lower.contains("created")
+                || lower.contains("updated")
+                || lower.contains("resolved")
+                || lower.contains("closed")
+                || lower.contains("reopened")
+                || lower.contains("deleted")
+                || lower.contains("moved");
     }
 }
