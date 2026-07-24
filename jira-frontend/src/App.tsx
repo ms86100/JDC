@@ -86,6 +86,16 @@ import GraphQLExplorerPage from './features/developer/pages/GraphQLExplorerPage'
 import TestScreenConfigHubPage from './features/tests/pages/TestScreenConfigHubPage';
 import PluginManagementPage from './features/tests/pages/PluginManagementPage';
 import FlakyTestDashboardPage from './features/tests/pages/FlakyTestDashboardPage';
+import VvoListPage from './features/aircraft-design/pages/VvoListPage';
+import VvoDetailPage from './features/aircraft-design/pages/VvoDetailPage';
+import HlvvoListPage from './features/aircraft-design/pages/HlvvoListPage';
+import TechEventListPage from './features/aircraft-design/pages/TechEventListPage';
+import TechEventDetailPage from './features/aircraft-design/pages/TechEventDetailPage';
+import ChangeCardPage from './features/aircraft-design/pages/ChangeCardPage';
+import BaselineManagementPage from './features/aircraft-design/pages/BaselineManagementPage';
+import VvDashboardPage from './features/aircraft-design/pages/VvDashboardPage';
+import CampaignPage from './features/aircraft-design/pages/CampaignPage';
+import MasterDataAdminPage from './features/aircraft-design/pages/MasterDataAdminPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -247,6 +257,17 @@ function App() {
                 <Route path="tests/:testId/execute" element={<TestDetailPage />} />
                 <Route path="tests/:testId" element={<TestDetailPage />} />
                 <Route path="tests/:projectId" element={<TestManagementPage />} />
+                {/* Aircraft Design System */}
+                <Route path="aircraft-design/vvos" element={<VvoListPage />} />
+                <Route path="aircraft-design/vvos/:id" element={<VvoDetailPage />} />
+                <Route path="aircraft-design/hlvvos" element={<HlvvoListPage />} />
+                <Route path="aircraft-design/tech-events" element={<TechEventListPage />} />
+                <Route path="aircraft-design/tech-events/:id" element={<TechEventDetailPage />} />
+                <Route path="aircraft-design/change-cards" element={<ChangeCardPage />} />
+                <Route path="aircraft-design/baselines" element={<BaselineManagementPage />} />
+                <Route path="aircraft-design/dashboard" element={<VvDashboardPage />} />
+                <Route path="aircraft-design/campaigns" element={<CampaignPage />} />
+                <Route path="aircraft-design/master-data" element={<MasterDataAdminPage />} />
               </Route>
               <Route
                 path="/admin/*"

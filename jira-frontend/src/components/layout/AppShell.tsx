@@ -152,20 +152,11 @@ export const AppShell: React.FC<AppShellProps> = ({ mode, children }) => {
 
   return (
     <div
-      className={isAdmin ? 'sa-shell-admin' : 'sa-shell-dc'}
-      style={{
-      display: 'flex', flexDirection: 'column', height: '100vh',
-      background: 'var(--sa-n50)', color: 'var(--sa-n900)',
-      fontFamily: 'var(--sa-font-sans)', fontSize: 'var(--sa-fs-base)',
-      lineHeight: 'var(--sa-lh-base)', overflow: 'hidden',
-    }}>
+      className={`sa-shell-root ${isAdmin ? 'sa-shell-admin' : 'sa-shell-dc'}`}
+    >
       {/* Skip link */}
       <a href="#sa-main"
-         style={{
-           position: 'absolute', left: -9999, top: 8,
-           background: 'var(--sa-brand-600)', color: 'var(--sa-n0)',
-           padding: '8px 12px', borderRadius: 'var(--sa-radius-sm)', zIndex: 9999,
-         }}
+         className="sa-skip-link"
          onFocus={(e) => (e.currentTarget.style.left = '8px')}
          onBlur={(e) => (e.currentTarget.style.left = '-9999px')}>
         Skip to main content
@@ -175,7 +166,6 @@ export const AppShell: React.FC<AppShellProps> = ({ mode, children }) => {
       <header
         role="banner"
         className={isAdmin ? 'sa-header sa-header--admin' : 'sa-header sa-header--dc'}
-        style={{ height: 48, flexShrink: 0 }}
       >
         <div className="sa-dc-header-brand">
           <Link to="/dashboard" aria-label="Systems and Avionics — Home" className="sa-dc-header-brand-link">
@@ -194,12 +184,7 @@ export const AppShell: React.FC<AppShellProps> = ({ mode, children }) => {
             }
             return (
               <Link key={i.path} to={i.path}
-                    className={`sa-dc-nav-link ${active ? 'active' : ''}`}
-                    style={{
-                      padding: '6px 12px', borderRadius: 'var(--jdc-radius, 3px)',
-                      fontSize: 'var(--sa-fs-sm)', fontWeight: 500,
-                      textDecoration: 'none',
-                    }}>
+                    className={`sa-dc-nav-link ${active ? 'active' : ''}`}>
                 {i.label}
               </Link>
             );
@@ -248,7 +233,6 @@ export const AppShell: React.FC<AppShellProps> = ({ mode, children }) => {
           <Link
             to="/dashboard"
             className="sa-dc-nav-link"
-            style={{ padding: '6px 12px', fontSize: 'var(--sa-fs-sm)', textDecoration: 'none' }}
           >
             Back to app
           </Link>
@@ -257,12 +241,7 @@ export const AppShell: React.FC<AppShellProps> = ({ mode, children }) => {
         )}
 
         <div
-          style={{
-            width: 1,
-            height: 24,
-            background: isAdmin ? 'var(--sa-n200)' : 'rgba(255,255,255,0.35)',
-            margin: '0 4px',
-          }}
+          className={`sa-header-divider ${isAdmin ? 'sa-header-divider--admin' : 'sa-header-divider--workspace'}`}
         />
 
         <button type="button" onClick={logout} className="sa-dc-user-avatar"
@@ -275,7 +254,7 @@ export const AppShell: React.FC<AppShellProps> = ({ mode, children }) => {
       {!isAdmin && <WebsudoBanner />}
 
       {/* BODY — admin row sits below header with a clear seam (no rail flush against top bar) */}
-      <div className={isAdmin ? 'sa-admin-body-row' : undefined} style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <div className={`sa-shell-body${isAdmin ? ' sa-admin-body-row' : ''}`}>
         {/* LEFT RAIL */}
         {isAdmin ? (
           <AdminNavSidebar pathname={location.pathname} />
@@ -337,12 +316,8 @@ const IconBtn: React.FC<React.PropsWithChildren<{ title: string; onClick?: () =>
   title, onClick, className, children,
 }) => (
   <button type="button" title={title} aria-label={title} onClick={onClick}
-          className={className}
-          style={{
-            width: 30, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            background: 'transparent', color: 'inherit', border: 0,
-            borderRadius: 'var(--sa-radius-sm)', cursor: 'pointer', fontSize: 14,
-          }}>{children}</button>
+          className={`sa-icon-btn${className ? ` ${className}` : ''}`}
+  >{children}</button>
 );
 
 export default AppShell;

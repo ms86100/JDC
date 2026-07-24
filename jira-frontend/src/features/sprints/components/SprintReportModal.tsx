@@ -6,6 +6,7 @@ import VelocityChart from './VelocityChart';
 import CumulativeFlowChart from '../../plans/components/sprint/CumulativeFlowChart';
 import ControlChart from '../../plans/components/sprint/ControlChart';
 import { useSprintReport, useCumulativeFlow, useControlChart, SprintReportResponse as PlanSprintReportResponse } from '../../plans/hooks/useSprint';
+import { chartColors } from '../../../utils/chartColors';
 
 interface SprintReportModalProps {
   sprintId: string;
@@ -33,9 +34,9 @@ export default function SprintReportModal({ sprintId, sprintName, boardId, onClo
   const { data: controlData } = useControlChart(boardId || '');
 
   const getProgressColor = (rate: number) => {
-    if (rate >= 80) return '#22c55e';
-    if (rate >= 50) return '#f59e0b';
-    return '#ef4444';
+    if (rate >= 80) return chartColors.success;
+    if (rate >= 50) return chartColors.warning;
+    return chartColors.danger;
   };
 
   const formatDate = (dateStr: string | undefined) => {
@@ -245,18 +246,18 @@ export default function SprintReportModal({ sprintId, sprintName, boardId, onClo
               {activeTab === 'overview' && planReport && (
                 <div style={{ marginTop: '16px' }}>
                   {planReport.puntedIssues && planReport.puntedIssues.length > 0 && (
-                    <div style={{ marginBottom: '12px', padding: '12px', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca' }}>
-                      <h4 style={{ margin: '0 0 8px', fontSize: '0.875rem', color: '#991b1b' }}>Punted Issues ({planReport.puntedIssues.length})</h4>
+                    <div style={{ marginBottom: '12px', padding: '12px', background: chartColors.dangerLight, borderRadius: '8px', border: `1px solid ${chartColors.danger}` }}>
+                      <h4 style={{ margin: '0 0 8px', fontSize: '0.875rem', color: chartColors.danger }}>Punted Issues ({planReport.puntedIssues.length})</h4>
                       {planReport.puntedIssues.slice(0, 5).map(i => (
-                        <div key={i.id} style={{ fontSize: '0.813rem', color: '#7f1d1d', padding: '2px 0' }}>{i.issueId}</div>
+                        <div key={i.id} style={{ fontSize: '0.813rem', color: chartColors.neutral900, padding: '2px 0' }}>{i.issueId}</div>
                       ))}
-                      {planReport.puntedIssues.length > 5 && <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>+{planReport.puntedIssues.length - 5} more</div>}
+                      {planReport.puntedIssues.length > 5 && <div style={{ fontSize: '0.75rem', color: chartColors.neutral400 }}>+{planReport.puntedIssues.length - 5} more</div>}
                     </div>
                   )}
                   {planReport.issueKeysAddedDuringSprint && planReport.issueKeysAddedDuringSprint.length > 0 && (
-                    <div style={{ padding: '12px', background: '#fefce8', borderRadius: '8px', border: '1px solid #fef08a' }}>
-                      <h4 style={{ margin: '0 0 8px', fontSize: '0.875rem', color: '#854d0e' }}>Scope Change: {planReport.issueKeysAddedDuringSprint.length} issues added after start</h4>
-                      <div style={{ fontSize: '0.813rem', color: '#92400e' }}>Scope change points: {planReport.scopeChangePoints}</div>
+                    <div style={{ padding: '12px', background: chartColors.neutral50, borderRadius: '8px', border: `1px solid ${chartColors.warning}` }}>
+                      <h4 style={{ margin: '0 0 8px', fontSize: '0.875rem', color: chartColors.warningDark }}>Scope Change: {planReport.issueKeysAddedDuringSprint.length} issues added after start</h4>
+                      <div style={{ fontSize: '0.813rem', color: chartColors.warningDark }}>Scope change points: {planReport.scopeChangePoints}</div>
                     </div>
                   )}
                 </div>
@@ -410,9 +411,9 @@ export default function SprintReportModal({ sprintId, sprintName, boardId, onClo
           font-weight: 500;
         }
 
-        .ab-status-active { background: #dcfce7; color: #166534; }
-        .ab-status-planning { background: #dbeafe; color: #1e40af; }
-        .ab-status-completed { background: #f3f4f6; color: #374151; }
+        .ab-status-active { background: ${chartColors.successLight}; color: ${chartColors.success}; }
+        .ab-status-planning { background: ${chartColors.primaryBg}; color: ${chartColors.primary}; }
+        .ab-status-completed { background: ${chartColors.neutral100}; color: ${chartColors.neutral700}; }
 
         .ab-close-btn {
           background: none;

@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { SprintVelocity } from '../../../api/sprintApi';
+import { chartColors } from '../../../utils/chartColors';
 
 interface VelocityChartProps {
   data: SprintVelocity[];
@@ -31,9 +32,9 @@ export default function VelocityChart({ data, averageVelocity }: VelocityChartPr
     );
 
     // Draw grid and Y axis
-    ctx.strokeStyle = '#e5e7eb';
+    ctx.strokeStyle = chartColors.neutral200;
     ctx.lineWidth = 1;
-    ctx.fillStyle = '#6b7280';
+    ctx.fillStyle = chartColors.neutral600;
     ctx.font = '11px system-ui';
 
     const ySteps = 5;
@@ -50,7 +51,7 @@ export default function VelocityChart({ data, averageVelocity }: VelocityChartPr
     // Average line
     if (averageVelocity > 0) {
       const avgY = padding.top + (chartHeight / maxY) * (maxY - averageVelocity);
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = chartColors.warning;
       ctx.lineWidth = 2;
       ctx.setLineDash([8, 4]);
       ctx.beginPath();
@@ -59,7 +60,7 @@ export default function VelocityChart({ data, averageVelocity }: VelocityChartPr
       ctx.stroke();
       ctx.setLineDash([]);
 
-      ctx.fillStyle = '#f59e0b';
+      ctx.fillStyle = chartColors.warning;
       ctx.fillText(`Avg: ${averageVelocity}`, width - 60, avgY - 5);
     }
 
@@ -72,34 +73,34 @@ export default function VelocityChart({ data, averageVelocity }: VelocityChartPr
 
       // Committed bar
       const committedHeight = (sprint.committedPoints / maxY) * chartHeight;
-      ctx.fillStyle = '#93c5fd';
+      ctx.fillStyle = chartColors.primaryLight;
       ctx.fillRect(x, height - padding.bottom - committedHeight, barWidth / 2 - 2, committedHeight);
 
       // Completed bar
       const completedHeight = (sprint.completedPoints / maxY) * chartHeight;
-      ctx.fillStyle = '#3b82f6';
+      ctx.fillStyle = chartColors.primary;
       ctx.fillRect(x + barWidth / 2 + 2, height - padding.bottom - completedHeight, barWidth / 2 - 2, completedHeight);
 
       // X-axis label
       const label = sprint.sprintName.length > 8
         ? sprint.sprintName.substring(0, 8) + '...'
         : sprint.sprintName;
-      ctx.fillStyle = '#6b7280';
+      ctx.fillStyle = chartColors.neutral600;
       ctx.fillText(label, x + barWidth / 2 - 15, height - padding.bottom + 20);
     });
 
     // Legend
-    ctx.fillStyle = '#6b7280';
+    ctx.fillStyle = chartColors.neutral600;
     ctx.font = '11px system-ui';
 
-    ctx.fillStyle = '#93c5fd';
+    ctx.fillStyle = chartColors.primaryLight;
     ctx.fillRect(width - 150, padding.top - 10, 12, 12);
-    ctx.fillStyle = '#374151';
+    ctx.fillStyle = chartColors.neutral700;
     ctx.fillText('Committed', width - 135, padding.top);
 
-    ctx.fillStyle = '#3b82f6';
+    ctx.fillStyle = chartColors.primary;
     ctx.fillRect(width - 80, padding.top - 10, 12, 12);
-    ctx.fillStyle = '#374151';
+    ctx.fillStyle = chartColors.neutral700;
     ctx.fillText('Completed', width - 65, padding.top);
 
   }, [data, averageVelocity]);

@@ -38,10 +38,10 @@ export default function JiraUserBrowser() {
   return (
       <div className="user-browser">
         <div className="user-browser-header">
-          <h1 className="user-browser-title">Users</h1>
+          <h1 className="user-browser-title ab-page-title">Users</h1>
           <div className="user-browser-actions">
-            <button className="btn-secondary" onClick={() => appNotify.info('Invite users feature coming soon')}>Invite users</button>
-            <Link to="/admin/users/create" className="btn-primary">Create user</Link>
+            <button className="ab-btn ab-btn-secondary" onClick={() => appNotify.info('Invite users feature coming soon')}>Invite users</button>
+            <Link to="/admin/users/create" className="ab-btn ab-btn-primary">Create user</Link>
           </div>
         </div>
 
@@ -109,8 +109,8 @@ export default function JiraUserBrowser() {
             </div>
           </div>
           <div className="filter-actions">
-            <button className="btn-primary" onClick={handleFilter}>Filter</button>
-            <button className="btn-link" onClick={handleReset}>Reset filter</button>
+            <button className="ab-btn ab-btn-primary" onClick={handleFilter}>Filter</button>
+            <button className="ab-btn ab-btn-secondary" onClick={handleReset}>Reset filter</button>
           </div>
         </div>
 
@@ -119,7 +119,7 @@ export default function JiraUserBrowser() {
           {Math.min((page + 1) * pageSize, data?.totalElements || 0)} of {data?.totalElements || 0}
         </div>
 
-        <table className="user-table">
+        <table className="user-table ab-table">
           <thead>
             <tr>
               <th>Full name</th>

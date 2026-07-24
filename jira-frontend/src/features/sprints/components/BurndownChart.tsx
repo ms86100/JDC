@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { BurndownDataPoint } from '../../../api/sprintApi';
+import { chartColors } from '../../../utils/chartColors';
 
 interface BurndownChartProps {
   data: BurndownDataPoint[];
@@ -26,7 +27,7 @@ export default function BurndownChart({ data, totalPoints }: BurndownChartProps)
     ctx.clearRect(0, 0, width, height);
 
     // Draw grid lines
-    ctx.strokeStyle = '#e5e7eb';
+    ctx.strokeStyle = chartColors.neutral200;
     ctx.lineWidth = 1;
 
     // Y-axis labels and grid
@@ -36,7 +37,7 @@ export default function BurndownChart({ data, totalPoints }: BurndownChartProps)
       const y = padding.top + (chartHeight / ySteps) * i;
       const value = Math.round(maxY - (maxY / ySteps) * i);
 
-      ctx.fillStyle = '#6b7280';
+      ctx.fillStyle = chartColors.neutral600;
       ctx.font = '11px system-ui';
       ctx.fillText(String(value), padding.left - 8, y + 4);
 
@@ -53,13 +54,13 @@ export default function BurndownChart({ data, totalPoints }: BurndownChartProps)
         const x = padding.left + (chartWidth / (data.length - 1 || 1)) * index;
         const date = new Date(point.date);
         const label = `${date.getMonth() + 1}/${date.getDate()}`;
-        ctx.fillStyle = '#6b7280';
+        ctx.fillStyle = chartColors.neutral600;
         ctx.fillText(label, x - 15, height - padding.bottom + 20);
       }
     });
 
     // Draw ideal line (diagonal from total to 0)
-    ctx.strokeStyle = '#9ca3af';
+    ctx.strokeStyle = chartColors.neutral400;
     ctx.setLineDash([5, 5]);
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -70,7 +71,7 @@ export default function BurndownChart({ data, totalPoints }: BurndownChartProps)
 
     // Draw actual line
     if (data.length > 0) {
-      ctx.strokeStyle = '#3b82f6';
+      ctx.strokeStyle = chartColors.primary;
       ctx.lineWidth = 3;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
@@ -90,7 +91,7 @@ export default function BurndownChart({ data, totalPoints }: BurndownChartProps)
       ctx.stroke();
 
       // Draw points
-      ctx.fillStyle = '#3b82f6';
+      ctx.fillStyle = chartColors.primary;
       data.forEach((point, index) => {
         const x = padding.left + (chartWidth / (data.length - 1 || 1)) * index;
         const yValue = point.remainingPoints || 0;
@@ -103,19 +104,19 @@ export default function BurndownChart({ data, totalPoints }: BurndownChartProps)
     }
 
     // Legend
-    ctx.fillStyle = '#6b7280';
+    ctx.fillStyle = chartColors.neutral600;
     ctx.font = '11px system-ui';
 
-    ctx.strokeStyle = '#3b82f6';
+    ctx.strokeStyle = chartColors.primary;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(width - 140, padding.top - 5);
     ctx.lineTo(width - 115, padding.top - 5);
     ctx.stroke();
-    ctx.fillStyle = '#374151';
+    ctx.fillStyle = chartColors.neutral700;
     ctx.fillText('Actual', width - 110, padding.top);
 
-    ctx.strokeStyle = '#9ca3af';
+    ctx.strokeStyle = chartColors.neutral400;
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
@@ -123,7 +124,7 @@ export default function BurndownChart({ data, totalPoints }: BurndownChartProps)
     ctx.lineTo(width - 45, padding.top - 5);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = '#374151';
+    ctx.fillStyle = chartColors.neutral700;
     ctx.fillText('Ideal', width - 40, padding.top);
 
   }, [data, totalPoints]);

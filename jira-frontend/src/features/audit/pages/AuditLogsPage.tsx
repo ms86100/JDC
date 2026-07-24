@@ -41,27 +41,27 @@ const AuditLogsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="ab-page">
+      <div className="ab-page-header">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-          <p className="text-gray-500 mt-1">Track all system activities and changes</p>
+          <h1 className="ab-page-title">Audit Logs</h1>
+          <p className="ab-text-muted">Track all system activities and changes</p>
         </div>
         <button
           onClick={() => refetch()}
-          className="px-4 py-2 bg-jira-blue text-white rounded hover:bg-blue-600"
+          className="ab-btn ab-btn-primary"
         >
           Refresh
         </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Entity Type</label>
+      <div className="ab-card" style={{ marginBottom: 'var(--ab-spacing-lg, 24px)' }}>
+        <div className="ab-card-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--ab-spacing-md, 16px)' }}>
+          <div className="ab-form-group">
+            <label className="ab-label">Entity Type</label>
             <select
-              className="w-full border rounded px-3 py-2"
+              className="ab-input"
               value={filters.entityType || ''}
               onChange={(e) => setFilters({ ...filters, entityType: e.target.value || undefined })}
             >
@@ -74,10 +74,10 @@ const AuditLogsPage: React.FC = () => {
               <option value="ATTACHMENT">Attachment</option>
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Action</label>
+          <div className="ab-form-group">
+            <label className="ab-label">Action</label>
             <select
-              className="w-full border rounded px-3 py-2"
+              className="ab-input"
               value={filters.action || ''}
               onChange={(e) => setFilters({ ...filters, action: e.target.value || undefined })}
             >
@@ -89,20 +89,20 @@ const AuditLogsPage: React.FC = () => {
               <option value="EXPORT">Export</option>
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+          <div className="ab-form-group">
+            <label className="ab-label">From Date</label>
             <input
               type="date"
-              className="w-full border rounded px-3 py-2"
+              className="ab-input"
               value={filters.startDate || ''}
               onChange={(e) => setFilters({ ...filters, startDate: e.target.value || undefined })}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+          <div className="ab-form-group">
+            <label className="ab-label">To Date</label>
             <input
               type="date"
-              className="w-full border rounded px-3 py-2"
+              className="ab-input"
               value={filters.endDate || ''}
               onChange={(e) => setFilters({ ...filters, endDate: e.target.value || undefined })}
             />
@@ -111,21 +111,21 @@ const AuditLogsPage: React.FC = () => {
       </div>
 
       {/* Logs Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+      <div className="ab-card" style={{ overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="ab-table" style={{ minWidth: '100%' }}>
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entity Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entity</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
+                <th>Timestamp</th>
+                <th>User</th>
+                <th>Action</th>
+                <th>Entity Type</th>
+                <th>Entity</th>
+                <th>Service</th>
+                <th>Details</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {isLoading ? (
                 <>
                   {[...Array(8)].map((_, i) => (
@@ -150,7 +150,8 @@ const AuditLogsPage: React.FC = () => {
                 data?.content?.map((log) => (
                   <tr
                     key={log.id}
-                    className="hover:bg-gray-50 cursor-pointer"
+                    className="ab-table-row-hover"
+                    style={{ cursor: 'pointer' }}
                     onClick={() => setSelectedLog(log)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -188,21 +189,21 @@ const AuditLogsPage: React.FC = () => {
         </div>
 
         {/* Pagination */}
-        <div className="px-6 py-4 flex items-center justify-between border-t">
-          <div className="text-sm text-gray-500">
+        <div className="ab-card-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderTop: '1px solid var(--ab-gray-200, #e5e7eb)' }}>
+          <div className="ab-text-muted" style={{ fontSize: '0.85rem' }}>
             Showing {data?.content?.length || 0} of {data?.totalElements || 0} logs
           </div>
-          <div className="flex gap-2">
+          <div style={{ display: 'flex', gap: 'var(--ab-spacing-sm, 8px)' }}>
             <button
               onClick={() => setFilters(f => ({ ...f, page: f.page ? f.page - 1 : 0 }))}
               disabled={!filters.page || filters.page === 0}
-              className="px-4 py-2 bg-jira-blue text-white rounded disabled:opacity-50"
+              className="ab-btn ab-btn-secondary ab-btn-sm"
             >
               Previous
             </button>
             <button
               onClick={() => setFilters(f => ({ ...f, page: f.page + 1 }))}
-              className="px-4 py-2 bg-jira-blue text-white rounded"
+              className="ab-btn ab-btn-secondary ab-btn-sm"
             >
               Next
             </button>
@@ -212,56 +213,54 @@ const AuditLogsPage: React.FC = () => {
 
       {/* Detail Modal */}
       {selectedLog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Audit Log Details</h3>
+        <div className="ab-modal-overlay">
+          <div className="ab-modal ab-card" style={{ maxWidth: 640, width: '100%', margin: '0 16px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="ab-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3>Audit Log Details</h3>
               <button
                 onClick={() => setSelectedLog(null)}
-                className="text-gray-400 hover:text-gray-600"
+                className="ab-btn ab-btn-secondary ab-btn-sm"
               >
                 ✕
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="ab-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ab-spacing-md, 16px)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--ab-spacing-md, 16px)' }}>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Timestamp</label>
-                  <p className="text-gray-900">
-                    {format(new Date(selectedLog.createdAt), 'PPpp')}
-                  </p>
+                  <label className="ab-label">Timestamp</label>
+                  <p>{format(new Date(selectedLog.createdAt), 'PPpp')}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">User</label>
-                  <p className="text-gray-900">{selectedLog.username || selectedLog.userId}</p>
+                  <label className="ab-label">User</label>
+                  <p>{selectedLog.username || selectedLog.userId}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Action</label>
-                  <p className="text-gray-900">{selectedLog.action}</p>
+                  <label className="ab-label">Action</label>
+                  <p>{selectedLog.action}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Service</label>
-                  <p className="text-gray-900">{selectedLog.serviceName}</p>
+                  <label className="ab-label">Service</label>
+                  <p>{selectedLog.serviceName}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Entity Type</label>
-                  <p className="text-gray-900">{selectedLog.entityType}</p>
+                  <label className="ab-label">Entity Type</label>
+                  <p>{selectedLog.entityType}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Entity ID</label>
-                  <p className="text-gray-900 font-mono text-sm">{selectedLog.entityId}</p>
+                  <label className="ab-label">Entity ID</label>
+                  <p style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{selectedLog.entityId}</p>
                 </div>
               </div>
               {selectedLog.ipAddress && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500">IP Address</label>
-                  <p className="text-gray-900 font-mono">{selectedLog.ipAddress}</p>
+                  <label className="ab-label">IP Address</label>
+                  <p style={{ fontFamily: 'monospace' }}>{selectedLog.ipAddress}</p>
                 </div>
               )}
               {selectedLog.changes && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Changes</label>
-                  <div className="bg-gray-50 rounded p-3 mt-1">
+                  <label className="ab-label">Changes</label>
+                  <div className="ab-code-block" style={{ marginTop: 4, padding: 12, borderRadius: 'var(--ab-radius-md, 6px)' }}>
                     {formatChanges(selectedLog.changes)}
                   </div>
                 </div>

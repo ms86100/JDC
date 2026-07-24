@@ -2,6 +2,95 @@
  * Workspace navigation — Airbus / Jira DC flyout (mirrors admin-shell.css).
  */
 
+/* ============================================================
+   SHELL ROOT & SHARED LAYOUT CLASSES
+   (classes referenced by AppShell.tsx — moved from inline styles)
+   ============================================================ */
+
+/* Root shell container */
+.sa-shell-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--sa-n50);
+  color: var(--sa-n900);
+  font-family: var(--sa-font-sans);
+  font-size: var(--sa-fs-base);
+  line-height: var(--sa-lh-base);
+  overflow: hidden;
+}
+
+/* Accessible skip-to-main link */
+.sa-skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  background: var(--sa-brand-600);
+  color: var(--sa-n0);
+  padding: 8px 12px;
+  border-radius: var(--sa-radius-sm);
+  z-index: 9999;
+  text-decoration: none;
+}
+
+/* Header height (supplements header.sa-header in jira-dc-ui.css) */
+header.sa-header {
+  height: 48px;
+  flex-shrink: 0;
+}
+
+/* Nav link spacing & typography (supplements .sa-dc-nav-link in jira-dc-ui.css) */
+.sa-dc-nav-link {
+  padding: 6px 12px;
+  font-size: var(--sa-fs-sm);
+  text-decoration: none;
+}
+
+/* Header vertical divider (between icon-btns and avatar) */
+.sa-header-divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+}
+
+.sa-header-divider--workspace {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.sa-header-divider--admin {
+  background: var(--sa-n200);
+}
+
+/* Shell body (flex row below header) */
+.sa-shell-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Icon button — shared base for header icon buttons */
+.sa-icon-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  border-radius: var(--sa-radius-sm);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background var(--sa-motion-fast), color var(--sa-motion-fast);
+}
+
+.sa-icon-btn:hover {
+  background: var(--sa-brand-700);
+  color: var(--sa-n0);
+}
+
+/* ============================================================ */
+
 .sa-workspace-nav {
   --sa-ws-rail-width: 220px;
   --sa-ws-flyout-width: 280px;
