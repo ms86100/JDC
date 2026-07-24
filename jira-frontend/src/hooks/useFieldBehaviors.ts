@@ -8,6 +8,9 @@ export interface FieldDirective {
   readOnly?: boolean;
   defaultValue?: unknown;
   options?: Array<{ value: string; label: string }>;
+  warning?: string;
+  label?: string;
+  helpText?: string;
 }
 
 interface UseFieldBehaviorsProps {
@@ -82,6 +85,21 @@ export function useFieldBehaviors({
     return d?.options;
   };
 
+  const getFieldWarning = (fieldName: string): string | undefined => {
+    const d = directives.find((f) => f.fieldName === fieldName);
+    return d?.warning;
+  };
+
+  const getFieldLabel = (fieldName: string): string | undefined => {
+    const d = directives.find((f) => f.fieldName === fieldName);
+    return d?.label;
+  };
+
+  const getFieldHelpText = (fieldName: string): string | undefined => {
+    const d = directives.find((f) => f.fieldName === fieldName);
+    return d?.helpText;
+  };
+
   return {
     directives,
     loading,
@@ -90,5 +108,8 @@ export function useFieldBehaviors({
     isFieldReadOnly,
     getFieldDefault,
     getFieldOptions,
+    getFieldWarning,
+    getFieldLabel,
+    getFieldHelpText,
   };
 }

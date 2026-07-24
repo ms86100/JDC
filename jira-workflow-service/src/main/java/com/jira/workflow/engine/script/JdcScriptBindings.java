@@ -2,8 +2,11 @@ package com.jira.workflow.engine.script;
 
 import com.jira.workflow.config.ScriptEngineProperties;
 import com.jira.workflow.engine.WorkflowIntegrationClient;
+import com.jira.workflow.repository.ScriptDefinitionRepository;
+import com.jira.workflow.repository.ScriptPersistentVarRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
@@ -18,6 +21,15 @@ public class JdcScriptBindings {
     private final WorkflowIntegrationClient integrationClient;
     private final ScriptEngineProperties properties;
     private final Map<String, DataSource> scriptDataSources;
+    private final ScriptPersistentVarRepository persistentVarRepository;
+    private final ScriptDefinitionRepository scriptDefinitionRepository;
+    private final GraalScriptEngine graalScriptEngine;
+
+    @Value("${jira.services.notification-url:http://jira-notification-service:8087}")
+    private String notificationServiceUrl;
+
+    @Value("${jira.services.user-url:http://jira-user-service:8082}")
+    private String userServiceUrl;
 
     public Map<String, Object> buildBindings(Map<String, Object> workflowContext) {
         Map<String, Object> bindings = new HashMap<>();
@@ -31,6 +43,13 @@ public class JdcScriptBindings {
         bindings.put("http", new JdcHttpApi(properties));
         bindings.put("env", new JdcEnvApi(properties));
         bindings.put("sql", new JdcSqlApi(scriptDataSources, true));
+        bindings.put("xml", new JdcXmlApi());
+        bindings.put("vars", new JdcPersistentVarApi(persistentVarRepository, workflowContext));
+        bindings.put("email", new JdcEmailApi(integrationClient.restTemplate(), notificationServiceUrl));
+        bindings.put("ldap", new JdcLdapApi(integrationClient.restTemplate(), userServiceUrl));
+
+        JdcIncludeApi includeApi = new JdcIncludeApi(scriptDefinitionRepository, graalScriptEngine);
+        bindings.put("include", includeApi);
 
         bindings.put("issueId", workflowContext.get("issueId"));
         bindings.put("projectId", workflowContext.get("projectId"));

@@ -37,6 +37,7 @@ public class ScriptController {
     private final GraalScriptEngine graalScriptEngine;
     private final com.jira.workflow.service.ScriptListenerService scriptListenerService;
     private final com.jira.workflow.service.ScriptFieldBehaviorService scriptFieldBehaviorService;
+    private final com.jira.workflow.service.ScriptCalculatedFieldService scriptCalculatedFieldService;
 
     @GetMapping
     @Operation(summary = "List scripts", description = "List all scripts, optionally filtered by type")
@@ -339,6 +340,43 @@ public class ScriptController {
     @Operation(summary = "Delete a field behavior")
     public ResponseEntity<Void> deleteFieldBehavior(@PathVariable UUID behaviorId) {
         scriptFieldBehaviorService.deleteBehavior(behaviorId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // === Calculated Fields ===
+
+    @GetMapping("/calculated-fields/evaluate")
+    @Operation(summary = "Evaluate a calculated field script for an issue")
+    public ResponseEntity<Map<String, Object>> evaluateCalculatedField(
+            @RequestParam UUID issueId,
+            @RequestParam UUID fieldId) {
+        return ResponseEntity.ok(scriptCalculatedFieldService.evaluateField(issueId, fieldId));
+    }
+
+    @PostMapping("/{scriptId}/calculated-fields")
+    @Operation(summary = "Bind a script to a custom field as a calculated field")
+    public ResponseEntity<com.jira.workflow.entity.ScriptCalculatedField> createCalculatedField(
+            @PathVariable UUID scriptId,
+            @RequestBody Map<String, String> body,
+            @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        scriptDefinitionService.getScript(scriptId);
+        Long ttl = body.get("cacheTtlMs") != null ? Long.parseLong(body.get("cacheTtlMs")) : 0L;
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                scriptCalculatedFieldService.createBinding(scriptId,
+                        UUID.fromString(body.get("customFieldId")), ttl,
+                        userId != null ? UUID.fromString(userId) : null));
+    }
+
+    @GetMapping("/{scriptId}/calculated-fields")
+    @Operation(summary = "Get calculated field bindings for a script")
+    public ResponseEntity<List<com.jira.workflow.entity.ScriptCalculatedField>> getCalculatedFields(@PathVariable UUID scriptId) {
+        return ResponseEntity.ok(scriptCalculatedFieldService.getBindingsForScript(scriptId));
+    }
+
+    @DeleteMapping("/calculated-fields/{bindingId}")
+    @Operation(summary = "Remove a calculated field binding")
+    public ResponseEntity<Void> deleteCalculatedField(@PathVariable UUID bindingId) {
+        scriptCalculatedFieldService.deleteBinding(bindingId);
         return ResponseEntity.noContent().build();
     }
 
