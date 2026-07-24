@@ -600,6 +600,249 @@ public class WorkflowIntegrationClient {
         }
     }
 
+    // === Issue Mutation Methods ===
+
+    public Map<String, Object> createIssue(Map<String, Object> issueData, UUID userId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            if (userId != null) headers.set("X-User-Id", userId.toString());
+            Map<?, ?> response = restTemplate().postForObject(
+                    issueServiceUrl + "/api/issues",
+                    new HttpEntity<>(issueData, headers), Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to create issue: {}", e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    public Map<String, Object> cloneIssue(UUID issueId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<?, ?> response = restTemplate().postForObject(
+                    issueServiceUrl + "/api/issues/" + issueId + "/clone",
+                    new HttpEntity<>(Map.of(), headers), Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to clone issue {}: {}", issueId, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    public Map<String, Object> moveIssue(UUID issueId, UUID targetProjectId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<?, ?> response = restTemplate().postForObject(
+                    issueServiceUrl + "/api/issues/" + issueId + "/move",
+                    new HttpEntity<>(Map.of("targetProjectId", targetProjectId.toString()), headers), Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to move issue {}: {}", issueId, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    public void deleteIssue(UUID issueId) {
+        try {
+            restTemplate().delete(issueServiceUrl + "/api/issues/" + issueId);
+        } catch (Exception e) {
+            log.warn("Failed to delete issue {}: {}", issueId, e.getMessage());
+        }
+    }
+
+    public void transitionIssue(UUID issueId, UUID projectId, String transitionId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("X-Workflow-Internal", "true");
+            Map<String, Object> body = new HashMap<>();
+            body.put("transitionId", transitionId);
+            restTemplate().exchange(
+                    issueServiceUrl + "/api/issues/" + issueId + "/status?projectId=" + projectId,
+                    HttpMethod.PATCH, new HttpEntity<>(body, headers), Map.class);
+        } catch (Exception e) {
+            log.warn("Failed to transition issue {}: {}", issueId, e.getMessage());
+        }
+    }
+
+    // === Label Methods ===
+
+    public void addLabel(UUID issueId, String label) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            restTemplate().postForObject(
+                    issueServiceUrl + "/api/issues/" + issueId + "/labels",
+                    new HttpEntity<>(Map.of("name", label), headers), Map.class);
+        } catch (Exception e) {
+            log.warn("Failed to add label to issue {}: {}", issueId, e.getMessage());
+        }
+    }
+
+    public void removeLabel(UUID issueId, String label) {
+        try {
+            restTemplate().delete(issueServiceUrl + "/api/issues/" + issueId + "/labels/" + label);
+        } catch (Exception e) {
+            log.warn("Failed to remove label from issue {}: {}", issueId, e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchLabels(UUID issueId) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    issueServiceUrl + "/api/issues/" + issueId + "/labels", List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+                else result.add(Map.of("name", String.valueOf(item)));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch labels for issue {}: {}", issueId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    // === Worklog Methods ===
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchWorklogs(UUID issueId) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    issueServiceUrl + "/api/issues/" + issueId + "/worklogs", List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch worklogs for issue {}: {}", issueId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    public Map<String, Object> addWorklog(UUID issueId, String timeSpent, String comment, UUID userId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            if (userId != null) headers.set("X-User-Id", userId.toString());
+            Map<String, Object> body = new HashMap<>();
+            body.put("timeSpent", timeSpent);
+            if (comment != null) body.put("comment", comment);
+            Map<?, ?> response = restTemplate().postForObject(
+                    issueServiceUrl + "/api/issues/" + issueId + "/worklogs",
+                    new HttpEntity<>(body, headers), Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to add worklog to issue {}: {}", issueId, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    // === Subtask Methods ===
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchSubtasks(UUID issueId) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    issueServiceUrl + "/api/issues/hierarchy/" + issueId + "/subtasks", List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch subtasks for issue {}: {}", issueId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    // === Vote Methods ===
+
+    public void addVote(UUID issueId, UUID userId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            if (userId != null) headers.set("X-User-Id", userId.toString());
+            restTemplate().postForObject(
+                    issueServiceUrl + "/api/issues/" + issueId + "/votes",
+                    new HttpEntity<>(Map.of(), headers), Map.class);
+        } catch (Exception e) {
+            log.warn("Failed to add vote to issue {}: {}", issueId, e.getMessage());
+        }
+    }
+
+    public void removeVote(UUID issueId, UUID userId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            if (userId != null) headers.set("X-User-Id", userId.toString());
+            restTemplate().exchange(
+                    issueServiceUrl + "/api/issues/" + issueId + "/votes",
+                    HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
+        } catch (Exception e) {
+            log.warn("Failed to remove vote from issue {}: {}", issueId, e.getMessage());
+        }
+    }
+
+    public void removeWatcher(UUID issueId, UUID userId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            if (userId != null) headers.set("X-User-Id", userId.toString());
+            restTemplate().exchange(
+                    issueServiceUrl + "/api/issues/" + issueId + "/watchers",
+                    HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
+        } catch (Exception e) {
+            log.warn("Failed to remove watcher from issue {}: {}", issueId, e.getMessage());
+        }
+    }
+
+    // === Version/Component Write Methods ===
+
+    public Map<String, Object> createVersion(Map<String, Object> versionData) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<?, ?> response = restTemplate().postForObject(
+                    versionServiceUrl + "/api/versions",
+                    new HttpEntity<>(versionData, headers), Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to create version: {}", e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    public void releaseVersion(UUID versionId) {
+        try {
+            restTemplate().postForObject(
+                    versionServiceUrl + "/api/versions/" + versionId + "/release",
+                    new HttpEntity<>(Map.of()), Map.class);
+        } catch (Exception e) {
+            log.warn("Failed to release version {}: {}", versionId, e.getMessage());
+        }
+    }
+
+    public Map<String, Object> createComponent(Map<String, Object> componentData) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<?, ?> response = restTemplate().postForObject(
+                    componentServiceUrl + "/api/components",
+                    new HttpEntity<>(componentData, headers), Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to create component: {}", e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, Object> castMap(Map<?, ?> raw) {
         Map<String, Object> result = new HashMap<>();

@@ -35,6 +35,8 @@ public class ScriptController {
     private final ScriptExecutionService scriptExecutionService;
     private final ScriptScheduleRepository scriptScheduleRepository;
     private final GraalScriptEngine graalScriptEngine;
+    private final com.jira.workflow.service.ScriptListenerService scriptListenerService;
+    private final com.jira.workflow.service.ScriptFieldBehaviorService scriptFieldBehaviorService;
 
     @GetMapping
     @Operation(summary = "List scripts", description = "List all scripts, optionally filtered by type")
@@ -263,5 +265,98 @@ public class ScriptController {
                     return ResponseEntity.ok(scriptScheduleRepository.save(schedule));
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    // === Event Listeners ===
+
+    @PostMapping("/{scriptId}/listeners")
+    @Operation(summary = "Add event listener for a script")
+    public ResponseEntity<com.jira.workflow.entity.ScriptListener> createListener(
+            @PathVariable UUID scriptId,
+            @RequestBody Map<String, String> body,
+            @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        scriptDefinitionService.getScript(scriptId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                scriptListenerService.createListener(scriptId,
+                        body.get("eventType"),
+                        body.get("projectFilter") != null ? UUID.fromString(body.get("projectFilter")) : null,
+                        body.get("issueTypeFilter") != null ? UUID.fromString(body.get("issueTypeFilter")) : null,
+                        userId != null ? UUID.fromString(userId) : null));
+    }
+
+    @GetMapping("/{scriptId}/listeners")
+    @Operation(summary = "Get listeners for a script")
+    public ResponseEntity<List<com.jira.workflow.entity.ScriptListener>> getListeners(@PathVariable UUID scriptId) {
+        return ResponseEntity.ok(scriptListenerService.getListenersForScript(scriptId));
+    }
+
+    @DeleteMapping("/listeners/{listenerId}")
+    @Operation(summary = "Delete a listener")
+    public ResponseEntity<Void> deleteListener(@PathVariable UUID listenerId) {
+        scriptListenerService.deleteListener(listenerId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // === Field Behaviors ===
+
+    @PostMapping("/field-behaviors/evaluate")
+    @Operation(summary = "Evaluate field behavior scripts for a screen context")
+    public ResponseEntity<Map<String, Object>> evaluateFieldBehaviors(@RequestBody Map<String, Object> body) {
+        String screenContext = (String) body.getOrDefault("screenContext", "EDIT");
+        UUID projectId = body.get("projectId") != null ? UUID.fromString(body.get("projectId").toString()) : null;
+        UUID issueTypeId = body.get("issueTypeId") != null ? UUID.fromString(body.get("issueTypeId").toString()) : null;
+        UUID userId = body.get("userId") != null ? UUID.fromString(body.get("userId").toString()) : null;
+        @SuppressWarnings("unchecked")
+        Map<String, Object> issueData = (Map<String, Object>) body.getOrDefault("issueData", Map.of());
+
+        List<Map<String, Object>> fields = scriptFieldBehaviorService.evaluateFieldBehaviors(
+                screenContext, projectId, issueTypeId, issueData, userId);
+        return ResponseEntity.ok(Map.of("fields", fields));
+    }
+
+    @PostMapping("/{scriptId}/field-behaviors")
+    @Operation(summary = "Create a field behavior for a script")
+    public ResponseEntity<com.jira.workflow.entity.ScriptFieldBehavior> createFieldBehavior(
+            @PathVariable UUID scriptId,
+            @RequestBody Map<String, String> body,
+            @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        scriptDefinitionService.getScript(scriptId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                scriptFieldBehaviorService.createBehavior(scriptId,
+                        body.getOrDefault("screenContext", "EDIT"),
+                        body.get("projectId") != null ? UUID.fromString(body.get("projectId")) : null,
+                        body.get("issueTypeId") != null ? UUID.fromString(body.get("issueTypeId")) : null,
+                        userId != null ? UUID.fromString(userId) : null));
+    }
+
+    @GetMapping("/{scriptId}/field-behaviors")
+    @Operation(summary = "Get field behaviors for a script")
+    public ResponseEntity<List<com.jira.workflow.entity.ScriptFieldBehavior>> getFieldBehaviors(@PathVariable UUID scriptId) {
+        return ResponseEntity.ok(scriptFieldBehaviorService.getBehaviorsForScript(scriptId));
+    }
+
+    @DeleteMapping("/field-behaviors/{behaviorId}")
+    @Operation(summary = "Delete a field behavior")
+    public ResponseEntity<Void> deleteFieldBehavior(@PathVariable UUID behaviorId) {
+        scriptFieldBehaviorService.deleteBehavior(behaviorId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // === Execute by Key (for automation integration) ===
+
+    @PostMapping("/execute-by-key/{scriptKey}")
+    @Operation(summary = "Execute a script by key with provided context (for automation/external integration)")
+    public ResponseEntity<ScriptConsoleResponse> executeByKey(
+            @PathVariable String scriptKey,
+            @RequestBody(required = false) Map<String, Object> context) {
+        Map<String, Object> ctx = context != null ? context : Map.of();
+        ScriptResult result = scriptExecutionService.executeByKey(scriptKey, ctx, "API");
+        return ResponseEntity.ok(ScriptConsoleResponse.builder()
+                .success(result.success())
+                .result(result.value())
+                .errorMessage(result.errorMessage())
+                .executionMs(result.executionMs())
+                .consoleOutput(result.consoleOutput())
+                .build());
     }
 }

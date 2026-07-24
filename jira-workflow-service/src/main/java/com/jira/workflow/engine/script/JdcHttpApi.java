@@ -74,6 +74,37 @@ public class JdcHttpApi {
         }
     }
 
+    @HostAccess.Export
+    public Map<String, Object> delete(String url, Map<String, String> headers) {
+        try {
+            validateUrl(url);
+            HttpHeaders httpHeaders = buildHeaders(headers);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.DELETE, new HttpEntity<>(httpHeaders), String.class);
+            return buildResponse(response);
+        } catch (SecurityException e) {
+            return Map.of("error", e.getMessage(), "status", 403);
+        } catch (Exception e) {
+            return Map.of("error", e.getMessage(), "status", 0);
+        }
+    }
+
+    @HostAccess.Export
+    public Map<String, Object> patch(String url, Object body, Map<String, String> headers) {
+        try {
+            validateUrl(url);
+            HttpHeaders httpHeaders = buildHeaders(headers);
+            httpHeaders.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.PATCH, new HttpEntity<>(body, httpHeaders), String.class);
+            return buildResponse(response);
+        } catch (SecurityException e) {
+            return Map.of("error", e.getMessage(), "status", 403);
+        } catch (Exception e) {
+            return Map.of("error", e.getMessage(), "status", 0);
+        }
+    }
+
     private void validateUrl(String url) {
         if (url == null || url.isBlank()) {
             throw new SecurityException("URL is required");

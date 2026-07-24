@@ -236,6 +236,156 @@ public class JdcApi {
                 return client.countAttachments(UUID.fromString(id.toString()));
             } catch (Exception e) { return 0; }
         }
+
+        @HostAccess.Export
+        public Map<String, Object> createIssue(String projectId, String issueTypeId, String summary, Map<String, Object> fields) {
+            try {
+                Map<String, Object> data = new java.util.HashMap<>(fields != null ? fields : Map.of());
+                data.put("projectId", projectId);
+                data.put("issueTypeId", issueTypeId);
+                data.put("summary", summary);
+                Object userId = context.get("userId");
+                return client.createIssue(data, userId != null ? UUID.fromString(userId.toString()) : null);
+            } catch (Exception e) { return Map.of(); }
+        }
+
+        @HostAccess.Export
+        public Map<String, Object> cloneIssue(String issueIdOrKey) {
+            try {
+                if (issueIdOrKey == null) return Map.of();
+                UUID id;
+                if (issueIdOrKey.contains("-")) {
+                    Map<String, Object> issue = client.fetchIssueByKey(issueIdOrKey);
+                    Object issueId = issue.get("id");
+                    if (issueId == null) return Map.of();
+                    id = UUID.fromString(issueId.toString());
+                } else {
+                    id = UUID.fromString(issueIdOrKey);
+                }
+                return client.cloneIssue(id);
+            } catch (Exception e) { return Map.of(); }
+        }
+
+        @HostAccess.Export
+        public Map<String, Object> moveIssue(String issueId, String targetProjectId) {
+            try {
+                if (issueId == null || targetProjectId == null) return Map.of();
+                return client.moveIssue(UUID.fromString(issueId), UUID.fromString(targetProjectId));
+            } catch (Exception e) { return Map.of(); }
+        }
+
+        @HostAccess.Export
+        public boolean deleteIssue(String issueId) {
+            try {
+                if (issueId == null) return false;
+                client.deleteIssue(UUID.fromString(issueId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean transitionIssue(String issueId, String transitionId) {
+            try {
+                if (issueId == null || transitionId == null) return false;
+                Object projectId = context.get("projectId");
+                client.transitionIssue(UUID.fromString(issueId),
+                        projectId != null ? UUID.fromString(projectId.toString()) : null,
+                        transitionId);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean addLabel(String label) {
+            try {
+                Object id = context.get("issueId");
+                if (id == null || label == null) return false;
+                client.addLabel(UUID.fromString(id.toString()), label);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean removeLabel(String label) {
+            try {
+                Object id = context.get("issueId");
+                if (id == null || label == null) return false;
+                client.removeLabel(UUID.fromString(id.toString()), label);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public List<Map<String, Object>> getLabels() {
+            try {
+                Object id = context.get("issueId");
+                if (id == null) return List.of();
+                return client.fetchLabels(UUID.fromString(id.toString()));
+            } catch (Exception e) { return List.of(); }
+        }
+
+        @HostAccess.Export
+        public List<Map<String, Object>> getWorklogs() {
+            try {
+                Object id = context.get("issueId");
+                if (id == null) return List.of();
+                return client.fetchWorklogs(UUID.fromString(id.toString()));
+            } catch (Exception e) { return List.of(); }
+        }
+
+        @HostAccess.Export
+        public Map<String, Object> addWorklog(String timeSpent, String comment) {
+            try {
+                Object id = context.get("issueId");
+                Object userId = context.get("userId");
+                if (id == null || timeSpent == null) return Map.of();
+                return client.addWorklog(UUID.fromString(id.toString()), timeSpent, comment,
+                        userId != null ? UUID.fromString(userId.toString()) : null);
+            } catch (Exception e) { return Map.of(); }
+        }
+
+        @HostAccess.Export
+        public List<Map<String, Object>> getSubtasks() {
+            try {
+                Object id = context.get("issueId");
+                if (id == null) return List.of();
+                return client.fetchSubtasks(UUID.fromString(id.toString()));
+            } catch (Exception e) { return List.of(); }
+        }
+
+        @HostAccess.Export
+        public boolean removeWatcher(String userId) {
+            try {
+                Object issueId = context.get("issueId");
+                if (issueId == null || userId == null) return false;
+                client.removeWatcher(UUID.fromString(issueId.toString()), UUID.fromString(userId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean addVote() {
+            try {
+                Object issueId = context.get("issueId");
+                Object userId = context.get("userId");
+                if (issueId == null) return false;
+                client.addVote(UUID.fromString(issueId.toString()),
+                        userId != null ? UUID.fromString(userId.toString()) : null);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean removeVote() {
+            try {
+                Object issueId = context.get("issueId");
+                Object userId = context.get("userId");
+                if (issueId == null) return false;
+                client.removeVote(UUID.fromString(issueId.toString()),
+                        userId != null ? UUID.fromString(userId.toString()) : null);
+                return true;
+            } catch (Exception e) { return false; }
+        }
     }
 
     // === Sub-API: jdc.project ===
@@ -296,6 +446,39 @@ public class JdcApi {
                 if (projectId == null) return List.of();
                 return client.fetchProjectMembers(UUID.fromString(projectId));
             } catch (Exception e) { return List.of(); }
+        }
+
+        @HostAccess.Export
+        public Map<String, Object> createVersion(String projectId, String name, String releaseDate) {
+            try {
+                if (projectId == null || name == null) return Map.of();
+                Map<String, Object> data = new java.util.HashMap<>();
+                data.put("projectId", projectId);
+                data.put("name", name);
+                if (releaseDate != null) data.put("releaseDate", releaseDate);
+                return client.createVersion(data);
+            } catch (Exception e) { return Map.of(); }
+        }
+
+        @HostAccess.Export
+        public boolean releaseVersion(String versionId) {
+            try {
+                if (versionId == null) return false;
+                client.releaseVersion(UUID.fromString(versionId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public Map<String, Object> createComponent(String projectId, String name, String leadId) {
+            try {
+                if (projectId == null || name == null) return Map.of();
+                Map<String, Object> data = new java.util.HashMap<>();
+                data.put("projectId", projectId);
+                data.put("name", name);
+                if (leadId != null) data.put("leadId", leadId);
+                return client.createComponent(data);
+            } catch (Exception e) { return Map.of(); }
         }
     }
 

@@ -22,8 +22,8 @@ public class CreateScriptRequest {
     private String description;
 
     @NotBlank(message = "Script type is required")
-    @Pattern(regexp = "^(CONDITION|VALIDATOR|POST_FUNCTION)$",
-            message = "Script type must be CONDITION, VALIDATOR, or POST_FUNCTION")
+    @Pattern(regexp = "^(CONDITION|VALIDATOR|POST_FUNCTION|LISTENER|FIELD_BEHAVIOR|CALCULATED_FIELD|CONSOLE|SCHEDULED)$",
+            message = "Script type must be CONDITION, VALIDATOR, POST_FUNCTION, LISTENER, FIELD_BEHAVIOR, CALCULATED_FIELD, CONSOLE, or SCHEDULED")
     private String scriptType;
 
     @NotBlank(message = "Script key is required")
