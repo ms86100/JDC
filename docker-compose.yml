@@ -89,7 +89,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   user-service:
     build:
@@ -118,7 +118,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   project-service:
     build:
@@ -147,7 +147,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   issue-service:
     build:
@@ -181,7 +181,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   workflow-service:
     build:
@@ -215,7 +215,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   comment-service:
     build:
@@ -244,7 +244,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   notification-service:
     build:
@@ -273,7 +273,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   search-service:
     build:
@@ -302,7 +302,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   audit-service:
     build:
@@ -331,7 +331,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   # =============================================================================
   # ATTACHMENT SERVICE
@@ -366,7 +366,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   # =============================================================================
   # SPRINT SERVICE
@@ -398,7 +398,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   # =============================================================================
   # VERSION SERVICE
@@ -430,7 +430,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   # =============================================================================
   # COMPONENT SERVICE
@@ -462,7 +462,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   # =============================================================================
   # PLAN SERVICE
@@ -494,7 +494,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   # =============================================================================
   # ADMIN SERVICE
@@ -526,7 +526,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   # =============================================================================
   # MIGRATION SERVICE
@@ -578,7 +578,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 240s
 
   # =============================================================================
   # FRONTEND
