@@ -1,18 +1,13 @@
 package com.jira.workflow.engine;
 
+import com.jira.workflow.engine.plugin.WorkflowPluginRegistry;
 import com.jira.workflow.entity.WorkflowValidator;
 import com.jira.workflow.repository.WorkflowValidatorRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
@@ -27,12 +22,14 @@ public class ValidatorExecutor {
             WorkflowValidator.TYPE_REGEX,
             "PARENT_STATUS",
             "ATTACHMENT_REQUIRED",
-            WorkflowValidator.TYPE_ATTACHMENT_COUNT
+            WorkflowValidator.TYPE_ATTACHMENT_COUNT,
+            WorkflowValidator.TYPE_SCRIPT
     )));
 
     private final WorkflowValidatorRepository workflowValidatorRepository;
     private final TransitionScreenService transitionScreenService;
     private final WorkflowIntegrationClient integrationClient;
+    private final WorkflowPluginRegistry pluginRegistry;
 
     public ValidationResult validate(UUID transitionId, WorkflowContext ctx) {
         Map<String, String> fieldErrors = new LinkedHashMap<>(
@@ -123,7 +120,38 @@ public class ValidatorExecutor {
             }
             return null;
         }
+        if (WorkflowValidator.TYPE_SCRIPT.equals(type)) {
+            String scriptKey = validator.getValidatorData();
+            if (scriptKey == null || scriptKey.isBlank()) {
+                return customMessage != null ? customMessage : "Script validator not configured";
+            }
+            Map<String, Object> pluginCtx = buildEnrichedContext(ctx);
+            Optional<String> validationError = pluginRegistry.validateWithProvider(scriptKey, pluginCtx);
+            if (validationError.isPresent()) {
+                return customMessage != null ? customMessage : validationError.get();
+            }
+            return null;
+        }
         return null;
+    }
+
+    private Map<String, Object> buildEnrichedContext(WorkflowContext ctx) {
+        Map<String, Object> pluginCtx = new HashMap<>();
+        pluginCtx.put("issueId", ctx.getIssueId() != null ? ctx.getIssueId().toString() : null);
+        pluginCtx.put("projectId", ctx.getProjectId() != null ? ctx.getProjectId().toString() : null);
+        pluginCtx.put("userId", ctx.getUserId() != null ? ctx.getUserId().toString() : null);
+        pluginCtx.put("issueTypeId", ctx.getIssueTypeId() != null ? ctx.getIssueTypeId().toString() : null);
+        pluginCtx.put("currentStatusId", ctx.getCurrentStatusId() != null ? ctx.getCurrentStatusId().toString() : null);
+        pluginCtx.put("transitionId", ctx.getTransition() != null ? ctx.getTransition().getId().toString() : null);
+        pluginCtx.put("transitionName", ctx.getTransition() != null ? ctx.getTransition().getName() : null);
+        pluginCtx.put("fromStatusId", ctx.getCurrentStatusId() != null ? ctx.getCurrentStatusId().toString() : null);
+        pluginCtx.put("toStatusId", ctx.getTransition() != null ? ctx.getTransition().getToStatusId().toString() : null);
+        pluginCtx.put("issueData", ctx.getIssueData() != null ? ctx.getIssueData() : Map.of());
+        pluginCtx.put("userData", ctx.getUserData() != null ? ctx.getUserData() : Map.of());
+        pluginCtx.put("screenInput", ctx.getScreenInput() != null ? ctx.getScreenInput() : Map.of());
+        pluginCtx.put("comment", ctx.getComment());
+        pluginCtx.put("resolutionId", ctx.getResolutionId() != null ? ctx.getResolutionId().toString() : null);
+        return pluginCtx;
     }
 
     public record ValidationResult(List<String> errors, Map<String, String> fieldErrors) {

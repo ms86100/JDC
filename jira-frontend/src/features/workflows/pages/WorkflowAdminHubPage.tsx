@@ -24,6 +24,11 @@ const SECTIONS = [
     description: 'Condition, validator, and post-function definition catalogs.',
   },
   {
+    title: 'Scripts',
+    path: '/workflows/admin/scripts',
+    description: 'Create and manage JavaScript scripts for workflow conditions, validators, and post-functions.',
+  },
+  {
     title: 'Audit log',
     path: '/workflows/admin/audit',
     description: 'Global workflow administration audit trail.',

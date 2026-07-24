@@ -66,6 +66,22 @@ jira:
     outbox:
       batch-size: 50
       poll-interval-ms: 5000
+  scripting:
+    enabled: true
+    timeout-ms: 5000
+    memory-limit-mb: 64
+    max-statements: 500000
+    console-timeout-ms: 10000
+    log-retention-days: 30
+    http-whitelist-domains: []
+    http-timeout-ms: 5000
+    env-whitelist-keys: []
+    scheduled-enabled: false
+    scheduled-poll-interval-ms: 30000
+  services:
+    version-url: ${VERSION_SERVICE_URL:http://jira-version-service:8096}
+    component-url: ${COMPONENT_SERVICE_URL:http://jira-component-service:8097}
+    sprint-url: ${SPRINT_SERVICE_URL:http://jira-sprint-service:8091}
 
 logging:
   level:

@@ -254,11 +254,27 @@ public class PostFunctionExecutor {
         if (pluginKey == null) {
             return;
         }
+        Map<String, Object> pluginCtx = buildEnrichedContext(ctx);
+        pluginRegistry.executePostFunction(pluginKey, pluginCtx);
+    }
+
+    private Map<String, Object> buildEnrichedContext(WorkflowContext ctx) {
         Map<String, Object> pluginCtx = new HashMap<>();
-        pluginCtx.put("issueId", ctx.getIssueId().toString());
+        pluginCtx.put("issueId", ctx.getIssueId() != null ? ctx.getIssueId().toString() : null);
         pluginCtx.put("projectId", ctx.getProjectId() != null ? ctx.getProjectId().toString() : null);
         pluginCtx.put("userId", ctx.getUserId() != null ? ctx.getUserId().toString() : null);
-        pluginRegistry.evaluateCondition(pluginKey, pluginCtx);
+        pluginCtx.put("issueTypeId", ctx.getIssueTypeId() != null ? ctx.getIssueTypeId().toString() : null);
+        pluginCtx.put("currentStatusId", ctx.getCurrentStatusId() != null ? ctx.getCurrentStatusId().toString() : null);
+        pluginCtx.put("transitionId", ctx.getTransition() != null ? ctx.getTransition().getId().toString() : null);
+        pluginCtx.put("transitionName", ctx.getTransition() != null ? ctx.getTransition().getName() : null);
+        pluginCtx.put("fromStatusId", ctx.getCurrentStatusId() != null ? ctx.getCurrentStatusId().toString() : null);
+        pluginCtx.put("toStatusId", ctx.getTransition() != null ? ctx.getTransition().getToStatusId().toString() : null);
+        pluginCtx.put("issueData", ctx.getIssueData() != null ? ctx.getIssueData() : Map.of());
+        pluginCtx.put("userData", ctx.getUserData() != null ? ctx.getUserData() : Map.of());
+        pluginCtx.put("screenInput", ctx.getScreenInput() != null ? ctx.getScreenInput() : Map.of());
+        pluginCtx.put("comment", ctx.getComment());
+        pluginCtx.put("resolutionId", ctx.getResolutionId() != null ? ctx.getResolutionId().toString() : null);
+        return pluginCtx;
     }
 
     private Map<String, Object> changeItem(String field, String oldVal, String newVal, String oldStr, String newStr) {

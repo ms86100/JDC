@@ -47,6 +47,12 @@ public class WorkflowIntegrationClient {
     @Value("${jira.services.search-url:http://localhost:8088}")
     private String searchServiceUrl;
 
+    @Value("${jira.services.version-url:http://jira-version-service:8096}")
+    private String versionServiceUrl;
+
+    @Value("${jira.services.component-url:http://jira-component-service:8097}")
+    private String componentServiceUrl;
+
     public Map<String, Object> fetchIssue(UUID issueId) {
         try {
             Map<?, ?> response = restTemplate().getForObject(issueServiceUrl + "/api/issues/" + issueId, Map.class);
@@ -345,6 +351,187 @@ public class WorkflowIntegrationClient {
         } catch (Exception e) {
             log.warn("Permission check failed for user {} in project {}: {}", userId, projectId, e.getMessage());
             return false;
+        }
+    }
+
+    public Map<String, Object> fetchIssueByKey(String issueKey) {
+        try {
+            Map<?, ?> response = restTemplate().getForObject(
+                    issueServiceUrl + "/api/issues/by-key/" + issueKey, Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to fetch issue by key {}: {}", issueKey, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchComments(UUID issueId) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    commentServiceUrl + "/api/comments/issue/" + issueId, List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch comments for issue {}: {}", issueId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchIssueHistory(UUID issueId) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    issueServiceUrl + "/api/issues/" + issueId + "/history", List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch history for issue {}: {}", issueId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchWatchers(UUID issueId) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    issueServiceUrl + "/api/issues/" + issueId + "/watchers", List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch watchers for issue {}: {}", issueId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    public void addWatcher(UUID issueId, UUID userId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            if (userId != null) headers.set("X-User-Id", userId.toString());
+            restTemplate().postForObject(
+                    issueServiceUrl + "/api/issues/" + issueId + "/watchers",
+                    new HttpEntity<>(Map.of("userId", userId.toString()), headers),
+                    Map.class);
+        } catch (Exception e) {
+            log.warn("Failed to add watcher to issue {}: {}", issueId, e.getMessage());
+        }
+    }
+
+    public Map<String, Object> fetchProjectByKey(String projectKey) {
+        try {
+            Map<?, ?> response = restTemplate().getForObject(
+                    projectServiceUrl + "/api/projects/key/" + projectKey, Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to fetch project by key {}: {}", projectKey, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchProjectVersions(UUID projectId) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    versionServiceUrl + "/api/versions/project/" + projectId, List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch versions for project {}: {}", projectId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchProjectComponents(UUID projectId) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    componentServiceUrl + "/api/components/project/" + projectId, List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch components for project {}: {}", projectId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchIssueTypes() {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    issueServiceUrl + "/api/issues/types", List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch issue types: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> searchIssuesJql(String jql, int maxResults) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, Object> body = new HashMap<>();
+            body.put("jql", jql);
+            body.put("maxResults", maxResults);
+            Map<?, ?> response = restTemplate().postForObject(
+                    issueServiceUrl + "/api/jql/search",
+                    new HttpEntity<>(body, headers),
+                    Map.class);
+            if (response != null && response.get("issues") instanceof List<?> issues) {
+                List<Map<String, Object>> result = new ArrayList<>();
+                for (Object item : issues) {
+                    if (item instanceof Map<?, ?> m) result.add(castMap(m));
+                }
+                return result;
+            }
+            return List.of();
+        } catch (Exception e) {
+            log.warn("JQL search failed for '{}': {}", jql, e.getMessage());
+            return List.of();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchProjectMembers(UUID projectId) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    projectServiceUrl + "/api/projects/" + projectId + "/members", List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch members for project {}: {}", projectId, e.getMessage());
+            return List.of();
         }
     }
 

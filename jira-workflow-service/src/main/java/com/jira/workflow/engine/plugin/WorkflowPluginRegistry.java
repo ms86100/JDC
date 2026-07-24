@@ -1,15 +1,15 @@
 package com.jira.workflow.engine.plugin;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Extension point for custom conditions, validators, and post-functions (Jira app modules).
- */
 @Component
+@Slf4j
 public class WorkflowPluginRegistry {
 
     private final Map<String, WorkflowConditionProvider> conditions = new ConcurrentHashMap<>();
@@ -44,10 +44,37 @@ public class WorkflowPluginRegistry {
         return validators.get(key);
     }
 
-    /**
-     * Lists all registered validator keys.
-     */
     public List<String> listValidatorKeys() {
         return validators.keySet().stream().sorted().toList();
     }
+
+    public void executePostFunction(String key, Map<String, Object> context) {
+        WorkflowPostFunctionProvider p = postFunctions.get(key);
+        if (p != null) {
+            p.execute(context);
+        } else {
+            log.warn("No post-function provider registered for key: {}", key);
+        }
+    }
+
+    public Optional<String> validateWithProvider(String key, Map<String, Object> context) {
+        WorkflowValidatorProvider p = validators.get(key);
+        if (p != null) {
+            return p.validate(context);
+        }
+        log.warn("No validator provider registered for key: {}", key);
+        return Optional.of("Unknown script validator: " + key);
+    }
+
+    public List<String> listPostFunctionKeys() {
+        return postFunctions.keySet().stream().sorted().toList();
+    }
+
+    public void unregisterCondition(String key) { conditions.remove(key); }
+    public void unregisterValidator(String key) { validators.remove(key); }
+    public void unregisterPostFunction(String key) { postFunctions.remove(key); }
+
+    public boolean hasCondition(String key) { return conditions.containsKey(key); }
+    public boolean hasValidator(String key) { return validators.containsKey(key); }
+    public boolean hasPostFunction(String key) { return postFunctions.containsKey(key); }
 }

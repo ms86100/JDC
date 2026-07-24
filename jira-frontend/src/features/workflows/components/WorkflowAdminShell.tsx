@@ -6,6 +6,7 @@ const ADMIN_TABS: { label: string; path: string; description: string }[] = [
   { label: 'Schemes', path: '/workflows/admin/schemes', description: 'Workflow scheme CRUD' },
   { label: 'Screens', path: '/workflows/admin/screens', description: 'Transition screens' },
   { label: 'Definitions', path: '/workflows/admin/definitions', description: 'C/V/PF catalogs' },
+  { label: 'Scripts', path: '/workflows/admin/scripts', description: 'JDC Script Engine' },
   { label: 'Audit log', path: '/workflows/admin/audit', description: 'Global workflow audit' },
 ];
 

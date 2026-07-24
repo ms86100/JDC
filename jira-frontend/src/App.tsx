@@ -34,6 +34,7 @@ import WorkflowAdminSchemesPage from './features/workflows/pages/WorkflowAdminSc
 import WorkflowAdminScreensAdminPage from './features/workflows/pages/WorkflowAdminScreensAdminPage';
 import WorkflowAdminDefinitionsPage from './features/workflows/pages/WorkflowAdminDefinitionsPage';
 import WorkflowAdminAuditPage from './features/workflows/pages/WorkflowAdminAuditPage';
+import WorkflowScriptsPage from './features/workflows/pages/WorkflowScriptsPage';
 import EnhancedSearchPage from './features/search/pages/EnhancedSearchPage';
 import NotificationsPage from './features/notifications/pages/NotificationsPage';
 import SprintsPage from './features/sprints/pages/SprintsPage';
@@ -177,6 +178,7 @@ function App() {
                   <Route path="screens" element={<WorkflowAdminScreensAdminPage />} />
                   <Route path="definitions" element={<WorkflowAdminDefinitionsPage />} />
                   <Route path="audit" element={<WorkflowAdminAuditPage />} />
+                  <Route path="scripts" element={<WorkflowScriptsPage />} />
                 </Route>
                 <Route path="workflows/admin-tools" element={<Navigate to="/workflows/admin/tools" replace />} />
                 <Route path="workflows/screens" element={<WorkflowTransitionScreensPage />} />
