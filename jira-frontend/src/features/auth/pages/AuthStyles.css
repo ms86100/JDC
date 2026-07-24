@@ -359,3 +359,39 @@
     align-items: flex-start;
   }
 }
+
+/* --- Auth Page Visual Polish --- */
+[class*="auth-page"],
+[class*="login-page"],
+[class*="register-page"] {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--sa-brand-800, #173062) 0%, var(--sa-brand-900, #0d1d3d) 50%, #010d20 100%);
+}
+
+[class*="auth-card"],
+[class*="login-card"] {
+  background: var(--sa-n0, #fff);
+  border-radius: var(--sa-radius-xl, 12px);
+  box-shadow: var(--sa-elev-4, 0 12px 40px rgba(0, 32, 91, 0.14));
+  padding: var(--sa-space-9, 48px) var(--sa-space-8, 40px);
+  width: 100%;
+  max-width: 420px;
+}
+
+[class*="auth-logo"],
+[class*="login-logo"] {
+  text-align: center;
+  margin-bottom: var(--sa-space-6, 24px);
+}
+
+[class*="auth-title"],
+[class*="login-title"] {
+  font-size: var(--sa-fs-2xl, 24px);
+  font-weight: 700;
+  color: var(--sa-n900, #161a20);
+  text-align: center;
+  margin-bottom: var(--sa-space-6, 24px);
+}

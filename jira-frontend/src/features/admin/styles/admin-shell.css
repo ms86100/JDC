@@ -887,3 +887,323 @@
 .dc-info-table td:last-child {
   color: var(--sa-n1000);
 }
+
+/* ============================================================
+   ENHANCED ADMIN SHELL VISUALS
+   Appended polish — no existing rules removed.
+   Uses --sa-* / --ab-* / --dc-admin-* tokens.
+   ============================================================ */
+
+/* ── 1. Admin Sidebar Enhancements ── */
+
+/* Active category with stronger left accent */
+.dc-admin-category-btn.has-active-child {
+  background: rgba(255, 255, 255, 0.08);
+  border-left: 3px solid #66a3ff;
+}
+
+/* Category icon hover glow */
+.dc-admin-category-icon {
+  transition: background var(--sa-motion-fast, 150ms ease-out),
+              color var(--sa-motion-fast, 150ms ease-out),
+              box-shadow var(--sa-motion-fast, 150ms ease-out);
+}
+
+/* Section group headers visual separation */
+.dc-admin-nav-categories-title {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+}
+
+/* Category button focus state */
+.dc-admin-category-btn:focus-visible {
+  outline: 2px solid #66a3ff;
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+/* Flyout link items hover refinement */
+.dc-admin-nav-link {
+  transition: background var(--sa-motion-fast),
+              color var(--sa-motion-fast),
+              border-color var(--sa-motion-fast),
+              transform var(--sa-motion-fast);
+}
+
+.dc-admin-nav-link:hover {
+  border-left-color: var(--sa-brand-300, #86a8e9);
+}
+
+/* Active flyout link with stronger indicator */
+.dc-admin-nav-link.is-active {
+  border-left-width: 3px;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgba(37, 95, 204, 0.08);
+}
+
+/* Overview button polish */
+.dc-admin-nav-overview {
+  transition: background var(--sa-motion-fast),
+              border-color var(--sa-motion-fast),
+              transform var(--sa-motion-fast);
+}
+
+.dc-admin-nav-overview:hover {
+  transform: translateY(-1px);
+}
+
+/* Flyout panel entrance */
+.dc-admin-nav-flyout {
+  border-radius: 0 var(--sa-radius-lg, 8px) var(--sa-radius-lg, 8px) 0;
+}
+
+/* Flyout header polish */
+.dc-admin-nav-flyout-header {
+  border-radius: 0 var(--sa-radius-lg, 8px) 0 0;
+}
+
+.dc-admin-nav-flyout-icon {
+  transition: box-shadow var(--sa-motion-fast);
+}
+
+.dc-admin-nav-flyout:hover .dc-admin-nav-flyout-icon {
+  box-shadow: 0 6px 16px rgba(0, 82, 204, 0.35);
+}
+
+/* ── 2. Admin Content Area Enhancements ── */
+
+/* Main content subtle background */
+.sa-admin-main {
+  background: linear-gradient(180deg, #eef0f3 0%, #e8eaef 100%);
+}
+
+/* Content padding refinement */
+.sa-admin-content {
+  padding: var(--sa-space-6, 24px) clamp(var(--sa-space-4, 16px), 3vw, var(--sa-space-7, 32px)) var(--sa-space-8, 40px);
+}
+
+/* ── 3. Dashboard Enhancements ── */
+
+/* Hero section glow */
+.admin-dashboard-hero {
+  transition: box-shadow var(--sa-motion-base, 250ms ease-out);
+}
+
+.admin-dashboard-hero:hover {
+  box-shadow: 0 16px 48px rgba(0, 32, 91, 0.3);
+}
+
+/* Overview cards refinement */
+.overview-card {
+  border-radius: var(--sa-radius-lg, 8px);
+  transition: transform var(--sa-motion-fast),
+              box-shadow var(--sa-motion-fast),
+              border-color var(--sa-motion-fast);
+}
+
+.overview-card:hover {
+  border-color: var(--sa-brand-200, #b3cbf8);
+}
+
+/* Overview icon animation */
+.overview-icon {
+  transition: transform var(--sa-motion-fast);
+}
+
+.overview-card:hover .overview-icon {
+  transform: scale(1.05);
+}
+
+/* Overview value counter animation */
+.overview-value {
+  transition: color var(--sa-motion-fast);
+}
+
+/* ── 4. Card Components ── */
+
+.dc-card {
+  border-radius: var(--sa-radius-lg, 8px);
+  transition: box-shadow var(--sa-motion-fast),
+              border-color var(--sa-motion-fast);
+}
+
+.dc-card:hover {
+  box-shadow: var(--sa-elev-2, 0 4px 12px rgba(0, 32, 91, 0.10));
+  border-color: var(--sa-n300);
+}
+
+/* Card header gradient refinement */
+.dc-card-header {
+  background: linear-gradient(90deg, var(--sa-n50, #fafafa) 0%, var(--sa-n0, #fff) 100%);
+  border-radius: var(--sa-radius-lg, 8px) var(--sa-radius-lg, 8px) 0 0;
+}
+
+/* ── 5. Quick Access Cards ── */
+
+.quick-access-card {
+  border-radius: var(--sa-radius-lg, 8px);
+  transition: border-color var(--sa-motion-fast),
+              box-shadow var(--sa-motion-fast),
+              transform var(--sa-motion-fast);
+}
+
+.quick-access-card:hover .quick-access-icon {
+  transform: scale(1.1);
+}
+
+.quick-access-icon {
+  transition: transform var(--sa-motion-fast);
+}
+
+/* ── 6. Info Table Polish ── */
+
+.dc-info-table tr {
+  transition: background var(--sa-motion-fast);
+}
+
+.dc-info-table tr:hover {
+  background: var(--sa-n50, #fafafa);
+}
+
+.dc-info-table td:first-child {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── 7. Tabs Enhancement ── */
+
+.dc-tabs {
+  border-radius: var(--sa-radius-lg, 8px) var(--sa-radius-lg, 8px) 0 0;
+}
+
+.dc-tab {
+  transition: color var(--sa-motion-fast),
+              border-color var(--sa-motion-fast),
+              background var(--sa-motion-fast);
+}
+
+.dc-tab:hover {
+  background: rgba(37, 95, 204, 0.04);
+}
+
+.dc-tab.dc-tab-active {
+  background: var(--sa-n0, #fff);
+}
+
+/* ── 8. Buttons Enhancement ── */
+
+.dc-btn {
+  transition: background var(--sa-motion-fast),
+              border-color var(--sa-motion-fast),
+              box-shadow var(--sa-motion-fast),
+              transform var(--sa-motion-fast);
+}
+
+.dc-btn:hover {
+  transform: translateY(-1px);
+}
+
+.dc-btn:active {
+  transform: translateY(0);
+}
+
+.dc-btn-secondary:hover {
+  box-shadow: var(--sa-elev-1);
+}
+
+/* ── 9. Admin Category Panels ── */
+
+.admin-category {
+  border-radius: var(--sa-radius-lg, 8px);
+  transition: box-shadow var(--sa-motion-fast);
+}
+
+.admin-category:hover {
+  box-shadow: var(--sa-elev-1);
+}
+
+.admin-category-header {
+  border-radius: var(--sa-radius-lg, 8px) var(--sa-radius-lg, 8px) 0 0;
+  transition: background var(--sa-motion-fast);
+}
+
+.admin-category-header.expanded {
+  border-radius: var(--sa-radius-lg, 8px) var(--sa-radius-lg, 8px) 0 0;
+}
+
+.category-icon {
+  transition: transform var(--sa-motion-fast), box-shadow var(--sa-motion-fast);
+}
+
+.admin-category-header:hover .category-icon {
+  transform: scale(1.05);
+  box-shadow: var(--sa-elev-1);
+}
+
+.expand-icon {
+  transition: transform var(--sa-motion-fast);
+}
+
+.admin-category-header.expanded .expand-icon {
+  transform: rotate(180deg);
+}
+
+/* Section cards in category content */
+.admin-section-card {
+  border-radius: var(--sa-radius-lg, 8px);
+  transition: background var(--sa-motion-fast),
+              border-color var(--sa-motion-fast),
+              box-shadow var(--sa-motion-fast),
+              transform var(--sa-motion-fast);
+}
+
+.admin-section-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--sa-elev-1);
+}
+
+/* Feature tags */
+.feature-tag {
+  border-radius: var(--sa-radius-sm, 3px);
+  transition: background var(--sa-motion-fast), color var(--sa-motion-fast);
+}
+
+.admin-section-card:hover .feature-tag {
+  background: var(--sa-n0, #fff);
+  border-color: var(--sa-brand-200, #b3cbf8);
+}
+
+/* ── 10. Search Box Polish ── */
+
+.admin-search-box {
+  border-radius: var(--sa-radius-lg, 8px);
+  transition: border-color var(--sa-motion-fast), box-shadow var(--sa-motion-fast);
+}
+
+/* ── 11. Breadcrumbs ── */
+
+.dc-admin-breadcrumbs {
+  padding: var(--sa-space-3, 12px) 0;
+  font-size: 13px;
+}
+
+.dc-admin-breadcrumbs a {
+  transition: color var(--sa-motion-fast);
+}
+
+.dc-admin-breadcrumbs a:hover {
+  color: var(--sa-brand-700, #002d80);
+}
+
+/* ── 12. Page Header Polish ── */
+
+.dc-page-title {
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.dc-page-subtitle {
+  line-height: 1.6;
+}

@@ -21,24 +21,31 @@
 }
 
 .jdc-rc-filter-tab {
-  padding: 6px 12px;
+  padding: 6px 14px;
   font-size: 13px;
   font-weight: 500;
   border: 1px solid var(--sa-n200, #e2e5ea);
-  border-radius: 6px;
-  background: #fff;
+  border-radius: var(--sa-radius-md, 6px);
+  background: var(--sa-n0, #fff);
   cursor: pointer;
   color: var(--sa-n700, #3d4654);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.jdc-rc-filter-tab:hover {
+  background: var(--sa-n100, #f0f1f4);
+  border-color: var(--sa-n300, #c9ced6);
 }
 
 .jdc-rc-filter-tab.active {
   background: var(--jdc-primary, #0052cc);
   border-color: var(--jdc-primary, #0052cc);
   color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 82, 204, 0.2);
 }
 
 .jdc-rc-progress {
-  min-width: 120px;
+  min-width: 140px;
 }
 
 .jdc-rc-progress-bar {
@@ -47,27 +54,31 @@
   border-radius: 4px;
   overflow: hidden;
   margin-top: 4px;
+  box-shadow: var(--sa-elev-inset, inset 0 1px 2px rgba(0,32,91,0.06));
 }
 
 .jdc-rc-progress-fill {
   height: 100%;
-  background: var(--sa-brand-600, #2563eb);
+  background: linear-gradient(90deg, var(--sa-brand-500, #255fcc), var(--sa-brand-600, #2563eb));
   border-radius: 4px;
-  transition: width 0.2s ease;
+  transition: width 0.4s ease;
 }
 
 .jdc-rc-progress-fill--done {
-  background: var(--sa-success-500);
+  background: linear-gradient(90deg, var(--sa-success-500), var(--sa-success-600, #16753f));
 }
 
 .jdc-rc-status {
-  display: inline-block;
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
   font-size: 11px;
-  font-weight: 600;
-  border-radius: 4px;
+  font-weight: 700;
+  border-radius: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
 }
 
 .jdc-rc-status--released {

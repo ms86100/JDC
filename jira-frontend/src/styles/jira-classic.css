@@ -1358,3 +1358,167 @@
 .idc-issue-view .idc-issue-body {
   max-width: none;
 }
+
+/* ============================================================
+   ENHANCED VISUALS — Airbus DS polish
+   ============================================================ */
+
+/* --- Top navigation links: smooth underline transitions --- */
+.ab-topnav-item {
+  position: relative;
+  transition: background var(--sa-motion-fast), color var(--sa-motion-fast);
+}
+
+.ab-topnav-item::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  right: 50%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 2px 2px 0 0;
+  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ab-topnav-item:hover::after {
+  left: 12px;
+  right: 12px;
+}
+
+.ab-topnav-item.active::after {
+  left: 8px;
+  right: 8px;
+  background: var(--sa-brand-300, #66a3ff);
+  height: 2px;
+}
+
+/* --- Top nav bar: glow and depth --- */
+.ab-jira-topnav {
+  box-shadow: 0 1px 6px rgba(0, 32, 91, 0.20),
+              0 2px 0 rgba(102, 163, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(102, 163, 255, 0.15);
+}
+
+/* --- Search input: clean focus ring --- */
+.ab-topnav-search:focus {
+  box-shadow: 0 0 0 2px rgba(102, 163, 255, 0.35);
+}
+
+/* --- Breadcrumbs: lighter, smaller, proper separators --- */
+.ab-breadcrumbs {
+  font-size: 11px;
+  color: var(--sa-n500);
+  letter-spacing: 0.01em;
+}
+
+.ab-breadcrumbs a {
+  color: var(--sa-n600);
+  font-weight: 400;
+  transition: color 0.15s ease;
+}
+
+.ab-breadcrumbs a:hover {
+  color: var(--sa-brand-500);
+}
+
+.ab-breadcrumb-sep {
+  color: var(--sa-n300);
+  margin: 0 3px;
+  font-size: 10px;
+}
+
+/* --- Content panels: card-style containers with hover shadows --- */
+.ab-jira-root .ab-card {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.ab-jira-root .ab-card:hover {
+  box-shadow: var(--sa-elev-2, 0 4px 12px rgba(0, 32, 91, 0.10));
+  border-color: var(--sa-n300);
+}
+
+/* --- Sidebar nav items: smoother hover transitions --- */
+.ab-sidebar-nav-item {
+  transition: background 0.18s ease, color 0.18s ease, transform 0.15s ease;
+}
+
+.ab-sidebar-nav-item:hover {
+  background: var(--sa-n100);
+  transform: translateX(2px);
+}
+
+.ab-sidebar-nav-item.active {
+  background: var(--sa-brand-50);
+  color: var(--sa-brand-600);
+  font-weight: 500;
+}
+
+/* --- Main content area: clean background --- */
+.ab-main-content {
+  background: var(--sa-n50);
+}
+
+.ab-content-scroll {
+  padding: var(--sa-space-6, 24px);
+}
+
+/* --- Kanban cards: hover lift + shadow refinement --- */
+.ab-jira-card {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.ab-jira-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 32, 91, 0.12);
+  border-color: var(--sa-n300);
+  transform: translateY(-1px);
+}
+
+/* --- Board columns: subtle differentiation --- */
+.ab-kanban-col {
+  transition: background 0.2s ease;
+}
+
+.ab-kanban-col:hover {
+  background: var(--sa-n150, #ebecf0);
+}
+
+/* --- User avatar: ring on hover --- */
+.ab-user-avatar-btn {
+  transition: background var(--sa-motion-fast), box-shadow 0.2s ease;
+}
+
+.ab-user-avatar-btn:hover {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+/* --- Create button: subtle lift on hover --- */
+.ab-create-btn {
+  transition: background var(--sa-motion-fast), box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.ab-create-btn:hover {
+  box-shadow: 0 2px 8px rgba(0, 82, 204, 0.25);
+  transform: translateY(-1px);
+}
+
+/* --- Template options: smoother selection --- */
+.ab-template-option {
+  transition: border-color var(--sa-motion-fast), background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ab-template-option:hover {
+  box-shadow: 0 2px 8px rgba(0, 32, 91, 0.08);
+}
+
+.ab-template-option.selected {
+  box-shadow: 0 0 0 1px var(--sa-brand-500), 0 2px 8px rgba(0, 82, 204, 0.12);
+}
+
+/* --- Modal animation: smoother entrance --- */
+.ab-jira-modal {
+  animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}

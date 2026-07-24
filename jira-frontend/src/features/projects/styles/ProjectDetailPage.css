@@ -28,11 +28,12 @@
 .ab-project-detail .ab-breadcrumb a:hover { text-decoration: underline; }
 
 .ab-project-detail .ab-page-title {
-  font-size: 26px;
-  font-weight: 600;
+  font-size: var(--sa-fs-3xl, 2rem);
+  font-weight: 700;
   color: var(--ab-gray-900);
-  margin: 0 0 6px;
-  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .ab-project-detail .ab-page-subtitle {
@@ -42,6 +43,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  line-height: 1.5;
+  max-width: 72ch;
 }
 
 .ab-project-detail .ab-header-actions {
@@ -56,16 +59,22 @@
   border: 1px solid var(--ab-gray-200);
   border-radius: var(--ab-radius-lg);
   box-shadow: var(--ab-shadow-sm);
-  margin-bottom: 20px;
+  margin-bottom: var(--sa-space-5, 20px);
   overflow: hidden;
+  transition: box-shadow 0.2s ease;
 }
+
+.ab-project-detail .ab-card:hover {
+  box-shadow: var(--sa-elev-2, 0 4px 12px rgba(0,32,91,.10), 0 2px 4px rgba(0,32,91,.06));
+}
+
 .ab-project-detail .ab-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 14px 18px;
   border-bottom: 1px solid var(--ab-gray-200);
-  background: var(--ab-white);
+  background: var(--ab-gray-50, #f8f9fa);
 }
 .ab-project-detail .ab-card-title {
   font-size: 15px;
@@ -73,8 +82,8 @@
   color: var(--ab-gray-800);
   margin: 0;
 }
-.ab-project-detail .ab-card-body { padding: 18px; }
-.ab-project-detail .ab-card-body p { margin: 0 0 8px; font-size: 14px; color: var(--ab-gray-700); }
+.ab-project-detail .ab-card-body { padding: var(--sa-space-5, 20px); }
+.ab-project-detail .ab-card-body p { margin: 0 0 8px; font-size: 14px; color: var(--ab-gray-700); line-height: 1.55; }
 .ab-project-detail .ab-card-body p strong { color: var(--ab-gray-900); margin-right: 6px; }
 
 /* Badges */

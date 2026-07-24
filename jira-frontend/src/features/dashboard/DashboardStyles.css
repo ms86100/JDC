@@ -27,32 +27,33 @@
   margin: 0;
 }
 
-/* ---- Stat tiles ---- */
+/* ---- Stat / KPI tiles ---- */
 .jdc-dash-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 24px;
+  gap: var(--sa-space-4, 16px);
+  margin-bottom: var(--sa-space-6, 24px);
 }
 
 .jdc-dash-stat {
   background: var(--sa-n0, #fff);
   border: 1px solid var(--sa-n200, #e0e3e9);
+  border-left: 3px solid var(--sa-n300, #c9ced6);
   border-radius: var(--sa-radius-lg, 8px);
-  padding: 16px 18px;
+  padding: 20px 20px 16px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  gap: 4px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
 .jdc-dash-stat:hover {
-  box-shadow: var(--sa-elev-1, 0 1px 3px rgba(0,32,91,.08));
-  transform: translateY(-1px);
+  box-shadow: var(--sa-elev-2, 0 4px 12px rgba(0,32,91,.10), 0 2px 4px rgba(0,32,91,.06));
+  transform: translateY(-2px);
 }
 
 .jdc-dash-stat-value {
-  font-size: 26px;
+  font-size: var(--sa-fs-3xl, 2rem);
   font-weight: 700;
   color: var(--sa-n900, #1b2a4a);
   line-height: 1.1;
@@ -64,17 +65,21 @@
   text-transform: uppercase;
   letter-spacing: 0.4px;
   color: var(--sa-n500, #7a869a);
+  margin-top: 2px;
 }
 
+.jdc-dash-stat--brand { border-left-color: var(--sa-brand-500, #255fcc); background: linear-gradient(135deg, rgba(37,95,204,0.03) 0%, var(--sa-n0, #fff) 100%); }
 .jdc-dash-stat--brand .jdc-dash-stat-value { color: var(--sa-brand-500, #255fcc); }
+.jdc-dash-stat--success { border-left-color: var(--sa-success-500, #1b874b); background: linear-gradient(135deg, rgba(27,135,75,0.03) 0%, var(--sa-n0, #fff) 100%); }
 .jdc-dash-stat--success .jdc-dash-stat-value { color: var(--sa-success-500, #1b874b); }
+.jdc-dash-stat--danger { border-left-color: var(--sa-danger-500, #d32f2f); background: linear-gradient(135deg, rgba(211,47,47,0.03) 0%, var(--sa-n0, #fff) 100%); }
 .jdc-dash-stat--danger .jdc-dash-stat-value { color: var(--sa-danger-500, #d32f2f); }
 
 /* ---- Quick Actions ---- */
 .jdc-dash-actions {
   display: flex;
-  gap: 10px;
-  margin-bottom: 24px;
+  gap: var(--sa-space-3, 12px);
+  margin-bottom: var(--sa-space-6, 24px);
   flex-wrap: wrap;
 }
 
@@ -107,14 +112,19 @@
 
 /* ---- Issue Distribution Chart ---- */
 .jdc-dash-distrib {
-  margin-bottom: 24px;
+  margin-bottom: var(--sa-space-6, 24px);
 }
 
 .jdc-dash-distrib-card {
   background: var(--sa-n0, #fff);
   border: 1px solid var(--sa-n200, #e0e3e9);
   border-radius: var(--sa-radius-lg, 8px);
-  padding: 18px 20px;
+  padding: var(--sa-space-6, 24px);
+  transition: box-shadow 0.2s ease;
+}
+
+.jdc-dash-distrib-card:hover {
+  box-shadow: var(--sa-elev-1, 0 1px 3px rgba(0,32,91,.08));
 }
 
 .jdc-dash-distrib-title {
@@ -279,22 +289,29 @@
 .jdc-dash-body {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 18px;
+  gap: var(--sa-space-4, 16px);
   align-items: start;
 }
 
 .jdc-dash-col {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--sa-space-4, 16px);
 }
 
-/* ---- Card shell ---- */
+/* ---- Card shell (gadget cards) ---- */
 .jdc-dash-card {
   background: var(--sa-n0, #fff);
   border: 1px solid var(--sa-n200, #e0e3e9);
+  border-top: 2px solid var(--sa-brand-500, #255fcc);
   border-radius: var(--sa-radius-lg, 8px);
   overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.jdc-dash-card:hover {
+  box-shadow: var(--sa-elev-2, 0 4px 12px rgba(0,32,91,.10), 0 2px 4px rgba(0,32,91,.06));
+  transform: translateY(-1px);
 }
 
 .jdc-dash-card-title {
@@ -304,8 +321,8 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0;
-  padding: 10px 16px;
-  background: #f8f9fa;
+  padding: 12px var(--sa-space-4, 16px);
+  background: var(--sa-n50, #fafafa);
   border-bottom: 1px solid var(--sa-n200, #e0e3e9);
   display: flex;
   align-items: center;
@@ -326,7 +343,7 @@
 }
 
 .jdc-dash-card-empty {
-  padding: 24px 16px;
+  padding: var(--sa-space-6, 24px) var(--sa-space-4, 16px);
   text-align: center;
   color: var(--sa-n500, #7a869a);
   font-size: 13px;

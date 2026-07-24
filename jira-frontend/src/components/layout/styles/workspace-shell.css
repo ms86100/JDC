@@ -323,3 +323,128 @@
 .sa-workspace-sidebar-collapse button:hover {
   background: rgba(255, 255, 255, 0.16);
 }
+
+/* ============================================================
+   ENHANCED VISUALS — Airbus DS polish
+   ============================================================ */
+
+/* --- Header bar: navy with subtle bottom glow and depth --- */
+.sa-workspace-header,
+.sa-workspace-topbar {
+  background: var(--sa-brand-800, #00205b);
+  border-bottom: 1px solid rgba(102, 163, 255, 0.18);
+  box-shadow: 0 1px 8px rgba(0, 32, 91, 0.22), 0 2px 0 rgba(102, 163, 255, 0.10);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* --- Sidebar: smooth slide-in flyout, clean surface, active accent bar --- */
+.sa-workspace-nav-rail {
+  background: var(--sa-n0, #fff);
+  border-right: 1px solid var(--sa-n200, #e0e4ea);
+  box-shadow: 2px 0 12px rgba(0, 32, 91, 0.06);
+  transition: background 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sa-workspace-nav-flyout {
+  transition:
+    opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0.28s;
+  transform: translateX(-16px);
+}
+
+.sa-workspace-nav-flyout.is-visible {
+  transform: translateX(0);
+}
+
+/* --- Nav items: enhanced hover and active states --- */
+.sa-workspace-category-btn {
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  border-radius: 0;
+}
+
+.sa-workspace-category-btn:hover,
+.sa-workspace-category-btn.is-hovered {
+  background: rgba(255, 255, 255, 0.16);
+  border-left-color: var(--sa-brand-500, #0052cc);
+  transform: translateX(1px);
+}
+
+.sa-workspace-category-btn.has-active-child,
+.sa-workspace-category-btn.is-route-section {
+  border-left: 3px solid var(--sa-brand-500, #0052cc);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+/* Active flyout nav link: left accent bar */
+.sa-workspace-nav-link.is-active {
+  border-left: 3px solid var(--sa-brand-500, #0052cc);
+  background: linear-gradient(90deg, var(--sa-brand-50, #e6f0ff) 0%, transparent 100%);
+  font-weight: 600;
+  color: var(--sa-brand-800, #00205b);
+}
+
+.sa-workspace-nav-link {
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.sa-workspace-nav-link:hover {
+  background: var(--sa-n100, #f4f5f7);
+  transform: translateX(2px);
+}
+
+/* --- Category icon: smoother transitions --- */
+.sa-workspace-category-icon {
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.sa-workspace-category-btn:hover .sa-workspace-category-icon,
+.sa-workspace-category-btn.is-hovered .sa-workspace-category-icon {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+/* --- Content area: clean background with proper spacing --- */
+.sa-workspace-content,
+.sa-workspace-main {
+  background: var(--sa-n50, #fafbfc);
+  padding: var(--sa-space-6, 24px);
+}
+
+/* --- Collapse button: smoother interaction --- */
+.sa-workspace-sidebar-collapse button {
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+}
+
+.sa-workspace-sidebar-collapse button:hover {
+  transform: scale(1.02);
+}
+
+/* --- Flyout header: subtle gradient refinement --- */
+.sa-workspace-nav-flyout-header {
+  background: linear-gradient(135deg, var(--sa-brand-50, #e6f0ff) 0%, var(--sa-n0, #fff) 70%);
+  border-bottom: 1px solid var(--sa-n150, #dfe1e6);
+}
+
+/* --- Section dividers in the rail --- */
+.sa-workspace-nav-section-title {
+  position: relative;
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+.sa-workspace-nav-section-title::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sa-workspace-nav-section-title:first-child::before {
+  display: none;
+}

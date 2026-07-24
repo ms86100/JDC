@@ -364,7 +364,7 @@ header.sa-header {
 .jdc-gadget-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: var(--sa-space-4, 16px);
   align-items: start;
 }
 
@@ -377,14 +377,20 @@ header.sa-header {
 .jdc-gadget {
   background: var(--sa-n0);
   border: 1px solid var(--jdc-border);
-  border-radius: var(--jdc-radius);
+  border-radius: var(--sa-radius-lg, 8px);
   overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.jdc-gadget:hover {
+  box-shadow: var(--sa-elev-2, 0 4px 12px rgba(0,32,91,.10), 0 2px 4px rgba(0,32,91,.06));
+  transform: translateY(-1px);
 }
 
 .jdc-gadget-header {
   background: var(--jdc-gadget-header);
   color: #fff;
-  padding: 8px 12px;
+  padding: 10px 14px;
   font-size: 14px;
   font-weight: 600;
   display: flex;
@@ -393,7 +399,7 @@ header.sa-header {
 }
 
 .jdc-gadget-body {
-  padding: 12px;
+  padding: var(--sa-space-4, 16px);
   font-size: 14px;
   color: var(--jdc-text);
 }
@@ -1671,4 +1677,202 @@ button.jdc-settings-nav-item:hover {
 
 .sa-shell-dc .jdc-lozenge {
   font-family: var(--jdc-font);
+}
+
+/* ==========================================================================
+   Issue Navigator — enhanced filter bar, sortable headers
+   ========================================================================== */
+
+/* Filter bar */
+.jdc-issue-navigator-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sa-space-3, 12px);
+  padding: var(--sa-space-3, 12px) var(--sa-space-4, 16px);
+  background: var(--sa-n50, #f7f8fa);
+  border-bottom: 1px solid var(--sa-n200, #e2e5ea);
+  flex-wrap: wrap;
+}
+
+.jdc-issue-navigator-filter-bar .jdc-input,
+.jdc-issue-navigator-filter-bar .jdc-select {
+  height: 32px;
+  font-size: 13px;
+}
+
+/* Sortable column headers */
+.jdc-issue-navigator th,
+.jdc-issue-list-header-col {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s ease, color 0.12s ease;
+  position: relative;
+}
+
+.jdc-issue-navigator th:hover,
+.jdc-issue-list-header-col:hover {
+  background: var(--sa-n100, #f0f1f4);
+  color: var(--sa-n900, #1b2a4a);
+}
+
+.jdc-issue-navigator th::after {
+  content: '';
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 6px;
+  vertical-align: middle;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-top: 4px solid var(--sa-n400, #a5adba);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.jdc-issue-navigator th:hover::after {
+  opacity: 0.6;
+}
+
+.jdc-issue-navigator th.sorted-asc::after,
+.jdc-issue-navigator th.sorted-desc::after {
+  opacity: 1;
+  border-top-color: var(--sa-brand-500, #255fcc);
+}
+
+.jdc-issue-navigator th.sorted-desc::after {
+  border-top: none;
+  border-bottom: 4px solid var(--sa-brand-500, #255fcc);
+}
+
+/* Issue list item enhancements for navigator */
+.jdc-issue-list-item {
+  border-left: 3px solid transparent;
+  transition: background 0.12s ease, border-left-color 0.12s ease;
+}
+
+.jdc-issue-list-item:hover {
+  border-left-color: var(--sa-brand-300, #7ba7e6);
+}
+
+/* ==========================================================================
+   Form Fields — consistent label styling
+   ========================================================================== */
+
+.jdc-form-label,
+.jdc-form-row > label,
+.jdc-rc-form-row > label,
+.jdc-field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sa-n600, #63728a);
+  margin-bottom: var(--sa-space-1, 4px);
+}
+
+.jdc-form-row .jdc-input,
+.jdc-form-row .jdc-select,
+.jdc-form-row textarea {
+  border-radius: var(--sa-radius-md, 6px);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.jdc-form-row .jdc-input:focus,
+.jdc-form-row .jdc-select:focus,
+.jdc-form-row textarea:focus {
+  outline: none;
+  border-color: var(--sa-brand-500, #255fcc);
+  box-shadow: 0 0 0 3px rgba(37, 95, 204, 0.12);
+}
+
+.jdc-form-row + .jdc-form-row {
+  margin-top: var(--sa-space-3, 12px);
+}
+
+/* Form hint text */
+.jdc-form-hint {
+  font-size: 12px;
+  color: var(--sa-n500, #7a869a);
+  margin-top: var(--sa-space-1, 4px);
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   Settings Pages — section cards with dividers
+   ========================================================================== */
+
+.jdc-settings-section {
+  background: var(--sa-n0, #fff);
+  border: 1px solid var(--sa-n200, #e2e5ea);
+  border-radius: var(--sa-radius-lg, 8px);
+  padding: var(--sa-space-6, 24px);
+  margin-bottom: var(--sa-space-5, 20px);
+  transition: box-shadow 0.2s ease;
+}
+
+.jdc-settings-section:hover {
+  box-shadow: var(--sa-elev-1, 0 1px 3px rgba(0,32,91,.08));
+}
+
+.jdc-settings-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--sa-n900, #1b2a4a);
+  margin: 0 0 var(--sa-space-4, 16px);
+  padding-bottom: var(--sa-space-3, 12px);
+  border-bottom: 1px solid var(--sa-n200, #e2e5ea);
+}
+
+.jdc-settings-section-desc {
+  font-size: 14px;
+  color: var(--sa-n600, #63728a);
+  line-height: 1.55;
+  margin: 0 0 var(--sa-space-4, 16px);
+}
+
+.jdc-settings-divider {
+  border: none;
+  border-top: 1px solid var(--sa-n200, #e2e5ea);
+  margin: var(--sa-space-5, 20px) 0;
+}
+
+/* Settings main content area spacing */
+.jdc-settings-main .jdc-settings-section + .jdc-settings-section {
+  margin-top: var(--sa-space-4, 16px);
+}
+
+/* Settings table enhancements */
+.jdc-settings-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--sa-n50, #f7f8fa);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sa-n600, #63728a);
+}
+
+.jdc-settings-table td {
+  transition: background 0.1s ease;
+}
+
+.jdc-settings-table tbody tr:hover td {
+  background: var(--sa-n50, #f7f8fa);
+}
+
+/* Settings sidebar nav enhancements */
+.jdc-settings-nav-item {
+  transition: background 0.12s ease, border-left-color 0.12s ease, color 0.12s ease;
+}
+
+button.jdc-settings-nav-item:hover {
+  border-left-color: var(--sa-n300, #c9ced6);
+}
+
+.jdc-settings-nav-item.active {
+  background: var(--sa-brand-50, #e6edfa);
+  color: var(--jdc-primary);
 }

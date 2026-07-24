@@ -1179,3 +1179,317 @@ textarea:focus-visible {
   cursor: pointer;
   font-size: 12px;
 }
+
+/* ============================================================
+   16. ENHANCED VISUALS — Airbus DS polish
+   Only additive rules / overrides. No existing CSS deleted.
+   ============================================================ */
+
+/* --- Issue detail sidebar: clean dividers, consistent padding --- */
+.idc-detail-item {
+  border-bottom: 1px solid var(--jdc-border);
+  padding: 10px 0;
+  transition: background 0.15s ease;
+}
+
+.idc-detail-item:last-child {
+  border-bottom: none;
+}
+
+.idc-detail-item:hover {
+  background: var(--jdc-surface-alt);
+  border-radius: var(--jdc-radius);
+}
+
+.idc-detail-item > :first-child {
+  color: var(--jdc-text-muted);
+  font-size: 11px;
+}
+
+/* Issue sidebar sections: spacing and dividers */
+.idc-section,
+.idc-detail-section {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--jdc-border);
+}
+
+.idc-section:last-child,
+.idc-detail-section:last-child {
+  border-bottom: none;
+}
+
+.idc-section-title,
+.idc-detail-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--jdc-text-muted);
+  margin-bottom: 10px;
+}
+
+/* --- Kanban board columns: subtle background differentiation --- */
+.ab-kanban-column:nth-child(odd) {
+  background: var(--sa-n100);
+}
+
+.ab-kanban-column:nth-child(even) {
+  background: var(--sa-n50);
+}
+
+.ab-kanban-column {
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.ab-kanban-column:hover {
+  border-color: var(--jdc-border);
+  box-shadow: 0 2px 8px rgba(0, 32, 91, 0.06);
+}
+
+.ab-kanban-col:nth-child(odd) {
+  background: var(--sa-n100);
+}
+
+.ab-kanban-col:nth-child(even) {
+  background: var(--sa-n50);
+}
+
+.ab-kanban-col {
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.ab-kanban-col:hover {
+  border-color: var(--jdc-border);
+  box-shadow: 0 2px 8px rgba(0, 32, 91, 0.06);
+}
+
+/* Smooth card transitions in columns */
+.ab-column-content > *,
+.ab-col-cards > *,
+.ab-issue-list > * {
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+/* --- Board cards: hover lift effect, subtle shadow transition --- */
+.ab-issue-list > *:hover,
+.ab-col-cards > *:hover {
+  box-shadow: 0 6px 20px rgba(0, 32, 91, 0.12), 0 2px 6px rgba(0, 32, 91, 0.06);
+  transform: translateY(-2px);
+}
+
+.ab-issue-list > *:active,
+.ab-col-cards > *:active {
+  transform: translateY(0);
+  box-shadow: var(--jdc-shadow-card);
+}
+
+.ab-board-card {
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.ab-board-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 32, 91, 0.12);
+  transform: translateY(-2px);
+}
+
+/* Sprint cards: hover lift */
+.ab-sprint-card {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.ab-sprint-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 32, 91, 0.10);
+  transform: translateY(-1px);
+}
+
+/* --- Modal / dialog: backdrop blur, smooth scale-in animation --- */
+.ab-modal-overlay {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  background: rgba(0, 20, 50, 0.45);
+  animation: jdc-overlay-in 0.2s ease-out;
+}
+
+@keyframes jdc-overlay-in {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(6px);
+  }
+}
+
+.ab-modal,
+.ab-modal-content {
+  animation: jdc-modal-scale-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes jdc-modal-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Modal header: subtle gradient */
+.ab-modal-header {
+  background: linear-gradient(180deg, var(--jdc-surface) 0%, var(--jdc-surface-alt) 100%);
+}
+
+/* Modal close button: smoother hover */
+.ab-btn-close,
+.ab-icon-close {
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.ab-btn-close:hover,
+.ab-icon-close:hover {
+  transform: scale(1.1);
+}
+
+/* --- Search: clean input with focus ring --- */
+.ab-topnav-search,
+.admin-search-input-toolbar,
+.ab-input[type="search"],
+.filter-input[type="search"] {
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, width 0.25s ease;
+}
+
+.ab-topnav-search:focus {
+  box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.2);
+  border-color: var(--jdc-focus);
+}
+
+.admin-search-input-toolbar:focus {
+  box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.15);
+}
+
+.filter-input:focus,
+.filter-select:focus {
+  box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.15);
+}
+
+/* --- Stat cards: hover glow --- */
+.admin-stat-card {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.admin-stat-card:hover {
+  transform: translateY(-1px);
+}
+
+/* --- Table rows: smoother hover --- */
+.admin-table tbody tr {
+  transition: background 0.12s ease;
+}
+
+/* --- Tabs: underline transition --- */
+.permissions-tabs button,
+.permissions-tabs a,
+.ab-tabs button,
+.ab-tabs a {
+  transition: color 0.18s ease, border-color 0.25s ease;
+  position: relative;
+}
+
+/* --- Notification items: left accent on unread --- */
+.ab-notification-item.ab-unread {
+  border-left: 3px solid var(--jdc-blue);
+}
+
+/* --- Alert: smoother entrance --- */
+.ab-alert {
+  animation: jdc-slide-up 0.2s ease-out;
+}
+
+/* --- Buttons: unified hover lift --- */
+.ab-btn-primary:hover:not(:disabled) {
+  box-shadow: 0 2px 8px rgba(0, 82, 204, 0.25);
+  transform: translateY(-1px);
+}
+
+.ab-btn-primary {
+  transition: background 0.15s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.ab-btn-secondary {
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease;
+}
+
+.ab-btn-secondary:hover:not(:disabled) {
+  box-shadow: 0 1px 4px rgba(0, 32, 91, 0.08);
+}
+
+/* --- Quick filters: smoother active state --- */
+.ab-quick-filter {
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ab-quick-filter.active,
+.ab-quick-filter[aria-pressed="true"] {
+  box-shadow: 0 0 0 1px rgba(37, 95, 204, 0.2);
+}
+
+/* --- Card drag states: visual feedback --- */
+.ab-kanban-column.ab-drag-over {
+  background: var(--sa-brand-50);
+  box-shadow: inset 0 0 0 2px var(--jdc-focus);
+  border-color: var(--jdc-focus);
+}
+
+/* --- Loading spinner: smoother animation --- */
+.ab-spinner {
+  border-width: 2.5px;
+  animation: jdc-spin 0.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* --- Empty states: subtle entrance --- */
+.ab-empty-state {
+  animation: jdc-fade-in 0.3s ease-out;
+}
+
+.ab-empty-state-icon {
+  transition: transform 0.2s ease;
+}
+
+.ab-empty-state:hover .ab-empty-state-icon {
+  transform: scale(1.05);
+}
+
+/* --- Auth card: hover glow --- */
+.ab-auth-card,
+.ab-card.ab-auth-card {
+  transition: box-shadow 0.25s ease;
+}
+
+.ab-auth-card:hover,
+.ab-card.ab-auth-card:hover {
+  box-shadow: 0 8px 32px rgba(0, 32, 91, 0.14);
+}
+
+/* --- Column headers: cleaner divider --- */
+.ab-column-header,
+.ab-kanban-col-header {
+  border-bottom: 2px solid rgba(0, 0, 0, 0.04);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+}
+
+/* --- Card labels: smoother tags --- */
+.ab-label-tag,
+.label-tag {
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ab-label-tag:hover,
+.label-tag:hover {
+  filter: brightness(0.95);
+}

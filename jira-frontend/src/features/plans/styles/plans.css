@@ -2368,3 +2368,57 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* --- Sprint Board Polish --- */
+[class*="sprint-header"],
+[class*="sprint-title"] {
+  font-size: var(--sa-fs-lg, 18px);
+  font-weight: 600;
+  color: var(--sa-n900, #161a20);
+}
+
+[class*="sprint-dates"] {
+  font-size: var(--sa-fs-xs, 11px);
+  color: var(--sa-n500, #7a8493);
+}
+
+/* Sprint velocity chart area */
+[class*="velocity-chart"],
+[class*="burndown-chart"] {
+  background: var(--sa-n0, #fff);
+  border: 1px solid var(--sa-n200, #e2e5ea);
+  border-radius: var(--sa-radius-lg, 8px);
+  padding: var(--sa-space-4, 16px);
+}
+
+/* --- Plan/Roadmap Polish --- */
+[class*="plan-timeline"],
+[class*="roadmap-timeline"] {
+  position: relative;
+}
+
+[class*="plan-item"],
+[class*="roadmap-item"] {
+  background: var(--sa-n0, #fff);
+  border: 1px solid var(--sa-n200, #e2e5ea);
+  border-radius: var(--sa-radius-md, 6px);
+  padding: var(--sa-space-3, 12px);
+  transition: box-shadow var(--sa-motion-fast, 0.15s ease);
+}
+
+[class*="plan-item"]:hover,
+[class*="roadmap-item"]:hover {
+  box-shadow: var(--sa-elev-1, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+
+/* Plan Gantt bar */
+[class*="gantt-bar"] {
+  height: 24px;
+  border-radius: 4px;
+  background: var(--sa-brand-400, #5487cf);
+  transition: width var(--sa-motion-base, 0.2s ease);
+}
+
+[class*="gantt-bar"]:hover {
+  filter: brightness(1.1);
+}

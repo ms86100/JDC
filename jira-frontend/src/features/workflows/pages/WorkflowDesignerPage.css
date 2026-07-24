@@ -142,3 +142,56 @@
   height: 100%;
   color: var(--sa-n600);
 }
+
+/* --- Workflow Designer Visual Polish --- */
+
+/* Workflow canvas dot grid */
+[class*="workflow-canvas"],
+[class*="designer-canvas"] {
+  background-color: var(--sa-n50, #f7f8fa);
+  background-image: radial-gradient(circle, var(--sa-n200, #e2e5ea) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Workflow node polish */
+[class*="workflow-node"],
+.react-flow__node {
+  background: var(--sa-n0, #fff);
+  border: 2px solid var(--sa-n300, #c9ced6);
+  border-radius: var(--sa-radius-lg, 8px);
+  box-shadow: var(--sa-elev-1, 0 1px 3px rgba(0, 0, 0, 0.08));
+  font-size: var(--sa-fs-sm, 13px);
+  transition: box-shadow var(--sa-motion-fast, 0.15s ease), border-color var(--sa-motion-fast, 0.15s ease);
+}
+
+[class*="workflow-node"]:hover,
+.react-flow__node:hover {
+  box-shadow: var(--sa-elev-2, 0 4px 12px rgba(0, 0, 0, 0.12));
+  border-color: var(--sa-brand-300, #7fa5db);
+}
+
+[class*="workflow-node"].selected,
+.react-flow__node.selected {
+  border-color: var(--sa-brand-500, #2f6ac0);
+  box-shadow: 0 0 0 3px var(--sa-brand-50, #eef3fb);
+}
+
+/* Workflow edge */
+.react-flow__edge-path {
+  stroke: var(--sa-n400, #a5adb8);
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--sa-brand-500, #2f6ac0);
+}
+
+/* Workflow toolbar/panel */
+[class*="workflow-toolbar"],
+[class*="workflow-panel"] {
+  background: var(--sa-n0, #fff);
+  border: 1px solid var(--sa-n200, #e2e5ea);
+  border-radius: var(--sa-radius-lg, 8px);
+  box-shadow: var(--sa-elev-2, 0 4px 12px rgba(0, 0, 0, 0.12));
+  padding: var(--sa-space-3, 12px);
+}

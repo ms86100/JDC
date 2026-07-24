@@ -638,3 +638,399 @@
   font-size: 18px;
   font-weight: 400;
 }
+
+/* ============================================================
+   ENHANCED ADMIN SHARED VISUALS
+   Appended polish — no existing rules removed.
+   Uses --sa-* tokens from tokens.css.
+   ============================================================ */
+
+/* ── 1. Admin Tables — Striped Rows + Hover + Action Visibility ── */
+
+/* Striped rows */
+.admin-table tbody tr:nth-child(even) {
+  background: var(--sa-n50, #fafafa);
+}
+
+.admin-table tbody tr:nth-child(even):hover {
+  background: var(--sa-brand-50, #e5ecf7);
+}
+
+.admin-table tbody tr:nth-child(odd):hover {
+  background: var(--sa-brand-50, #e5ecf7);
+}
+
+/* Action buttons show on hover */
+.admin-table tbody tr .action-buttons {
+  opacity: 0.6;
+  transition: opacity var(--sa-motion-fast, 150ms ease-out);
+}
+
+.admin-table tbody tr:hover .action-buttons {
+  opacity: 1;
+}
+
+/* Table container polish */
+.admin-table-container {
+  border-radius: var(--sa-radius-lg, 8px);
+  box-shadow: var(--sa-elev-1, 0 1px 3px rgba(0, 32, 91, 0.08));
+  transition: box-shadow var(--sa-motion-fast);
+}
+
+.admin-table-container:hover {
+  box-shadow: var(--sa-elev-2, 0 4px 12px rgba(0, 32, 91, 0.10));
+}
+
+/* Table header polish */
+.admin-table thead {
+  background: linear-gradient(180deg, var(--sa-n50, #fafafa), var(--sa-n100, #eff1f4));
+}
+
+.admin-table th {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--sa-n600, #63728a);
+  border-bottom: 2px solid var(--sa-n200);
+}
+
+/* Table cell transition */
+.admin-table td {
+  transition: background var(--sa-motion-fast);
+}
+
+/* Table row focus for keyboard nav */
+.admin-table tbody tr:focus-within {
+  box-shadow: inset 3px 0 0 var(--sa-brand-500, #255fcc);
+}
+
+/* ── 2. Status Indicators Enhancement ── */
+
+.admin-status {
+  border-radius: var(--sa-radius-md, 6px);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 3px 10px;
+  transition: box-shadow var(--sa-motion-fast);
+}
+
+.admin-status-active {
+  box-shadow: inset 0 0 0 1px rgba(8, 135, 91, 0.15);
+}
+
+.admin-status-inactive {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.admin-status-pending {
+  box-shadow: inset 0 0 0 1px rgba(151, 79, 0, 0.15);
+}
+
+/* ── 3. Admin Forms Enhancement ── */
+
+/* Consistent label positioning */
+.admin-form-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sa-n600);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+/* Form group with visual section */
+.admin-form-group {
+  margin-bottom: var(--sa-space-5, 20px);
+  padding-bottom: var(--sa-space-4, 16px);
+  border-bottom: 1px solid var(--sa-n100, #eff1f4);
+}
+
+.admin-form-group:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* Input styling refinement */
+.admin-form-select,
+.admin-form-input,
+.admin-form-textarea {
+  border-radius: var(--sa-radius-md, 6px);
+  transition: border-color var(--sa-motion-fast),
+              box-shadow var(--sa-motion-fast),
+              background var(--sa-motion-fast);
+}
+
+.admin-form-select:hover,
+.admin-form-input:hover,
+.admin-form-textarea:hover {
+  border-color: var(--sa-n300, #ced5dd);
+}
+
+.admin-form-select:focus,
+.admin-form-input:focus,
+.admin-form-textarea:focus {
+  border-color: var(--sa-brand-400, #638ee0);
+  box-shadow: 0 0 0 3px rgba(37, 95, 204, 0.12);
+  background: var(--sa-n0, #fff);
+}
+
+/* Form hint */
+.admin-form-hint {
+  font-size: 11px;
+  color: var(--sa-n500, #919cb0);
+  line-height: 1.4;
+  margin-top: 6px;
+}
+
+/* Required label indicator */
+.admin-form-label-required::after {
+  font-weight: 400;
+}
+
+/* ── 4. Admin Buttons Enhancement ── */
+
+.admin-btn-primary,
+.admin-btn-secondary,
+.admin-btn-danger {
+  border-radius: var(--sa-radius-md, 6px);
+  transition: background var(--sa-motion-fast),
+              border-color var(--sa-motion-fast),
+              box-shadow var(--sa-motion-fast),
+              transform var(--sa-motion-fast);
+}
+
+.admin-btn-primary:hover:not(:disabled) {
+  box-shadow: 0 2px 8px rgba(37, 95, 204, 0.3);
+  transform: translateY(-1px);
+}
+
+.admin-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.admin-btn-secondary:hover:not(:disabled) {
+  border-color: var(--sa-n300, #ced5dd);
+  box-shadow: var(--sa-elev-1);
+  transform: translateY(-1px);
+}
+
+.admin-btn-secondary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.admin-btn-danger:hover:not(:disabled) {
+  box-shadow: 0 2px 8px rgba(228, 0, 43, 0.2);
+  transform: translateY(-1px);
+}
+
+.admin-btn-danger:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* ── 5. Toolbar Enhancement ── */
+
+.admin-toolbar {
+  border-radius: var(--sa-radius-lg, 8px);
+  box-shadow: var(--sa-elev-1, 0 1px 3px rgba(0, 32, 91, 0.08));
+  transition: box-shadow var(--sa-motion-fast);
+}
+
+.admin-toolbar:hover {
+  box-shadow: var(--sa-elev-2);
+}
+
+/* Modern toolbar */
+.admin-toolbar-modern {
+  border: 1px solid var(--sa-n200, #e0e3e9);
+  border-radius: var(--sa-radius-lg, 8px);
+  transition: box-shadow var(--sa-motion-fast);
+}
+
+.admin-toolbar-modern:hover {
+  box-shadow: var(--sa-elev-1);
+}
+
+/* Search toolbar input */
+.admin-search-input-toolbar {
+  border-radius: var(--sa-radius-md, 6px);
+  transition: border-color var(--sa-motion-fast),
+              box-shadow var(--sa-motion-fast),
+              width var(--sa-motion-fast);
+}
+
+/* ── 6. Stat Cards Enhancement ── */
+
+.admin-stat-card {
+  border-radius: var(--sa-radius-lg, 8px);
+  transition: box-shadow var(--sa-motion-fast),
+              transform var(--sa-motion-fast),
+              border-color var(--sa-motion-fast);
+}
+
+.admin-stat-card:hover {
+  box-shadow: var(--sa-elev-2, 0 4px 12px rgba(0, 32, 91, 0.10));
+  transform: translateY(-2px);
+  border-color: var(--sa-n300);
+}
+
+.admin-stat-label {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.admin-stat-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 7. Pagination Enhancement ── */
+
+.admin-pagination {
+  border-radius: 0 0 var(--sa-radius-lg, 8px) var(--sa-radius-lg, 8px);
+  background: linear-gradient(180deg, var(--sa-n50) 0%, var(--sa-n100) 100%);
+}
+
+.admin-pagination-btn {
+  border-radius: var(--sa-radius-md, 6px);
+  transition: background var(--sa-motion-fast),
+              border-color var(--sa-motion-fast),
+              box-shadow var(--sa-motion-fast);
+}
+
+.admin-pagination-btn:hover:not(:disabled) {
+  border-color: var(--sa-brand-300, #86a8e9);
+  box-shadow: var(--sa-elev-1);
+}
+
+/* Active page indicator */
+.admin-pagination-btn.is-active,
+.admin-pagination-btn[aria-current="page"] {
+  background: var(--sa-brand-500, #255fcc);
+  color: var(--sa-n0, #fff);
+  border-color: var(--sa-brand-500);
+}
+
+/* ── 8. Modal Enhancement ── */
+
+.admin-modal {
+  border-radius: var(--sa-radius-xl, 12px);
+  box-shadow: var(--sa-elev-3, 0 8px 24px rgba(0, 32, 91, 0.12)),
+              0 0 0 1px rgba(0, 0, 0, 0.04);
+  animation: admin-modal-enter 0.2s ease-out;
+}
+
+@keyframes admin-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.admin-modal-overlay {
+  animation: admin-overlay-enter 0.15s ease-out;
+}
+
+@keyframes admin-overlay-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.admin-modal-header {
+  border-radius: var(--sa-radius-xl, 12px) var(--sa-radius-xl, 12px) 0 0;
+  background: linear-gradient(90deg, var(--sa-n0) 0%, var(--sa-n50) 100%);
+}
+
+.admin-modal-title {
+  font-weight: 600;
+  color: var(--sa-n900, #282e3a);
+}
+
+.admin-modal-close {
+  border-radius: var(--sa-radius-md, 6px);
+  transition: background var(--sa-motion-fast), color var(--sa-motion-fast);
+}
+
+.admin-modal-footer {
+  border-radius: 0 0 var(--sa-radius-xl, 12px) var(--sa-radius-xl, 12px);
+  background: linear-gradient(180deg, var(--sa-n50) 0%, var(--sa-n100) 100%);
+}
+
+/* ── 9. Empty State Enhancement ── */
+
+.admin-empty-state {
+  border-radius: var(--sa-radius-xl, 12px);
+  border: 2px dashed var(--sa-n200, #e0e3e9);
+  background: linear-gradient(135deg, var(--sa-n0, #fff) 0%, var(--sa-n50, #fafafa) 100%);
+}
+
+.admin-empty-state-icon {
+  opacity: 0.4;
+  font-size: 48px;
+}
+
+/* ── 10. Search Input Polish ── */
+
+.search-input {
+  transition: border-color var(--sa-motion-fast),
+              box-shadow var(--sa-motion-fast),
+              background var(--sa-motion-fast),
+              width var(--sa-motion-base, 250ms ease-out);
+}
+
+.search-input:hover {
+  border-color: var(--sa-n300, #ced5dd);
+}
+
+/* Filter select */
+.filter-select {
+  border-radius: var(--sa-radius-md, 6px);
+  transition: border-color var(--sa-motion-fast), box-shadow var(--sa-motion-fast);
+}
+
+/* ── 11. Create Project Button ── */
+
+.btn-create-project {
+  border-radius: var(--sa-radius-md, 6px);
+  transition: background var(--sa-motion-fast),
+              box-shadow var(--sa-motion-fast),
+              transform var(--sa-motion-fast);
+}
+
+.btn-create-project:hover {
+  box-shadow: 0 2px 8px rgba(37, 95, 204, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-create-project:active {
+  transform: scale(0.98) translateY(0);
+  box-shadow: none;
+}
+
+/* ── 12. Toolbar Link Polish ── */
+
+.toolbar-link {
+  border-radius: var(--sa-radius-md, 6px);
+  transition: background var(--sa-motion-fast),
+              color var(--sa-motion-fast),
+              transform var(--sa-motion-fast);
+}
+
+.toolbar-link:hover {
+  transform: translateX(1px);
+}
+
+/* ── 13. Page Title / Description Polish ── */
+
+.admin-page-title {
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.admin-page-description {
+  line-height: 1.6;
+  max-width: 640px;
+}

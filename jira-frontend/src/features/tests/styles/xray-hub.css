@@ -106,3 +106,71 @@ button.xray-hub-card {
   font-size: 12px;
   color: var(--sa-n600, #5e6c84);
 }
+
+/* --- Test Management Visual Polish --- */
+
+/* Test list table */
+.test-list-table,
+[class*="test-table"] {
+  width: 100%;
+}
+
+.test-list-table th,
+[class*="test-table"] th {
+  font-size: var(--sa-fs-xs, 11px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sa-n600, #5e6c84);
+  background: var(--sa-n50, #f7f8fa);
+  padding: var(--sa-space-3, 12px) var(--sa-space-4, 16px);
+  border-bottom: 2px solid var(--sa-n200, #e2e5ea);
+  position: sticky;
+  top: 0;
+}
+
+.test-list-table td,
+[class*="test-table"] td {
+  padding: var(--sa-space-3, 12px) var(--sa-space-4, 16px);
+  border-bottom: 1px solid var(--sa-n100, #eef0f3);
+  font-size: var(--sa-fs-sm, 13px);
+}
+
+/* Test execution status badges */
+[class*="test-status"],
+[class*="execution-status"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: var(--sa-fs-xs, 11px);
+  font-weight: 600;
+  border-radius: var(--sa-radius-sm, 3px);
+  letter-spacing: 0.02em;
+}
+
+/* Test folder tree */
+[class*="folder-tree"],
+[class*="test-folder"] {
+  font-size: var(--sa-fs-sm, 13px);
+}
+
+[class*="folder-tree"] [class*="item"]:hover,
+[class*="test-folder"] [class*="item"]:hover {
+  background: var(--sa-n50, #f7f8fa);
+  border-radius: var(--sa-radius-sm, 3px);
+}
+
+/* Test coverage bar */
+[class*="coverage-bar"] {
+  height: 6px;
+  background: var(--sa-n200, #e2e5ea);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+[class*="coverage-fill"] {
+  height: 100%;
+  border-radius: 3px;
+  transition: width var(--sa-motion-base, 0.2s ease);
+}

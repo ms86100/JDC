@@ -712,3 +712,213 @@
   opacity: 1;
   overflow: visible;
 }
+
+/* ============================================================
+   ENHANCED KANBAN BOARD VISUALS
+   Appended polish — no existing rules removed or overridden.
+   Uses --kb-* / --jdc-* / --sa-* / --ab-* tokens.
+   ============================================================ */
+
+/* ── Enhanced column styling ── */
+.sa-kanban-workspace .ab-kanban-column {
+  border: 1px solid var(--kb-border, var(--sa-n200));
+  border-radius: var(--sa-radius-lg, 8px);
+  transition: background var(--sa-motion-fast, 150ms ease-out),
+              border-color var(--sa-motion-fast, 150ms ease-out);
+}
+
+.sa-kanban-workspace .ab-kanban-column:hover {
+  border-color: var(--sa-n300);
+}
+
+.sa-kanban-workspace .ab-kanban-column.ab-drag-over {
+  border-color: var(--kb-focus, var(--sa-brand-400));
+  background: var(--kb-link-bg, var(--sa-brand-50));
+  box-shadow: 0 0 0 2px rgba(37, 95, 204, 0.12);
+}
+
+/* ── Column header separator ── */
+.sa-kanban-workspace .ab-column-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: var(--sa-radius-lg, 8px) var(--sa-radius-lg, 8px) 0 0;
+  padding: var(--sa-space-3, 12px) var(--sa-space-3, 12px) var(--sa-space-2, 8px);
+}
+
+.sa-kanban-workspace .ab-column-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--kb-subtle, var(--sa-n600));
+}
+
+/* ── Enhanced card styling ── */
+.sa-kanban-workspace .jdc-kanban-card {
+  border: 1px solid var(--sa-n200, #e0e3e9);
+  border-radius: var(--sa-radius-md, 6px);
+  transition: box-shadow var(--sa-motion-fast, 150ms ease-out),
+              transform var(--sa-motion-fast, 150ms ease-out),
+              border-color var(--sa-motion-fast, 150ms ease-out);
+}
+
+.sa-kanban-workspace .jdc-kanban-card:hover {
+  box-shadow: var(--sa-elev-2, 0 4px 12px rgba(0, 32, 91, 0.10));
+  transform: translateY(-1px);
+  border-color: var(--sa-brand-200, #b3cbf8);
+}
+
+.sa-kanban-workspace .jdc-kanban-card:active {
+  transform: translateY(0);
+  box-shadow: var(--sa-elev-1);
+}
+
+.sa-kanban-workspace .jdc-kanban-card.is-dragging {
+  box-shadow: var(--sa-elev-3, 0 8px 24px rgba(0, 32, 91, 0.12));
+  transform: rotate(2deg) scale(1.02);
+  z-index: 100;
+}
+
+/* ── Card content refinements ── */
+.sa-kanban-workspace .jdc-kanban-card__summary {
+  font-size: var(--sa-fs-sm, 0.875rem);
+  line-height: 1.45;
+  color: var(--sa-n900, #282e3a);
+}
+
+.sa-kanban-workspace .jdc-kanban-card__key {
+  font-family: var(--sa-font-mono, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sa-n500, #919cb0);
+  transition: color var(--sa-motion-fast);
+}
+
+.sa-kanban-workspace .jdc-kanban-card:hover .jdc-kanban-card__key {
+  color: var(--sa-brand-500, #255fcc);
+}
+
+/* ── Card labels polish ── */
+.sa-kanban-workspace .jdc-kanban-card__label {
+  border-radius: var(--sa-radius-sm, 3px);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  line-height: 18px;
+  padding: 0 6px;
+}
+
+/* ── Card avatar ring on hover ── */
+.sa-kanban-workspace .jdc-kanban-card__avatar {
+  transition: box-shadow var(--sa-motion-fast);
+}
+
+.sa-kanban-workspace .jdc-kanban-card:hover .jdc-kanban-card__avatar {
+  box-shadow: 0 0 0 2px var(--sa-n0, #fff), 0 0 0 3px var(--sa-brand-300, #86a8e9);
+}
+
+/* ── Column content spacing ── */
+.sa-kanban-workspace .ab-column-content {
+  padding: var(--sa-space-2, 8px) var(--sa-space-3, 12px) var(--sa-space-3, 12px);
+  gap: var(--sa-space-2, 8px);
+}
+
+/* ── Epics panel refinements ── */
+.sa-kanban-workspace .sa-board-epics-panel {
+  border-right: 1px solid var(--sa-n200);
+  box-shadow: 2px 0 8px rgba(0, 32, 91, 0.04);
+}
+
+.sa-kanban-workspace .sa-board-epic-item {
+  border-radius: var(--sa-radius-md, 6px);
+  transition: background var(--sa-motion-fast),
+              transform var(--sa-motion-fast),
+              box-shadow var(--sa-motion-fast);
+}
+
+.sa-kanban-workspace .sa-board-epic-item:hover {
+  box-shadow: var(--sa-elev-1);
+}
+
+.sa-kanban-workspace .sa-board-epic-item.is-active {
+  box-shadow: inset 3px 0 0 var(--sa-brand-500, #255fcc);
+  background: var(--sa-brand-50, #e5ecf7);
+  font-weight: 500;
+}
+
+/* ── Filter strip polish ── */
+.sa-kanban-workspace .sa-kanban-filter-strip {
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid var(--sa-n200);
+}
+
+/* ── Board chrome title hover ── */
+.sa-kanban-workspace .sa-kanban-chrome-title {
+  transition: color var(--sa-motion-fast);
+}
+
+/* ── Column WIP exceeded visual ── */
+.sa-kanban-workspace .ab-kanban-column.ab-wip-exceeded {
+  border-color: var(--sa-danger-500, #e4002b);
+  background: rgba(228, 0, 43, 0.03);
+}
+
+.sa-kanban-workspace .ab-kanban-column.ab-wip-exceeded .ab-column-header {
+  background: var(--sa-danger-50, #ffebe6);
+}
+
+/* ── Smooth column footer ── */
+.sa-kanban-workspace .ab-column-footer {
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  padding: var(--sa-space-2, 8px) var(--sa-space-3, 12px);
+}
+
+.sa-kanban-workspace .ab-add-issue-btn {
+  border-radius: var(--sa-radius-sm, 3px);
+  padding: var(--sa-space-1, 4px) var(--sa-space-2, 8px);
+  transition: background var(--sa-motion-fast), color var(--sa-motion-fast);
+}
+
+.sa-kanban-workspace .ab-add-issue-btn:hover {
+  background: var(--sa-brand-50, #e5ecf7);
+}
+
+/* ── Chrome buttons polish ── */
+.sa-kanban-workspace .sa-kanban-chrome-btn {
+  border-radius: var(--sa-radius-md, 6px);
+  transition: background var(--sa-motion-fast),
+              border-color var(--sa-motion-fast),
+              box-shadow var(--sa-motion-fast);
+}
+
+.sa-kanban-workspace .sa-kanban-chrome-btn:hover {
+  box-shadow: var(--sa-elev-1);
+}
+
+.sa-kanban-workspace .sa-kanban-chrome-btn--primary:hover {
+  box-shadow: 0 2px 8px rgba(37, 95, 204, 0.3);
+}
+
+/* ── Search input polish ── */
+.sa-kanban-workspace .sa-kanban-search-input {
+  border-radius: var(--sa-radius-md, 6px);
+  transition: background var(--sa-motion-fast), box-shadow var(--sa-motion-fast);
+}
+
+/* ── Avatar filter polish ── */
+.sa-kanban-workspace .sa-kanban-avatar-filter {
+  transition: transform var(--sa-motion-fast), box-shadow var(--sa-motion-fast);
+}
+
+.sa-kanban-workspace .sa-kanban-avatar-filter:hover {
+  transform: scale(1.1);
+}
+
+/* ── Drop slot animation ── */
+.sa-kanban-workspace .ab-card-drop-slot {
+  transition: min-height var(--sa-motion-fast),
+              background var(--sa-motion-fast),
+              margin var(--sa-motion-fast);
+}
+
+.sa-kanban-workspace .ab-card-drop-slot.is-over {
+  border-radius: var(--sa-radius-md, 6px);
+}
