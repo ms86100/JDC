@@ -61,6 +61,9 @@ jira:
     notification-url: ${NOTIFICATION_SERVICE_URL:http://jira-notification-service:8087}
     search-url: ${SEARCH_SERVICE_URL:http://jira-search-service:8088}
     project-url: ${PROJECT_SERVICE_URL:http://jira-project-service:8083}
+    version-url: ${VERSION_SERVICE_URL:http://jira-version-service:8096}
+    component-url: ${COMPONENT_SERVICE_URL:http://jira-component-service:8097}
+    sprint-url: ${SPRINT_SERVICE_URL:http://jira-sprint-service:8091}
   workflow:
     transition-fallback: false
     outbox:
@@ -78,10 +81,6 @@ jira:
     env-whitelist-keys: []
     scheduled-enabled: false
     scheduled-poll-interval-ms: 30000
-  services:
-    version-url: ${VERSION_SERVICE_URL:http://jira-version-service:8096}
-    component-url: ${COMPONENT_SERVICE_URL:http://jira-component-service:8097}
-    sprint-url: ${SPRINT_SERVICE_URL:http://jira-sprint-service:8091}
 
 logging:
   level:

@@ -4,10 +4,12 @@ import com.jira.workflow.config.ScriptEngineProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.graalvm.polyglot.HostAccess;
 import org.springframework.http.*;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.InetAddress;
 import java.net.URI;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,8 +20,10 @@ public class JdcHttpApi {
     private final RestTemplate restTemplate;
     private final List<String> whitelistDomains;
 
-    public JdcHttpApi(RestTemplate restTemplate, ScriptEngineProperties properties) {
-        this.restTemplate = restTemplate;
+    public JdcHttpApi(ScriptEngineProperties properties) {
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory();
+        factory.setReadTimeout(Duration.ofMillis(properties.getHttpTimeoutMs()));
+        this.restTemplate = new RestTemplate(factory);
         this.whitelistDomains = properties.getHttpWhitelistDomains();
     }
 

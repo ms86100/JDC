@@ -1,17 +1,25 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { workflowApi, WorkflowTransitionDetail, type WorkflowDefinition } from '../../../api/workflowApi';
+import { workflowApi, WorkflowTransitionDetail } from '../../../api/workflowApi';
+import { scriptApi, ScriptDefinition } from '../../../api/scriptApi';
 
 interface Props {
   transition: WorkflowTransitionDetail;
   onClose: () => void;
 }
 
+const SCRIPT_CONDITION_TYPES = ['SCRIPT', 'custom_script'];
+const SCRIPT_VALIDATOR_TYPES = ['SCRIPT', 'custom_validator'];
+const SCRIPT_POSTFN_TYPES = ['SCRIPT_POST_FUNCTION', 'custom_script', 'script_post_function'];
+
 export function TransitionConfigPanel({ transition, onClose }: Props) {
   const queryClient = useQueryClient();
   const [newCondition, setNewCondition] = useState('');
   const [newValidator, setNewValidator] = useState('');
   const [newPostFn, setNewPostFn] = useState('');
+  const [selectedConditionScript, setSelectedConditionScript] = useState('');
+  const [selectedValidatorScript, setSelectedValidatorScript] = useState('');
+  const [selectedPostFnScript, setSelectedPostFnScript] = useState('');
 
   const { data: conditionDefs = [] } = useQuery({
     queryKey: ['wf-condition-definitions'],
@@ -26,14 +34,30 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
     queryFn: () => workflowApi.getPostFunctionDefinitions().then((r) => Array.isArray(r.data) ? r.data : []),
   });
 
+  const { data: conditionScripts = [] } = useQuery({
+    queryKey: ['available-scripts', 'CONDITION'],
+    queryFn: () => scriptApi.getAvailable('CONDITION').then((r) => r.data).catch(() => [] as ScriptDefinition[]),
+  });
+  const { data: validatorScripts = [] } = useQuery({
+    queryKey: ['available-scripts', 'VALIDATOR'],
+    queryFn: () => scriptApi.getAvailable('VALIDATOR').then((r) => r.data).catch(() => [] as ScriptDefinition[]),
+  });
+  const { data: postFnScripts = [] } = useQuery({
+    queryKey: ['available-scripts', 'POST_FUNCTION'],
+    queryFn: () => scriptApi.getAvailable('POST_FUNCTION').then((r) => r.data).catch(() => [] as ScriptDefinition[]),
+  });
+
+  const getDefType = (d: { type?: string; id?: string }) => d.type || d.id || '';
+  const getDefName = (d: { name?: string; type?: string; id?: string }) => d.name || d.type || d.id || '';
+
   useEffect(() => {
-    if (!newCondition && conditionDefs.length) setNewCondition(conditionDefs[0].type);
+    if (!newCondition && conditionDefs.length) setNewCondition(getDefType(conditionDefs[0]));
   }, [conditionDefs, newCondition]);
   useEffect(() => {
-    if (!newValidator && validatorDefs.length) setNewValidator(validatorDefs[0].type);
+    if (!newValidator && validatorDefs.length) setNewValidator(getDefType(validatorDefs[0]));
   }, [validatorDefs, newValidator]);
   useEffect(() => {
-    if (!newPostFn && postFnDefs.length) setNewPostFn(postFnDefs[0].type);
+    if (!newPostFn && postFnDefs.length) setNewPostFn(getDefType(postFnDefs[0]));
   }, [postFnDefs, newPostFn]);
 
   const { data: screens = [] } = useQuery({
@@ -48,18 +72,58 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
     queryClient.invalidateQueries({ queryKey: ['workflow-layout', transition.workflowId] });
   };
 
+  const isScriptCondition = SCRIPT_CONDITION_TYPES.includes(newCondition);
+  const isScriptValidator = SCRIPT_VALIDATOR_TYPES.includes(newValidator);
+  const isScriptPostFn = SCRIPT_POSTFN_TYPES.includes(newPostFn);
+
   const addCondition = useMutation({
-    mutationFn: () => workflowApi.addCondition(transition.id, { type: newCondition }),
+    mutationFn: () => {
+      const config: Record<string, string> = { type: isScriptCondition ? 'SCRIPT' : newCondition };
+      if (isScriptCondition && selectedConditionScript) {
+        config.value = selectedConditionScript;
+        config.scriptKey = selectedConditionScript;
+      }
+      return workflowApi.addCondition(transition.id, config);
+    },
     onSuccess: invalidate,
   });
   const addValidator = useMutation({
-    mutationFn: () => workflowApi.addValidator(transition.id, { type: newValidator }),
+    mutationFn: () => {
+      const config: Record<string, string> = { type: isScriptValidator ? 'SCRIPT' : newValidator };
+      if (isScriptValidator && selectedValidatorScript) {
+        config.validatorData = selectedValidatorScript;
+        config.scriptKey = selectedValidatorScript;
+      }
+      return workflowApi.addValidator(transition.id, config);
+    },
     onSuccess: invalidate,
   });
   const addPostFn = useMutation({
-    mutationFn: () => workflowApi.addPostFunction(transition.id, { type: newPostFn }),
+    mutationFn: () => {
+      const config: Record<string, string> = { type: isScriptPostFn ? 'SCRIPT_POST_FUNCTION' : newPostFn };
+      if (isScriptPostFn && selectedPostFnScript) {
+        config.functionData = JSON.stringify({ scriptKey: selectedPostFnScript });
+      }
+      return workflowApi.addPostFunction(transition.id, config);
+    },
     onSuccess: invalidate,
   });
+
+  const renderScriptPicker = (
+    scripts: ScriptDefinition[],
+    selected: string,
+    onChange: (val: string) => void,
+    label: string
+  ) => (
+    <select value={selected} onChange={(e) => onChange(e.target.value)} className="ab-select" style={{ marginLeft: 4 }}>
+      <option value="">Select {label}...</option>
+      {scripts.map((s) => (
+        <option key={s.scriptKey} value={s.scriptKey}>
+          {s.name} ({s.scriptKey})
+        </option>
+      ))}
+    </select>
+  );
 
   return (
     <div className="wf-transition-panel">
@@ -81,7 +145,10 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
         <ul className="wf-config-list">
           {(transition.conditions ?? []).map((c) => (
             <li key={c.id}>
-              <span>{c.type}</span>
+              <span>
+                {c.type}
+                {c.value && <span className="wf-script-badge"> ({c.value})</span>}
+              </span>
               <button
                 type="button"
                 className="ab-btn ab-btn-ghost ab-btn-sm"
@@ -96,12 +163,18 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
           <select value={newCondition} onChange={(e) => setNewCondition(e.target.value)} className="ab-select">
             {conditionDefs.length === 0 && <option value="user_in_group">User in group (fallback)</option>}
             {conditionDefs.map((d) => (
-              <option key={d.type} value={d.type}>
-                {d.name ?? d.type}
+              <option key={getDefType(d)} value={getDefType(d)}>
+                {getDefName(d)}
               </option>
             ))}
           </select>
-          <button type="button" className="ab-btn ab-btn-sm ab-btn-secondary" onClick={() => addCondition.mutate()}>
+          {isScriptCondition && renderScriptPicker(conditionScripts, selectedConditionScript, setSelectedConditionScript, 'script')}
+          <button
+            type="button"
+            className="ab-btn ab-btn-sm ab-btn-secondary"
+            disabled={isScriptCondition && !selectedConditionScript}
+            onClick={() => addCondition.mutate()}
+          >
             Add
           </button>
         </div>
@@ -113,7 +186,10 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
         <ul className="wf-config-list">
           {(transition.validators ?? []).map((v) => (
             <li key={v.id}>
-              <span>{v.type}</span>
+              <span>
+                {v.type}
+                {v.validatorData && <span className="wf-script-badge"> ({v.validatorData})</span>}
+              </span>
               <button
                 type="button"
                 className="ab-btn ab-btn-ghost ab-btn-sm"
@@ -128,12 +204,18 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
           <select value={newValidator} onChange={(e) => setNewValidator(e.target.value)} className="ab-select">
             {validatorDefs.length === 0 && <option value="field_required">Field required (fallback)</option>}
             {validatorDefs.map((d) => (
-              <option key={d.type} value={d.type}>
-                {d.name ?? d.type}
+              <option key={getDefType(d)} value={getDefType(d)}>
+                {getDefName(d)}
               </option>
             ))}
           </select>
-          <button type="button" className="ab-btn ab-btn-sm ab-btn-secondary" onClick={() => addValidator.mutate()}>
+          {isScriptValidator && renderScriptPicker(validatorScripts, selectedValidatorScript, setSelectedValidatorScript, 'script')}
+          <button
+            type="button"
+            className="ab-btn ab-btn-sm ab-btn-secondary"
+            disabled={isScriptValidator && !selectedValidatorScript}
+            onClick={() => addValidator.mutate()}
+          >
             Add
           </button>
         </div>
@@ -145,7 +227,10 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
         <ul className="wf-config-list">
           {(transition.postFunctions ?? []).map((p) => (
             <li key={p.id}>
-              <span>{p.type}</span>
+              <span>
+                {p.type}
+                {p.functionData && <span className="wf-script-badge"> ({p.functionData})</span>}
+              </span>
               <button
                 type="button"
                 className="ab-btn ab-btn-ghost ab-btn-sm"
@@ -167,12 +252,18 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
               </>
             )}
             {postFnDefs.map((d) => (
-              <option key={d.type} value={d.type}>
-                {d.name ?? d.type}
+              <option key={getDefType(d)} value={getDefType(d)}>
+                {getDefName(d)}
               </option>
             ))}
           </select>
-          <button type="button" className="ab-btn ab-btn-sm ab-btn-secondary" onClick={() => addPostFn.mutate()}>
+          {isScriptPostFn && renderScriptPicker(postFnScripts, selectedPostFnScript, setSelectedPostFnScript, 'script')}
+          <button
+            type="button"
+            className="ab-btn ab-btn-sm ab-btn-secondary"
+            disabled={isScriptPostFn && !selectedPostFnScript}
+            onClick={() => addPostFn.mutate()}
+          >
             Add
           </button>
         </div>

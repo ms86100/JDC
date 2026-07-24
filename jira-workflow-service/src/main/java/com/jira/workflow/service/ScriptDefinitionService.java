@@ -193,6 +193,7 @@ public class ScriptDefinitionService {
                 .build();
         scriptVersionRepository.save(revertVersion);
 
+        graalScriptEngine.invalidateCache(saved.getScriptKey());
         scriptPluginRegistrar.refreshScript(saved);
         log.info("Reverted script '{}' to version {} (now version {})", saved.getScriptKey(), version, saved.getVersion());
         return mapToResponse(saved);

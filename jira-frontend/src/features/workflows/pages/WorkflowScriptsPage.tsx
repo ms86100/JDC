@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Editor from '@monaco-editor/react';
-import { scriptApi, ScriptDefinition, ScriptExecutionLog } from '../../../api/scriptApi';
+import { scriptApi, ScriptDefinition, ScriptExecutionLog, ScriptVersion, ScriptSchedule } from '../../../api/scriptApi';
 import ScriptConsole from '../components/ScriptConsole';
 
 type Tab = 'scripts' | 'console' | 'logs';
@@ -11,6 +11,22 @@ const TYPE_LABELS: Record<string, string> = {
   POST_FUNCTION: 'Post-Function',
 };
 
+const KEY_PATTERN = /^[a-z][a-z0-9-]{2,63}$/;
+
+function extractError(err: unknown): string {
+  if (err && typeof err === 'object') {
+    const axiosErr = err as { response?: { data?: { message?: string; error?: string; validationErrors?: Record<string, string> } }; message?: string };
+    if (axiosErr.response?.data) {
+      const d = axiosErr.response.data;
+      if (d.validationErrors) return Object.values(d.validationErrors).join('; ');
+      if (d.message) return d.message;
+      if (d.error) return d.error;
+    }
+    if (axiosErr.message) return axiosErr.message;
+  }
+  return 'An unexpected error occurred';
+}
+
 export default function WorkflowScriptsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('scripts');
   const [scripts, setScripts] = useState<ScriptDefinition[]>([]);
@@ -18,6 +34,7 @@ export default function WorkflowScriptsPage() {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingScript, setEditingScript] = useState<ScriptDefinition | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: 'error' | 'success' } | null>(null);
 
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
@@ -26,6 +43,18 @@ export default function WorkflowScriptsPage() {
   const [formBody, setFormBody] = useState('// Write your script here\n');
   const [formChangeSummary, setFormChangeSummary] = useState('');
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+
+  const [versions, setVersions] = useState<ScriptVersion[]>([]);
+  const [showVersions, setShowVersions] = useState<string | null>(null);
+  const [schedule, setSchedule] = useState<ScriptSchedule | null>(null);
+  const [showSchedule, setShowSchedule] = useState<string | null>(null);
+  const [cronInput, setCronInput] = useState('0 0 9 * * MON-FRI');
+
+  const showToast = (msg: string, type: 'error' | 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 5000);
+  };
 
   const fetchScripts = async () => {
     setLoading(true);
@@ -33,8 +62,7 @@ export default function WorkflowScriptsPage() {
       const res = await scriptApi.list();
       setScripts(res.data);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to load';
-      alert(msg);
+      showToast(extractError(err), 'error');
     } finally {
       setLoading(false);
     }
@@ -44,80 +72,75 @@ export default function WorkflowScriptsPage() {
     try {
       const res = await scriptApi.getAllExecutionLogs(0, 50);
       setLogs(res.data.content || []);
-    } catch {
-      /* ignore */
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
     }
   };
 
-  useEffect(() => {
-    fetchScripts();
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === 'logs') fetchLogs();
-  }, [activeTab]);
+  useEffect(() => { fetchScripts(); }, []);
+  useEffect(() => { if (activeTab === 'logs') fetchLogs(); }, [activeTab]);
 
   const generateKey = (name: string) =>
     name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 64);
 
   const openCreate = () => {
     setEditingScript(null);
-    setFormName('');
-    setFormDescription('');
-    setFormType('CONDITION');
-    setFormKey('');
-    setFormBody('// Write your script here\n');
-    setFormChangeSummary('');
+    setFormName(''); setFormDescription(''); setFormType('CONDITION');
+    setFormKey(''); setFormBody('// Write your script here\n');
+    setFormChangeSummary(''); setFormError('');
     setShowModal(true);
   };
 
   const openEdit = (script: ScriptDefinition) => {
     setEditingScript(script);
-    setFormName(script.name);
-    setFormDescription(script.description || '');
-    setFormType(script.scriptType);
-    setFormKey(script.scriptKey);
-    setFormBody(script.scriptBody);
-    setFormChangeSummary('');
+    setFormName(script.name); setFormDescription(script.description || '');
+    setFormType(script.scriptType); setFormKey(script.scriptKey);
+    setFormBody(script.scriptBody); setFormChangeSummary(''); setFormError('');
     setShowModal(true);
   };
 
+  const validateForm = (): string | null => {
+    if (!formName.trim()) return 'Name is required';
+    if (!editingScript && !KEY_PATTERN.test(formKey)) return 'Key must be 3-64 chars, lowercase letters/numbers/dashes, starting with a letter';
+    if (!formBody.trim()) return 'Script body is required';
+    return null;
+  };
+
   const handleSave = async () => {
-    setSaving(true);
+    const err = validateForm();
+    if (err) { setFormError(err); return; }
+    setSaving(true); setFormError('');
     try {
       if (editingScript) {
         await scriptApi.update(editingScript.id, {
-          name: formName,
-          description: formDescription,
-          scriptBody: formBody,
-          changeSummary: formChangeSummary || undefined,
+          name: formName, description: formDescription,
+          scriptBody: formBody, changeSummary: formChangeSummary || undefined,
         });
+        showToast('Script updated', 'success');
       } else {
         await scriptApi.create({
-          name: formName,
-          description: formDescription,
-          scriptType: formType,
-          scriptKey: formKey,
-          scriptBody: formBody,
+          name: formName, description: formDescription,
+          scriptType: formType, scriptKey: formKey, scriptBody: formBody,
         });
+        showToast('Script created', 'success');
       }
       setShowModal(false);
       fetchScripts();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to load';
-      alert(msg);
+      setFormError(extractError(err));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this script?')) return;
+    if (!window.confirm('Delete this script? This cannot be undone.')) return;
     try {
       await scriptApi.delete(id);
+      showToast('Script deleted', 'success');
       fetchScripts();
-    } catch {
-      /* ignore */
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
     }
   };
 
@@ -125,8 +148,72 @@ export default function WorkflowScriptsPage() {
     try {
       await scriptApi.toggle(id, enabled);
       fetchScripts();
-    } catch {
-      /* ignore */
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
+    }
+  };
+
+  const loadVersions = async (scriptId: string) => {
+    if (showVersions === scriptId) { setShowVersions(null); return; }
+    try {
+      const res = await scriptApi.getVersions(scriptId);
+      setVersions(res.data);
+      setShowVersions(scriptId);
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
+    }
+  };
+
+  const handleRevert = async (scriptId: string, version: number) => {
+    if (!window.confirm(`Revert to version ${version}?`)) return;
+    try {
+      await scriptApi.revertToVersion(scriptId, version);
+      showToast(`Reverted to version ${version}`, 'success');
+      fetchScripts();
+      loadVersions(scriptId);
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
+    }
+  };
+
+  const loadSchedule = async (scriptId: string) => {
+    if (showSchedule === scriptId) { setShowSchedule(null); return; }
+    try {
+      const res = await scriptApi.getSchedule(scriptId);
+      setSchedule(res.data);
+    } catch { setSchedule(null); }
+    setShowSchedule(scriptId);
+  };
+
+  const handleCreateSchedule = async (scriptId: string) => {
+    try {
+      await scriptApi.createSchedule(scriptId, cronInput);
+      showToast('Schedule created', 'success');
+      loadSchedule(scriptId);
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
+    }
+  };
+
+  const handleDeleteSchedule = async (scriptId: string) => {
+    try {
+      await scriptApi.deleteSchedule(scriptId);
+      showToast('Schedule removed', 'success');
+      setSchedule(null);
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
+    }
+  };
+
+  const handleExport = async (id: string) => {
+    try {
+      const res = await scriptApi.exportScript(id);
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `script-export.json`; a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
     }
   };
 
@@ -138,6 +225,14 @@ export default function WorkflowScriptsPage() {
 
   return (
     <div>
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded shadow-lg text-sm font-medium ${
+          toast.type === 'error' ? 'bg-red-100 text-red-800 border border-red-300' : 'bg-green-100 text-green-800 border border-green-300'
+        }`}>
+          {toast.msg}
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xl font-bold">JDC Script Engine</h2>
@@ -146,10 +241,7 @@ export default function WorkflowScriptsPage() {
           </p>
         </div>
         {activeTab === 'scripts' && (
-          <button
-            onClick={openCreate}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
-          >
+          <button onClick={openCreate} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
             Create Script
           </button>
         )}
@@ -157,17 +249,10 @@ export default function WorkflowScriptsPage() {
 
       <div className="flex gap-1 border-b border-gray-200 mb-4">
         {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
+          <button key={tab.key} onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              activeTab === tab.key
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            {tab.label}
-          </button>
+              activeTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'
+            }`}>{tab.label}</button>
         ))}
       </div>
 
@@ -176,9 +261,7 @@ export default function WorkflowScriptsPage() {
           {loading ? (
             <div className="p-8 text-center text-gray-500">Loading scripts...</div>
           ) : scripts.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              No scripts yet. Click "Create Script" to get started.
-            </div>
+            <div className="p-8 text-center text-gray-500">No scripts yet. Click "Create Script" to get started.</div>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
@@ -193,59 +276,84 @@ export default function WorkflowScriptsPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {scripts.map((script) => (
-                  <tr key={script.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div className="font-medium">{script.name}</div>
-                      {script.description && (
-                        <div className="text-xs text-gray-500 mt-0.5 truncate max-w-xs">
-                          {script.description}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{script.scriptKey}</code>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${
-                        script.scriptType === 'CONDITION'
-                          ? 'bg-blue-100 text-blue-800'
-                          : script.scriptType === 'VALIDATOR'
-                          ? 'bg-amber-100 text-amber-800'
+                  <>
+                    <tr key={script.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{script.name}</div>
+                        {script.description && <div className="text-xs text-gray-500 mt-0.5 truncate max-w-xs">{script.description}</div>}
+                      </td>
+                      <td className="px-4 py-3"><code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{script.scriptKey}</code></td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${
+                          script.scriptType === 'CONDITION' ? 'bg-blue-100 text-blue-800'
+                          : script.scriptType === 'VALIDATOR' ? 'bg-amber-100 text-amber-800'
                           : 'bg-green-100 text-green-800'
-                      }`}>
-                        {TYPE_LABELS[script.scriptType] || script.scriptType}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">v{script.version}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleToggle(script.id, !script.isEnabled)}
-                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                          script.isEnabled ? 'bg-green-500' : 'bg-gray-300'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
-                            script.isEnabled ? 'translate-x-4' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => openEdit(script)}
-                        className="text-blue-600 hover:text-blue-800 text-sm mr-3"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(script.id)}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
+                        }`}>{TYPE_LABELS[script.scriptType] || script.scriptType}</span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">v{script.version}</td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => handleToggle(script.id, !script.isEnabled)}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${script.isEnabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                          <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${script.isEnabled ? 'translate-x-4' : 'translate-x-1'}`} />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-right space-x-2">
+                        <button onClick={() => openEdit(script)} className="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
+                        <button onClick={() => loadVersions(script.id)} className="text-gray-600 hover:text-gray-800 text-sm">Versions</button>
+                        <button onClick={() => loadSchedule(script.id)} className="text-purple-600 hover:text-purple-800 text-sm">Schedule</button>
+                        <button onClick={() => handleExport(script.id)} className="text-gray-600 hover:text-gray-800 text-sm">Export</button>
+                        <button onClick={() => handleDelete(script.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                      </td>
+                    </tr>
+                    {showVersions === script.id && (
+                      <tr key={`${script.id}-versions`}>
+                        <td colSpan={6} className="px-4 py-3 bg-gray-50">
+                          <div className="text-xs font-semibold mb-2">Version History</div>
+                          {versions.length === 0 ? <div className="text-xs text-gray-500">No versions</div> : (
+                            <table className="w-full text-xs">
+                              <thead><tr><th className="text-left py-1">Version</th><th className="text-left py-1">Summary</th><th className="text-left py-1">Date</th><th className="text-right py-1">Action</th></tr></thead>
+                              <tbody>
+                                {versions.map((v) => (
+                                  <tr key={v.id} className="border-t border-gray-200">
+                                    <td className="py-1">v{v.version}</td>
+                                    <td className="py-1 text-gray-600">{v.changeSummary || 'No summary'}</td>
+                                    <td className="py-1 text-gray-500">{new Date(v.createdAt).toLocaleString()}</td>
+                                    <td className="py-1 text-right">
+                                      {v.version !== script.version && (
+                                        <button onClick={() => handleRevert(script.id, v.version)} className="text-blue-600 hover:text-blue-800">Revert</button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    {showSchedule === script.id && (
+                      <tr key={`${script.id}-schedule`}>
+                        <td colSpan={6} className="px-4 py-3 bg-purple-50">
+                          <div className="text-xs font-semibold mb-2">Schedule</div>
+                          {schedule ? (
+                            <div className="flex items-center gap-4 text-xs">
+                              <span>Cron: <code className="bg-white px-1 rounded">{schedule.cronExpression}</code></span>
+                              <span>Enabled: {schedule.isEnabled ? 'Yes' : 'No'}</span>
+                              <span>Runs: {schedule.runCount}</span>
+                              {schedule.nextRunAt && <span>Next: {new Date(schedule.nextRunAt).toLocaleString()}</span>}
+                              <button onClick={() => handleDeleteSchedule(script.id)} className="text-red-600 hover:text-red-800">Remove</button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <input type="text" value={cronInput} onChange={(e) => setCronInput(e.target.value)}
+                                className="border border-gray-300 rounded px-2 py-1 text-xs w-48" placeholder="Cron expression" />
+                              <button onClick={() => handleCreateSchedule(script.id)} className="text-purple-600 hover:text-purple-800 text-xs font-medium">Create Schedule</button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))}
               </tbody>
             </table>
@@ -274,35 +382,22 @@ export default function WorkflowScriptsPage() {
               <tbody className="divide-y divide-gray-100">
                 {logs.map((log) => (
                   <tr key={log.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{log.scriptKey}</code>
-                    </td>
+                    <td className="px-4 py-3"><code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{log.scriptKey}</code></td>
                     <td className="px-4 py-3 text-gray-600">{TYPE_LABELS[log.scriptType] || log.scriptType}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded ${
-                        log.executionMode === 'CONSOLE'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {log.executionMode}
-                      </span>
+                        log.executionMode === 'CONSOLE' ? 'bg-purple-100 text-purple-700'
+                        : log.executionMode === 'SCHEDULED' ? 'bg-orange-100 text-orange-700'
+                        : 'bg-gray-100 text-gray-700'
+                      }`}>{log.executionMode}</span>
                     </td>
                     <td className="px-4 py-3">
-                      {log.success ? (
-                        <span className="text-green-600 font-medium">OK</span>
-                      ) : (
-                        <span className="text-red-600 font-medium" title={log.errorMessage || ''}>
-                          FAIL
-                        </span>
-                      )}
-                      {log.resultValue && (
-                        <span className="ml-2 text-xs text-gray-500">{log.resultValue}</span>
-                      )}
+                      {log.success ? <span className="text-green-600 font-medium">OK</span>
+                        : <span className="text-red-600 font-medium" title={log.errorMessage || ''}>FAIL</span>}
+                      {log.resultValue && <span className="ml-2 text-xs text-gray-500">{log.resultValue}</span>}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{log.executionMs}ms</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">
-                      {new Date(log.createdAt).toLocaleString()}
-                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{new Date(log.createdAt).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -315,51 +410,38 @@ export default function WorkflowScriptsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-bold">
-                {editingScript ? 'Edit Script' : 'Create Script'}
-              </h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">
-                &times;
-              </button>
+              <h3 className="text-lg font-bold">{editingScript ? 'Edit Script' : 'Create Script'}</h3>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
             </div>
 
             <div className="p-6 space-y-4">
+              {formError && <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">{formError}</div>}
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                  <input
-                    type="text"
-                    value={formName}
-                    onChange={(e) => {
-                      setFormName(e.target.value);
-                      if (!editingScript) setFormKey(generateKey(e.target.value));
-                    }}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                    placeholder="Auto-assign Critical Issues"
-                  />
+                  <input type="text" value={formName}
+                    onChange={(e) => { setFormName(e.target.value); if (!editingScript) setFormKey(generateKey(e.target.value)); }}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Auto-assign Critical Issues" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Script Key</label>
-                  <input
-                    type="text"
-                    value={formKey}
-                    onChange={(e) => setFormKey(e.target.value)}
+                  <input type="text" value={formKey} onChange={(e) => setFormKey(e.target.value)}
                     disabled={!!editingScript}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm disabled:bg-gray-100"
-                    placeholder="auto-assign-critical"
-                  />
+                    className={`w-full border rounded px-3 py-2 text-sm disabled:bg-gray-100 ${!editingScript && formKey && !KEY_PATTERN.test(formKey) ? 'border-red-400' : 'border-gray-300'}`}
+                    placeholder="auto-assign-critical" />
+                  {!editingScript && formKey && !KEY_PATTERN.test(formKey) && (
+                    <p className="text-xs text-red-500 mt-1">3-64 chars, lowercase a-z, 0-9, dashes, must start with a letter</p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                  <select
-                    value={formType}
-                    onChange={(e) => setFormType(e.target.value)}
+                  <select value={formType} onChange={(e) => setFormType(e.target.value)}
                     disabled={!!editingScript}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm disabled:bg-gray-100"
-                  >
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm disabled:bg-gray-100">
                     <option value="CONDITION">Condition (returns boolean)</option>
                     <option value="VALIDATOR">Validator (returns error or null)</option>
                     <option value="POST_FUNCTION">Post-Function (side effects)</option>
@@ -367,63 +449,34 @@ export default function WorkflowScriptsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <input
-                    type="text"
-                    value={formDescription}
-                    onChange={(e) => setFormDescription(e.target.value)}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                    placeholder="What does this script do?"
-                  />
+                  <input type="text" value={formDescription} onChange={(e) => setFormDescription(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="What does this script do?" />
                 </div>
               </div>
 
               {editingScript && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Change Summary</label>
-                  <input
-                    type="text"
-                    value={formChangeSummary}
-                    onChange={(e) => setFormChangeSummary(e.target.value)}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                    placeholder="What changed in this version?"
-                  />
+                  <input type="text" value={formChangeSummary} onChange={(e) => setFormChangeSummary(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="What changed in this version?" />
                 </div>
               )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Script Body (JavaScript)</label>
                 <div className="border border-gray-300 rounded overflow-hidden">
-                  <Editor
-                    height="350px"
-                    language="javascript"
-                    theme="vs-dark"
-                    value={formBody}
+                  <Editor height="350px" language="javascript" theme="vs-dark" value={formBody}
                     onChange={(value) => setFormBody(value || '')}
-                    options={{
-                      minimap: { enabled: false },
-                      lineNumbers: 'on',
-                      wordWrap: 'on',
-                      scrollBeyondLastLine: false,
-                      fontSize: 13,
-                      tabSize: 2,
-                    }}
-                  />
+                    options={{ minimap: { enabled: false }, lineNumbers: 'on', wordWrap: 'on', scrollBeyondLastLine: false, fontSize: 13, tabSize: 2 }} />
                 </div>
               </div>
             </div>
 
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving || !formName || !formKey || !formBody.trim()}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50"
-              >
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-100">Cancel</button>
+              <button onClick={handleSave}
+                disabled={saving || !formName || (!editingScript && (!formKey || !KEY_PATTERN.test(formKey))) || !formBody.trim()}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50">
                 {saving ? 'Saving...' : editingScript ? 'Update Script' : 'Create Script'}
               </button>
             </div>

@@ -421,25 +421,34 @@ public class JdcApi {
         private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger("jdc.script");
 
         @HostAccess.Export
-        public void info(Object... args) { logger.info("[script] {}", join(args)); }
+        public void info(Object... args) { logger.info("[script] {}", sanitize(join(args))); }
 
         @HostAccess.Export
-        public void warn(Object... args) { logger.warn("[script] {}", join(args)); }
+        public void warn(Object... args) { logger.warn("[script] {}", sanitize(join(args))); }
 
         @HostAccess.Export
-        public void error(Object... args) { logger.error("[script] {}", join(args)); }
+        public void error(Object... args) { logger.error("[script] {}", sanitize(join(args))); }
 
         @HostAccess.Export
-        public void debug(Object... args) { logger.debug("[script] {}", join(args)); }
+        public void debug(Object... args) { logger.debug("[script] {}", sanitize(join(args))); }
 
         private String join(Object[] args) {
             if (args == null) return "null";
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < args.length; i++) {
                 if (i > 0) sb.append(' ');
-                sb.append(args[i] == null ? "null" : args[i]);
+                String val = args[i] == null ? "null" : String.valueOf(args[i]);
+                if (sb.length() + val.length() > 10000) {
+                    sb.append("[truncated]");
+                    break;
+                }
+                sb.append(val);
             }
             return sb.toString();
+        }
+
+        private String sanitize(String msg) {
+            return msg.replace("\r\n", " ").replace("\n", " ").replace("\r", " ");
         }
     }
 
