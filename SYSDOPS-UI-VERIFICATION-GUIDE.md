@@ -1,7 +1,32 @@
 # SYSDOPS Aircraft Design System -- UI Verification Guide
 
-> **Version:** 1.0 | **Date:** 2026-07-24
+> **Version:** 1.1 | **Date:** 2026-07-25
 > **Services Required:** jira-auth-service (8081), jira-admin-service (8093), jira-project-service (8083), jira-issue-service (8084), jira-workflow-service (8085), jira-test-service (8095), jira-gateway (8080), jira-frontend (3000), PostgreSQL (5432)
+
+---
+
+## Seed Data Reference
+
+The system comes pre-loaded with test data for immediate verification. No manual data entry required.
+
+| Data Type | Count | Key IDs |
+|-----------|-------|---------|
+| **Project** | 1 | ID: `10000000-0000-0000-0000-000000000001`, Key: `NFMS` (nFMS System Development & Testing) |
+| **Baselines (Fix Versions)** | 3 | Baseline 1: `20000000-...01`, Baseline 2: `20000000-...02`, Baseline 3: `20000000-...03` |
+| **HLVVOs** | 2 | HLVVO-1 (DIR TO, AUTHORIZE), HLVVO-2 (HOLD, VVO_WRITING_IN_PROGRESS) |
+| **VVOs** | 15 | 3 NEW, 3 TO_BE_VERIFIED, 3 VERIFIED, 3 RELEASED, 2 CANCELLED, 1 SUPERSEDED |
+| **Test Requests** | 2 | LTR-1 (Lab Test Request), FTR-1 (Flight Test Request) |
+| **TechEvents** | 8 | 2 OPEN, 1 UNDER_ORIGINATOR_ANALYSIS, 1 UNDER_RESOLVER_ANALYSIS, 1 CLASSIFIED, 1 RESOLVED_CORRECTED, 1 CLOSED, 1 CANCELLED |
+| **Bench Defects** | 4 | 1 BLOCKING, 1 HIGH/P1, 1 LOW, 1 CLOSED |
+| **Problem Reports** | 3 | 1 OPEN (CAT/HAZ), 1 UNDER_ANALYSIS (Functional), 1 CLOSED |
+| **Test Cases** | 8 | DIR TO, HOLD, OFFSET tests in APPROVED status |
+| **Test Executions** | 2 | 1 FAILED, 1 PASSED |
+| **Issues (Change Cards)** | 8 | 5 Change Cards, 1 Design Item, 1 DCL, 1 Deliverable |
+| **Components** | 6 | Lateral Guidance, Vertical Guidance, NavDB, MCDU, Performance, Datalink |
+| **Master Data** | 300+ | 5 programs, 50 test means, 185 systems, 26 functions, 20 teams, 39 defect origins |
+
+**Use this project ID for all page URLs:** `10000000-0000-0000-0000-000000000001`
+**Use this fix version ID for baselines:** `20000000-0000-0000-0000-000000000001`
 
 ---
 
@@ -89,7 +114,7 @@ Navigate to `http://localhost:3000/login` and log in with:
 
 ### STEP 2: VVO Management
 
-**URL:** `http://localhost:3000/aircraft-design/vvos?projectId={projectId}`
+**URL:** `http://localhost:3000/aircraft-design/vvos?projectId=10000000-0000-0000-0000-000000000001`
 
 > Note: You need a valid `projectId` UUID from the project-service. Use the Projects page to find one, or use the default project UUID from seed data.
 
@@ -108,7 +133,7 @@ Navigate to `http://localhost:3000/login` and log in with:
 | 2.9 | Click "Archive" on a VVO | VVO disappears from list (archived=true) | |
 
 **API Endpoints Exercised:**
-- `GET /api/vvo/project/{projectId}`
+- `GET /api/vvo/project/10000000-0000-0000-0000-000000000001`
 - `POST /api/vvo`
 - `GET /api/vvo/{id}`
 - `PUT /api/vvo/{id}`
@@ -119,7 +144,7 @@ Navigate to `http://localhost:3000/login` and log in with:
 
 ### STEP 3: HLVVO Management
 
-**URL:** `http://localhost:3000/aircraft-design/hlvvos?projectId={projectId}`
+**URL:** `http://localhost:3000/aircraft-design/hlvvos?projectId=10000000-0000-0000-0000-000000000001`
 
 | # | Action | Expected Result | Pass/Fail |
 |---|--------|----------------|-----------|
@@ -129,7 +154,7 @@ Navigate to `http://localhost:3000/login` and log in with:
 | 3.4 | Go to a VVO and set its hlvvoId to the HLVVO just created | VVO appears as child when HLVVO is expanded | |
 
 **API Endpoints Exercised:**
-- `GET /api/hlvvo/project/{projectId}`
+- `GET /api/hlvvo/project/10000000-0000-0000-0000-000000000001`
 - `POST /api/hlvvo`
 - `GET /api/hlvvo/{id}/child-vvos`
 
@@ -137,7 +162,7 @@ Navigate to `http://localhost:3000/login` and log in with:
 
 ### STEP 4: VVO Baselining
 
-**URL:** `http://localhost:3000/aircraft-design/baselines?projectId={projectId}`
+**URL:** `http://localhost:3000/aircraft-design/baselines?projectId=10000000-0000-0000-0000-000000000001`
 
 | # | Action | Expected Result | Pass/Fail |
 |---|--------|----------------|-----------|
@@ -197,7 +222,7 @@ Navigate to `http://localhost:3000/login` and log in with:
 
 ### STEP 7: TechEvent Defect Management (M1668)
 
-**URL:** `http://localhost:3000/aircraft-design/tech-events?projectId={projectId}`
+**URL:** `http://localhost:3000/aircraft-design/tech-events?projectId=10000000-0000-0000-0000-000000000001`
 
 | # | Action | Expected Result | Pass/Fail |
 |---|--------|----------------|-----------|
@@ -216,7 +241,7 @@ Navigate to `http://localhost:3000/login` and log in with:
 | 7.13 | Click "Create Problem Report" from TechEvent | New ProblemReport created with fields copied, linked via linkedTechEventId. TechEvent's linkedProblemReportId updated | |
 
 **API Endpoints Exercised:**
-- `GET /api/tech-events/project/{projectId}`
+- `GET /api/tech-events/project/10000000-0000-0000-0000-000000000001`
 - `POST /api/tech-events`
 - `GET /api/tech-events/{id}`
 - `POST /api/tech-events/{id}/transition?targetStatus=UNDER_ORIGINATOR_ANALYSIS`
@@ -234,7 +259,7 @@ Navigate to `http://localhost:3000/login` and log in with:
 
 ### STEP 8: Change Card (6-Tab Layout)
 
-**URL:** `http://localhost:3000/aircraft-design/change-cards?issueId={issueId}`
+**URL:** `http://localhost:3000/aircraft-design/change-cards?issueId=40000000-0000-0000-0000-000000000001`
 
 > Note: You need a valid issue ID. Create an issue first via the Issues page, then navigate here with its ID.
 
@@ -250,15 +275,15 @@ Navigate to `http://localhost:3000/login` and log in with:
 | 8.8 | Switch between tabs | Data persists across tab switches (no data loss) | |
 
 **API Endpoints Exercised:**
-- `GET /api/issues/{issueId}/change-card`
-- `POST /api/issues/{issueId}/change-card`
-- `PUT /api/issues/{issueId}/change-card`
+- `GET /api/issues/40000000-0000-0000-0000-000000000001/change-card`
+- `POST /api/issues/40000000-0000-0000-0000-000000000001/change-card`
+- `PUT /api/issues/40000000-0000-0000-0000-000000000001/change-card`
 
 ---
 
 ### STEP 9: V&V Project Dashboard
 
-**URL:** `http://localhost:3000/aircraft-design/dashboard?projectId={projectId}`
+**URL:** `http://localhost:3000/aircraft-design/dashboard?projectId=10000000-0000-0000-0000-000000000001`
 
 | # | Action | Expected Result | Pass/Fail |
 |---|--------|----------------|-----------|
@@ -271,13 +296,13 @@ Navigate to `http://localhost:3000/login` and log in with:
 | 9.7 | Click "View All VVOs" quick link | Navigates to `/aircraft-design/vvos?projectId={id}` | |
 
 **API Endpoints Exercised:**
-- `GET /api/vv-reports/dashboard/{projectId}`
+- `GET /api/vv-reports/dashboard/10000000-0000-0000-0000-000000000001`
 
 ---
 
 ### STEP 10: Campaign Creation from CSV
 
-**URL:** `http://localhost:3000/aircraft-design/campaigns?projectId={projectId}`
+**URL:** `http://localhost:3000/aircraft-design/campaigns?projectId=10000000-0000-0000-0000-000000000001`
 
 | # | Action | Expected Result | Pass/Fail |
 |---|--------|----------------|-----------|
