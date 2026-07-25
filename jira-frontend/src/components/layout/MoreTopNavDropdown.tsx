@@ -20,6 +20,7 @@ const MORE_PATH_PREFIXES = [
   '/sprints',
   '/kanban',
   '/board/classic',
+  '/aircraft-design',
 ];
 
 export default function MoreTopNavDropdown({ active }: MoreTopNavDropdownProps) {

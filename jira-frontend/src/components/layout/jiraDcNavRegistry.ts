@@ -24,6 +24,8 @@ export const JIRA_DC_PRIMARY_TOP_NAV = [
 export const JIRA_DC_MORE_TOP_NAV = [
   { label: 'Plans & programs', path: '/plans', description: 'Advanced Roadmaps' },
   { label: 'Xray Test Management', path: '/tests', description: 'Xray plugin — tests & traceability' },
+  { label: 'SYSDOPS V&V', path: '/aircraft-design/dashboard', description: 'Aircraft design — VVO, defects, baselines' },
+  { label: 'Architecture', path: '/aircraft-design/architecture', description: 'System architecture documentation' },
   { label: 'Migration Center', path: '/migration', description: 'Import, export, jobs' },
   { label: 'Epics', path: '/epics', description: 'Epic hierarchy' },
   { label: 'Workflow hub', path: '/workflows', description: 'Workflows & schemes' },
