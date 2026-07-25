@@ -26,7 +26,9 @@ import java.util.UUID;
         @Index(name = "idx_issue_epic_id", columnList = "epic_id"),
         @Index(name = "idx_issue_parent_issue_id", columnList = "parent_issue_id"),
         @Index(name = "idx_issue_issue_key", columnList = "issue_key"),
-        @Index(name = "idx_issue_created_at", columnList = "created_at")
+        @Index(name = "idx_issue_created_at", columnList = "created_at"),
+        @Index(name = "idx_issue_priority", columnList = "priority"),
+        @Index(name = "idx_issue_issue_type", columnList = "issue_type")
     }
 )
 @Getter
@@ -53,15 +55,15 @@ public class Issue {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "status", nullable = false)
     private IssueStatus status;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "priority")
     private IssuePriority priority;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "issue_type", nullable = false)
     private IssueType issueType;
 

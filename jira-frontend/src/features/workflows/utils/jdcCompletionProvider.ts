@@ -179,6 +179,28 @@ const APIS: Record<string, ApiMethod[]> = {
     { label: 'getPassed', detail: '(): number', documentation: 'Get count of passed assertions', insertText: 'getPassed()', kind: 'Method' },
     { label: 'getFailed', detail: '(): number', documentation: 'Get count of failed assertions', insertText: 'getFailed()', kind: 'Method' },
   ],
+  'asset': [
+    { label: 'getAsset', detail: '(assetId: string): Map', documentation: 'Get asset/CMDB object by ID', insertText: 'getAsset(${1:assetId})', kind: 'Method' },
+    { label: 'searchAssets', detail: '(query: string): List<Map>', documentation: 'Search assets by name/attributes', insertText: 'searchAssets(${1:query})', kind: 'Method' },
+    { label: 'getAssetsByType', detail: '(typeId: string): List<Map>', documentation: 'Get all assets of a specific type', insertText: 'getAssetsByType(${1:assetTypeId})', kind: 'Method' },
+    { label: 'createAsset', detail: '(typeId, name, attributes): Map', documentation: 'Create a new asset', insertText: 'createAsset(${1:assetTypeId}, ${2:name}, ${3:{}})', kind: 'Method' },
+    { label: 'updateAsset', detail: '(assetId, updates): boolean', documentation: 'Update an asset', insertText: 'updateAsset(${1:assetId}, ${2:{}})', kind: 'Method' },
+    { label: 'deleteAsset', detail: '(assetId: string): boolean', documentation: 'Delete an asset', insertText: 'deleteAsset(${1:assetId})', kind: 'Method' },
+    { label: 'linkAssetToIssue', detail: '(assetId, issueId, linkType): boolean', documentation: 'Link asset to an issue', insertText: 'linkAssetToIssue(${1:assetId}, ${2:issueId}, ${3:linkType})', kind: 'Method' },
+    { label: 'unlinkAssetFromIssue', detail: '(assetId, issueId): boolean', documentation: 'Unlink asset from issue', insertText: 'unlinkAssetFromIssue(${1:assetId}, ${2:issueId})', kind: 'Method' },
+    { label: 'getAssetLinksForIssue', detail: '(issueId: string): List<Map>', documentation: 'Get all assets linked to an issue', insertText: 'getAssetLinksForIssue(${1:issueId})', kind: 'Method' },
+    { label: 'getAssetTypes', detail: '(): List<Map>', documentation: 'Get all asset/object types', insertText: 'getAssetTypes()', kind: 'Method' },
+    { label: 'getAssetType', detail: '(typeId: string): Map', documentation: 'Get asset type details', insertText: 'getAssetType(${1:assetTypeId})', kind: 'Method' },
+  ],
+  'tempo': [
+    { label: 'getWorklogs', detail: '(issueId: string): List<Map>', documentation: 'Get worklogs for an issue', insertText: 'getWorklogs(${1:issueId})', kind: 'Method' },
+    { label: 'logWork', detail: '(issueId, timeSpent, comment, startedAt?): Map', documentation: 'Log work on an issue', insertText: 'logWork(${1:issueId}, ${2:timeSpent}, ${3:comment}, ${4:startedAt})', kind: 'Method' },
+    { label: 'deleteWorklog', detail: '(worklogId: string): boolean', documentation: 'Delete a worklog entry', insertText: 'deleteWorklog(${1:worklogId})', kind: 'Method' },
+    { label: 'updateWorklog', detail: '(worklogId, timeSpent, comment): boolean', documentation: 'Update a worklog entry', insertText: 'updateWorklog(${1:worklogId}, ${2:timeSpent}, ${3:comment})', kind: 'Method' },
+    { label: 'getTimeTracking', detail: '(issueId: string): Map', documentation: 'Get time tracking data (original/remaining estimate, time spent)', insertText: 'getTimeTracking(${1:issueId})', kind: 'Method' },
+    { label: 'getUserWorklogs', detail: '(userId, startDate, endDate): List<Map>', documentation: 'Get worklogs for a user in date range', insertText: 'getUserWorklogs(${1:userId}, ${2:startDate}, ${3:endDate})', kind: 'Method' },
+    { label: 'getTotalTimeSpent', detail: '(issueId: string): number', documentation: 'Get total seconds worked on an issue', insertText: 'getTotalTimeSpent(${1:issueId})', kind: 'Method' },
+  ],
 };
 
 const TOP_LEVEL_MODULES = [
@@ -194,6 +216,8 @@ const TOP_LEVEL_MODULES = [
   { label: 'webhook', detail: 'Webhook Response', documentation: 'Control HTTP response for webhook-triggered scripts', kind: 'Module' as const },
   { label: 'env', detail: 'Environment', documentation: 'Access whitelisted environment variables', kind: 'Module' as const },
   { label: 'file', detail: 'File I/O', documentation: 'In-memory file system (read, write, list — 10MB limit, per-execution)', kind: 'Module' as const },
+  { label: 'asset', detail: 'Assets/CMDB', documentation: 'Asset management — create, search, link assets to issues (Insight equivalent)', kind: 'Module' as const },
+  { label: 'tempo', detail: 'Time Tracking', documentation: 'Advanced time tracking — worklogs, time reports, estimates (Tempo equivalent)', kind: 'Module' as const },
   { label: 'test', detail: 'Testing', documentation: 'Assertion framework (assertTrue, assertEquals, assertNotNull, etc.)', kind: 'Module' as const },
   { label: 'console', detail: 'Console', documentation: 'Log output (log, info, warn, error, debug, table, dir, trace)', kind: 'Module' as const },
 ];

@@ -23,7 +23,7 @@ public class PluginSandbox {
 
     private final Set<String> allowedApis;
     private final Map<String, AuditEntry> auditLog = new ConcurrentHashMap<>();
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final ExecutorService executor = Executors.newFixedThreadPool(Math.min(Runtime.getRuntime().availableProcessors() * 2, 20));
 
     public PluginSandbox() {
         this.allowedApis = new HashSet<>();

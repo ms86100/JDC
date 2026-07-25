@@ -36,7 +36,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: jira-redis
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-jiraRedis2026!}
     volumes:
       - redis_data:/data
     ports:
@@ -94,6 +94,7 @@ services:
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -120,10 +121,11 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       JWT_SECRET: jira-platform-super-secret-key-that-is-at-least-256-bits-long
-      JWT_EXPIRATION_MS: 86400000
-      JWT_REFRESH_EXPIRATION_MS: 604800000
+      JWT_EXPIRATION_MS: 900000
+      JWT_REFRESH_EXPIRATION_MS: 28800000
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -153,6 +155,7 @@ services:
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -183,6 +186,7 @@ services:
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -214,11 +218,12 @@ services:
       WORKFLOW_SERVICE_URL: http://workflow-service:8085
       PROJECT_SERVICE_URL: http://project-service:8083
       VERSION_SERVICE_URL: http://version-service:8096
-      JIRA_PERMISSIONS_FAILOPEN: "true"
+      JIRA_PERMISSIONS_FAILOPEN: "false"
       JIRA_WORKFLOW_TRANSITION_FALLBACK: "true"
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -258,7 +263,7 @@ services:
       COMPONENT_SERVICE_URL: http://component-service:8097
       PLAN_SERVICE_URL: http://plan-service:8092
       SPRINT_SERVICE_URL: http://sprint-service:8091
-      JIRA_PERMISSIONS_FAILOPEN: "true"
+      JIRA_PERMISSIONS_FAILOPEN: "false"
       JIRA_SCRIPTING_ENABLED: "true"
       JIRA_SCRIPTING_TIMEOUT_MS: "5000"
       JIRA_SCRIPTING_MEMORY_LIMIT_MB: "64"
@@ -268,6 +273,7 @@ services:
       JIRA_SCRIPTING_SCHEDULED_POLL_INTERVAL_MS: "30000"
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -299,6 +305,7 @@ services:
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -331,6 +338,7 @@ services:
       WORKFLOW_SERVICE_URL: http://workflow-service:8085
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -362,6 +370,7 @@ services:
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -393,6 +402,7 @@ services:
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -428,6 +438,7 @@ services:
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     volumes:
       - attachment_data:/var/jira/attachments
     networks:
@@ -463,6 +474,7 @@ services:
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -496,6 +508,7 @@ services:
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -529,6 +542,7 @@ services:
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -562,6 +576,7 @@ services:
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -595,6 +610,7 @@ services:
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:
@@ -644,6 +660,7 @@ services:
       TEST_SERVICE_URL: http://test-service:8095
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
     networks:
       - jira-network
     depends_on:

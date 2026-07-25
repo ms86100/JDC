@@ -51,7 +51,7 @@ public class SseController {
     private final Map<String, CopyOnWriteArrayList<SseEmitter>> jobEmitters = new ConcurrentHashMap<>();
 
     // Thread pool for async SSE operations
-    private final ExecutorService sseExecutor = Executors.newCachedThreadPool();
+    private final ExecutorService sseExecutor = Executors.newFixedThreadPool(Math.min(Runtime.getRuntime().availableProcessors() * 2, 20));
 
     @GetMapping("/job/{jobId}/stream")
     @Operation(summary = "SSE endpoint for progress streaming")

@@ -8,6 +8,11 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      connection-timeout: 20000
+      leak-detection-threshold: 30000
   jpa:
     hibernate:
       ddl-auto: none
@@ -17,26 +22,47 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         default_schema: jira_auth
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 500
+        generate_statistics: false
   flyway:
     enabled: true
     baseline-on-migrate: true
     default-schema: jira_auth
     schemas: jira_auth
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
 
 server:
   port: 8081
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: never
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    max-connections: 8192
+    accept-count: 100
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,prometheus
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
 
 jwt:
-  secret: ${JWT_SECRET:jira-platform-super-secret-key-that-is-at-least-256-bits-long}
+  secret: ${JWT_SECRET:}
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}
   refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
 
@@ -47,10 +73,6 @@ logging:
     org.springframework.security: DEBUG
   file:
     path: ${LOG_PATH:../../logs}/auth
-
-error:
-  include-message: always
-  include-stacktrace: never
 
 springdoc:
   api-docs:

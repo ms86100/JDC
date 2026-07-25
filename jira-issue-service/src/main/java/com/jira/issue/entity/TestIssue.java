@@ -101,11 +101,11 @@ public class TestIssue {
     private UUID testRepositoryFolderId;
 
     // Standard Jira issue fields
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "status", nullable = false)
     private IssueStatus status;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "priority")
     private IssuePriority priority;
 

@@ -40,6 +40,7 @@ public class ScriptExecutionService {
         Map<String, Object> ctx = mockContext != null ? mockContext : Map.of();
         java.util.Set<String> resolvedKeys = new java.util.HashSet<>();
         String resolvedBody = resolveIncludes(scriptBody, resolvedKeys);
+        resolvedBody = JdcDslTranspiler.transpile(resolvedBody);
         Map<String, Object> enrichedCtx = new java.util.HashMap<>(ctx);
         enrichedCtx.put("_resolvedIncludes", resolvedKeys);
         Map<String, Object> bindings = jdcScriptBindings.buildBindings(enrichedCtx);
@@ -80,6 +81,7 @@ public class ScriptExecutionService {
     private ScriptResult executeScript(ScriptDefinition script, Map<String, Object> ctx, String executionMode) {
         java.util.Set<String> resolvedKeys = new java.util.HashSet<>();
         String resolvedBody = resolveIncludes(script.getScriptBody(), resolvedKeys);
+        resolvedBody = JdcDslTranspiler.transpile(resolvedBody);
         Map<String, Object> enrichedCtx = new java.util.HashMap<>(ctx);
         enrichedCtx.put("_resolvedIncludes", resolvedKeys);
         Map<String, Object> bindings = jdcScriptBindings.buildBindings(enrichedCtx);

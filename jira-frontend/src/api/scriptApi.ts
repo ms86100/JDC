@@ -226,4 +226,7 @@ export const scriptApi = {
 
   getProfilerStats: () =>
     apiClient.get<{ totalExecutions: number; successRate: number; slowestScripts: Array<{ scriptKey: string; avgMs: number }>; executionsByMode: Record<string, number> }>(`${BASE}/profiler/stats`),
+
+  transpile: (scriptBody: string) =>
+    apiClient.post<{ original: string; transpiled: string; hasDslSyntax: boolean; changed: boolean }>(`${BASE}/transpile`, { scriptBody }),
 };

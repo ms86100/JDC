@@ -31,7 +31,12 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .addFilterBefore(migrationHeaderAuthFilter, org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class)
+            // TODO: Security hardening — switch to .anyRequest().authenticated() once a
+            //  JWT authentication filter is added to this service. Currently permitAll
+            //  is required because there is no JWT filter to validate tokens.
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/ws/**").permitAll()
                 .anyRequest().permitAll()
             );
 

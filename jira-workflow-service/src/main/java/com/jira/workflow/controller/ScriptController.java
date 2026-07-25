@@ -2,6 +2,7 @@ package com.jira.workflow.controller;
 
 import com.jira.workflow.dto.*;
 import com.jira.workflow.engine.script.GraalScriptEngine;
+import com.jira.workflow.engine.script.JdcDslTranspiler;
 import com.jira.workflow.engine.script.ScriptExecutionService;
 import com.jira.workflow.engine.script.ScriptResult;
 import com.jira.workflow.entity.ScriptSchedule;
@@ -179,11 +180,30 @@ public class ScriptController {
             return ResponseEntity.badRequest().body(Map.of("valid", false, "error", "Script body is required"));
         }
         try {
-            graalScriptEngine.parseOnly(scriptBody);
+            String transpiled = JdcDslTranspiler.transpile(scriptBody);
+            graalScriptEngine.parseOnly(transpiled);
             return ResponseEntity.ok(Map.of("valid", true));
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("valid", false, "error", e.getMessage()));
         }
+    }
+
+    // === DSL Transpilation Preview ===
+
+    @PostMapping("/transpile")
+    @Operation(summary = "Preview DSL-to-JavaScript transpilation output")
+    public ResponseEntity<Map<String, Object>> transpileScript(@RequestBody Map<String, String> body) {
+        String scriptBody = body.get("scriptBody");
+        if (scriptBody == null || scriptBody.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Script body is required"));
+        }
+        String transpiled = JdcDslTranspiler.transpile(scriptBody);
+        boolean hasDsl = JdcDslTranspiler.containsDslSyntax(scriptBody);
+        return ResponseEntity.ok(Map.of(
+            "original", scriptBody,
+            "transpiled", transpiled,
+            "hasDslSyntax", hasDsl,
+            "changed", !scriptBody.equals(transpiled)));
     }
 
     // === Import/Export ===
@@ -551,5 +571,30 @@ public class ScriptController {
                     return ResponseEntity.ok(result);
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    // === Debug API ===
+
+    @GetMapping("/debug/sessions")
+    @Operation(summary = "List active debug sessions")
+    public ResponseEntity<Map<String, Object>> listDebugSessions() {
+        return ResponseEntity.ok(com.jira.workflow.engine.script.ScriptDebugger.listActiveSessions());
+    }
+
+    @GetMapping("/debug/state/{sessionId}")
+    @Operation(summary = "Get debug session state including breakpoints and variable snapshots")
+    public ResponseEntity<Map<String, Object>> getDebugState(@PathVariable String sessionId) {
+        var session = com.jira.workflow.engine.script.ScriptDebugger.getSession(sessionId);
+        if (session == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(session.getState());
+    }
+
+    @PostMapping("/debug/resume/{sessionId}")
+    @Operation(summary = "Resume a paused debug session")
+    public ResponseEntity<Map<String, Object>> resumeDebug(@PathVariable String sessionId) {
+        var session = com.jira.workflow.engine.script.ScriptDebugger.getSession(sessionId);
+        if (session == null) return ResponseEntity.notFound().build();
+        session.resume();
+        return ResponseEntity.ok(Map.of("resumed", true, "sessionId", sessionId));
     }
 }

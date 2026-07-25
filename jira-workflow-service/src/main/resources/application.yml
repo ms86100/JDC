@@ -1,5 +1,15 @@
 server:
   port: 8085
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: never
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    max-connections: 8192
+    accept-count: 100
 
 spring:
   main:
@@ -12,10 +22,11 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
+      maximum-pool-size: 50
+      minimum-idle: 10
       idle-timeout: 300000
       connection-timeout: 20000
+      leak-detection-threshold: 30000
   jpa:
     hibernate:
       ddl-auto: none
@@ -25,6 +36,15 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         default_schema: jira_workflow
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 500
+        generate_statistics: false
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -34,15 +54,17 @@ spring:
     schemas: jira_workflow
     default-schema: jira_workflow
     table: flyway_schema_history
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,prometheus
   endpoint:
     health:
-      show-details: when_authorized
+      show-details: when-authorized
 
 springdoc:
   api-docs:

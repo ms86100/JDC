@@ -35,7 +35,7 @@ public class PluginRegistry {
     private final PluginSandbox sandbox;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
-    private final ExecutorService asyncExecutor = Executors.newCachedThreadPool();
+    private final ExecutorService asyncExecutor = Executors.newFixedThreadPool(Math.min(Runtime.getRuntime().availableProcessors() * 2, 20));
     private volatile boolean shuttingDown = false;
 
     public PluginRegistry() {

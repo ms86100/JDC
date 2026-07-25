@@ -19,6 +19,10 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // TODO: Security hardening — replace .requestMatchers("/api/**").permitAll()
+            //  with .anyRequest().authenticated() once a JWT authentication filter is
+            //  added to this service. Currently permitAll is required because there is
+            //  no JWT filter to validate tokens.
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

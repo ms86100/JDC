@@ -7,6 +7,7 @@ import { issueApi, CreateIssueRequest, IssueType, IssuePriority } from '../../..
 import apiClient from '../../../api/axiosClient';
 import { appNotify } from '../../../lib/appNotify';
 import { useFieldBehaviors } from '../../../hooks/useFieldBehaviors';
+import { useLiveFields } from '../../../hooks/useLiveFields';
 import './CreateIssueModal.css';
 
 interface CreateIssueModalProps {
@@ -133,7 +134,7 @@ export default function CreateIssueModal({
     enabled: !!form.projectId,
   });
 
-  const { isFieldVisible, isFieldRequired, isFieldReadOnly, getFieldWarning, getFieldLabel, getFieldDefault, getFieldOptions, getFieldHelpText } = useFieldBehaviors({
+  const serverBehaviors = useFieldBehaviors({
     screenContext: 'CREATE',
     projectId: form.projectId || undefined,
     issueTypeId: form.issueTypeId || undefined,
@@ -141,14 +142,33 @@ export default function CreateIssueModal({
     enabled: !!form.projectId,
   });
 
+  const liveFields = useLiveFields();
+
+  // Merge server-side directives into client-side Live Fields whenever they change
+  const { directives: serverDirectives } = serverBehaviors;
+  const prevDirectivesRef = useState<string>('')[1];
+  const directivesJson = JSON.stringify(serverDirectives);
+  if (directivesJson !== prevDirectivesRef.toString()) {
+    liveFields.applyServerDirectives(serverDirectives.map(d => ({
+      fieldName: d.fieldName,
+      visible: d.visible,
+      required: d.required,
+      readOnly: d.readOnly,
+      defaultValue: d.defaultValue,
+      options: d.options,
+      label: d.label,
+      message: d.warning,
+    })));
+  }
+
   const fb = (fieldName: string) => ({
-    visible: isFieldVisible(fieldName),
-    required: isFieldRequired(fieldName),
-    readOnly: isFieldReadOnly(fieldName),
-    warning: getFieldWarning(fieldName),
-    label: getFieldLabel(fieldName),
-    helpText: getFieldHelpText(fieldName),
-    options: getFieldOptions(fieldName),
+    visible: liveFields.isFieldVisible(fieldName) && serverBehaviors.isFieldVisible(fieldName),
+    required: liveFields.isFieldRequired(fieldName) || serverBehaviors.isFieldRequired(fieldName),
+    readOnly: liveFields.isFieldReadOnly(fieldName) || serverBehaviors.isFieldReadOnly(fieldName),
+    warning: liveFields.getFieldMessage(fieldName) || serverBehaviors.getFieldWarning(fieldName),
+    label: liveFields.getFieldLabel(fieldName) || serverBehaviors.getFieldLabel(fieldName),
+    helpText: liveFields.getFieldDescription(fieldName) || serverBehaviors.getFieldHelpText(fieldName),
+    options: liveFields.getFieldOptions(fieldName) || serverBehaviors.getFieldOptions(fieldName),
     defaultValue: getFieldDefault(fieldName),
   });
 

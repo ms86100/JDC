@@ -32,7 +32,7 @@ public class PluginHookExecutor {
     public PluginHookExecutor(PluginSandbox sandbox) {
         this.sandbox = sandbox;
         this.syncExecutor = Executors.newFixedThreadPool(4);
-        this.asyncExecutor = Executors.newCachedThreadPool();
+        this.asyncExecutor = Executors.newFixedThreadPool(Math.min(Runtime.getRuntime().availableProcessors() * 2, 20));
         this.scheduler = Executors.newScheduledThreadPool(2);
     }
 

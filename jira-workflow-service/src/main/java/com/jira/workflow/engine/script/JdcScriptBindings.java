@@ -35,6 +35,9 @@ public class JdcScriptBindings {
     @Value("${jira.services.plan-url:http://jira-plan-service:8092}")
     private String planServiceUrl;
 
+    @Value("${jira.services.admin-url:http://jira-admin-service:8093}")
+    private String adminServiceUrl;
+
     public Map<String, Object> buildBindings(Map<String, Object> workflowContext) {
         Map<String, Object> bindings = new HashMap<>();
 
@@ -53,6 +56,8 @@ public class JdcScriptBindings {
         bindings.put("ldap", new JdcLdapApi(integrationClient.restTemplate(), userServiceUrl));
         bindings.put("confluence", new JdcConfluenceApi(integrationClient.restTemplate(), confluenceUrl));
         bindings.put("sprint", new JdcSprintApi(integrationClient.restTemplate(), planServiceUrl, integrationClient.getIssueServiceUrl()));
+        bindings.put("asset", new JdcAssetApi(integrationClient.restTemplate(), adminServiceUrl));
+        bindings.put("tempo", new JdcTempoApi(integrationClient.restTemplate(), integrationClient.getIssueServiceUrl()));
         JdcWebhookApi webhookApi = new JdcWebhookApi();
         if (workflowContext.containsKey("_requestHeaders")) {
             @SuppressWarnings("unchecked")
