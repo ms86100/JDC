@@ -312,55 +312,129 @@ function renderSystemOverview() {
 
       <SectionHeading>Platform Architecture</SectionHeading>
       <Paragraph>
-        The platform comprises 12+ Spring Boot microservices, a single PostgreSQL 16 database with 14
-        isolated schemas, and a React 18 frontend served through an API gateway. Each service owns its
-        schema and exposes a versioned REST API.
+        The platform is a clustered, enterprise-grade microservices system comprising 22 Spring Boot services,
+        a shared PostgreSQL 16 database (primary + read replica) with 21 isolated schemas, and a React 18
+        frontend. Services communicate via REST and Kafka event bus, coordinated through a shared cluster
+        library (jira-cluster-commons). The system supports 4,000+ concurrent users with horizontal
+        auto-scaling, distributed caching, and multi-tenant isolation.
       </Paragraph>
 
-      {/* Architecture Diagram */}
+      {/* Full Architecture Diagram */}
       <div style={{ position: 'relative', padding: 20, background: C.bg, borderRadius: 8, marginBottom: 24 }}>
-        {/* Top: Frontend + Gateway */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 40, marginBottom: 10 }}>
-          <ServiceBox name="jira-frontend" port="3000" color={C.brand} desc="React 18 + Vite" />
-          <ServiceBox name="jira-gateway" port="8080" color={C.dark} desc="API Gateway (routing)" />
+        <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: C.dark, marginBottom: 12 }}>
+          Production Architecture (Jira Data Center Style)
+        </div>
+
+        {/* Internet + TLS */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+          <DiagramBox label="Internet / Users" color={C.subtle} width={180} />
+        </div>
+        <DownArrow />
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+          <DiagramBox label="TLS Termination" sub="nginx / haproxy" color={C.dark} width={200} />
         </div>
         <DownArrow />
 
-        {/* Row 1 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
-          <ServiceBox name="auth-service" port="8081" color={C.purple} desc="JWT auth, SAML SSO" />
-          <ServiceBox name="user-service" port="8082" color={C.purple} desc="User/group CRUD" />
-          <ServiceBox name="project-service" port="8083" color={C.success} desc="Projects, schemes, roles" />
+        {/* Gateway */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 6 }}>
+          <ServiceBox name="jira-frontend" port="3000" color={C.brand} desc="React 18 + TypeScript + Vite" />
+          <ServiceBox name="jira-gateway" port="8080" color={C.dark} desc="Rate limit, JWT, CORS, circuit breaker" />
+        </div>
+        <DownArrow />
+
+        {/* Load Balancer note */}
+        <div style={{ textAlign: 'center', fontSize: 10, color: C.subtle, marginBottom: 6, fontStyle: 'italic' }}>
+          Docker DNS round-robin / K8s Service (Load Balancer) -- each service horizontally scalable
+        </div>
+
+        {/* Row 1: Core */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 10 }}>
+          <ServiceBox name="auth-service" port="8081" color={C.purple} desc="JWT + OAuth2/OIDC, SAML SSO" />
+          <ServiceBox name="user-service" port="8082" color={C.purple} desc="User/group CRUD, LDAP sync" />
+          <ServiceBox name="project-service" port="8083" color={C.success} desc="Projects, schemes, roles, templates" />
           <ServiceBox name="issue-service" port="8084" color={C.success} desc="Issues, custom fields, change mgmt" />
         </div>
 
-        {/* Row 2 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
-          <ServiceBox name="workflow-service" port="8085" color={C.danger} desc="Workflows, automation, scripting" />
-          <ServiceBox name="test-service" port="8095" color={C.danger} desc="VVO, Xray, defects, reports" />
-          <ServiceBox name="admin-service" port="8093" color={C.warning} desc="Master data, assets, config" />
-          <ServiceBox name="search-service" port="8088" color={C.teal} desc="JQL parser, full-text search" />
+        {/* Row 2: Business Logic */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 10 }}>
+          <ServiceBox name="workflow-service" port="8085" color={C.danger} desc="Workflows, automation, GraalJS scripting" />
+          <ServiceBox name="test-service" port="8095" color={C.danger} desc="VVO, HLVVO, defects, V&V reports" />
+          <ServiceBox name="admin-service" port="8093" color={C.warning} desc="Master data, assets, config, webhooks" />
+          <ServiceBox name="search-service" port="8088" color={C.teal} desc="JQL parser, full-text search (tsvector)" />
         </div>
 
-        {/* Row 3 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 10 }}>
+        {/* Row 3: Supporting */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 10 }}>
           <ServiceBox name="sprint-service" port="8091" color={C.teal} desc="Sprints, boards, kanban" />
-          <ServiceBox name="plan-service" port="--" color={C.teal} desc="Roadmaps, teams, goals" />
-          <ServiceBox name="notification-service" port="8087" color={C.subtle} desc="Email, templates" />
-          <ServiceBox name="dashboard-service" port="--" color={C.subtle} desc="Gadgets, charts" />
+          <ServiceBox name="plan-service" port="8092" color={C.teal} desc="Roadmaps, teams, goals" />
+          <ServiceBox name="notification" port="8087" color={C.subtle} desc="Email, templates, automation" />
+          <ServiceBox name="comment" port="8086" color={C.subtle} desc="Comments, mentions" />
+          <ServiceBox name="audit" port="8089" color={C.subtle} desc="Audit trail, compliance" />
+        </div>
+
+        {/* Row 4: Extended */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 10 }}>
+          <ServiceBox name="attachment" port="8090" color={C.subtle} desc="Files via StorageProvider (S3)" />
+          <ServiceBox name="version" port="8096" color={C.subtle} desc="Release hub, versions" />
+          <ServiceBox name="component" port="8097" color={C.subtle} desc="Components, assignments" />
+          <ServiceBox name="migration" port="8094" color={C.subtle} desc="Import/export, data migration" />
+          <ServiceBox name="dashboard" port="--" color={C.subtle} desc="Gadgets, charts, reports" />
         </div>
 
         <DownArrow />
 
-        {/* Database */}
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <div style={{ background: C.dbBg, color: C.white, padding: '16px 40px', borderRadius: 8, textAlign: 'center', maxWidth: 700 }}>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>PostgreSQL 16</div>
-            <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
-              14 schemas: jira_auth, jira_issue, jira_project, jira_workflow, jira_test, jira_admin,
-              jira_search, jira_sprint, jira_plan, jira_comment, jira_notification, jira_audit,
-              jira_version, jira_component
+        {/* Shared Library */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+          <div style={{ background: '#e8f5e9', border: `2px solid ${C.success}`, borderRadius: 8, padding: '10px 24px', textAlign: 'center', maxWidth: 700 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.success }}>jira-cluster-commons</div>
+            <div style={{ fontSize: 11, color: C.dark, marginTop: 4 }}>
+              ShedLock | StorageProvider | ClusterCacheManager | ClusterEventBus | Resilience4j |
+              IdempotencyService | CorrelationIdFilter | TenantContext | ArchUnit Guards
             </div>
+          </div>
+        </div>
+
+        <DownArrow />
+
+        {/* Infrastructure */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ background: C.dbBg, color: C.white, padding: '10px 16px', borderRadius: 6, textAlign: 'center', minWidth: 150 }}>
+            <div style={{ fontWeight: 700, fontSize: 13 }}>PostgreSQL 16</div>
+            <div style={{ fontSize: 10, opacity: 0.8 }}>Primary + Read Replica</div>
+            <div style={{ fontSize: 10, opacity: 0.7 }}>21 schemas (CQRS)</div>
+          </div>
+          <div style={{ background: '#c62828', color: C.white, padding: '10px 16px', borderRadius: 6, textAlign: 'center', minWidth: 140 }}>
+            <div style={{ fontWeight: 700, fontSize: 13 }}>Redis 7</div>
+            <div style={{ fontSize: 10, opacity: 0.8 }}>Cache + Pub/Sub + Locks</div>
+            <div style={{ fontSize: 10, opacity: 0.7 }}>Authenticated</div>
+          </div>
+          <div style={{ background: '#1b5e20', color: C.white, padding: '10px 16px', borderRadius: 6, textAlign: 'center', minWidth: 120 }}>
+            <div style={{ fontWeight: 700, fontSize: 13 }}>Kafka</div>
+            <div style={{ fontSize: 10, opacity: 0.8 }}>Event Bus</div>
+            <div style={{ fontSize: 10, opacity: 0.7 }}>7 topics</div>
+          </div>
+          <div style={{ background: '#e65100', color: C.white, padding: '10px 16px', borderRadius: 6, textAlign: 'center', minWidth: 120 }}>
+            <div style={{ fontWeight: 700, fontSize: 13 }}>MinIO</div>
+            <div style={{ fontSize: 10, opacity: 0.8 }}>S3 Storage</div>
+            <div style={{ fontSize: 10, opacity: 0.7 }}>Shared files</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+          <div style={{ background: '#f57f17', color: C.white, padding: '8px 14px', borderRadius: 6, textAlign: 'center', minWidth: 120 }}>
+            <div style={{ fontWeight: 600, fontSize: 12 }}>Prometheus</div>
+            <div style={{ fontSize: 10, opacity: 0.8 }}>Metrics (16 targets)</div>
+          </div>
+          <div style={{ background: '#6a1b9a', color: C.white, padding: '8px 14px', borderRadius: 6, textAlign: 'center', minWidth: 120 }}>
+            <div style={{ fontWeight: 600, fontSize: 12 }}>Grafana</div>
+            <div style={{ fontSize: 10, opacity: 0.8 }}>Dashboards + 6 alerts</div>
+          </div>
+          <div style={{ background: '#00695c', color: C.white, padding: '8px 14px', borderRadius: 6, textAlign: 'center', minWidth: 120 }}>
+            <div style={{ fontWeight: 600, fontSize: 12 }}>Zipkin</div>
+            <div style={{ fontSize: 10, opacity: 0.8 }}>Distributed tracing</div>
+          </div>
+          <div style={{ background: '#37474f', color: C.white, padding: '8px 14px', borderRadius: 6, textAlign: 'center', minWidth: 120 }}>
+            <div style={{ fontWeight: 600, fontSize: 12 }}>Zookeeper</div>
+            <div style={{ fontSize: 10, opacity: 0.8 }}>Kafka coordination</div>
           </div>
         </div>
       </div>
@@ -368,20 +442,20 @@ function renderSystemOverview() {
       {/* Key stats */}
       <div className="ads-stats">
         <div className="ads-stat ads-stat--brand">
-          <span className="ads-stat-value">12+</span>
+          <span className="ads-stat-value">22</span>
           <span className="ads-stat-label">Microservices</span>
         </div>
         <div className="ads-stat ads-stat--success">
-          <span className="ads-stat-value">14</span>
+          <span className="ads-stat-value">21</span>
           <span className="ads-stat-label">DB Schemas</span>
         </div>
         <div className="ads-stat ads-stat--warning">
-          <span className="ads-stat-value">200+</span>
-          <span className="ads-stat-label">REST Endpoints</span>
+          <span className="ads-stat-value">8</span>
+          <span className="ads-stat-label">Infra Services</span>
         </div>
         <div className="ads-stat">
-          <span className="ads-stat-value">150+</span>
-          <span className="ads-stat-label">Entity Models</span>
+          <span className="ads-stat-value">4K+</span>
+          <span className="ads-stat-label">Concurrent Users</span>
         </div>
       </div>
 
@@ -392,12 +466,14 @@ function renderSystemOverview() {
           <div>
             <div className="ads-section-title">Backend</div>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: C.dark, lineHeight: 1.8 }}>
-              <li>Java 21 + Spring Boot 3.3</li>
+              <li>Java 21 + Spring Boot 3.4.5</li>
               <li>Spring Data JPA (Hibernate 6)</li>
-              <li>Spring Security + JWT</li>
-              <li>WebClient for inter-service calls</li>
-              <li>GraalJS (script engine)</li>
+              <li>Spring Security + JWT + OAuth2/OIDC</li>
+              <li>Resilience4j (circuit breakers + retry)</li>
+              <li>ShedLock (cluster-safe scheduling)</li>
+              <li>GraalJS (scripting engine)</li>
               <li>Flyway migrations per schema</li>
+              <li>Micrometer + OpenTelemetry tracing</li>
             </ul>
           </div>
           <div>
@@ -408,18 +484,20 @@ function renderSystemOverview() {
               <li>React Router 6</li>
               <li>Axios for HTTP</li>
               <li>CSS Modules + ads-* design tokens</li>
-              <li>No external UI library</li>
+              <li>17-tab Architecture page</li>
             </ul>
           </div>
           <div>
             <div className="ads-section-title">Infrastructure</div>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: C.dark, lineHeight: 1.8 }}>
-              <li>PostgreSQL 16 (single instance)</li>
-              <li>API Gateway (port 8080)</li>
-              <li>Maven multi-module build</li>
-              <li>Docker Compose (dev)</li>
-              <li>Schema-per-service isolation</li>
-              <li>Centralized YAML config</li>
+              <li>PostgreSQL 16 (primary + read replica)</li>
+              <li>Redis 7 (cache, pub/sub, locking)</li>
+              <li>Kafka + Zookeeper (event bus)</li>
+              <li>MinIO (S3-compatible storage)</li>
+              <li>Prometheus + Grafana (observability)</li>
+              <li>Zipkin (distributed tracing)</li>
+              <li>Docker Compose + K8s + HPA</li>
+              <li>GitHub Actions CI/CD + Gatling</li>
             </ul>
           </div>
         </div>
