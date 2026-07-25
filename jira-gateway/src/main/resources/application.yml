@@ -48,6 +48,14 @@ management:
       enabled: true
     redis:
       enabled: false
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: w3c
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://zipkin:9411/api/v2/spans}
 
 # JWT Configuration
 jwt:
@@ -82,11 +90,21 @@ logging:
 # Resilience Configuration
 resilience4j:
   circuitbreaker:
+    configs:
+      default:
+        failureRateThreshold: 50
+        slidingWindowSize: 10
+        waitDurationInOpenState: 30s
+        minimumNumberOfCalls: 5
     instances:
       default:
         register-health-indicator: true
         sliding-window-size: 10
   retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 500ms
     instances:
       default:
         max-attempts: 3
