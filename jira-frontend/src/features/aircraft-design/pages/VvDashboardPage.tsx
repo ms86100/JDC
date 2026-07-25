@@ -3,18 +3,34 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { vvReportApi } from '../../../api/vvReportApi';
 import '../AircraftDesignStyles.css';
 
+interface MetricsBlock {
+  total?: number;
+  newCount?: number;
+  verifiedCount?: number;
+  releasedCount?: number;
+  openCount?: number;
+  blockingCount?: number;
+}
+
 interface DashboardData {
-  totalVvos: number;
-  verifiedCount: number;
-  releasedCount: number;
-  openTechEvents: number;
-  blockingBenchDefects: number;
-  openProblemReports: number;
-  coveragePercentage: number;
-  vvoStatusDistribution: Record<string, number>;
-  techEventTrend: { label: string; count: number }[];
-  benchDefectSeverity: Record<string, number>;
-  recentActivity: { id: string; type: string; summary: string; timestamp: string; user: string }[];
+  projectId?: string;
+  vvoMetrics?: MetricsBlock;
+  techEventMetrics?: MetricsBlock;
+  benchDefectMetrics?: MetricsBlock;
+  problemReportMetrics?: MetricsBlock;
+  generatedAt?: string;
+  // Legacy flat fields (for backward compat)
+  totalVvos?: number;
+  verifiedCount?: number;
+  releasedCount?: number;
+  openTechEvents?: number;
+  blockingBenchDefects?: number;
+  openProblemReports?: number;
+  coveragePercentage?: number;
+  vvoStatusDistribution?: Record<string, number>;
+  techEventTrend?: { label: string; count: number }[];
+  benchDefectSeverity?: Record<string, number>;
+  recentActivity?: { id: string; type: string; summary: string; timestamp: string; user: string }[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -194,32 +210,44 @@ export default function VvDashboardPage() {
         </div>
       )}
 
-      {dashboard && (
+      {dashboard && (() => {
+        const vvo = dashboard.vvoMetrics || {};
+        const te = dashboard.techEventMetrics || {};
+        const bd = dashboard.benchDefectMetrics || {};
+        const pr = dashboard.problemReportMetrics || {};
+        const totalVvos = vvo.total ?? dashboard.totalVvos ?? 0;
+        const verifiedCount = vvo.verifiedCount ?? dashboard.verifiedCount ?? 0;
+        const releasedCount = vvo.releasedCount ?? dashboard.releasedCount ?? 0;
+        const openTechEvents = te.openCount ?? dashboard.openTechEvents ?? 0;
+        const blockingBenchDefects = bd.blockingCount ?? dashboard.blockingBenchDefects ?? 0;
+        const openProblemReports = pr.openCount ?? dashboard.openProblemReports ?? 0;
+        const coveragePercentage = dashboard.coveragePercentage ?? 0;
+        return (
         <>
           {/* KPI Cards */}
           <div className="ads-stats">
             <div className="ads-stat ads-stat--brand">
-              <span className="ads-stat-value">{dashboard.totalVvos}</span>
+              <span className="ads-stat-value">{totalVvos}</span>
               <span className="ads-stat-label">Total VVOs</span>
             </div>
             <div className="ads-stat ads-stat--success">
-              <span className="ads-stat-value">{dashboard.verifiedCount}</span>
+              <span className="ads-stat-value">{verifiedCount}</span>
               <span className="ads-stat-label">Verified</span>
             </div>
             <div className="ads-stat ads-stat--success">
-              <span className="ads-stat-value">{dashboard.releasedCount}</span>
+              <span className="ads-stat-value">{releasedCount}</span>
               <span className="ads-stat-label">Released</span>
             </div>
             <div className="ads-stat ads-stat--warning">
-              <span className="ads-stat-value">{dashboard.openTechEvents}</span>
+              <span className="ads-stat-value">{openTechEvents}</span>
               <span className="ads-stat-label">Open Tech Events</span>
             </div>
             <div className="ads-stat ads-stat--danger">
-              <span className="ads-stat-value">{dashboard.blockingBenchDefects}</span>
+              <span className="ads-stat-value">{blockingBenchDefects}</span>
               <span className="ads-stat-label">Blocking Defects</span>
             </div>
             <div className="ads-stat ads-stat--danger">
-              <span className="ads-stat-value">{dashboard.openProblemReports}</span>
+              <span className="ads-stat-value">{openProblemReports}</span>
               <span className="ads-stat-label">Open PRs</span>
             </div>
           </div>
@@ -230,11 +258,11 @@ export default function VvDashboardPage() {
             <div className="ads-gauge">
               <div className="ads-gauge-bar">
                 <div
-                  className={`ads-gauge-fill${dashboard.coveragePercentage >= 80 ? ' ads-gauge-fill--success' : dashboard.coveragePercentage >= 50 ? ' ads-gauge-fill--warning' : ' ads-gauge-fill--danger'}`}
-                  style={{ width: `${Math.min(dashboard.coveragePercentage, 100)}%` }}
+                  className={`ads-gauge-fill${coveragePercentage >= 80 ? ' ads-gauge-fill--success' : coveragePercentage >= 50 ? ' ads-gauge-fill--warning' : ' ads-gauge-fill--danger'}`}
+                  style={{ width: `${Math.min(coveragePercentage, 100)}%` }}
                 />
               </div>
-              <span className="ads-gauge-label">{dashboard.coveragePercentage}%</span>
+              <span className="ads-gauge-label">{coveragePercentage}%</span>
             </div>
           </div>
 
@@ -297,7 +325,8 @@ export default function VvDashboardPage() {
             </div>
           </div>
         </>
-      )}
+        );
+      })()}
     </div>
   );
 }
