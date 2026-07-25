@@ -312,131 +312,236 @@ function renderSystemOverview() {
 
       <SectionHeading>Platform Architecture</SectionHeading>
       <Paragraph>
-        The platform is a clustered, enterprise-grade microservices system comprising 22 Spring Boot services,
-        a shared PostgreSQL 16 database (primary + read replica) with 21 isolated schemas, and a React 18
-        frontend. Services communicate via REST and Kafka event bus, coordinated through a shared cluster
-        library (jira-cluster-commons). The system supports 4,000+ concurrent users with horizontal
-        auto-scaling, distributed caching, and multi-tenant isolation.
+        The platform is a clustered, enterprise-grade microservices system built on Jira Data Center
+        principles: multiple identical nodes behind a load balancer, sharing a database and storage,
+        with distributed caching, event-driven messaging, and multi-tenant isolation. Supports 4,000+
+        concurrent users with horizontal auto-scaling across 22 services and 8 infrastructure components.
       </Paragraph>
 
-      {/* Full Architecture Diagram */}
-      <div style={{ position: 'relative', padding: 20, background: C.bg, borderRadius: 8, marginBottom: 24 }}>
-        <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: C.dark, marginBottom: 12 }}>
-          Production Architecture (Jira Data Center Style)
+      {/* ─── DIAGRAM 1: Load Balancer + Nodes ─── */}
+      <div style={{ padding: 20, background: C.bg, borderRadius: 8, marginBottom: 16 }}>
+        <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 12 }}>
+          1. Load Balancer + Node Architecture
         </div>
+        <div style={{ background: C.white, borderRadius: 6, padding: 16, fontFamily: 'monospace', fontSize: 12, lineHeight: 1.7, color: C.dark, whiteSpace: 'pre', overflowX: 'auto' }}>{
+`                         4,000+ Users
+                              |
+                     ┌────────┴────────┐
+                     │  Load Balancer  │   TLS Termination
+                     │  (nginx / K8s) │   Sticky Sessions
+                     └────────┬────────┘
+                              │
+               ┌──────────────┼──────────────┐
+               │              │              │
+          ┌─────────┐   ┌─────────┐   ┌─────────┐
+          │Gateway-1│   │Gateway-2│   │Gateway-3│  ← Horizontal Scale
+          │  :8080  │   │  :8080  │   │  :8080  │  Rate Limit (Redis)
+          └────┬────┘   └────┬────┘   └────┬────┘  JWT Validation
+               │              │              │      Circuit Breaker
+               └──────────────┼──────────────┘
+                              │
+                    Docker DNS Round-Robin
+                    / K8s Service (ClusterIP)
+                              │
+        ┌─────────┬───────────┼───────────┬─────────┐
+        │         │           │           │         │
+   ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ...
+   │Issue    │ │Issue    │ │Issue    │ │Auth     │
+   │Node 1  │ │Node 2  │ │Node 3  │ │Node 1  │  ← Each Node =
+   │  :8084 │ │  :8084 │ │  :8084 │ │  :8081 │  Full App Instance
+   └─────────┘ └─────────┘ └─────────┘ └─────────┘
 
-        {/* Internet + TLS */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
-          <DiagramBox label="Internet / Users" color={C.subtle} width={180} />
+   Every node contains: REST API, Business Logic, Caching,
+   Schedulers (ShedLock), Plugins, Authentication, Indexing`
+        }</div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+          {['Gateway x3','Auth x2','Issue x3','Workflow x2','Search x2','Notification x2','Sprint x1','Plan x1'].map(n => (
+            <span key={n} style={{ fontSize: 11, background: C.white, border: `1px solid ${C.border}`, borderRadius: 4, padding: '3px 8px' }}>{n}</span>
+          ))}
         </div>
-        <DownArrow />
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
-          <DiagramBox label="TLS Termination" sub="nginx / haproxy" color={C.dark} width={200} />
+      </div>
+
+      {/* ─── DIAGRAM 2: Horizontal + Vertical Scaling ─── */}
+      <div style={{ padding: 20, background: C.bg, borderRadius: 8, marginBottom: 16 }}>
+        <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 12 }}>
+          2. Horizontal + Vertical Scaling
         </div>
-        <DownArrow />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ background: C.white, borderRadius: 6, padding: 14, border: `2px solid ${C.brand}` }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.brand, marginBottom: 8 }}>Horizontal Scaling (add nodes)</div>
+            <div style={{ fontFamily: 'monospace', fontSize: 11, lineHeight: 1.8, whiteSpace: 'pre', color: C.dark }}>{
+`# Docker Compose
+docker compose up --scale issue-service=5
 
-        {/* Gateway */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 6 }}>
-          <ServiceBox name="jira-frontend" port="3000" color={C.brand} desc="React 18 + TypeScript + Vite" />
-          <ServiceBox name="jira-gateway" port="8080" color={C.dark} desc="Rate limit, JWT, CORS, circuit breaker" />
-        </div>
-        <DownArrow />
+# K8s HPA (auto)
+minReplicas: 2  →  maxReplicas: 6
+trigger: CPU > 70%
 
-        {/* Load Balancer note */}
-        <div style={{ textAlign: 'center', fontSize: 10, color: C.subtle, marginBottom: 6, fontStyle: 'italic' }}>
-          Docker DNS round-robin / K8s Service (Load Balancer) -- each service horizontally scalable
-        </div>
+# Cluster overlay
+docker compose -f docker-compose.yml \\
+  -f docker-compose.cluster.yml up`
+            }</div>
+            <div style={{ fontSize: 11, color: C.subtle, marginTop: 8 }}>
+              ShedLock prevents duplicate scheduled jobs. ClusterCacheManager syncs cache across nodes.
+              StorageProvider (MinIO) shares files. ClusterEventBus relays WebSocket events.
+            </div>
+          </div>
+          <div style={{ background: C.white, borderRadius: 6, padding: 14, border: `2px solid ${C.success}` }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.success, marginBottom: 8 }}>Vertical Scaling (tune per node)</div>
+            <div style={{ fontFamily: 'monospace', fontSize: 11, lineHeight: 1.8, whiteSpace: 'pre', color: C.dark }}>{
+`# JVM Memory
+JAVA_OPTS: -Xms256m -Xmx512m -XX:+UseG1GC
 
-        {/* Row 1: Core */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 10 }}>
-          <ServiceBox name="auth-service" port="8081" color={C.purple} desc="JWT + OAuth2/OIDC, SAML SSO" />
-          <ServiceBox name="user-service" port="8082" color={C.purple} desc="User/group CRUD, LDAP sync" />
-          <ServiceBox name="project-service" port="8083" color={C.success} desc="Projects, schemes, roles, templates" />
-          <ServiceBox name="issue-service" port="8084" color={C.success} desc="Issues, custom fields, change mgmt" />
-        </div>
+# Connection Pools (tiered)
+Hot-path:  HikariCP max=50  (issue, auth)
+Medium:    HikariCP max=30  (workflow, sprint)
+Light:     HikariCP max=20  (audit, notification)
 
-        {/* Row 2: Business Logic */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 10 }}>
-          <ServiceBox name="workflow-service" port="8085" color={C.danger} desc="Workflows, automation, GraalJS scripting" />
-          <ServiceBox name="test-service" port="8095" color={C.danger} desc="VVO, HLVVO, defects, V&V reports" />
-          <ServiceBox name="admin-service" port="8093" color={C.warning} desc="Master data, assets, config, webhooks" />
-          <ServiceBox name="search-service" port="8088" color={C.teal} desc="JQL parser, full-text search (tsvector)" />
-        </div>
-
-        {/* Row 3: Supporting */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 10 }}>
-          <ServiceBox name="sprint-service" port="8091" color={C.teal} desc="Sprints, boards, kanban" />
-          <ServiceBox name="plan-service" port="8092" color={C.teal} desc="Roadmaps, teams, goals" />
-          <ServiceBox name="notification" port="8087" color={C.subtle} desc="Email, templates, automation" />
-          <ServiceBox name="comment" port="8086" color={C.subtle} desc="Comments, mentions" />
-          <ServiceBox name="audit" port="8089" color={C.subtle} desc="Audit trail, compliance" />
-        </div>
-
-        {/* Row 4: Extended */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 10 }}>
-          <ServiceBox name="attachment" port="8090" color={C.subtle} desc="Files via StorageProvider (S3)" />
-          <ServiceBox name="version" port="8096" color={C.subtle} desc="Release hub, versions" />
-          <ServiceBox name="component" port="8097" color={C.subtle} desc="Components, assignments" />
-          <ServiceBox name="migration" port="8094" color={C.subtle} desc="Import/export, data migration" />
-          <ServiceBox name="dashboard" port="--" color={C.subtle} desc="Gadgets, charts, reports" />
-        </div>
-
-        <DownArrow />
-
-        {/* Shared Library */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-          <div style={{ background: '#e8f5e9', border: `2px solid ${C.success}`, borderRadius: 8, padding: '10px 24px', textAlign: 'center', maxWidth: 700 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: C.success }}>jira-cluster-commons</div>
-            <div style={{ fontSize: 11, color: C.dark, marginTop: 4 }}>
-              ShedLock | StorageProvider | ClusterCacheManager | ClusterEventBus | Resilience4j |
-              IdempotencyService | CorrelationIdFilter | TenantContext | ArchUnit Guards
+# Tomcat Threads
+max: 200  |  min-spare: 20
+max-connections: 8192  |  accept: 100`
+            }</div>
+            <div style={{ fontSize: 11, color: C.subtle, marginTop: 8 }}>
+              Hibernate batch_size=50 with ordered inserts/updates. LAZY fetch on all entity relationships.
+              Bounded thread pools (CPU*2, max 20). Slow query logging at 500ms.
             </div>
           </div>
         </div>
+      </div>
 
-        <DownArrow />
+      {/* ─── DIAGRAM 3: Event-Driven + CQRS ─── */}
+      <div style={{ padding: 20, background: C.bg, borderRadius: 8, marginBottom: 16 }}>
+        <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 12 }}>
+          3. Event-Driven Architecture + CQRS
+        </div>
+        <div style={{ background: C.white, borderRadius: 6, padding: 16, fontFamily: 'monospace', fontSize: 12, lineHeight: 1.7, color: C.dark, whiteSpace: 'pre', overflowX: 'auto' }}>{
+`  ┌──────────────┐    REST (write)     ┌──────────────┐
+  │ Issue Service ├───────────────────→│  PostgreSQL  │
+  │   (Node 1)   │                     │   PRIMARY    │
+  └──────┬───────┘                     └──────┬───────┘
+         │                                    │ Streaming
+         │ Kafka Event                        │ Replication
+         ▼                                    ▼
+  ┌──────────────┐                     ┌──────────────┐
+  │    Kafka     │                     │  PostgreSQL  │
+  │  Event Bus   │                     │   REPLICA    │
+  │  (7 topics)  │                     └──────┬───────┘
+  └──┬───┬───┬───┘                            │
+     │   │   │                                │ @Transactional
+     ▼   ▼   ▼                                │ (readOnly=true)
+  ┌────┐┌────┐┌────┐                   ┌──────┴───────┐
+  │Srch││Ntfy││Aud │ ← Consumers      │Search/Report │ ← CQRS Reads
+  └────┘└────┘└────┘                   │  Dashboard   │
+                                       └──────────────┘
 
-        {/* Infrastructure */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ background: C.dbBg, color: C.white, padding: '10px 16px', borderRadius: 6, textAlign: 'center', minWidth: 150 }}>
-            <div style={{ fontWeight: 700, fontSize: 13 }}>PostgreSQL 16</div>
-            <div style={{ fontSize: 10, opacity: 0.8 }}>Primary + Read Replica</div>
-            <div style={{ fontSize: 10, opacity: 0.7 }}>21 schemas (CQRS)</div>
+  Topics: jira.issue.events | jira.workflow.events |
+          jira.notification.events | jira.audit.events |
+          jira.search.index | jira.user.events | jira.project.events`
+        }</div>
+      </div>
+
+      {/* ─── DIAGRAM 4: Cache + Storage + Observability ─── */}
+      <div style={{ padding: 20, background: C.bg, borderRadius: 8, marginBottom: 16 }}>
+        <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 12 }}>
+          4. Distributed Cache, Shared Storage + Observability
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <div style={{ background: C.white, borderRadius: 6, padding: 12, border: `2px solid #c62828` }}>
+            <div style={{ fontWeight: 700, fontSize: 12, color: '#c62828', marginBottom: 6 }}>Two-Tier Cache</div>
+            <div style={{ fontFamily: 'monospace', fontSize: 10, lineHeight: 1.8, whiteSpace: 'pre', color: C.dark }}>{
+`Request → Caffeine L1
+          (local, 5min TTL)
+             ↓ miss
+          Redis L2
+          (shared, 10min TTL)
+             ↓ miss
+          PostgreSQL
+             ↓
+          Cache populated
+             ↓
+          Redis pub/sub
+          invalidates L1
+          on ALL nodes`
+            }</div>
           </div>
-          <div style={{ background: '#c62828', color: C.white, padding: '10px 16px', borderRadius: 6, textAlign: 'center', minWidth: 140 }}>
-            <div style={{ fontWeight: 700, fontSize: 13 }}>Redis 7</div>
-            <div style={{ fontSize: 10, opacity: 0.8 }}>Cache + Pub/Sub + Locks</div>
-            <div style={{ fontSize: 10, opacity: 0.7 }}>Authenticated</div>
+          <div style={{ background: C.white, borderRadius: 6, padding: 12, border: `2px solid ${C.success}` }}>
+            <div style={{ fontWeight: 700, fontSize: 12, color: C.success, marginBottom: 6 }}>Shared Storage</div>
+            <div style={{ fontFamily: 'monospace', fontSize: 10, lineHeight: 1.8, whiteSpace: 'pre', color: C.dark }}>{
+`Upload on Node A
+       ↓
+  StorageProvider
+       ↓
+  MinIO (S3 API)
+       ↓
+Download on Node B
+  (same bucket)
+
+Attachments, Plugins,
+Exports, Imports
+all shared across
+every node`
+            }</div>
           </div>
-          <div style={{ background: '#1b5e20', color: C.white, padding: '10px 16px', borderRadius: 6, textAlign: 'center', minWidth: 120 }}>
-            <div style={{ fontWeight: 700, fontSize: 13 }}>Kafka</div>
-            <div style={{ fontSize: 10, opacity: 0.8 }}>Event Bus</div>
-            <div style={{ fontSize: 10, opacity: 0.7 }}>7 topics</div>
-          </div>
-          <div style={{ background: '#e65100', color: C.white, padding: '10px 16px', borderRadius: 6, textAlign: 'center', minWidth: 120 }}>
-            <div style={{ fontWeight: 700, fontSize: 13 }}>MinIO</div>
-            <div style={{ fontSize: 10, opacity: 0.8 }}>S3 Storage</div>
-            <div style={{ fontSize: 10, opacity: 0.7 }}>Shared files</div>
+          <div style={{ background: C.white, borderRadius: 6, padding: 12, border: `2px solid ${C.purple}` }}>
+            <div style={{ fontWeight: 700, fontSize: 12, color: C.purple, marginBottom: 6 }}>Observability Stack</div>
+            <div style={{ fontFamily: 'monospace', fontSize: 10, lineHeight: 1.8, whiteSpace: 'pre', color: C.dark }}>{
+`Prometheus ← scrapes
+  16 services every 15s
+       ↓
+  Grafana Dashboards
+  + 6 Alert Rules
+       ↓
+  Zipkin ← traces
+  W3C propagation
+  across all calls
+       ↓
+  JSON Structured Logs
+  + X-Correlation-ID
+  in every log line`
+            }</div>
           </div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
-          <div style={{ background: '#f57f17', color: C.white, padding: '8px 14px', borderRadius: 6, textAlign: 'center', minWidth: 120 }}>
-            <div style={{ fontWeight: 600, fontSize: 12 }}>Prometheus</div>
-            <div style={{ fontSize: 10, opacity: 0.8 }}>Metrics (16 targets)</div>
-          </div>
-          <div style={{ background: '#6a1b9a', color: C.white, padding: '8px 14px', borderRadius: 6, textAlign: 'center', minWidth: 120 }}>
-            <div style={{ fontWeight: 600, fontSize: 12 }}>Grafana</div>
-            <div style={{ fontSize: 10, opacity: 0.8 }}>Dashboards + 6 alerts</div>
-          </div>
-          <div style={{ background: '#00695c', color: C.white, padding: '8px 14px', borderRadius: 6, textAlign: 'center', minWidth: 120 }}>
-            <div style={{ fontWeight: 600, fontSize: 12 }}>Zipkin</div>
-            <div style={{ fontSize: 10, opacity: 0.8 }}>Distributed tracing</div>
-          </div>
-          <div style={{ background: '#37474f', color: C.white, padding: '8px 14px', borderRadius: 6, textAlign: 'center', minWidth: 120 }}>
-            <div style={{ fontWeight: 600, fontSize: 12 }}>Zookeeper</div>
-            <div style={{ fontSize: 10, opacity: 0.8 }}>Kafka coordination</div>
-          </div>
+      </div>
+
+      {/* ─── DIAGRAM 5: Security + Resilience ─── */}
+      <div style={{ padding: 20, background: C.bg, borderRadius: 8, marginBottom: 16 }}>
+        <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 12 }}>
+          5. Security + Resilience Patterns
         </div>
+        <div style={{ background: C.white, borderRadius: 6, padding: 16, fontFamily: 'monospace', fontSize: 12, lineHeight: 1.7, color: C.dark, whiteSpace: 'pre', overflowX: 'auto' }}>{
+`  Request Flow Through Security + Resilience Layers:
+
+  User Request
+       │
+       ▼
+  ┌─ Gateway ──────────────────────────────────────────┐
+  │  1. TLS Termination                                │
+  │  2. CORS Check (${CORS_ALLOWED_ORIGINS})           │
+  │  3. Rate Limit (Redis-backed, 100/min per user)    │
+  │  4. JWT Validation (15min access token)             │
+  │  5. Circuit Breaker (50% failure → open 30s)       │
+  └────────────────────────────────────────────────────┘
+       │
+       ▼
+  ┌─ Service Node ─────────────────────────────────────┐
+  │  6. X-Correlation-ID (MDC propagation)             │
+  │  7. X-Tenant-ID (multi-tenant context)             │
+  │  8. Retry Policy (3x, 500ms backoff)               │
+  │  9. Idempotency Check (Redis, 30min TTL)           │
+  │ 10. Permission Check (FAILOPEN=false)              │
+  │ 11. Business Logic                                 │
+  │ 12. Graceful Shutdown (30s drain on deploy)        │
+  └────────────────────────────────────────────────────┘
+       │
+       ▼
+  ┌─ If Node Crashes ──────────────────────────────────┐
+  │  Load Balancer removes unhealthy node              │
+  │  Traffic redistributes to remaining nodes          │
+  │  ShedLock prevents duplicate scheduled jobs        │
+  │  Async errors caught by ClusterAsyncExceptionHandler│
+  │  No downtime. No data loss. No duplicate work.     │
+  └────────────────────────────────────────────────────┘`
+        }</div>
       </div>
 
       {/* Key stats */}
