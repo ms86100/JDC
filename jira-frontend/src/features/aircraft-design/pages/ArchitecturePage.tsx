@@ -21,12 +21,17 @@ const C = {
 const TABS = [
   'System Overview',
   'Service Map',
+  'Issue & Workflow',
   'Domain Model',
   'Data Flow',
   'VVO Lifecycle',
   'Defect Management',
   'Plugin Matrix',
+  'SIL Alternative',
   'API Reference',
+  'Auth & Users',
+  'Sprint & Search',
+  'Database Schema',
 ] as const;
 type TabName = (typeof TABS)[number];
 
@@ -484,7 +489,197 @@ function renderServiceMap() {
   );
 }
 
-/* ── Tab 3: Domain Model ── */
+/* ── Tab 3: Issue & Workflow Architecture ── */
+function renderIssueWorkflow() {
+  const issueFeatures = [
+    { area: 'Core Issue CRUD', entities: 'Issue, IssueType, IssueStatus, IssuePriority, Resolution', service: 'issue-service', endpoints: 'POST/GET/PUT/DELETE /api/issues, GET /api/issues/{id}' },
+    { area: 'Custom Fields', entities: 'CustomFieldDefinition, CustomFieldValue, CustomFieldOption', service: 'issue-service', endpoints: '/api/fields — 20+ field type handlers (text, select, cascading, user picker, etc.)' },
+    { area: 'Issue Linking', entities: 'IssueLink, IssueLinkType (blocks, relates, clones, duplicates, causes, requires)', service: 'issue-service', endpoints: 'POST/GET/DELETE /api/issues/links' },
+    { area: 'Change History', entities: 'ChangeGroup, ChangeItem — field-level audit trail', service: 'issue-service', endpoints: 'GET /api/issues/{id}/history — every field change tracked with old/new values' },
+    { area: 'Versions & Components', entities: 'ProjectVersion (Fix/Affects), ProjectComponent', service: 'version-service, component-service', endpoints: '/api/versions, /api/components — with issue count aggregation' },
+    { area: 'Epics', entities: 'Epic, EpicIssue, EpicProgressHistory', service: 'issue-service', endpoints: '/api/epics — progress tracking with story point aggregation' },
+    { area: 'Time Tracking', entities: 'Worklog (originalEstimate, remainingEstimate, timeSpent)', service: 'issue-service', endpoints: '/api/worklogs — per-issue time logging' },
+    { area: 'Watchers & Votes', entities: 'Watcher, Vote — with trigger-based counters', service: 'issue-service', endpoints: '/api/issues/{id}/watchers, /api/issues/{id}/votes' },
+    { area: 'Attachments', entities: 'File-system storage with metadata', service: 'attachment-service', endpoints: '/api/attachments — upload/download/delete' },
+    { area: 'Comments', entities: 'Comment with author, body, timestamps', service: 'comment-service', endpoints: '/api/comments — threaded discussion on issues' },
+    { area: 'Labels & Security', entities: 'Label, SecurityLevel — access control per issue', service: 'issue-service', endpoints: '/api/issues/{id}/labels, security levels per scheme' },
+    { area: 'Bulk Operations', entities: 'BulkIssueOperation — move, transition, edit, delete', service: 'issue-service', endpoints: 'POST /api/issues/bulk — batch processing' },
+    { area: 'Issue Import/Export', entities: 'ImportService, IssueExportService — CSV/JSON', service: 'issue-service', endpoints: '/api/import, /api/issues/export' },
+    { area: 'Dev Info Integration', entities: 'DevInfoCommit, DevInfoBranch, DevInfoPullRequest, DevInfoBuild', service: 'issue-service', endpoints: '/api/issues/{id}/dev-info — Git commit/branch/PR/build linkage' },
+  ];
+
+  const workflowFeatures = [
+    { area: 'Workflow Definition', entities: 'Workflow, WorkflowStatus, WorkflowTransition, WorkflowVersion', detail: 'Named workflows with ordered statuses and directed transitions between them. Supports drafts, versioning, and sharing across projects.' },
+    { area: 'Conditions (16 types)', entities: 'WorkflowCondition — PERMISSION, USER_GROUP, FIELD_VALUE, FIELD_CHANGED, PREVIOUS_STATUS, USER_IS_REPORTER/ASSIGNEE, LINKED_ISSUE_STATUS, SUBTASK_STATUS, SPRINT_STATUS, SCRIPT, AND/OR/NOT', detail: 'Gate transition visibility. Conditions are evaluated before showing a transition as available. Supports negate flag and nested AND/OR/NOT logic.' },
+    { area: 'Validators (11 types)', entities: 'WorkflowValidator — FIELD_REQUIRED, FIELD_VALUE, REGEX, DATE_RANGE, USER_PERMISSION, SCRIPT, SUBTASK_RESOLUTION, LINKED_ISSUE_RESOLUTION, ATTACHMENT_COUNT, COMMENT_REQUIRED, TIME_TRACKING', detail: 'Block transition execution if data is invalid. Return field-level errors to the UI. Evaluated after conditions pass.' },
+    { area: 'Post-Functions (30+ types)', entities: 'WorkflowPostFunction — ASSIGN_TO_*, SET_FIELD_VALUE, COPY_VALUE, CREATE_SUBTASK, CLONE_ISSUE, LINK_ISSUE, SEND_EMAIL, TRIGGER_WEBHOOK, AUTO_TRANSITION, SCRIPT_POST_FUNCTION, etc.', detail: 'Execute side effects after transition. Essential chain (status change, history, reindex, event fire) runs first, then configured post-functions in sequence order.' },
+    { area: 'Transition Screens', entities: 'WorkflowScreen, WorkflowScreenTab, WorkflowScreenField', detail: 'Mandatory/optional field prompts shown during transition. Screen input validated by validators.' },
+    { area: 'Workflow Schemes', entities: 'WorkflowScheme, WorkflowSchemeMapping — maps issue types to workflows within a project', detail: 'A project references a scheme, which maps each issue type to a specific workflow. Default workflow used for unmapped types.' },
+    { area: 'Triggers (15 types)', entities: 'WorkflowTransitionTrigger — FIELD_CHANGE, DATE_BASED, COMMENT_ADDED, LINK_ADDED, STATUS_CHANGE, EXTERNAL_WEBHOOK, API_TRIGGER, SPRINT_START/COMPLETE, BUILD_SUCCESS, PULL_REQUEST', detail: 'Auto-fire transitions based on events. Includes cooldown and max fire count controls.' },
+    { area: 'GraalJS Scripting', entities: 'ScriptDefinition, ScriptVersion, ScriptExecutionLog, ScriptSchedule', detail: 'ECMAScript 2022 scripts in sandboxed GraalVM engine. Types: CONDITION, VALIDATOR, POST_FUNCTION. Full JDC API (jdc.issue, jdc.project, jdc.user, jdc.search, jdc.workflow, jdc.log).' },
+    { area: 'Automation Rules', entities: 'AutomationRule (trigger/conditions/actions/branch), AutomationExecutionLog', detail: 'Independent if-then rules that fire on issue events (not tied to workflow transitions). Supports FOR_EACH_LINKED_ISSUE and FOR_EACH_SUBTASK branching.' },
+    { area: 'Execution Engine', entities: 'WorkflowExecutionEngine — 12-step pipeline', detail: 'Idempotency check → context resolution → project permission → status validation → optimistic lock → transition permission → conditions → validators → post-functions → history → event fire → idempotency store.' },
+    { area: 'Event Outbox', entities: 'WorkflowEventOutbox, WorkflowEventPublisher, WorkflowEventOutboxProcessor', detail: 'Transactional outbox pattern for reliable event delivery. Events processed by scheduled job for downstream notification and automation triggering.' },
+  ];
+
+  const migrationFeatures = [
+    { area: 'Data Center Import', entities: 'DcStagingEntry, DcUnknownCustomField — full Jira DC XML/JSON import', detail: 'Imports projects, issues, workflows, schemes, users, groups, custom fields from a Jira DC backup. Staged for review before commit.' },
+    { area: 'Workflow XML Import', entities: 'WorkflowDescriptorModel, WorkflowStepModel, WorkflowActionModel, WorkflowFunctionDescriptor', detail: 'Import Jira DC workflow XML descriptors with full step/action/function/condition/validator mapping.' },
+    { area: 'Field Mapping', entities: 'MigrationFieldController, CustomFieldsCompatController — maps source DC fields to target fields', detail: 'Handles field type conversion, custom field creation, and value transformation during import.' },
+    { area: 'Import Wizard', entities: 'ImportWizardController — step-by-step guided import with preview', detail: 'Multi-step wizard: select source → map projects → map fields → preview → execute → verify.' },
+    { area: 'Migration State Machine', entities: 'NodeState (IDLE, IMPORTING, VALIDATING, MAPPING, EXECUTING, COMPLETED, FAILED)', detail: 'Tracks migration job state with DLQ (dead letter queue) for failed records and SSE/WebSocket progress streaming.' },
+    { area: 'Migration Health', entities: 'MigrationHealthController — monitors import job health and integrity', detail: 'Checks data integrity post-migration: orphaned issues, broken links, missing custom field values, scheme inconsistencies.' },
+  ];
+
+  return (
+    <div>
+      <h3 style={{ color: C.dark, marginBottom: '8px' }}>Issue Service Architecture</h3>
+      <p style={{ color: C.subtle, marginBottom: '16px' }}>
+        The issue-service is the central data store for all Jira issues with 48+ entities. It manages the full issue lifecycle including custom fields, linking, versioning, time tracking, and integrates with the workflow engine for status transitions.
+      </p>
+
+      {/* Issue-Workflow-Migration Relationship Diagram */}
+      <div className="ads-card" style={{ marginBottom: '24px' }}>
+        <div className="ads-card-title">Service Relationship: Issue ↔ Workflow ↔ Migration</div>
+        <div style={{ padding: '16px', background: C.bg, borderRadius: '8px' }}>
+          <svg viewBox="0 0 900 400" style={{ width: '100%', maxHeight: '400px' }}>
+            {/* Issue Service Box */}
+            <rect x="20" y="30" width="250" height="340" rx="8" fill="white" stroke={C.success} strokeWidth="2"/>
+            <rect x="20" y="30" width="250" height="32" rx="8" fill={C.success}/>
+            <text x="145" y="52" textAnchor="middle" fill="white" fontSize="13" fontWeight="700">issue-service (8084)</text>
+            {['Issue CRUD + 48 entities', 'Custom Fields (20+ types)', 'Issue Links (7 link types)', 'Change History (field audit)', 'Versions & Components', 'Epics & Story Points', 'Time Tracking (Worklogs)', 'Bulk Operations', 'Dev Info (Git integration)', 'ChangeCard / DI / DCL', 'SystemStandard / MOD'].map((t, i) => (
+              <text key={i} x="35" y={80 + i * 24} fontSize="11" fill={C.dark}>{t}</text>
+            ))}
+
+            {/* Workflow Service Box */}
+            <rect x="330" y="30" width="250" height="340" rx="8" fill="white" stroke={C.danger} strokeWidth="2"/>
+            <rect x="330" y="30" width="250" height="32" rx="8" fill={C.danger}/>
+            <text x="455" y="52" textAnchor="middle" fill="white" fontSize="13" fontWeight="700">workflow-service (8085)</text>
+            {['Workflow Engine (12-step)', 'Conditions (16 types)', 'Validators (11 types)', 'Post-Functions (30+ types)', 'GraalJS Scripting', 'Automation Rules', 'Transition Screens', 'Workflow Schemes', 'Triggers (15 event types)', 'Event Outbox Pattern', 'Script Console & REPL'].map((t, i) => (
+              <text key={i} x="345" y={80 + i * 24} fontSize="11" fill={C.dark}>{t}</text>
+            ))}
+
+            {/* Migration Service Box */}
+            <rect x="640" y="30" width="240" height="340" rx="8" fill="white" stroke={C.purple} strokeWidth="2"/>
+            <rect x="640" y="30" width="240" height="32" rx="8" fill={C.purple}/>
+            <text x="760" y="52" textAnchor="middle" fill="white" fontSize="13" fontWeight="700">migration-service</text>
+            {['DC XML/JSON Import', 'Workflow XML Import', 'Field Mapping Engine', 'Import Wizard (5 steps)', 'State Machine (7 states)', 'DLQ Error Handling', 'SSE Progress Streaming', 'Health & Integrity Check', 'Custom Field Compat', 'Scheme Migration'].map((t, i) => (
+              <text key={i} x="655" y={80 + i * 24} fontSize="11" fill={C.dark}>{t}</text>
+            ))}
+
+            {/* Arrows: Issue <-> Workflow */}
+            <defs><marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill={C.brand}/></marker></defs>
+            <line x1="270" y1="100" x2="325" y2="100" stroke={C.brand} strokeWidth="2" markerEnd="url(#ah)"/>
+            <text x="297" y="94" textAnchor="middle" fontSize="9" fill={C.brand}>fetch issue</text>
+            <line x1="325" y1="140" x2="270" y2="140" stroke={C.brand} strokeWidth="2" markerEnd="url(#ah)"/>
+            <text x="297" y="134" textAnchor="middle" fontSize="9" fill={C.brand}>update status</text>
+            <line x1="270" y1="180" x2="325" y2="180" stroke={C.teal} strokeWidth="2" markerEnd="url(#ah)"/>
+            <text x="297" y="174" textAnchor="middle" fontSize="9" fill={C.teal}>execute transition</text>
+            <line x1="325" y1="220" x2="270" y2="220" stroke={C.teal} strokeWidth="2" markerEnd="url(#ah)"/>
+            <text x="297" y="214" textAnchor="middle" fontSize="9" fill={C.teal}>record history</text>
+
+            {/* Arrows: Workflow <-> Migration */}
+            <line x1="580" y1="100" x2="635" y2="100" stroke={C.purple} strokeWidth="2" markerEnd="url(#ah)"/>
+            <text x="607" y="94" textAnchor="middle" fontSize="9" fill={C.purple}>import workflows</text>
+            <line x1="635" y1="180" x2="580" y2="180" stroke={C.purple} strokeWidth="2" markerEnd="url(#ah)"/>
+            <text x="607" y="174" textAnchor="middle" fontSize="9" fill={C.purple}>scheme mapping</text>
+
+            {/* Arrows: Issue <-> Migration */}
+            <path d="M145,370 L145,390 L760,390 L760,370" fill="none" stroke={C.subtle} strokeWidth="1.5" strokeDasharray="4,4"/>
+            <text x="450" y="386" textAnchor="middle" fontSize="9" fill={C.subtle}>import issues, fields, schemes</text>
+          </svg>
+        </div>
+      </div>
+
+      {/* Issue Features Table */}
+      <div className="ads-card" style={{ marginBottom: '24px' }}>
+        <div className="ads-card-title">Issue Service — Feature Inventory (48+ Entities)</div>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead><tr><th style={{width:'18%'}}>Feature Area</th><th style={{width:'35%'}}>Key Entities</th><th style={{width:'15%'}}>Service</th><th style={{width:'32%'}}>API Endpoints</th></tr></thead>
+            <tbody>
+              {issueFeatures.map(f => (
+                <tr key={f.area}>
+                  <td style={{ fontWeight: 600, fontSize: '12px' }}>{f.area}</td>
+                  <td style={{ fontSize: '11px', fontFamily: 'monospace' }}>{f.entities}</td>
+                  <td><span className="ads-badge ads-badge--verified" style={{fontSize:'10px'}}>{f.service}</span></td>
+                  <td style={{ fontSize: '11px' }}>{f.endpoints}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Workflow Engine Features Table */}
+      <div className="ads-card" style={{ marginBottom: '24px' }}>
+        <div className="ads-card-title">Workflow Service — Engine Architecture (31+ Entities)</div>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead><tr><th style={{width:'18%'}}>Component</th><th style={{width:'35%'}}>Entities / Types</th><th style={{width:'47%'}}>Detail</th></tr></thead>
+            <tbody>
+              {workflowFeatures.map(f => (
+                <tr key={f.area}>
+                  <td style={{ fontWeight: 600, fontSize: '12px' }}>{f.area}</td>
+                  <td style={{ fontSize: '11px', fontFamily: 'monospace' }}>{f.entities}</td>
+                  <td style={{ fontSize: '11px' }}>{f.detail}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Workflow Execution Pipeline */}
+      <div className="ads-card" style={{ marginBottom: '24px' }}>
+        <div className="ads-card-title">Workflow Execution Engine — 12-Step Pipeline</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', padding: '16px' }}>
+          {[
+            { step: '1', name: 'Idempotency', desc: 'Check duplicate key', color: C.subtle },
+            { step: '2', name: 'Context', desc: 'Fetch issue + user data', color: C.brand },
+            { step: '3', name: 'Project Perm', desc: 'EDIT_ISSUES check', color: C.purple },
+            { step: '4', name: 'Status Valid', desc: 'fromStatus matches current', color: C.teal },
+            { step: '5', name: 'Optimistic Lock', desc: 'Version check', color: C.subtle },
+            { step: '6', name: 'Transition Perm', desc: 'Group/role check', color: C.purple },
+            { step: '7', name: 'Conditions', desc: '16 condition types', color: C.warning },
+            { step: '8', name: 'Validators', desc: '11 validator types', color: C.warning },
+            { step: '9', name: 'Post-Functions', desc: 'Essential + configured', color: C.danger },
+            { step: '10', name: 'History', desc: 'Record transition', color: C.success },
+            { step: '11', name: 'Event Fire', desc: 'Outbox + automation', color: C.success },
+            { step: '12', name: 'Idempotency Store', desc: 'Cache response', color: C.subtle },
+          ].map(s => (
+            <div key={s.step} style={{ background: 'white', borderRadius: '6px', border: `2px solid ${s.color}`, padding: '8px', textAlign: 'center' }}>
+              <div style={{ fontWeight: 700, fontSize: '18px', color: s.color }}>{s.step}</div>
+              <div style={{ fontWeight: 600, fontSize: '12px', color: C.dark }}>{s.name}</div>
+              <div style={{ fontSize: '10px', color: C.subtle }}>{s.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Migration Service Features Table */}
+      <div className="ads-card">
+        <div className="ads-card-title">Migration Service — Jira DC Data Import Architecture</div>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead><tr><th style={{width:'18%'}}>Feature</th><th style={{width:'35%'}}>Entities</th><th style={{width:'47%'}}>Detail</th></tr></thead>
+            <tbody>
+              {migrationFeatures.map(f => (
+                <tr key={f.area}>
+                  <td style={{ fontWeight: 600, fontSize: '12px' }}>{f.area}</td>
+                  <td style={{ fontSize: '11px', fontFamily: 'monospace' }}>{f.entities}</td>
+                  <td style={{ fontSize: '11px' }}>{f.detail}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Tab 4: Domain Model ── */
 function renderDomainModel() {
   return (
     <div>
@@ -1124,7 +1319,221 @@ function renderPluginMatrix() {
   );
 }
 
-/* ── Tab 8: API Reference ── */
+/* ── Tab 8: SIL Alternative (GraalJS Scripting Engine) ── */
+function renderSilAlternative() {
+  const silVsGraal = [
+    { feature: 'Language', sil: 'SIL (Simple Issue Language) — proprietary DSL', graal: 'JavaScript (ECMAScript 2022) — industry standard' },
+    { feature: 'Runtime', sil: 'SIL Manager plugin (cPrime)', graal: 'GraalVM Polyglot Engine (Oracle) — sandboxed' },
+    { feature: 'Script Types', sil: 'Post-functions, Validators, Conditions, Listeners, Scheduled Jobs, REST endpoints', graal: 'Post-functions, Validators, Conditions, Scheduled Jobs, Console (REPL)' },
+    { feature: 'Issue Access', sil: 'issue.status, issue.assignee, issue.customfield_10001', graal: 'jdc.issue.getFieldValue("status"), jdc.issue.setFieldValue("assignee", userId)' },
+    { feature: 'Linked Issues', sil: 'linkedIssues(issue, "blocks")', graal: 'jdc.issue.getLinkedIssues() — returns full issue objects' },
+    { feature: 'JQL Search', sil: 'selectIssues("project = X AND status = Open")', graal: 'jdc.search.jql("project = X AND status = Open", 100)' },
+    { feature: 'User/Group', sil: 'isInGroup(currentUser(), "developers")', graal: 'jdc.user.isInGroup("developers")' },
+    { feature: 'Comments', sil: 'addComment(issue, "text")', graal: 'jdc.issue.addComment("text")' },
+    { feature: 'Transitions', sil: 'transition(issue, "Done")', graal: 'Handled by workflow engine post-function chain — no script needed' },
+    { feature: 'HTTP Calls', sil: 'httpGet("https://api.example.com")', graal: 'DISABLED — no network access (security sandbox)' },
+    { feature: 'Scheduling', sil: 'SIL Scheduled Jobs (cron)', graal: 'ScriptSchedule entity with cron expressions' },
+    { feature: 'Debugging', sil: 'SIL Manager console + log()', graal: 'Script Console (POST /api/workflow/scripts/console) + jdc.log.info()' },
+    { feature: 'Versioning', sil: 'File-based (.sil files)', graal: 'ScriptVersion entity with rollback support' },
+    { feature: 'Security', sil: 'Full server access (file I/O, network, classes)', graal: 'Strict sandbox — no I/O, no threads, no native access, no Java classes, statement limit' },
+    { feature: 'Performance', sil: 'Interpreted at runtime', graal: 'JIT-compiled by GraalVM with source caching' },
+  ];
+
+  const migrationExamples = [
+    {
+      title: 'Auto-assign on transition',
+      sil: `// SIL script
+if (issue.status == "In Progress") {
+  issue.assignee = currentUser();
+}`,
+      graal: `// GraalJS equivalent
+if (issueData.status === "In Progress") {
+  jdc.issue.setFieldValue("assigneeId", userId);
+}`,
+      note: 'In our system, this is better done as a built-in ASSIGN_TO_CURRENT_USER post-function — no script needed.'
+    },
+    {
+      title: 'Cascade date change to linked issues',
+      sil: `// SIL script
+string[] linked = linkedIssues(issue, "blocks");
+for (string li in linked) {
+  setCustomFieldValue(li, "end_date", issue.end_date);
+}`,
+      graal: `// GraalJS equivalent
+const linked = jdc.issue.getLinkedIssues();
+for (const li of linked) {
+  if (li.linkType === "blocks") {
+    jdc.issue.setFieldValue.call({issueId: li.id}, "end_date", issueData.end_date);
+  }
+}`,
+      note: 'Better approach: use an Automation Rule (trigger: FIELD_CHANGED on end_date, branch: FOR_EACH_LINKED_ISSUE, action: UPDATE_FIELD).'
+    },
+    {
+      title: 'Validate required fields on transition',
+      sil: `// SIL validator
+if (isEmpty(issue.description)) {
+  return false, "Description is required";
+}
+return true;`,
+      graal: `// GraalJS validator
+if (!issueData.description || issueData.description.trim() === '') {
+  return 'Description is required';
+}
+return null; // null = valid`,
+      note: 'Better approach: use a built-in FIELD_REQUIRED validator on the workflow transition — no script needed.'
+    },
+    {
+      title: 'Create sub-task on condition',
+      sil: `// SIL post-function
+if (issue.priority == "Highest") {
+  createSubTask(issue, "Urgent Review", "Task");
+}`,
+      graal: `// GraalJS post-function
+if (issueData.priority === "Highest") {
+  jdc.issue.addComment("Priority is Highest — manual sub-task creation needed");
+  // Sub-task creation via jdc API: planned enhancement
+}`,
+      note: 'Better approach: use a built-in CREATE_SUBTASK post-function with a FIELD_VALUE condition (priority = Highest).'
+    },
+  ];
+
+  return (
+    <div>
+      <h3 style={{ color: C.dark, marginBottom: '8px' }}>SIL to GraalJS Migration Guide</h3>
+      <p style={{ color: C.subtle, marginBottom: '24px' }}>
+        SYSDOPS traditionally uses <strong>SIL (Simple Issue Language)</strong> scripts via the cPrime SIL Manager plugin for Jira automation.
+        Our platform replaces SIL with a <strong>GraalJS-based scripting engine</strong> that provides equivalent functionality within a secure sandbox.
+        Below is a comprehensive comparison and migration guide.
+      </p>
+
+      {/* Architecture Diagram: SIL vs GraalJS */}
+      <div className="ads-card" style={{ marginBottom: '24px' }}>
+        <div className="ads-card-title">Scripting Architecture Comparison</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 1fr', gap: '0', alignItems: 'start', padding: '16px' }}>
+          {/* SIL Side */}
+          <div style={{ background: '#fff3e0', borderRadius: '8px', padding: '16px', border: '2px solid #FF5630' }}>
+            <div style={{ fontWeight: 700, fontSize: '16px', color: '#FF5630', marginBottom: '12px', textAlign: 'center' }}>SIL (Legacy)</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {['SIL Manager Plugin', 'SIL Script Files (.sil)', 'Full Server Access', 'No Sandbox', 'cPrime Proprietary'].map(item => (
+                <div key={item} style={{ background: 'white', padding: '6px 10px', borderRadius: '4px', fontSize: '12px', border: '1px solid #dfe1e6' }}>{item}</div>
+              ))}
+            </div>
+          </div>
+          {/* Arrow */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <svg width="50" height="40"><path d="M5,20 L40,20 M34,14 L40,20 L34,26" stroke={C.brand} fill="none" strokeWidth="3"/></svg>
+          </div>
+          {/* GraalJS Side */}
+          <div style={{ background: '#e3fcef', borderRadius: '8px', padding: '16px', border: '2px solid #00875a' }}>
+            <div style={{ fontWeight: 700, fontSize: '16px', color: '#00875a', marginBottom: '12px', textAlign: 'center' }}>GraalJS (Our Platform)</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {['GraalVM Polyglot Engine', 'ScriptDefinition Entity (DB)', 'Strict Sandbox (no I/O)', 'Statement Limit + Timeout', 'ECMAScript 2022 Standard'].map(item => (
+                <div key={item} style={{ background: 'white', padding: '6px 10px', borderRadius: '4px', fontSize: '12px', border: '1px solid #dfe1e6' }}>{item}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Feature Comparison Table */}
+      <div className="ads-card" style={{ marginBottom: '24px' }}>
+        <div className="ads-card-title">Feature-by-Feature Comparison</div>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead><tr><th style={{width:'15%'}}>Feature</th><th style={{width:'38%'}}>SIL (cPrime)</th><th style={{width:'38%'}}>GraalJS (Our Platform)</th><th style={{width:'9%'}}>Parity</th></tr></thead>
+            <tbody>
+              {silVsGraal.map(row => (
+                <tr key={row.feature}>
+                  <td style={{ fontWeight: 600 }}>{row.feature}</td>
+                  <td style={{ fontSize: '12px', fontFamily: 'monospace', background: '#fff3e0' }}>{row.sil}</td>
+                  <td style={{ fontSize: '12px', fontFamily: 'monospace', background: '#e3fcef' }}>{row.graal}</td>
+                  <td style={{ textAlign: 'center' }}>{row.graal.includes('DISABLED') ? '🔒' : '✅'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Migration Examples */}
+      <div className="ads-card" style={{ marginBottom: '24px' }}>
+        <div className="ads-card-title">SIL to GraalJS Migration Examples</div>
+        {migrationExamples.map((ex, i) => (
+          <div key={i} style={{ borderBottom: i < migrationExamples.length - 1 ? '1px solid #dfe1e6' : 'none', padding: '16px' }}>
+            <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '8px' }}>{i + 1}. {ex.title}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '8px' }}>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#FF5630', marginBottom: '4px' }}>SIL Script</div>
+                <pre style={{ background: '#fff3e0', padding: '10px', borderRadius: '4px', fontSize: '11px', overflow: 'auto', margin: 0, border: '1px solid #dfe1e6' }}>{ex.sil}</pre>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#00875a', marginBottom: '4px' }}>GraalJS Equivalent</div>
+                <pre style={{ background: '#e3fcef', padding: '10px', borderRadius: '4px', fontSize: '11px', overflow: 'auto', margin: 0, border: '1px solid #dfe1e6' }}>{ex.graal}</pre>
+              </div>
+            </div>
+            <div className="ads-alert ads-alert--info" style={{ fontSize: '12px', padding: '8px 12px' }}>
+              <strong>Recommended:</strong> {ex.note}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* JDC Script API Reference */}
+      <div className="ads-card" style={{ marginBottom: '24px' }}>
+        <div className="ads-card-title">JDC Script API (Available in GraalJS Scripts)</div>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead><tr><th>API</th><th>Methods</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td style={{fontWeight:600}}>jdc.issue</td><td style={{fontSize:'11px',fontFamily:'monospace'}}>getCurrentIssue(), getFieldValue(field), setFieldValue(field, value), addComment(text), getComments(), getHistory(), getWatchers(), addWatcher(userId), link(targetKey, linkType), getLinkedIssues(), getAttachmentCount(), getIssue(idOrKey)</td><td>Full issue read/write access</td></tr>
+              <tr><td style={{fontWeight:600}}>jdc.project</td><td style={{fontSize:'11px',fontFamily:'monospace'}}>getCurrentProject(), getVersions(projectId), getComponents(projectId), getMembers(projectId), getIssueTypes()</td><td>Project metadata access</td></tr>
+              <tr><td style={{fontWeight:600}}>jdc.user</td><td style={{fontSize:'11px',fontFamily:'monospace'}}>getCurrentUser(), isInGroup(groupName), hasPermission(permission), getUserGroups()</td><td>User context and permissions</td></tr>
+              <tr><td style={{fontWeight:600}}>jdc.workflow</td><td style={{fontSize:'11px',fontFamily:'monospace'}}>getCurrentTransition(), getAllStatuses()</td><td>Workflow context during transitions</td></tr>
+              <tr><td style={{fontWeight:600}}>jdc.search</td><td style={{fontSize:'11px',fontFamily:'monospace'}}>jql(query, maxResults), findIssues(projectKey, statusName)</td><td>JQL search (max 500 results)</td></tr>
+              <tr><td style={{fontWeight:600}}>jdc.log</td><td style={{fontSize:'11px',fontFamily:'monospace'}}>info(...args), warn(...args), error(...args), debug(...args)</td><td>Server-side logging</td></tr>
+              <tr><td style={{fontWeight:600}}>console</td><td style={{fontSize:'11px',fontFamily:'monospace'}}>log(), warn(), error()</td><td>Script console output capture</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Script Lifecycle Diagram */}
+      <div className="ads-card" style={{ marginBottom: '24px' }}>
+        <div className="ads-card-title">Script Execution Lifecycle</div>
+        <div className="ads-pipeline">
+          {['Create Script\n(POST /api/workflow/scripts)', 'Validate Syntax\n(/scripts/validate)', 'Test in Console\n(/scripts/console)', 'Enable Script\n(toggle isEnabled)', 'Attach to Workflow\n(condition/validator/post-fn)', 'Executes on\nTransition'].map((step, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && <div className="ads-pipeline-arrow">&rarr;</div>}
+              <div className="ads-pipeline-step ads-pipeline-step--done" style={{ minWidth: '130px', textAlign: 'center', fontSize: '11px', whiteSpace: 'pre-line' }}>{step}</div>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      {/* When to use Scripts vs Built-in */}
+      <div className="ads-card">
+        <div className="ads-card-title">When to Use Scripts vs Built-in Features</div>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead><tr><th>Scenario</th><th>Recommendation</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Set field value on transition</td><td><span className="ads-badge ads-badge--verified">Built-in: SET_FIELD_VALUE post-function</span></td><td>No script overhead, configurable via UI</td></tr>
+              <tr><td>Validate required fields</td><td><span className="ads-badge ads-badge--verified">Built-in: FIELD_REQUIRED validator</span></td><td>Standard validation, clear error messages</td></tr>
+              <tr><td>Auto-assign to current user</td><td><span className="ads-badge ads-badge--verified">Built-in: ASSIGN_TO_CURRENT_USER</span></td><td>Zero-config, works out of the box</td></tr>
+              <tr><td>Check linked issue status</td><td><span className="ads-badge ads-badge--verified">Built-in: LINKED_ISSUE_STATUS condition</span></td><td>Supports direction, link type, requireAll</td></tr>
+              <tr><td>Cascade updates to linked issues</td><td><span className="ads-badge ads-badge--new">Automation Rule: FOR_EACH_LINKED_ISSUE</span></td><td>No coding, configurable, auditable</td></tr>
+              <tr><td>Complex multi-field validation</td><td><span className="ads-badge ads-badge--warning">Script: GraalJS VALIDATOR</span></td><td>When built-in validators are insufficient</td></tr>
+              <tr><td>Cross-project data sync</td><td><span className="ads-badge ads-badge--warning">Script: GraalJS POST_FUNCTION</span></td><td>When built-in actions can't express the logic</td></tr>
+              <tr><td>Custom calculation (e.g., risk score)</td><td><span className="ads-badge ads-badge--warning">Script: GraalJS CONDITION/POST_FUNCTION</span></td><td>Business logic too complex for config</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Tab 9: API Reference ── */
 function renderApiReference() {
   return (
     <div>
@@ -1370,6 +1779,808 @@ function renderApiReference() {
   );
 }
 
+/* ── Tab 11: Auth & Users ── */
+function renderAuthUsers() {
+  const roleMatrix = [
+    { role: 'Administrator', manageUsers: true, manageBoards: true, deleteIssues: true, editIssues: true, readIssues: true },
+    { role: 'Maintainer', manageUsers: true, manageBoards: true, deleteIssues: false, editIssues: true, readIssues: true },
+    { role: 'Contributor', manageUsers: false, manageBoards: false, deleteIssues: false, editIssues: true, readIssues: true },
+    { role: 'Reader', manageUsers: false, manageBoards: false, deleteIssues: false, editIssues: false, readIssues: true },
+  ];
+
+  const adminFeatures = [
+    { area: 'System Settings', detail: 'Key-value config: application title, timezone, security policy, mail server, API keys' },
+    { area: 'Permission Schemes', detail: '32 standard Jira DC permissions seeded (BROWSE_PROJECTS, CREATE_ISSUES, EDIT_ISSUES, DELETE_ISSUES, ASSIGN_ISSUES, etc.)' },
+    { area: 'Notification Schemes', detail: '10 event types: Issue Created, Issue Updated, Issue Assigned, Comment Added, Status Changed, etc.' },
+    { area: 'Priority Schemes', detail: 'Configurable priority sets per project (Highest, High, Medium, Low, Lowest + custom)' },
+    { area: 'Screen Schemes', detail: 'Screen layouts for Create, Edit, View operations with field tab grouping' },
+    { area: 'Field Configurations', detail: 'Required/optional/hidden per field per issue type context' },
+    { area: 'Issue Type Schemes', detail: 'Maps which issue types are available per project' },
+    { area: 'Workflow Schemes', detail: 'Proxy to workflow-service: maps issue types to workflows within a project' },
+    { area: 'Appearance & License', detail: 'Logo, colors, announcement banner, license key management' },
+    { area: 'LDAP Configuration', detail: 'Optional LDAP/AD directory integration for user sync' },
+    { area: 'Master Data', detail: 'Aircraft programs, test means, systems, ATA chapters, suppliers, functions, teams, defect origins' },
+    { area: 'Assets & Inventory', detail: 'Asset types, assets, asset-issue links -- test equipment and calibration tracking' },
+  ];
+
+  return (
+    <div>
+      <SectionHeading>Authentication, User Management & Administration</SectionHeading>
+      <Paragraph>
+        This tab covers four services that handle identity, access control, platform configuration, and
+        notifications: auth-service (8081), user-service (8082), admin-service (8093), and
+        notification-service (8087).
+      </Paragraph>
+
+      {/* Authentication Flow Diagram */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <h4 className="ads-card-title" style={{ color: C.purple }}>Authentication Flow</h4>
+        <div style={{ padding: 20, background: C.bg, borderRadius: 8, overflowX: 'auto' }}>
+          <svg viewBox="0 0 920 260" style={{ width: '100%', maxHeight: 260 }}>
+            {/* Login */}
+            <rect x="10" y="30" width="120" height="50" rx="6" fill={C.white} stroke={C.brand} strokeWidth="2"/>
+            <text x="70" y="52" textAnchor="middle" fontSize="12" fontWeight="600" fill={C.dark}>User Login</text>
+            <text x="70" y="68" textAnchor="middle" fontSize="9" fill={C.subtle}>credentials / SSO</text>
+
+            {/* Arrow */}
+            <line x1="130" y1="55" x2="170" y2="55" stroke={C.subtle} strokeWidth="2" markerEnd="url(#arrowR)"/>
+
+            {/* Auth Service */}
+            <rect x="170" y="20" width="140" height="70" rx="6" fill={C.white} stroke={C.purple} strokeWidth="2"/>
+            <rect x="170" y="20" width="140" height="24" rx="6" fill={C.purple}/>
+            <text x="240" y="37" textAnchor="middle" fontSize="11" fontWeight="600" fill={C.white}>auth-service :8081</text>
+            <text x="240" y="58" textAnchor="middle" fontSize="10" fill={C.dark}>JWT Generation</text>
+            <text x="240" y="72" textAnchor="middle" fontSize="10" fill={C.dark}>SAML SSO</text>
+
+            {/* Arrow */}
+            <line x1="310" y1="55" x2="350" y2="55" stroke={C.subtle} strokeWidth="2" markerEnd="url(#arrowR)"/>
+
+            {/* Token Issued */}
+            <rect x="350" y="30" width="130" height="50" rx="6" fill={C.white} stroke={C.success} strokeWidth="2"/>
+            <text x="415" y="50" textAnchor="middle" fontSize="11" fontWeight="600" fill={C.dark}>JWT Issued</text>
+            <text x="415" y="66" textAnchor="middle" fontSize="9" fill={C.subtle}>access + refresh token</text>
+
+            {/* Arrow */}
+            <line x1="480" y1="55" x2="520" y2="55" stroke={C.subtle} strokeWidth="2" markerEnd="url(#arrowR)"/>
+
+            {/* Request with token */}
+            <rect x="520" y="30" width="130" height="50" rx="6" fill={C.white} stroke={C.brand} strokeWidth="2"/>
+            <text x="585" y="50" textAnchor="middle" fontSize="11" fontWeight="600" fill={C.dark}>API Request</text>
+            <text x="585" y="66" textAnchor="middle" fontSize="9" fill={C.subtle}>Bearer token header</text>
+
+            {/* Arrow */}
+            <line x1="650" y1="55" x2="690" y2="55" stroke={C.subtle} strokeWidth="2" markerEnd="url(#arrowR)"/>
+
+            {/* Gateway validates */}
+            <rect x="690" y="20" width="130" height="70" rx="6" fill={C.white} stroke={C.dark} strokeWidth="2"/>
+            <rect x="690" y="20" width="130" height="24" rx="6" fill={C.dark}/>
+            <text x="755" y="37" textAnchor="middle" fontSize="11" fontWeight="600" fill={C.white}>Gateway :8080</text>
+            <text x="755" y="58" textAnchor="middle" fontSize="10" fill={C.dark}>Token Validation</text>
+            <text x="755" y="72" textAnchor="middle" fontSize="10" fill={C.dark}>Route to Service</text>
+
+            {/* Arrow down from gateway */}
+            <line x1="755" y1="90" x2="755" y2="130" stroke={C.subtle} strokeWidth="2" markerEnd="url(#arrowD)"/>
+
+            {/* Service processes */}
+            <rect x="690" y="130" width="130" height="50" rx="6" fill={C.white} stroke={C.success} strokeWidth="2"/>
+            <text x="755" y="152" textAnchor="middle" fontSize="11" fontWeight="600" fill={C.dark}>Target Service</text>
+            <text x="755" y="168" textAnchor="middle" fontSize="9" fill={C.subtle}>processes request</text>
+
+            {/* 401 flow */}
+            <rect x="350" y="140" width="130" height="50" rx="6" fill={C.white} stroke={C.danger} strokeWidth="2"/>
+            <text x="415" y="160" textAnchor="middle" fontSize="11" fontWeight="600" fill={C.danger}>401 Unauthorized</text>
+            <text x="415" y="175" textAnchor="middle" fontSize="9" fill={C.subtle}>token expired</text>
+
+            <line x1="690" y1="165" x2="480" y2="165" stroke={C.danger} strokeWidth="1.5" strokeDasharray="4 3" markerEnd="url(#arrowR)"/>
+
+            {/* Refresh arrow */}
+            <line x1="415" y1="190" x2="415" y2="220" stroke={C.subtle} strokeWidth="2" markerEnd="url(#arrowD)"/>
+
+            <rect x="350" y="220" width="130" height="35" rx="6" fill={C.white} stroke={C.purple} strokeWidth="2"/>
+            <text x="415" y="242" textAnchor="middle" fontSize="11" fontWeight="600" fill={C.purple}>Token Refresh</text>
+
+            <line x1="350" y1="237" x2="240" y2="90" stroke={C.purple} strokeWidth="1.5" strokeDasharray="4 3"/>
+
+            {/* Token details */}
+            <rect x="10" y="130" width="280" height="70" rx="6" fill={C.white} stroke={C.border} strokeWidth="1"/>
+            <text x="150" y="150" textAnchor="middle" fontSize="11" fontWeight="600" fill={C.dark}>Token Details</text>
+            <text x="20" y="168" fontSize="10" fill={C.dark}>Access Token: short-lived (configurable, e.g. 15min)</text>
+            <text x="20" y="183" fontSize="10" fill={C.dark}>Refresh Token: long-lived (configurable, e.g. 7 days)</text>
+
+            {/* Auth entities */}
+            <rect x="10" y="210" width="280" height="50" rx="6" fill={C.white} stroke={C.border} strokeWidth="1"/>
+            <text x="150" y="230" textAnchor="middle" fontSize="11" fontWeight="600" fill={C.dark}>Auth Entities</text>
+            <text x="20" y="248" fontSize="10" fill={C.subtle}>Role, UserGroup, UserGroupMembership, SessionToken</text>
+          </svg>
+        </div>
+        <div className="ads-alert ads-alert--info" style={{ marginTop: 12 }}>
+          Roles supported: <strong>ROLE_ADMIN</strong>, <strong>ROLE_USER</strong>. Token strategy uses short-lived
+          access tokens paired with long-lived refresh tokens. SAML SSO available for enterprise IdP integration.
+        </div>
+      </div>
+
+      {/* User Management */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <h4 className="ads-card-title" style={{ color: C.purple }}>User Management (user-service :8082)</h4>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead>
+              <tr><th>Entity</th><th>Description</th><th>Key Fields</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>CwdUser</td>
+                <td>Core user entity (Crowd directory model)</td>
+                <td style={{ fontSize: 12 }}>id, username, displayName, email, active, directoryId, createdDate</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>CwdGroup</td>
+                <td>User group (Crowd directory model)</td>
+                <td style={{ fontSize: 12 }}>id, groupName, description, active, directoryId</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>OrganizationMemberId</td>
+                <td>Organization membership link</td>
+                <td style={{ fontSize: 12 }}>userId, organizationId, role, joinedDate</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style={{ padding: '12px 16px', background: C.bg, borderRadius: 6, marginTop: 12, fontSize: 13 }}>
+          <strong>Operations:</strong> User CRUD, group membership management, optional LDAP integration for directory sync,
+          password management with bcrypt hashing, user search and autocomplete for pickers.
+        </div>
+      </div>
+
+      {/* Admin Service */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <h4 className="ads-card-title" style={{ color: C.warning }}>Admin Service (admin-service :8093)</h4>
+        <Paragraph>
+          The admin-service is the central configuration hub for the platform. It manages all schemes,
+          system settings, master data categories, and the assets/inventory module. It shares the
+          jira_admin schema with user-service.
+        </Paragraph>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead>
+              <tr><th style={{ width: '25%' }}>Feature Area</th><th>Detail</th></tr>
+            </thead>
+            <tbody>
+              {adminFeatures.map((f) => (
+                <tr key={f.area}>
+                  <td style={{ fontWeight: 600, fontSize: 12 }}>{f.area}</td>
+                  <td style={{ fontSize: 12 }}>{f.detail}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Notification Service */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <h4 className="ads-card-title" style={{ color: C.subtle }}>Notification Service (notification-service :8087)</h4>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead>
+              <tr><th>Entity</th><th>Description</th><th>Details</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>EmailTemplate</td>
+                <td>Thymeleaf-based email templates</td>
+                <td style={{ fontSize: 12 }}>HTML templates with variable substitution for issue fields, user names, project info, links</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>NotificationEvent</td>
+                <td>10 event types that trigger notifications</td>
+                <td style={{ fontSize: 12 }}>ISSUE_CREATED, ISSUE_UPDATED, ISSUE_ASSIGNED, ISSUE_RESOLVED, ISSUE_CLOSED, COMMENT_ADDED, STATUS_CHANGED, MENTION, WATCHER_ADDED, SPRINT_STARTED</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>NotificationPreference</td>
+                <td>Per-user notification preferences</td>
+                <td style={{ fontSize: 12 }}>userId, eventType, channel (EMAIL/IN_APP), enabled flag -- users can opt-out per event type</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* User Roles Table */}
+      <div className="ads-card">
+        <h4 className="ads-card-title">SYSDOPS Role-Based Access Matrix</h4>
+        <Paragraph>
+          The platform defines four primary roles with a progressive permission model. Roles are
+          assigned per project via ProjectRole/ProjectMember entities.
+        </Paragraph>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead>
+              <tr>
+                <th>Role</th>
+                <th style={{ textAlign: 'center' }}>Manage Users</th>
+                <th style={{ textAlign: 'center' }}>Manage Boards</th>
+                <th style={{ textAlign: 'center' }}>Delete Issues</th>
+                <th style={{ textAlign: 'center' }}>Edit Issues</th>
+                <th style={{ textAlign: 'center' }}>Read Issues</th>
+              </tr>
+            </thead>
+            <tbody>
+              {roleMatrix.map((r) => (
+                <tr key={r.role}>
+                  <td style={{ fontWeight: 700, color: C.dark }}>{r.role}</td>
+                  {[r.manageUsers, r.manageBoards, r.deleteIssues, r.editIssues, r.readIssues].map((v, i) => (
+                    <td key={i} style={{ textAlign: 'center', fontSize: 14, fontWeight: 700, color: v ? C.success : C.danger }}>
+                      {v ? 'Yes' : 'No'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Tab 12: Sprint & Search ── */
+function renderSprintSearch() {
+  const jqlOperators = [
+    { op: '=, !=', desc: 'Exact match / not equal', example: 'status = "Open"' },
+    { op: '>, <, >=, <=', desc: 'Comparison (numbers, dates)', example: 'created > -7d' },
+    { op: '~', desc: 'Contains (full-text)', example: 'summary ~ "engine failure"' },
+    { op: 'IN, NOT IN', desc: 'Set membership', example: 'status IN ("Open", "In Progress")' },
+    { op: 'IS, IS NOT', desc: 'Null checks', example: 'assignee IS EMPTY' },
+    { op: 'WAS, WAS IN', desc: 'Historical state', example: 'status WAS "Open"' },
+    { op: 'CHANGED', desc: 'Field change history', example: 'status CHANGED FROM "Open" TO "Done"' },
+  ];
+
+  const jqlFunctions = [
+    { fn: 'currentUser()', desc: 'Currently authenticated user' },
+    { fn: 'membersOf("group")', desc: 'All members of a user group' },
+    { fn: 'latestReleasedVersion(project)', desc: 'Most recently released version' },
+    { fn: 'startOfDay() / endOfDay()', desc: 'Date boundary functions' },
+    { fn: 'startOfWeek() / endOfWeek()', desc: 'Week boundary functions' },
+    { fn: 'startOfMonth() / endOfMonth()', desc: 'Month boundary functions' },
+  ];
+
+  const chartTypes = [
+    { type: 'PIE', desc: 'Distribution charts (status, priority, assignee)' },
+    { type: 'BAR', desc: 'Comparison charts (issues by project, sprint velocity)' },
+    { type: 'LINE', desc: 'Trend charts (created vs resolved over time)' },
+    { type: 'DONUT', desc: 'Proportional distribution with center metric' },
+    { type: 'TABLE', desc: 'Tabular data gadget with sorting and filtering' },
+    { type: 'STACKED_BAR', desc: 'Multi-dimension comparison (status by priority)' },
+    { type: 'AREA', desc: 'Cumulative flow diagrams' },
+    { type: 'SCATTER', desc: 'Correlation analysis (estimate vs actual)' },
+    { type: 'GAUGE', desc: 'Single metric progress (SLA compliance, sprint health)' },
+    { type: 'HEATMAP', desc: 'Activity density (commits per day, issues per component)' },
+  ];
+
+  return (
+    <div>
+      <SectionHeading>Sprint, Board, Search & Dashboard Architecture</SectionHeading>
+      <Paragraph>
+        This tab covers sprint-service (8091), search-service (8088), dashboard-service, and
+        plan-service -- the services that power agile boards, JQL search, dashboards, and
+        advanced roadmap planning.
+      </Paragraph>
+
+      {/* Sprint & Board Architecture SVG */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <h4 className="ads-card-title" style={{ color: C.teal }}>Sprint & Board Architecture</h4>
+        <div style={{ padding: 20, background: C.bg, borderRadius: 8, overflowX: 'auto' }}>
+          <svg viewBox="0 0 880 350" style={{ width: '100%', maxHeight: 350 }}>
+            {/* Board entity */}
+            <rect x="30" y="20" width="200" height="100" rx="8" fill={C.white} stroke={C.teal} strokeWidth="2"/>
+            <rect x="30" y="20" width="200" height="28" rx="8" fill={C.teal}/>
+            <text x="130" y="39" textAnchor="middle" fontSize="12" fontWeight="600" fill={C.white}>AgileBoard</text>
+            <text x="40" y="65" fontSize="10" fill={C.dark}>type: SCRUM | KANBAN</text>
+            <text x="40" y="80" fontSize="10" fill={C.dark}>name, projectId, filterJql</text>
+            <text x="40" y="95" fontSize="10" fill={C.dark}>boardConfig (swimlanes, colors)</text>
+
+            {/* Arrow to columns */}
+            <line x1="230" y1="70" x2="280" y2="70" stroke={C.subtle} strokeWidth="2" markerEnd="url(#arrowR)"/>
+            <text x="255" y="62" textAnchor="middle" fontSize="9" fill={C.subtle}>1:N</text>
+
+            {/* BoardColumn */}
+            <rect x="280" y="20" width="180" height="100" rx="8" fill={C.white} stroke={C.teal} strokeWidth="2"/>
+            <rect x="280" y="20" width="180" height="28" rx="8" fill={C.teal}/>
+            <text x="370" y="39" textAnchor="middle" fontSize="12" fontWeight="600" fill={C.white}>BoardColumn</text>
+            <text x="290" y="65" fontSize="10" fill={C.dark}>name, position, minLimit, maxLimit</text>
+            <text x="290" y="80" fontSize="10" fill={C.dark}>statusMappings[] (status IDs)</text>
+            <text x="290" y="95" fontSize="10" fill={C.dark}>columnCategory (TODO/IN_PROGRESS/DONE)</text>
+
+            {/* Arrow from board to sprint */}
+            <line x1="130" y1="120" x2="130" y2="160" stroke={C.subtle} strokeWidth="2" markerEnd="url(#arrowD)"/>
+            <text x="155" y="145" fontSize="9" fill={C.subtle}>1:N via BoardSprint</text>
+
+            {/* Sprint */}
+            <rect x="30" y="160" width="200" height="100" rx="8" fill={C.white} stroke={C.brand} strokeWidth="2"/>
+            <rect x="30" y="160" width="200" height="28" rx="8" fill={C.brand}/>
+            <text x="130" y="179" textAnchor="middle" fontSize="12" fontWeight="600" fill={C.white}>Sprint</text>
+            <text x="40" y="205" fontSize="10" fill={C.dark}>name, goal, startDate, endDate</text>
+            <text x="40" y="220" fontSize="10" fill={C.dark}>state: PLANNED | ACTIVE | COMPLETED</text>
+            <text x="40" y="235" fontSize="10" fill={C.dark}>velocity, completeDate</text>
+
+            {/* Sprint Lifecycle */}
+            <rect x="280" y="160" width="340" height="50" rx="8" fill={C.white} stroke={C.border} strokeWidth="1"/>
+            <text x="450" y="178" textAnchor="middle" fontSize="11" fontWeight="600" fill={C.dark}>Sprint Lifecycle</text>
+
+            <rect x="290" y="195" width="80" height="24" rx="4" fill={C.brand}/>
+            <text x="330" y="211" textAnchor="middle" fontSize="10" fontWeight="600" fill={C.white}>PLANNED</text>
+
+            <line x1="370" y1="207" x2="400" y2="207" stroke={C.subtle} strokeWidth="2" markerEnd="url(#arrowR)"/>
+
+            <rect x="400" y="195" width="80" height="24" rx="4" fill={C.success}/>
+            <text x="440" y="211" textAnchor="middle" fontSize="10" fontWeight="600" fill={C.white}>ACTIVE</text>
+
+            <line x1="480" y1="207" x2="510" y2="207" stroke={C.subtle} strokeWidth="2" markerEnd="url(#arrowR)"/>
+
+            <rect x="510" y="195" width="100" height="24" rx="4" fill={C.subtle}/>
+            <text x="560" y="211" textAnchor="middle" fontSize="10" fontWeight="600" fill={C.white}>COMPLETED</text>
+
+            {/* BoardConfig */}
+            <rect x="500" y="20" width="200" height="100" rx="8" fill={C.white} stroke={C.warning} strokeWidth="2"/>
+            <rect x="500" y="20" width="200" height="28" rx="8" fill={C.warning}/>
+            <text x="600" y="39" textAnchor="middle" fontSize="12" fontWeight="600" fill={C.white}>BoardConfig</text>
+            <text x="510" y="65" fontSize="10" fill={C.dark}>swimlaneStrategy (NONE/ASSIGNEE/EPIC)</text>
+            <text x="510" y="80" fontSize="10" fill={C.dark}>quickFilters (JQL-based)</text>
+            <text x="510" y="95" fontSize="10" fill={C.dark}>cardColors, cardFields, estimation</text>
+
+            {/* Arrow board -> config */}
+            <line x1="230" y1="40" x2="230" y2="40" stroke="none"/>
+            <path d="M230,40 Q270,10 500,40" fill="none" stroke={C.subtle} strokeWidth="1.5" strokeDasharray="4 3"/>
+
+            {/* Board types explanation */}
+            <rect x="30" y="280" width="590" height="60" rx="8" fill={C.white} stroke={C.border} strokeWidth="1"/>
+            <text x="50" y="302" fontSize="11" fontWeight="600" fill={C.dark}>Board Types:</text>
+            <text x="50" y="320" fontSize="10" fill={C.dark}>Scrum: Sprint-based with backlog, active sprint, and completed sprints. Velocity tracking.</text>
+            <text x="50" y="334" fontSize="10" fill={C.dark}>Kanban: Continuous flow with WIP limits per column. Cumulative flow diagram.</text>
+
+            {/* Entity count */}
+            <rect x="730" y="20" width="120" height="100" rx="8" fill={C.white} stroke={C.border} strokeWidth="1"/>
+            <text x="790" y="42" textAnchor="middle" fontSize="11" fontWeight="600" fill={C.dark}>Entities</text>
+            <text x="790" y="65" textAnchor="middle" fontSize="28" fontWeight="700" fill={C.teal}>5</text>
+            <text x="790" y="82" textAnchor="middle" fontSize="10" fill={C.subtle}>Sprint, Board,</text>
+            <text x="790" y="95" textAnchor="middle" fontSize="10" fill={C.subtle}>Column, Config,</text>
+            <text x="790" y="108" textAnchor="middle" fontSize="10" fill={C.subtle}>BoardSprint</text>
+          </svg>
+        </div>
+      </div>
+
+      {/* Search Service - JQL Engine */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <h4 className="ads-card-title" style={{ color: C.brand }}>Search Service -- JQL Engine (search-service :8088)</h4>
+        <Paragraph>
+          The search service implements a complete JQL (Jira Query Language) parser that translates
+          JQL expressions into SQL queries. It supports operators, functions, date math, and historical
+          queries (WAS/CHANGED). Results can be cached for performance.
+        </Paragraph>
+
+        <div className="ads-grid-3" style={{ marginBottom: 16 }}>
+          <div>
+            <div className="ads-section-title">JQL Operators</div>
+            <div className="ads-table-wrap">
+              <table className="ads-table">
+                <thead><tr><th>Operator</th><th>Description</th><th>Example</th></tr></thead>
+                <tbody>
+                  {jqlOperators.map((o) => (
+                    <tr key={o.op}>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap' }}>{o.op}</td>
+                      <td style={{ fontSize: 11 }}>{o.desc}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: 10 }}>{o.example}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div style={{ gridColumn: 'span 2' }}>
+            <div className="ads-section-title">JQL Functions & Date Math</div>
+            <div className="ads-table-wrap">
+              <table className="ads-table">
+                <thead><tr><th>Function</th><th>Description</th></tr></thead>
+                <tbody>
+                  {jqlFunctions.map((f) => (
+                    <tr key={f.fn}>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: 12 }}>{f.fn}</td>
+                      <td style={{ fontSize: 12 }}>{f.desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="ads-alert ads-alert--info" style={{ marginTop: 8 }}>
+              <strong>Date math:</strong> Supports relative offsets like <code>-1d</code> (1 day ago),
+              <code>-2w</code> (2 weeks ago), <code>-3M</code> (3 months ago). Combine with functions:
+              <code>created &gt;= startOfDay(-7d)</code>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ padding: '12px 16px', background: C.bg, borderRadius: 6 }}>
+          <strong>Query Pipeline:</strong> JQL string &rarr; Lexer/Tokenizer &rarr; AST Parser &rarr;
+          Semantic Analyzer (resolve field names, validate types) &rarr; SQL Generator &rarr; Query Execution &rarr;
+          Result Mapping &rarr; Response with pagination. Full-text search on <code>summary</code> and
+          <code>description</code> fields via PostgreSQL <code>tsvector</code>.
+        </div>
+      </div>
+
+      {/* Dashboard & Reporting */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <h4 className="ads-card-title" style={{ color: C.success }}>Dashboard & Reporting (dashboard-service)</h4>
+        <Paragraph>
+          The dashboard service manages gadget instances that power configurable dashboards. Each gadget
+          has a chart type, configuration JSON, and a data source (typically a JQL query or reference ID).
+        </Paragraph>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead>
+              <tr><th>Entity</th><th>Key Fields</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>Gadget</td>
+                <td style={{ fontSize: 12 }}>id, name, description, category</td>
+                <td style={{ fontSize: 12 }}>Gadget type definition (e.g., "Issue Statistics", "Sprint Burndown")</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>GadgetInstance</td>
+                <td style={{ fontSize: 12 }}>id, gadgetId, chartType, chartConfig (JSON), referenceId, dataSourceJql, position</td>
+                <td style={{ fontSize: 12 }}>Configured instance on a user's dashboard with placement and data binding</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="ads-section-title" style={{ marginTop: 16 }}>Supported Chart Types</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+          {chartTypes.map((ct) => (
+            <div key={ct.type} style={{
+              padding: '8px 10px',
+              background: C.white,
+              borderRadius: 6,
+              border: `1px solid ${C.border}`,
+              textAlign: 'center',
+            }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: C.brand, marginBottom: 4 }}>{ct.type}</div>
+              <div style={{ fontSize: 10, color: C.subtle, lineHeight: 1.4 }}>{ct.desc}</div>
+            </div>
+          ))}
+        </div>
+        <div className="ads-alert ads-alert--info" style={{ marginTop: 12 }}>
+          Dashboard gadgets integrate with Custom Charts plugin functionality. Performance Objective
+          dashboards provide project-level KPI tracking with configurable targets.
+        </div>
+      </div>
+
+      {/* Plan Service - Advanced Roadmaps */}
+      <div className="ads-card">
+        <h4 className="ads-card-title" style={{ color: C.purple }}>Plan Service -- Advanced Roadmaps</h4>
+        <Paragraph>
+          The plan service implements Jira Advanced Roadmaps functionality: cross-project planning with
+          dependencies, team capacity management, goal tracking, and schedule optimization.
+        </Paragraph>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead>
+              <tr><th>Entity</th><th>Key Fields</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>PlanItem</td>
+                <td style={{ fontSize: 12 }}>id, issueId, targetDate, targetEndDate, dependencies[]</td>
+                <td style={{ fontSize: 12 }}>Roadmap item with scheduling dates and dependency links</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>PlanTeam</td>
+                <td style={{ fontSize: 12 }}>id, name, planId, velocity, iterationLength</td>
+                <td style={{ fontSize: 12 }}>Team definition within a plan for capacity calculation</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>PlanTeamMember</td>
+                <td style={{ fontSize: 12 }}>id, teamId, userId, capacityHours, availability (%)</td>
+                <td style={{ fontSize: 12 }}>Individual team member with capacity and availability settings</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>PlanGoal</td>
+                <td style={{ fontSize: 12 }}>id, name, parentGoalId, progress, status</td>
+                <td style={{ fontSize: 12 }}>Hierarchical goals with automatic progress tracking from linked items</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+          <div style={{ padding: '12px 16px', background: C.bg, borderRadius: 6 }}>
+            <div style={{ fontWeight: 600, fontSize: 13, color: C.dark, marginBottom: 4 }}>Schedule Engine</div>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: C.dark, lineHeight: 1.8 }}>
+              <li>Forward scheduling (from start date)</li>
+              <li>Backward scheduling (from deadline)</li>
+              <li>Critical path analysis</li>
+              <li>Dependency chain resolution</li>
+              <li>Working days configuration (exclude weekends/holidays)</li>
+            </ul>
+          </div>
+          <div style={{ padding: '12px 16px', background: C.bg, borderRadius: 6 }}>
+            <div style={{ fontWeight: 600, fontSize: 13, color: C.dark, marginBottom: 4 }}>Capacity Planning</div>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: C.dark, lineHeight: 1.8 }}>
+              <li>Team velocity tracking per iteration</li>
+              <li>Member availability percentage</li>
+              <li>Capacity hours per sprint</li>
+              <li>Over-allocation warnings</li>
+              <li>Cross-team dependency visualization</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Tab 13: Database Schema ── */
+function renderDatabaseSchema() {
+  const schemas = [
+    {
+      schema: 'jira_auth', service: 'auth-service', port: '8081',
+      keyTables: 'users, roles, user_roles, user_groups, user_group_memberships',
+      tableCount: '5', relationships: 'users -> roles (M:N via user_roles)',
+      color: C.purple,
+    },
+    {
+      schema: 'jira_admin', service: 'admin-service + user-service', port: '8093/8082',
+      keyTables: 'cwd_user, cwd_group, statuses, issue_types, priorities, resolutions, permission_schemes, system_settings, aircraft_programs, test_means, aircraft_systems, ata_chapters, system_suppliers, system_functions, reporter_teams, test_mean_defect_origins, asset_types, assets, asset_issue_links, project_roles',
+      tableCount: '30+', relationships: 'aircraft_programs -> test_means, systems -> functions/suppliers',
+      color: C.warning,
+    },
+    {
+      schema: 'jira_project', service: 'project-service', port: '8083',
+      keyTables: 'projects, project_types, project_templates, project_roles, project_members, issue_type_schemes, workflow_schemes, permission_schemes, notification_schemes, screen_schemes, field_configurations',
+      tableCount: '15+', relationships: 'projects -> schemes (1:1 per type)',
+      color: C.success,
+    },
+    {
+      schema: 'jira_issue', service: 'issue-service', port: '8084',
+      keyTables: 'issues, issue_types, issue_statuses, issue_priorities, resolutions, custom_field_definitions, custom_field_values, issue_links, issue_link_types, change_groups, change_items, labels, epics, worklogs, project_versions, project_components, change_card_metadata, design_item_metadata, dcl_metadata, deliverable_metadata, system_standard_metadata, review_sub_task_metadata, modification_metadata, external_page_links',
+      tableCount: '30+', relationships: 'issues -> custom_field_values (1:N), issues -> change_card_metadata (1:1)',
+      color: C.success,
+    },
+    {
+      schema: 'jira_workflow', service: 'workflow-service', port: '8085',
+      keyTables: 'workflows, workflow_statuses, workflow_transitions, workflow_conditions, workflow_validators, workflow_post_functions, workflow_schemes, workflow_scheme_mappings, workflow_transition_history, workflow_screens, workflow_triggers, script_definitions, script_versions, automation_rules, automation_execution_log',
+      tableCount: '25+', relationships: 'workflows -> statuses -> transitions -> conditions/validators/post-functions',
+      color: C.danger,
+    },
+    {
+      schema: 'jira_test', service: 'test-service', port: '8095',
+      keyTables: 'test_issue, test_step, test_set, test_plan, test_execution, test_run, step_result, requirement_link, defect_link, test_folder, shared_step, precondition, cucumber_scenario, vvo_definition, hlvvo_definition, test_request, vvo_test_request_link, tech_event, bench_defect, problem_report, export_template, coverage_*, environment_*, evidence_*, flaky_*, quarantine_*',
+      tableCount: '50+', relationships: 'vvo_definition -> hlvvo_definition, test_plan -> test_execution, tech_event -> bench_defect/problem_report',
+      color: C.danger,
+    },
+    {
+      schema: 'jira_sprint', service: 'sprint-service', port: '8091',
+      keyTables: 'sprints, agile_boards, board_columns, board_configs, board_sprints',
+      tableCount: '5', relationships: 'boards -> columns, boards -> sprints',
+      color: C.teal,
+    },
+    {
+      schema: 'jira_plan', service: 'plan-service', port: '--',
+      keyTables: 'plan_items, plan_teams, plan_team_members, plan_goals, dependencies, releases, initiatives, schedules',
+      tableCount: '10+', relationships: 'plan_items -> dependencies (M:N), plan_teams -> members',
+      color: C.teal,
+    },
+    {
+      schema: 'jira_comment', service: 'comment-service', port: '--',
+      keyTables: 'comments',
+      tableCount: '1', relationships: 'comments -> issues (via issueId FK)',
+      color: C.subtle,
+    },
+    {
+      schema: 'jira_notification', service: 'notification-service', port: '8087',
+      keyTables: 'email_templates, notification_events, notification_preferences',
+      tableCount: '3', relationships: 'events -> templates',
+      color: C.subtle,
+    },
+    {
+      schema: 'jira_search', service: 'search-service', port: '8088',
+      keyTables: 'jql_queries, jql_clauses',
+      tableCount: '2', relationships: 'Stateless query processing',
+      color: C.teal,
+    },
+    {
+      schema: 'jira_audit', service: 'audit-service', port: '--',
+      keyTables: 'audit_logs',
+      tableCount: '1', relationships: 'Append-only audit trail',
+      color: C.subtle,
+    },
+    {
+      schema: 'jira_version', service: 'version-service', port: '--',
+      keyTables: 'project_versions, issue_affects_versions',
+      tableCount: '2', relationships: 'versions -> issues (M:N)',
+      color: C.subtle,
+    },
+    {
+      schema: 'jira_component', service: 'component-service', port: '--',
+      keyTables: 'project_components, issue_components, component_assignment_rules, component_audit_log, component_metrics',
+      tableCount: '5+', relationships: 'components -> issues (M:N)',
+      color: C.subtle,
+    },
+  ];
+
+  return (
+    <div>
+      <SectionHeading>Database Schema Reference</SectionHeading>
+      <Paragraph>
+        SYSDOPS uses a single PostgreSQL 16 instance with 14 isolated schemas. Each service owns its
+        schema and manages its tables via Flyway migrations. Cross-schema references use logical IDs
+        (not foreign keys) to maintain service isolation.
+      </Paragraph>
+
+      {/* Summary Stats */}
+      <div className="ads-stats" style={{ marginBottom: 24 }}>
+        <div className="ads-stat ads-stat--brand">
+          <span className="ads-stat-value">14</span>
+          <span className="ads-stat-label">Schemas</span>
+        </div>
+        <div className="ads-stat ads-stat--success">
+          <span className="ads-stat-value">150+</span>
+          <span className="ads-stat-label">Tables</span>
+        </div>
+        <div className="ads-stat ads-stat--warning">
+          <span className="ads-stat-value">150+</span>
+          <span className="ads-stat-label">Entity Models</span>
+        </div>
+        <div className="ads-stat">
+          <span className="ads-stat-value">50+</span>
+          <span className="ads-stat-label">Flyway Migrations</span>
+        </div>
+      </div>
+
+      {/* Schema Table */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <h4 className="ads-card-title">All 14 Schemas -- Tables & Relationships</h4>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead>
+              <tr>
+                <th style={{ width: '12%' }}>Schema</th>
+                <th style={{ width: '14%' }}>Service</th>
+                <th style={{ width: '36%' }}>Key Tables</th>
+                <th style={{ width: '8%', textAlign: 'center' }}>Tables</th>
+                <th style={{ width: '30%' }}>Key Relationships</th>
+              </tr>
+            </thead>
+            <tbody>
+              {schemas.map((s) => (
+                <tr key={s.schema}>
+                  <td>
+                    <span style={{
+                      fontFamily: 'monospace',
+                      fontWeight: 700,
+                      fontSize: 12,
+                      color: s.color,
+                      background: `${s.color}15`,
+                      padding: '2px 6px',
+                      borderRadius: 3,
+                      display: 'inline-block',
+                    }}>
+                      {s.schema}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.dark }}>{s.service}</div>
+                    <div style={{ fontSize: 10, color: C.subtle }}>:{s.port}</div>
+                  </td>
+                  <td style={{ fontSize: 11, fontFamily: 'monospace', lineHeight: 1.6, wordBreak: 'break-word' }}>
+                    {s.keyTables}
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <span style={{
+                      fontWeight: 700,
+                      fontSize: 14,
+                      color: C.dark,
+                      background: C.bg,
+                      padding: '2px 8px',
+                      borderRadius: 4,
+                      display: 'inline-block',
+                    }}>
+                      {s.tableCount}
+                    </span>
+                  </td>
+                  <td style={{ fontSize: 11, color: C.dark }}>{s.relationships}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Schema Visualization */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <h4 className="ads-card-title">Schema Size Distribution</h4>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', padding: '16px 0', height: 200, borderBottom: `1px solid ${C.border}` }}>
+          {schemas
+            .map((s) => ({ name: s.schema.replace('jira_', ''), count: parseInt(s.tableCount) || 1, color: s.color }))
+            .sort((a, b) => b.count - a.count)
+            .map((s) => {
+              const maxH = 160;
+              const maxCount = 50;
+              const h = Math.max(20, (s.count / maxCount) * maxH);
+              return (
+                <div key={s.name} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: C.dark, marginBottom: 4 }}>{s.count}+</div>
+                  <div style={{ width: '70%', height: h, background: s.color, borderRadius: '4px 4px 0 0', minWidth: 20 }} />
+                  <div style={{ fontSize: 8, color: C.subtle, marginTop: 4, textAlign: 'center', transform: 'rotate(-45deg)', transformOrigin: 'top center', whiteSpace: 'nowrap' }}>
+                    {s.name}
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </div>
+
+      {/* Cross-schema communication */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <h4 className="ads-card-title">Cross-Schema Communication Pattern</h4>
+        <Paragraph>
+          Services do not use cross-schema JOINs or foreign keys. Instead, they reference entities in
+          other schemas via logical IDs and REST API calls. This preserves schema isolation and allows
+          independent service deployment.
+        </Paragraph>
+        <div style={{ padding: 16, background: C.bg, borderRadius: 8, overflowX: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 700 }}>
+            <DiagramBox label="issue-service" sub="jira_issue schema" color={C.success} width={140} height={55} />
+            <ArrowRight label="REST call" width={80} />
+            <DiagramBox label="workflow-service" sub="jira_workflow schema" color={C.danger} width={150} height={55} />
+            <ArrowRight label="REST call" width={80} />
+            <DiagramBox label="admin-service" sub="jira_admin schema" color={C.warning} width={140} height={55} />
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 8, fontSize: 11, color: C.subtle }}>
+            Inter-service calls use WebClient beans with logical IDs (issueId, projectId, userId) --
+            never direct SQL across schema boundaries
+          </div>
+        </div>
+      </div>
+
+      {/* Entity Count Summary */}
+      <div className="ads-card">
+        <h4 className="ads-card-title">Entity Count Summary</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, padding: '16px 0' }}>
+          <div style={{ textAlign: 'center', padding: 16, background: C.bg, borderRadius: 8 }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: C.brand }}>14</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>Total Schemas</div>
+            <div style={{ fontSize: 11, color: C.subtle, marginTop: 4 }}>One per service (some shared)</div>
+          </div>
+          <div style={{ textAlign: 'center', padding: 16, background: C.bg, borderRadius: 8 }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: C.success }}>150+</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>Total Tables</div>
+            <div style={{ fontSize: 11, color: C.subtle, marginTop: 4 }}>Across all 14 schemas</div>
+          </div>
+          <div style={{ textAlign: 'center', padding: 16, background: C.bg, borderRadius: 8 }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: C.warning }}>150+</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>Entity Models</div>
+            <div style={{ fontSize: 11, color: C.subtle, marginTop: 4 }}>JPA entities mapped to tables</div>
+          </div>
+          <div style={{ textAlign: 'center', padding: 16, background: C.bg, borderRadius: 8 }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: C.purple }}>50+</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>Flyway Migrations</div>
+            <div style={{ fontSize: 11, color: C.subtle, marginTop: 4 }}>Versioned schema evolution</div>
+          </div>
+        </div>
+
+        {/* Schema ownership note */}
+        <div className="ads-alert ads-alert--info" style={{ marginTop: 16 }}>
+          <strong>Schema Isolation Principle:</strong> Each service owns its schema exclusively. The only
+          exception is <code>jira_admin</code>, which is shared between admin-service (configuration data)
+          and user-service (CwdUser/CwdGroup entities). All cross-service data access happens via REST
+          APIs, never via direct database queries across schema boundaries.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* =========================================================================
    Main Component
    ========================================================================= */
@@ -1383,6 +2594,8 @@ export default function ArchitecturePage() {
         return renderSystemOverview();
       case 'Service Map':
         return renderServiceMap();
+      case 'Issue & Workflow':
+        return renderIssueWorkflow();
       case 'Domain Model':
         return renderDomainModel();
       case 'Data Flow':
@@ -1393,8 +2606,16 @@ export default function ArchitecturePage() {
         return renderDefectManagement();
       case 'Plugin Matrix':
         return renderPluginMatrix();
+      case 'SIL Alternative':
+        return renderSilAlternative();
       case 'API Reference':
         return renderApiReference();
+      case 'Auth & Users':
+        return renderAuthUsers();
+      case 'Sprint & Search':
+        return renderSprintSearch();
+      case 'Database Schema':
+        return renderDatabaseSchema();
       default:
         return null;
     }
