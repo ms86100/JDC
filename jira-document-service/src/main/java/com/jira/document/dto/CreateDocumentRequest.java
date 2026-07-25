@@ -12,7 +12,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateDocumentRequest {
 
-    @NotBlank(message = "Title is required")
+    @NotBlank(message = "{validation.document.title.required}")
     private String title;
 
     private String content;
@@ -20,7 +20,7 @@ public class CreateDocumentRequest {
     private UUID projectId;
     private UUID issueId;
 
-    @NotNull(message = "Document type is required")
+    @NotNull(message = "{validation.document.type.required}")
     private String documentType;
 
     private String space;

@@ -23,8 +23,8 @@ public interface LegalHoldRepository extends JpaRepository<LegalHold, UUID> {
     @Query(value = "SELECT * FROM legal_holds lh WHERE lh.custodian_ids @> ARRAY[CAST(:custodianId AS uuid)]", nativeQuery = true)
     List<LegalHold> findByCustodianContaining(@Param("custodianId") UUID custodianId);
 
-    @Query("SELECT lh FROM LegalHold lh WHERE lh.status = 'ACTIVE' AND lh.endDate <= :date")
-    List<LegalHold> findExpiringSoon(@Param("date") LocalDateTime date);
+    @Query("SELECT lh FROM LegalHold lh WHERE lh.status = :status AND lh.endDate <= :date")
+    List<LegalHold> findExpiringSoon(@Param("status") String status, @Param("date") LocalDateTime date);
 
     @Query("SELECT lh FROM LegalHold lh WHERE lh.initiatedBy = :userId")
     List<LegalHold> findByInitiatedBy(@Param("userId") UUID userId);

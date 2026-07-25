@@ -12,10 +12,10 @@ import java.util.UUID;
 @Builder
 public class CreateVersionRequest {
 
-    @NotNull(message = "Project ID is required")
+    @NotNull(message = "{validation.version.projectId.required}")
     private UUID projectId;
 
-    @NotBlank(message = "Version name is required")
+    @NotBlank(message = "{validation.version.name.required}")
     private String name;
 
     private String description;

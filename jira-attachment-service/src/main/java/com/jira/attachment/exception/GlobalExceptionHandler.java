@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,10 +13,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.LocalDateTime;
-import java.util.Map;
+import java.util.Locale;
 
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final MessageSource messageSource;
 
     @Data
     @Builder
@@ -34,7 +39,7 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.builder()
                         .timestamp(LocalDateTime.now())
                         .status(HttpStatus.NOT_FOUND.value())
-                        .error("Not Found")
+                        .error(HttpStatus.NOT_FOUND.getReasonPhrase())
                         .message(ex.getMessage())
                         .build());
     }
@@ -45,7 +50,7 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.builder()
                         .timestamp(LocalDateTime.now())
                         .status(HttpStatus.BAD_REQUEST.value())
-                        .error("Bad Request")
+                        .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
                         .message(ex.getMessage())
                         .build());
     }
@@ -56,8 +61,9 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.builder()
                         .timestamp(LocalDateTime.now())
                         .status(HttpStatus.PAYLOAD_TOO_LARGE.value())
-                        .error("Payload Too Large")
-                        .message("File size exceeds the maximum allowed limit")
+                        .error(HttpStatus.PAYLOAD_TOO_LARGE.getReasonPhrase())
+                        .message(messageSource.getMessage("error.max.upload.size", null,
+                                "File size exceeds the maximum allowed limit", Locale.ENGLISH))
                         .build());
     }
 
@@ -67,7 +73,7 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.builder()
                         .timestamp(LocalDateTime.now())
                         .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                        .error("Internal Server Error")
+                        .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
                         .message(ex.getMessage())
                         .build());
     }

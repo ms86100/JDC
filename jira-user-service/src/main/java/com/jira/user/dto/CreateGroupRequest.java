@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateGroupRequest {
-    @NotBlank(message = "Group name is required")
+    @NotBlank(message = "{validation.group.name.required}")
     private String name;
 
     private String description;

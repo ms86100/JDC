@@ -12,15 +12,15 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreatePortalRequest {
 
-    @NotBlank(message = "Portal name is required")
+    @NotBlank(message = "{validation.portal.name.required}")
     private String name;
 
     private String description;
 
-    @NotNull(message = "Project ID is required")
+    @NotNull(message = "{validation.portal.projectId.required}")
     private UUID projectId;
 
-    @NotBlank(message = "Portal key is required")
+    @NotBlank(message = "{validation.portal.key.required}")
     private String portalKey;
 
     private String baseUrl;

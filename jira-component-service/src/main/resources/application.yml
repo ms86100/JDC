@@ -67,6 +67,10 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+app:
+  defaults:
+    assignee-type: PROJECT_DEFAULT
+
 logging:
   file:
     path: ${LOG_PATH:../../logs}/component

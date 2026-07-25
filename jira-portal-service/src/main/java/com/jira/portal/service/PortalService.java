@@ -1,11 +1,13 @@
 package com.jira.portal.service;
 
+import com.jira.cluster.util.StatusCategoryHelper;
 import com.jira.portal.dto.*;
 import com.jira.portal.entity.*;
 import com.jira.portal.exception.ResourceNotFoundException;
 import com.jira.portal.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,48 @@ public class PortalService {
     private final RequestTypeRepository requestTypeRepository;
     private final PortalCommentRepository portalCommentRepository;
 
+    @Value("${app.portal.defaults.is-public:false}")
+    private boolean defaultIsPublic;
+
+    @Value("${app.portal.defaults.require-authentication:true}")
+    private boolean defaultRequireAuthentication;
+
+    @Value("${app.portal.defaults.allow-anonymous-submissions:false}")
+    private boolean defaultAllowAnonymousSubmissions;
+
+    @Value("${app.portal.defaults.published-status:PUBLISHED}")
+    private String publishedStatus;
+
+    @Value("${app.portal.defaults.request-priority:MEDIUM}")
+    private String defaultRequestPriority;
+
+    @Value("${app.portal.defaults.request-channel:WEB}")
+    private String defaultRequestChannel;
+
+    @Value("${app.portal.defaults.request-type-enabled:true}")
+    private boolean defaultRequestTypeEnabled;
+
+    @Value("${app.portal.defaults.request-type-is-default:false}")
+    private boolean defaultRequestTypeIsDefault;
+
+    @Value("${app.portal.defaults.request-type-display-order:0}")
+    private int defaultRequestTypeDisplayOrder;
+
+    @Value("${app.portal.defaults.request-type-sla-minutes:480}")
+    private int defaultRequestTypeSlaMinutes;
+
+    @Value("${app.portal.defaults.comment-author-type:CUSTOMER}")
+    private String defaultCommentAuthorType;
+
+    @Value("${app.portal.defaults.comment-is-public:true}")
+    private boolean defaultCommentIsPublic;
+
+    @Value("${app.portal.defaults.comment-is-internal:false}")
+    private boolean defaultCommentIsInternal;
+
+    @Value("${app.portal.defaults.request-key-prefix:REQ}")
+    private String defaultRequestKeyPrefix;
+
     // Portal Management
     @Transactional
     public CustomerPortalResponse createPortal(CreatePortalRequest request, UUID userId) {
@@ -37,9 +81,9 @@ public class PortalService {
                 .projectId(request.getProjectId())
                 .portalKey(request.getPortalKey())
                 .baseUrl(request.getBaseUrl())
-                .isPublic(request.getIsPublic() != null ? request.getIsPublic() : false)
-                .requireAuthentication(request.getRequireAuthentication() != null ? request.getRequireAuthentication() : true)
-                .allowAnonymousSubmissions(request.getAllowAnonymousSubmissions() != null ? request.getAllowAnonymousSubmissions() : false)
+                .isPublic(request.getIsPublic() != null ? request.getIsPublic() : defaultIsPublic)
+                .requireAuthentication(request.getRequireAuthentication() != null ? request.getRequireAuthentication() : defaultRequireAuthentication)
+                .allowAnonymousSubmissions(request.getAllowAnonymousSubmissions() != null ? request.getAllowAnonymousSubmissions() : defaultAllowAnonymousSubmissions)
                 .brandingConfig(request.getBrandingConfig())
                 .layoutConfig(request.getLayoutConfig())
                 .headerContent(request.getHeaderContent())
@@ -81,7 +125,7 @@ public class PortalService {
         log.info("Publishing portal {} by user {}", portalId, userId);
         CustomerPortal portal = customerPortalRepository.findById(portalId)
                 .orElseThrow(() -> new ResourceNotFoundException("CustomerPortal", "id", portalId));
-        portal.setStatus("PUBLISHED");
+        portal.setStatus(publishedStatus);
         portal.setPublishedAt(LocalDateTime.now());
         portal.setPublishedBy(userId);
         portal = customerPortalRepository.save(portal);
@@ -90,7 +134,7 @@ public class PortalService {
 
     @Transactional(readOnly = true)
     public List<CustomerPortalResponse> getPublicPortals() {
-        return customerPortalRepository.findPublicPortals().stream()
+        return customerPortalRepository.findPublicPortals(publishedStatus).stream()
                 .map(this::toCustomerPortalResponse)
                 .collect(Collectors.toList());
     }
@@ -114,12 +158,12 @@ public class PortalService {
                 .customerName(request.getCustomerName())
                 .customerEmail(request.getCustomerEmail())
                 .customerId(request.getCustomerId())
-                .priority(request.getPriority() != null ? request.getPriority() : "MEDIUM")
+                .priority(request.getPriority() != null ? request.getPriority() : defaultRequestPriority)
                 .organizationId(request.getOrganizationId())
                 .organizationName(request.getOrganizationName())
                 .fields(request.getFields())
                 .attachments(request.getAttachments())
-                .channel(request.getChannel() != null ? request.getChannel() : "WEB")
+                .channel(request.getChannel() != null ? request.getChannel() : defaultRequestChannel)
                 .build();
 
         customerRequest = customerRequestRepository.save(customerRequest);
@@ -156,13 +200,13 @@ public class PortalService {
         request.setStatus(status);
         request.setAssignedAgentId(agentId);
 
-        if ("IN_PROGRESS".equals(status) && request.getFirstResponseAt() == null) {
+        if (StatusCategoryHelper.isInProgress(status) && request.getFirstResponseAt() == null) {
             request.setFirstResponseAt(LocalDateTime.now());
         }
-        if ("RESOLVED".equals(status)) {
+        if (StatusCategoryHelper.isCompleted(status) && request.getResolvedAt() == null) {
             request.setResolvedAt(LocalDateTime.now());
         }
-        if ("CLOSED".equals(status)) {
+        if (StatusCategoryHelper.isCompleted(status)) {
             request.setClosedAt(LocalDateTime.now());
         }
 
@@ -184,11 +228,11 @@ public class PortalService {
                 .projectId(request.getProjectId())
                 .fieldsConfig(request.getFieldsConfig())
                 .instructions(request.getInstructions())
-                .isEnabled(request.getIsEnabled() != null ? request.getIsEnabled() : true)
-                .isDefault(request.getIsDefault() != null ? request.getIsDefault() : false)
+                .isEnabled(request.getIsEnabled() != null ? request.getIsEnabled() : defaultRequestTypeEnabled)
+                .isDefault(request.getIsDefault() != null ? request.getIsDefault() : defaultRequestTypeIsDefault)
                 .iconUrl(request.getIconUrl())
-                .displayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : 0)
-                .slaMinutes(request.getSlaMinutes() != null ? request.getSlaMinutes() : 480)
+                .displayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : defaultRequestTypeDisplayOrder)
+                .slaMinutes(request.getSlaMinutes() != null ? request.getSlaMinutes() : defaultRequestTypeSlaMinutes)
                 .workflowId(request.getWorkflowId())
                 .build();
 
@@ -215,9 +259,9 @@ public class PortalService {
                 .authorId(request.getAuthorId())
                 .authorName(request.getAuthorName())
                 .authorEmail(request.getAuthorEmail())
-                .authorType(request.getAuthorType() != null ? request.getAuthorType() : "CUSTOMER")
-                .isPublic(request.getIsPublic() != null ? request.getIsPublic() : true)
-                .isInternal(request.getIsInternal() != null ? request.getIsInternal() : false)
+                .authorType(request.getAuthorType() != null ? request.getAuthorType() : defaultCommentAuthorType)
+                .isPublic(request.getIsPublic() != null ? request.getIsPublic() : defaultCommentIsPublic)
+                .isInternal(request.getIsInternal() != null ? request.getIsInternal() : defaultCommentIsInternal)
                 .attachments(request.getAttachments())
                 .build();
 
@@ -242,7 +286,7 @@ public class PortalService {
 
     // Response Mappings
     private String generateRequestKey(String portalKey) {
-        String prefix = portalKey != null ? portalKey : "REQ";
+        String prefix = portalKey != null ? portalKey : defaultRequestKeyPrefix;
         long count = customerRequestRepository.count() + 1;
         return prefix + "-" + count;
     }

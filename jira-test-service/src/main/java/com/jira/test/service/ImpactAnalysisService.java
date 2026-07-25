@@ -9,6 +9,7 @@ import com.jira.test.exception.*;
 import com.jira.test.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,30 @@ public class ImpactAnalysisService {
     private final ObjectMapper objectMapper;
     private final ImpactGraphRepository impactGraphRepository;
     private final RequirementLinkRepository requirementLinkRepository;
+
+    @Value("${app.defaults.impact-analysis.analyzed-by:rule-based}")
+    private String defaultAnalyzedBy;
+
+    @Value("${app.defaults.impact-analysis.mapping-type:direct}")
+    private String defaultMappingType;
+
+    @Value("${app.defaults.impact-analysis.risk-critical-threshold:80}")
+    private double riskCriticalThreshold;
+
+    @Value("${app.defaults.impact-analysis.risk-high-threshold:60}")
+    private double riskHighThreshold;
+
+    @Value("${app.defaults.impact-analysis.risk-medium-threshold:30}")
+    private double riskMediumThreshold;
+
+    @Value("${app.defaults.impact-analysis.impact-critical-threshold:75}")
+    private double impactCriticalThreshold;
+
+    @Value("${app.defaults.impact-analysis.impact-high-threshold:50}")
+    private double impactHighThreshold;
+
+    @Value("${app.defaults.impact-analysis.impact-medium-threshold:25}")
+    private double impactMediumThreshold;
 
     // ==================== Dependency Graph Building ====================
 
@@ -222,9 +247,9 @@ public class ImpactAnalysisService {
     // ==================== Risk Scoring Algorithm ====================
 
     public String calculateRiskLevel(double riskScore) {
-        if (riskScore >= 80) return "CRITICAL";
-        if (riskScore >= 60) return "HIGH";
-        if (riskScore >= 30) return "MEDIUM";
+        if (riskScore >= riskCriticalThreshold) return "CRITICAL";
+        if (riskScore >= riskHighThreshold) return "HIGH";
+        if (riskScore >= riskMediumThreshold) return "MEDIUM";
         return "LOW";
     }
 
@@ -431,9 +456,9 @@ public class ImpactAnalysisService {
     }
 
     private String determineImpactLevel(double riskScore) {
-        if (riskScore >= 75) return "CRITICAL";
-        if (riskScore >= 50) return "HIGH";
-        if (riskScore >= 25) return "MEDIUM";
+        if (riskScore >= impactCriticalThreshold) return "CRITICAL";
+        if (riskScore >= impactHighThreshold) return "HIGH";
+        if (riskScore >= impactMediumThreshold) return "MEDIUM";
         return "LOW";
     }
 
@@ -634,7 +659,7 @@ public class ImpactAnalysisService {
                     .testId(request.getTestId())
                     .componentId(request.getComponentId())
                     .confidenceScore(request.getConfidenceScore() != null ? request.getConfidenceScore() : BigDecimal.ONE)
-                    .mappingType(request.getMappingType() != null ? request.getMappingType() : "direct")
+                    .mappingType(request.getMappingType() != null ? request.getMappingType() : defaultMappingType)
                     .build();
             testComponentMappingRepository.save(mapping);
         }
@@ -699,7 +724,7 @@ public class ImpactAnalysisService {
                 .suggestedSuite(serializeSuites(suggestedSuites))
                 .riskScore(riskScore)
                 .confidenceScore(calculateConfidence(affectedComponents.size(), affectedTests.size()))
-                .analyzedBy("rule-based")
+                .analyzedBy(defaultAnalyzedBy)
                 .build();
 
         result = impactAnalysisResultRepository.save(result);

@@ -4,6 +4,7 @@ import com.jira.admin.entity.*;
 import com.jira.admin.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ public class PrioritySchemeService {
     private final PrioritySchemeItemRepository prioritySchemeItemRepository;
     private final ProjectPrioritySchemeRepository projectPrioritySchemeRepository;
     private final PriorityRepository priorityRepository;
+    private final MessageSource messageSource;
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getAllSchemes() {
@@ -97,7 +99,8 @@ public class PrioritySchemeService {
     @Transactional
     public List<PrioritySchemeItemEntity> setSchemeItems(String schemeId, List<PrioritySchemeItemEntity> items) {
         if (!prioritySchemeRepository.existsById(schemeId)) {
-            throw new IllegalArgumentException("Priority scheme not found: " + schemeId);
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.priority.scheme.not.found", new Object[]{schemeId}, Locale.ENGLISH));
         }
         prioritySchemeItemRepository.deleteBySchemeId(schemeId);
         for (int i = 0; i < items.size(); i++) {

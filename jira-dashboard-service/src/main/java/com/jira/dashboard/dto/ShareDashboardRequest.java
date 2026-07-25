@@ -11,7 +11,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ShareDashboardRequest {
 
-    @NotNull(message = "Share type is required")
+    @NotNull(message = "{validation.share.type.required}")
     private String shareType; // USER, GROUP, PROJECT, ROLE, PUBLIC
 
     private UUID shareId;

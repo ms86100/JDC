@@ -65,6 +65,59 @@ jira:
     issue-url: ${ISSUE_SERVICE_URL:http://localhost:8084}
     workflow-url: ${WORKFLOW_SERVICE_URL:http://localhost:8085}
 
+# Configurable application defaults (Pattern B)
+app:
+  defaults:
+    user-role: USER
+    timezone: UTC
+    language: en-US
+    password-hash-placeholder: "$2a$10$placeholder"
+    system-role-names: Administrators,Developers,Users
+    status-color: "#6C757D"
+    status-category: TODO
+    issue-type-icon: standard
+    permission-category: CUSTOM
+    config-value-type: STRING
+    config-category: custom
+    audit-severity: INFO
+    audit-source: UI
+    application-link-name: Confluence
+    application-type: confluence
+    link-direction: two-way
+    link-initial-status: pending
+    asset-status: ACTIVE
+    asset-link-type: RELATED
+    ldap-port: 389
+    ldap-sync-interval: 60
+    password-min-length: 8
+    password-max-length: 128
+    password-prevent-reuse: 5
+    password-expire-days: 90
+    password-lockout-attempts: 5
+    password-lockout-duration: 30
+  backup:
+    status:
+      in-progress: IN_PROGRESS
+      completed: COMPLETED
+      failed: FAILED
+    schedule:
+      default-cron: "0 0 2 * * ?"
+      default-retention-days: 30
+  health:
+    service-names: Database,Email Service,File Storage
+  permissions:
+    admin-group-id: grp-jira-administrators
+    admin-role-id: role-admin
+    group-id-prefix: "grp-"
+  screen:
+    tab:
+      description-fields: summary,description,environment
+      details-create-fields: issuetype,priority,assignee,reporter,labels,security,duedate,components,fixVersions,affectsVersions
+      details-edit-fields: issuetype,priority,assignee,reporter,labels,security,duedate,components,fixVersions,affectsVersions,linkedIssues,subtasks,attachment
+      people-fields: watcher,vote,comment
+      development-fields: sprint,epic,storyPoints,flagged,worklog
+      activity-fields: activity
+
 springdoc:
   api-docs:
     path: /api-docs

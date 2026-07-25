@@ -6,8 +6,8 @@ import com.jira.migration.entity.CsvTemplate;
 import com.jira.migration.exception.ValidationException;
 import com.jira.migration.repository.CsvTemplateRepository;
 import com.jira.migration.service.DbValidationRuleEngine;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -16,15 +16,37 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class ValidationEngine {
 
     private final CsvTemplateRepository csvTemplateRepository;
     private final DbValidationRuleEngine dbValidationRuleEngine;
     private final ObjectMapper objectMapper;
+
+    private final Set<String> validIssueTypes;
+    private final Set<String> validPriorities;
+
+    public ValidationEngine(
+            CsvTemplateRepository csvTemplateRepository,
+            DbValidationRuleEngine dbValidationRuleEngine,
+            ObjectMapper objectMapper,
+            @Value("${app.validation.valid-issue-types:Epic,Story,Task,Bug,Subtask,Improvement}") String validIssueTypesStr,
+            @Value("${app.validation.valid-priorities:Highest,High,Medium,Low,Lowest}") String validPrioritiesStr) {
+        this.csvTemplateRepository = csvTemplateRepository;
+        this.dbValidationRuleEngine = dbValidationRuleEngine;
+        this.objectMapper = objectMapper;
+        this.validIssueTypes = Arrays.stream(validIssueTypesStr.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        this.validPriorities = Arrays.stream(validPrioritiesStr.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
 
     public ValidationResult validateRow(Map<String, String> rowData, String entityType, int rowNumber) {
         List<ValidationResult.ValidationError> errors = new ArrayList<>();
@@ -84,8 +106,7 @@ public class ValidationEngine {
         // Issue type — warn if not a standard type (useful hint, not blocking)
         String issueType = firstNonBlank(row, "issue_type", "issuetype", "type");
         if (issueType != null && !issueType.isBlank()) {
-            Set<String> validTypes = Set.of("Epic", "Story", "Task", "Bug", "Subtask", "Improvement");
-            if (!validTypes.contains(issueType)) {
+            if (!validIssueTypes.contains(issueType)) {
                 warnings.add(createWarning("issue_type", "UNKNOWN_ISSUE_TYPE", "Issue type '" + issueType + "' may not exist in target system", rowNum));
             }
         }
@@ -93,7 +114,6 @@ public class ValidationEngine {
         // Priority — warn if not a standard value
         String priority = row.get("priority");
         if (priority != null && !priority.isBlank()) {
-            Set<String> validPriorities = Set.of("Highest", "High", "Medium", "Low", "Lowest");
             if (!validPriorities.contains(priority)) {
                 warnings.add(createWarning("priority", "UNKNOWN_PRIORITY", "Priority '" + priority + "' may not exist in target system", rowNum));
             }

@@ -11,11 +11,13 @@ import com.jira.migration.service.clients.*;
 import com.jira.migration.service.clients.dto.*;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Issue Persister Handler
@@ -28,6 +30,7 @@ public class IssuePersisterHandler {
     private final ProjectMappingRepository projectMappingRepository;
     private final EntityStatusRepository entityStatusRepository;
     private final CustomFieldPersisterHandler customFieldPersisterHandler;
+    private final Map<String, String> parentTypeMap;
     private IssueServiceClient issueServiceClient;
     private IssueLinkServiceClient issueLinkServiceClient;
     private MigrationWorkflowStatusApplier migrationWorkflowStatusApplier;
@@ -39,10 +42,23 @@ public class IssuePersisterHandler {
     public IssuePersisterHandler(
             ProjectMappingRepository projectMappingRepository,
             EntityStatusRepository entityStatusRepository,
-            CustomFieldPersisterHandler customFieldPersisterHandler) {
+            CustomFieldPersisterHandler customFieldPersisterHandler,
+            @Value("${app.issue.hierarchy.epic-parent:}") String epicParent,
+            @Value("${app.issue.hierarchy.story-parent:Epic}") String storyParent,
+            @Value("${app.issue.hierarchy.task-parent:}") String taskParent,
+            @Value("${app.issue.hierarchy.bug-parent:}") String bugParent,
+            @Value("${app.issue.hierarchy.subtask-parent:Story}") String subtaskParent) {
         this.projectMappingRepository = projectMappingRepository;
         this.entityStatusRepository = entityStatusRepository;
         this.customFieldPersisterHandler = customFieldPersisterHandler;
+
+        Map<String, String> temp = new HashMap<>();
+        temp.put("Epic", epicParent.isEmpty() ? null : epicParent);
+        temp.put("Story", storyParent.isEmpty() ? null : storyParent);
+        temp.put("Task", taskParent.isEmpty() ? null : taskParent);
+        temp.put("Bug", bugParent.isEmpty() ? null : bugParent);
+        temp.put("Subtask", subtaskParent.isEmpty() ? null : subtaskParent);
+        this.parentTypeMap = Collections.unmodifiableMap(temp);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -57,17 +73,7 @@ public class IssuePersisterHandler {
         this.userDirectoryMappingService = userDirectoryMappingService;
     }
 
-    // Issue type hierarchy - use HashMap to allow null values
-    private static final Map<String, String> PARENT_TYPE_MAP;
-    static {
-        Map<String, String> temp = new HashMap<>();
-        temp.put("Epic", null);
-        temp.put("Story", "Epic");
-        temp.put("Task", null);
-        temp.put("Bug", null);
-        temp.put("Subtask", "Story");
-        PARENT_TYPE_MAP = Collections.unmodifiableMap(temp);
-    }
+    // parentTypeMap is now injected via @Value constructor params above
 
     @Transactional(rollbackFor = Exception.class)
     public IssuePersisterResult persistIssue(Map<String, Object> issueData, UUID jobId) {
@@ -409,7 +415,7 @@ public class IssuePersisterHandler {
      * Validate parent-child relationship based on issue type hierarchy.
      */
     private void validateParentRelationship(String issueType, String parentKey, UUID jobId) {
-        String expectedParentType = PARENT_TYPE_MAP.get(issueType);
+        String expectedParentType = parentTypeMap.get(issueType);
 
         if (expectedParentType == null && parentKey != null) {
             throw new ValidationException(

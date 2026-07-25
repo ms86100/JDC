@@ -7,11 +7,13 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @RestController
@@ -21,13 +23,14 @@ import java.util.UUID;
 public class LegalArchiveController {
 
     private final DocumentService documentService;
+    private final MessageSource messageSource;
 
     @PostMapping
     @Operation(summary = "Create legal archive", description = "Creates a new legal archive for compliance")
     public ResponseEntity<LegalArchiveResponse> createLegalArchive(
             @Valid @RequestBody CreateLegalArchiveRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(documentService.createLegalArchive(request, actor));

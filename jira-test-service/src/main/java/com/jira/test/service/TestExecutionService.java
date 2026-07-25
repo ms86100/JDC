@@ -7,6 +7,7 @@ import com.jira.test.exception.*;
 import com.jira.test.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,21 @@ public class TestExecutionService {
     private final TestStepRepository testStepRepository;
     private final EventPublisherService eventPublisher;
 
+    @Value("${app.defaults.execution-status.initial:RUNNING}")
+    private String defaultExecutionInitialStatus;
+
+    @Value("${app.defaults.step-result-status:NOT_RUN}")
+    private String defaultStepResultStatus;
+
+    @Value("${app.defaults.defect-severity:MEDIUM}")
+    private String defaultDefectSeverity;
+
+    @Value("${app.defaults.defect-status:OPEN}")
+    private String defaultDefectStatus;
+
+    @Value("${app.defaults.system-user:SYSTEM}")
+    private String defaultSystemUser;
+
     @Transactional
     public TestExecutionResponse createExecution(CreateExecutionRequest request) {
         log.info("Creating test execution: {}", request.getName());
@@ -44,7 +60,7 @@ public class TestExecutionService {
                 .testCycle(request.getTestCycle())
                 .ciBuildUrl(request.getCiBuildUrl())
                 .ciJobId(request.getCiJobId())
-                .status("RUNNING")
+                .status(defaultExecutionInitialStatus)
                 .startedAt(LocalDateTime.now())
                 .totalTests(request.getStepResults() != null ? request.getStepResults().size() : 0)
                 .build();
@@ -56,7 +72,7 @@ public class TestExecutionService {
                 StepResult stepResult = StepResult.builder()
                         .executionId(execution.getId())
                         .stepId(stepDto.getStepId())
-                        .status(stepDto.getStatus() != null ? stepDto.getStatus() : "NOT_RUN")
+                        .status(stepDto.getStatus() != null ? stepDto.getStatus() : defaultStepResultStatus)
                         .actualResult(stepDto.getActualResult())
                         .evidenceUrls(stepDto.getEvidenceUrls())
                         .defectKey(stepDto.getDefectKey())
@@ -191,8 +207,8 @@ public class TestExecutionService {
                 .executionId(execution.getId())
                 .stepResultId(stepResultId)
                 .defectKey(defectKey)
-                .severity(severity != null ? severity : "MEDIUM")
-                .status("OPEN")
+                .severity(severity != null ? severity : defaultDefectSeverity)
+                .status(defaultDefectStatus)
                 .build();
 
         defectLink = defectLinkRepository.save(defectLink);
@@ -315,7 +331,7 @@ public class TestExecutionService {
                     .stepId(stepId)
                     .previousStatus(previousStatus)
                     .newStatus(newStatus)
-                    .updatedBy(execution.getTesterId() != null ? execution.getTesterId().toString() : "SYSTEM")
+                    .updatedBy(execution.getTesterId() != null ? execution.getTesterId().toString() : defaultSystemUser)
                     .build();
             eventPublisher.publish(event);
             log.info("Published TestRunUpdatedEvent for execution: {}, step: {}", execution.getId(), stepId);
@@ -334,7 +350,7 @@ public class TestExecutionService {
                     .stepResultId(stepResultId)
                     .defectKey(defectKey)
                     .severity(severity)
-                    .linkedBy(execution.getTesterId() != null ? execution.getTesterId().toString() : "SYSTEM")
+                    .linkedBy(execution.getTesterId() != null ? execution.getTesterId().toString() : defaultSystemUser)
                     .affectedTestIds(List.of(execution.getTestId() != null ? execution.getTestId().toString() : ""))
                     .build();
             eventPublisher.publish(event);

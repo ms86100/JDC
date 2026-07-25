@@ -6,6 +6,8 @@ import com.jira.component.exception.*;
 import com.jira.component.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
@@ -16,12 +18,18 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ComponentService {
 
+    private static final String RESOURCE_COMPONENT = "Component";
+
     private final ProjectComponentRepository componentRepository;
     private final IssueComponentRepository issueComponentRepository;
     private final ComponentAuditLogRepository auditLogRepository;
     private final ComponentOwnershipHistoryRepository ownershipHistoryRepository;
     private final ComponentMetricsRepository metricsRepository;
     private final ComponentAssignmentRuleRepository assignmentRuleRepository;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.assignee-type:PROJECT_DEFAULT}")
+    private String defaultAssigneeType;
 
     // ========== COMPONENT CRUD ==========
 
@@ -41,7 +49,7 @@ public class ComponentService {
     @Transactional(readOnly = true)
     public ComponentResponse getComponentById(UUID componentId) {
         ProjectComponent component = componentRepository.findByIdAndDeletedFalse(componentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Component", "id", componentId));
+            .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_COMPONENT, "id", componentId));
         return toComponentResponse(component);
     }
 
@@ -49,7 +57,7 @@ public class ComponentService {
     public ComponentResponse createComponent(CreateComponentRequest request) {
         // Check for duplicate name
         if (componentRepository.existsByProjectIdAndNameAndIdNot(request.getProjectId(), request.getName(), null)) {
-            throw new DuplicateResourceException("Component with name '" + request.getName() + "' already exists in this project");
+            throw new DuplicateResourceException(messageSource.getMessage("error.component.duplicate", new Object[]{request.getName()}, Locale.ENGLISH));
         }
 
         int nextSequence = (int) componentRepository.countByProjectId(request.getProjectId());
@@ -59,7 +67,7 @@ public class ComponentService {
             .name(request.getName())
             .description(request.getDescription())
             .leadUserId(request.getLeadUserId())
-            .assigneeType(request.getAssigneeType() != null ? request.getAssigneeType() : "PROJECT_DEFAULT")
+            .assigneeType(request.getAssigneeType() != null ? request.getAssigneeType() : defaultAssigneeType)
             .defaultAssignee(request.getDefaultAssignee())
             .color(request.getColor())
             .icon(request.getIcon())
@@ -78,12 +86,12 @@ public class ComponentService {
     @Transactional
     public ComponentResponse updateComponent(UUID componentId, UpdateComponentRequest request, UUID userId) {
         ProjectComponent component = componentRepository.findByIdAndDeletedFalse(componentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Component", "id", componentId));
+            .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_COMPONENT, "id", componentId));
 
         // Check for duplicate name
         if (request.getName() != null && !request.getName().equals(component.getName())) {
             if (componentRepository.existsByProjectIdAndNameAndIdNot(component.getProjectId(), request.getName(), componentId)) {
-                throw new DuplicateResourceException("Component with name '" + request.getName() + "' already exists in this project");
+                throw new DuplicateResourceException(messageSource.getMessage("error.component.duplicate", new Object[]{request.getName()}, Locale.ENGLISH));
             }
         }
 
@@ -116,7 +124,7 @@ public class ComponentService {
     @Transactional
     public void deleteComponent(UUID componentId) {
         ProjectComponent component = componentRepository.findByIdAndDeletedFalse(componentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Component", "id", componentId));
+            .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_COMPONENT, "id", componentId));
 
         component.setDeleted(true);
         componentRepository.save(component);
@@ -130,7 +138,7 @@ public class ComponentService {
     @Transactional
     public ComponentResponse archiveComponent(UUID componentId, UUID userId) {
         ProjectComponent component = componentRepository.findByIdAndDeletedFalse(componentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Component", "id", componentId));
+            .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_COMPONENT, "id", componentId));
 
         component.setArchived(true);
         component = componentRepository.save(component);
@@ -144,7 +152,7 @@ public class ComponentService {
     @Transactional
     public ComponentResponse unarchiveComponent(UUID componentId, UUID userId) {
         ProjectComponent component = componentRepository.findByIdAndDeletedFalse(componentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Component", "id", componentId));
+            .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_COMPONENT, "id", componentId));
 
         component.setArchived(false);
         component = componentRepository.save(component);
@@ -158,7 +166,7 @@ public class ComponentService {
     @Transactional
     public ComponentResponse restoreComponent(UUID componentId) {
         ProjectComponent component = componentRepository.findById(componentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Component", "id", componentId));
+            .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_COMPONENT, "id", componentId));
 
         component.setDeleted(false);
         component = componentRepository.save(component);
@@ -251,7 +259,7 @@ public class ComponentService {
     @Transactional
     public ComponentResponse transferOwnership(UUID componentId, TransferOwnershipRequest request) {
         ProjectComponent component = componentRepository.findByIdAndDeletedFalse(componentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Component", "id", componentId));
+            .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_COMPONENT, "id", componentId));
 
         // Record ownership history
         ComponentOwnershipHistory history = ComponentOwnershipHistory.builder()
@@ -297,7 +305,7 @@ public class ComponentService {
     @Transactional
     public ComponentMetricsResponse recordMetricsSnapshot(UUID componentId) {
         ProjectComponent component = componentRepository.findByIdAndDeletedFalse(componentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Component", "id", componentId));
+            .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_COMPONENT, "id", componentId));
 
         long totalCount = issueComponentRepository.countByComponentId(componentId);
 
@@ -323,7 +331,7 @@ public class ComponentService {
     @Transactional
     public ComponentAssignmentRuleResponse createAssignmentRule(UUID componentId, ComponentAssignmentRule rule, UUID userId) {
         ProjectComponent component = componentRepository.findByIdAndDeletedFalse(componentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Component", "id", componentId));
+            .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_COMPONENT, "id", componentId));
 
         rule.setComponentId(componentId);
         rule.setCreatedBy(userId);

@@ -47,8 +47,11 @@
   overflow: hidden;
 }
 
+/* Support both old (idc-issue-view) and new (idm-root) class names */
 .jdc-issue-detail-pane > .idc-issue-view,
-.jdc-issue-detail-pane > .idc-issue-view-embedded {
+.jdc-issue-detail-pane > .idc-issue-view-embedded,
+.jdc-issue-detail-pane > .idm-root,
+.jdc-issue-detail-pane > .idm-root--embedded {
   flex: 1 1 auto;
   min-width: 0;
   width: 100%;
@@ -56,21 +59,36 @@
   align-self: stretch;
 }
 
-/* ---- Embedded issue detail ---- */
-.idc-issue-view.idc-issue-view-embedded {
+/* ---- Embedded issue detail (new IDM layout) ---- */
+.idm-root.idm-root--embedded {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: #fff;
+  background: var(--sa-n0);
 }
 
-.idc-issue-view-embedded .idc-issue-header {
+.idm-root--embedded .idm-header {
   flex-shrink: 0;
   width: 100%;
   box-sizing: border-box;
+}
+
+.idm-root--embedded .idm-body {
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.idm-root--embedded .idm-main {
+  padding: var(--sa-space-4) var(--sa-space-5);
+}
+
+.idm-root--embedded .idm-title {
+  font-size: 18px;
 }
 
 @media (max-width: 1100px) {
@@ -92,6 +110,23 @@
   }
 }
 
+/* ---- Legacy idc-issue-view support (backwards compat) ---- */
+.idc-issue-view.idc-issue-view-embedded {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.idc-issue-view-embedded .idc-issue-header {
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .idc-issue-view-embedded .idc-issue-body {
   flex: 1 1 auto;
   display: grid;
@@ -100,7 +135,6 @@
   min-width: 0;
   box-sizing: border-box;
   align-self: stretch;
-  /* Main column grows; sidebar fixed — Jira-style */
   grid-template-columns: minmax(0, 1fr) 272px;
   gap: 24px;
   padding: 20px clamp(20px, 2.5vw, 48px);
@@ -121,7 +155,6 @@
   max-width: 272px;
 }
 
-/* Description breathing room */
 .idc-issue-view-embedded .idc-section .idc-description {
   padding: 24px 28px;
 }
@@ -131,7 +164,6 @@
   padding: 2px 0;
 }
 
-/* Tabs: one clean panel, no horizontal squeeze scroll */
 .idc-issue-view-embedded .idc-tabs-panel {
   width: 100%;
   max-width: none;
@@ -151,7 +183,6 @@
   font-size: 13px;
 }
 
-/* Details tab duplicates right sidebar — hide in split view */
 .idc-issue-view-embedded .idc-tabs .idc-tab:last-child {
   display: none;
 }

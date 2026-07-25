@@ -13,10 +13,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class AddMemberRequest {
 
-    @NotNull(message = "User ID is required")
+    @NotNull(message = "{validation.userid.required}")
     private UUID userId;
 
-    @NotBlank(message = "Role is required")
-    @Size(max = 50, message = "Role must not exceed 50 characters")
+    @NotBlank(message = "{validation.role.required}")
+    @Size(max = 50, message = "{validation.role.size}")
     private String role;
 }

@@ -1,8 +1,10 @@
 package com.jira.version.service;
 
+import com.jira.cluster.util.StatusCategoryHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -16,7 +18,15 @@ public class ReleaseHubService {
     @Value("${issue.service.url:http://jira-issue-service:8084}")
     private String issueServiceUrl;
 
+    @Value("${app.release-hub.fetch-size:1000}")
+    private int fetchSize;
+
     private final RestTemplate restTemplate;
+    private final MessageSource messageSource;
+
+    private static final String CATEGORY_DONE = "DONE";
+    private static final String CATEGORY_IN_PROGRESS = "IN_PROGRESS";
+    private static final String CATEGORY_TODO = "TODO";
 
     @SuppressWarnings("unchecked")
     public Map<String, Object> getReleaseStatus(UUID versionId) {
@@ -31,8 +41,8 @@ public class ReleaseHubService {
             totalPoints += points;
 
             switch (statusCategory) {
-                case "DONE" -> { done++; completedPoints += points; }
-                case "IN_PROGRESS" -> inProgress++;
+                case CATEGORY_DONE -> { done++; completedPoints += points; }
+                case CATEGORY_IN_PROGRESS -> inProgress++;
                 default -> todo++;
             }
         }
@@ -49,7 +59,7 @@ public class ReleaseHubService {
                 "totalPoints", totalPoints,
                 "completedPoints", completedPoints,
                 "progressPercent", progressPercent,
-                "issuesByStatus", Map.of("TODO", todo, "IN_PROGRESS", inProgress, "DONE", done)
+                "issuesByStatus", Map.of(CATEGORY_TODO, todo, CATEGORY_IN_PROGRESS, inProgress, CATEGORY_DONE, done)
         );
     }
 
@@ -62,7 +72,7 @@ public class ReleaseHubService {
             String statusCategory = getStatusCategory(issue);
             String issueKey = issue.getOrDefault("issueKey", "").toString();
 
-            if (!"DONE".equals(statusCategory)) {
+            if (!CATEGORY_DONE.equals(statusCategory)) {
                 Object devInfo = issue.get("devInfo");
                 if (devInfo == null) {
                     try {
@@ -75,11 +85,12 @@ public class ReleaseHubService {
 
                             if (commitCount == 0) {
                                 warnings.add(Map.of("issueKey", issueKey, "type", "NO_COMMITS",
-                                        "message", "No commits linked to this issue"));
+                                        "message", messageSource.getMessage("release.warning.no.commits", null, Locale.ENGLISH)));
                             }
                             if (!openPrs.isEmpty()) {
                                 warnings.add(Map.of("issueKey", issueKey, "type", "OPEN_PULL_REQUEST",
-                                        "message", openPrs.size() + " open pull request(s) need to be merged"));
+                                        "message", messageSource.getMessage("release.warning.open.prs",
+                                                new Object[]{openPrs.size()}, Locale.ENGLISH)));
                             }
                         }
                     } catch (Exception e) {
@@ -95,7 +106,7 @@ public class ReleaseHubService {
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> fetchIssuesForVersion(UUID versionId) {
         try {
-            String url = issueServiceUrl + "/api/issues?fixVersion=" + versionId + "&size=1000";
+            String url = issueServiceUrl + "/api/issues?fixVersion=" + versionId + "&size=" + fetchSize;
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
             if (response != null && response.get("content") != null) {
                 return (List<Map<String, Object>>) response.get("content");
@@ -110,9 +121,7 @@ public class ReleaseHubService {
         String cat = issue.get("statusCategory") != null ? issue.get("statusCategory").toString() : "";
         if (cat.isEmpty()) {
             String status = issue.get("statusName") != null ? issue.get("statusName").toString() : "";
-            if (status.contains("Done") || status.contains("Closed") || status.contains("Resolved")) return "DONE";
-            if (status.contains("Progress") || status.contains("Review")) return "IN_PROGRESS";
-            return "TODO";
+            return StatusCategoryHelper.getCategory(status);
         }
         return cat.toUpperCase();
     }

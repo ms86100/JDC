@@ -9,6 +9,7 @@ import com.jira.test.exception.*;
 import com.jira.test.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -39,6 +40,36 @@ public class QuarantineService {
     private final QuarantineReviewHistoryRepository reviewHistoryRepository;
     private final FlakyTestAnalysisRepository flakyAnalysisRepository;
     private final ObjectMapper objectMapper;
+
+    @Value("${app.defaults.quarantine-status:quarantined}")
+    private String defaultQuarantineStatus;
+
+    @Value("${app.defaults.quarantine-restored-status:restored}")
+    private String quarantineRestoredStatus;
+
+    @Value("${app.defaults.quarantine.auto-restore.pass-count:5}")
+    private int defaultAutoRestorePassCount;
+
+    @Value("${app.defaults.quarantine.auto-restore.days-elapsed:7}")
+    private int defaultAutoRestoreDaysElapsed;
+
+    @Value("${app.defaults.quarantine.auto-restore.pass-rate-threshold:1.0}")
+    private double defaultAutoRestorePassRateThreshold;
+
+    @Value("${app.defaults.quarantine.duration.auto-flaky-days:14}")
+    private int quarantineDurationAutoFlakyDays;
+
+    @Value("${app.defaults.quarantine.duration.environment-days:30}")
+    private int quarantineDurationEnvironmentDays;
+
+    @Value("${app.defaults.quarantine.duration.third-party-days:60}")
+    private int quarantineDurationThirdPartyDays;
+
+    @Value("${app.defaults.quarantine.duration.default-days:30}")
+    private int quarantineDurationDefaultDays;
+
+    @Value("${app.defaults.quarantine.ready-for-restore-pass-count:5}")
+    private int readyForRestorePassCount;
 
     // ==================== Core Quarantine Operations ====================
 
@@ -78,7 +109,7 @@ public class QuarantineService {
         // Create new quarantine entry
         TestQuarantine quarantine = TestQuarantine.builder()
                 .testId(request.getTestId())
-                .status(request.getStatus() != null ? request.getStatus() : "quarantined")
+                .status(request.getStatus() != null ? request.getStatus() : defaultQuarantineStatus)
                 .quarantineReason(request.getQuarantineReason())
                 .triggerType(request.getTriggerType())
                 .triggeredBy(triggeredBy)
@@ -111,7 +142,7 @@ public class QuarantineService {
         String oldStatus = quarantine.getStatus();
         quarantine.setStatus(newStatus);
 
-        if ("restored".equals(newStatus)) {
+        if (quarantineRestoredStatus.equals(newStatus)) {
             quarantine.setRestoredAt(LocalDateTime.now());
             quarantine.setRestoreReason(reason);
         }
@@ -143,7 +174,7 @@ public class QuarantineService {
 
         String oldStatus = quarantine.getStatus();
         UUID currentUserId = getCurrentUserId();
-        quarantine.setStatus("restored");
+        quarantine.setStatus(quarantineRestoredStatus);
         quarantine.setRestoredAt(LocalDateTime.now());
         quarantine.setRestoredBy(currentUserId);
         quarantine.setRestoreReason(reason);
@@ -151,7 +182,7 @@ public class QuarantineService {
         quarantine = quarantineRepository.save(quarantine);
 
         // Record transition
-        recordTransition(quarantineId, oldStatus, "restored", reason, null, currentUserId);
+        recordTransition(quarantineId, oldStatus, quarantineRestoredStatus, reason, null, currentUserId);
 
         // Update review if exists
         reviewRepository.findByQuarantineId(quarantineId).ifPresent(r -> {
@@ -320,7 +351,7 @@ public class QuarantineService {
                 .collect(Collectors.toList());
 
         int quarantinedCount = (int) projectQuarantines.stream()
-                .filter(q -> "quarantined".equals(q.getStatus())).count();
+                .filter(q -> defaultQuarantineStatus.equals(q.getStatus())).count();
         int investigationCount = (int) projectQuarantines.stream()
                 .filter(q -> "investigation".equals(q.getStatus())).count();
         int candidateCount = (int) projectQuarantines.stream()
@@ -359,7 +390,7 @@ public class QuarantineService {
 
         // Find tests ready for restore (passing consistently)
         List<QuarantineResponse> readyForRestore = projectQuarantines.stream()
-                .filter(q -> "quarantined".equals(q.getStatus()) && q.getCurrentPassCount() >= 5)
+                .filter(q -> defaultQuarantineStatus.equals(q.getStatus()) && q.getCurrentPassCount() >= readyForRestorePassCount)
                 .limit(10)
                 .map(q -> {
                     TestIssue test = testIssueRepository.findById(q.getTestId()).orElse(null);
@@ -582,18 +613,18 @@ public class QuarantineService {
 
         // Default based on trigger type
         return switch (triggerType) {
-            case "auto_flaky" -> LocalDateTime.now().plusDays(14);
-            case "environment" -> LocalDateTime.now().plusDays(30);
-            case "third_party" -> LocalDateTime.now().plusDays(60);
-            default -> LocalDateTime.now().plusDays(30);
+            case "auto_flaky" -> LocalDateTime.now().plusDays(quarantineDurationAutoFlakyDays);
+            case "environment" -> LocalDateTime.now().plusDays(quarantineDurationEnvironmentDays);
+            case "third_party" -> LocalDateTime.now().plusDays(quarantineDurationThirdPartyDays);
+            default -> LocalDateTime.now().plusDays(quarantineDurationDefaultDays);
         };
     }
 
     private Map<String, Object> getDefaultAutoRestoreConditions(UUID projectId) {
         Map<String, Object> conditions = new HashMap<>();
-        conditions.put("passCount", 5);
-        conditions.put("daysElapsed", 7);
-        conditions.put("passRateThreshold", 1.0);
+        conditions.put("passCount", defaultAutoRestorePassCount);
+        conditions.put("daysElapsed", defaultAutoRestoreDaysElapsed);
+        conditions.put("passRateThreshold", defaultAutoRestorePassRateThreshold);
         return conditions;
     }
 
@@ -935,9 +966,9 @@ public class QuarantineService {
         Map<String, Object> summary = new HashMap<>();
         summary.put("totalQuarantines", projectQuarantines.size());
         summary.put("activeQuarantines", projectQuarantines.stream()
-                .filter(q -> !"restored".equals(q.getStatus())).count());
+                .filter(q -> !quarantineRestoredStatus.equals(q.getStatus())).count());
         summary.put("restoredQuarantines", projectQuarantines.stream()
-                .filter(q -> "restored".equals(q.getStatus())).count());
+                .filter(q -> quarantineRestoredStatus.equals(q.getStatus())).count());
 
         // Calculate average metrics
         List<TestQuarantine> restored = projectQuarantines.stream()

@@ -4,8 +4,9 @@ import com.jira.admin.dto.IssueTypeSchemeResponse;
 import com.jira.admin.dto.*;
 import com.jira.admin.entity.*;
 import com.jira.admin.repository.*;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,7 +18,6 @@ import java.util.stream.Collectors;
  * Issue Administration Service - Issue types, priorities, statuses, workflows, screens
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class IssueAdministrationService {
 
@@ -40,6 +40,58 @@ public class IssueAdministrationService {
     private final PermissionSchemeRepository permissionSchemeRepository;
     private final NotificationSchemeRepository notificationSchemeRepository;
     private final AuditLogRepository auditLogRepository;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.status-color:#6C757D}")
+    private String defaultStatusColor;
+
+    @Value("${app.defaults.audit-severity:INFO}")
+    private String defaultAuditSeverity;
+
+    @Value("${app.defaults.audit-source:UI}")
+    private String defaultAuditSource;
+
+    public IssueAdministrationService(IssueTypeRepository issueTypeRepository,
+                                       PriorityRepository priorityRepository,
+                                       ResolutionRepository resolutionRepository,
+                                       StatusRepository statusRepository,
+                                       IssueTypeSchemeRepository issueTypeSchemeRepository,
+                                       ProjectRepository projectRepository,
+                                       ProjectCatalogSyncService projectCatalogSyncService,
+                                       IssueSchemeBridgeService issueSchemeBridgeService,
+                                       WorkflowRepository workflowRepository,
+                                       WorkflowAdminProxyService workflowAdminProxyService,
+                                       WorkflowSchemeAdminProxyService workflowSchemeAdminProxyService,
+                                       WorkflowSchemeBridgeService workflowSchemeBridgeService,
+                                       WorkflowSchemeRepository workflowSchemeRepository,
+                                       ScreenRepository screenRepository,
+                                       ScreenSchemeRepository screenSchemeRepository,
+                                       IssueTypeScreenSchemeRepository issueTypeScreenSchemeRepository,
+                                       PermissionSchemeRepository permissionSchemeRepository,
+                                       NotificationSchemeRepository notificationSchemeRepository,
+                                       AuditLogRepository auditLogRepository,
+                                       MessageSource messageSource) {
+        this.issueTypeRepository = issueTypeRepository;
+        this.priorityRepository = priorityRepository;
+        this.resolutionRepository = resolutionRepository;
+        this.statusRepository = statusRepository;
+        this.issueTypeSchemeRepository = issueTypeSchemeRepository;
+        this.projectRepository = projectRepository;
+        this.projectCatalogSyncService = projectCatalogSyncService;
+        this.issueSchemeBridgeService = issueSchemeBridgeService;
+        this.workflowRepository = workflowRepository;
+        this.workflowAdminProxyService = workflowAdminProxyService;
+        this.workflowSchemeAdminProxyService = workflowSchemeAdminProxyService;
+        this.workflowSchemeBridgeService = workflowSchemeBridgeService;
+        this.workflowSchemeRepository = workflowSchemeRepository;
+        this.screenRepository = screenRepository;
+        this.screenSchemeRepository = screenSchemeRepository;
+        this.issueTypeScreenSchemeRepository = issueTypeScreenSchemeRepository;
+        this.permissionSchemeRepository = permissionSchemeRepository;
+        this.notificationSchemeRepository = notificationSchemeRepository;
+        this.auditLogRepository = auditLogRepository;
+        this.messageSource = messageSource;
+    }
 
     // ==================== Issue Types ====================
 
@@ -68,7 +120,8 @@ public class IssueAdministrationService {
     @Transactional
     public IssueTypeEntity updateIssueType(String issueTypeId, Map<String, Object> updates) {
         IssueTypeEntity issueType = issueTypeRepository.findById(issueTypeId)
-                .orElseThrow(() -> new IllegalArgumentException("Issue type not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.issue.type.not.found", null, Locale.ENGLISH)));
 
         if (updates.containsKey("name")) issueType.setName((String) updates.get("name"));
         if (updates.containsKey("description")) issueType.setDescription((String) updates.get("description"));
@@ -93,14 +146,15 @@ public class IssueAdministrationService {
     public PriorityEntity createPriority(Map<String, Object> data) {
         String name = (String) data.get("name");
         if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("name is required");
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.priority.name.required", null, Locale.ENGLISH));
         }
         long count = priorityRepository.count();
         PriorityEntity priority = PriorityEntity.builder()
                 .name(name)
                 .description((String) data.getOrDefault("description", ""))
                 .iconUrl((String) data.getOrDefault("iconUrl", ""))
-                .statusColor((String) data.getOrDefault("statusColor", "#6C757D"))
+                .statusColor((String) data.getOrDefault("statusColor", defaultStatusColor))
                 .sequence((Integer) data.getOrDefault("sequence", (int) count + 1))
                 .isDefault(count == 0)
                 .build();
@@ -114,7 +168,8 @@ public class IssueAdministrationService {
     @Transactional
     public PriorityEntity updatePriority(String priorityId, Map<String, Object> updates) {
         PriorityEntity priority = priorityRepository.findById(priorityId)
-                .orElseThrow(() -> new IllegalArgumentException("Priority not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.priority.not.found", null, Locale.ENGLISH)));
 
         if (updates.containsKey("name")) priority.setName((String) updates.get("name"));
         if (updates.containsKey("description")) priority.setDescription((String) updates.get("description"));
@@ -132,7 +187,8 @@ public class IssueAdministrationService {
     @Transactional
     public void deletePriority(String priorityId) {
         if (!priorityRepository.existsById(priorityId)) {
-            throw new IllegalArgumentException("Priority not found");
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.priority.not.found", null, Locale.ENGLISH));
         }
         priorityRepository.deleteById(priorityId);
         logAudit("DELETE", "PRIORITY", priorityId, null, "Priority deleted");
@@ -151,7 +207,8 @@ public class IssueAdministrationService {
     public ResolutionEntity createResolution(Map<String, Object> data) {
         String name = (String) data.get("name");
         if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("name is required");
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.resolution.name.required", null, Locale.ENGLISH));
         }
         long count = resolutionRepository.count();
         ResolutionEntity resolution = ResolutionEntity.builder()
@@ -178,16 +235,19 @@ public class IssueAdministrationService {
     @Transactional(readOnly = true)
     public StatusEntity getStatus(String statusId) {
         return statusRepository.findById(statusId)
-                .orElseThrow(() -> new IllegalArgumentException("Status not found: " + statusId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.status.not.found", new Object[]{statusId}, Locale.ENGLISH)));
     }
 
     @Transactional
     public StatusEntity createStatus(CreateStatusRequest request) {
         if (request.getName() == null || request.getName().trim().isEmpty()) {
-            throw new IllegalArgumentException("name is required");
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.status.name.required", null, Locale.ENGLISH));
         }
         if (statusRepository.existsByName(request.getName())) {
-            throw new IllegalArgumentException("Status with name '" + request.getName() + "' already exists");
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.status.name.exists", new Object[]{request.getName()}, Locale.ENGLISH));
         }
 
         long count = statusRepository.count();
@@ -196,7 +256,7 @@ public class IssueAdministrationService {
                 .description(request.getDescription())
                 .statusCategory(request.getStatusCategory() != null ? request.getStatusCategory() : StatusEntity.CATEGORY_TODO)
                 .iconUrl(request.getIconUrl())
-                .statusColor(request.getStatusColor() != null ? request.getStatusColor() : "#6C757D")
+                .statusColor(request.getStatusColor() != null ? request.getStatusColor() : defaultStatusColor)
                 .sequence(request.getSequence() != null ? request.getSequence() : (int) count + 1)
                 .isDefault(request.getIsDefault() != null ? request.getIsDefault() : count == 0)
                 .lookupGroup(request.getLookupGroup())
@@ -228,11 +288,13 @@ public class IssueAdministrationService {
     @Transactional
     public StatusEntity updateStatus(String statusId, UpdateStatusRequest request) {
         StatusEntity status = statusRepository.findById(statusId)
-                .orElseThrow(() -> new IllegalArgumentException("Status not found: " + statusId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.status.not.found", new Object[]{statusId}, Locale.ENGLISH)));
 
         if (request.getName() != null && !request.getName().isEmpty()) {
             if (statusRepository.existsByNameAndIdNot(request.getName(), statusId)) {
-                throw new IllegalArgumentException("Status with name '" + request.getName() + "' already exists");
+                throw new IllegalArgumentException(
+                        messageSource.getMessage("error.status.name.exists", new Object[]{request.getName()}, Locale.ENGLISH));
             }
             status.setName(request.getName());
         }
@@ -272,7 +334,8 @@ public class IssueAdministrationService {
     @Transactional
     public void archiveStatus(String statusId) {
         StatusEntity status = statusRepository.findById(statusId)
-                .orElseThrow(() -> new IllegalArgumentException("Status not found: " + statusId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.status.not.found", new Object[]{statusId}, Locale.ENGLISH)));
 
         status.setIsArchived(true);
         status.setIsActive(false);
@@ -283,7 +346,8 @@ public class IssueAdministrationService {
     @Transactional
     public void restoreStatus(String statusId) {
         StatusEntity status = statusRepository.findById(statusId)
-                .orElseThrow(() -> new IllegalArgumentException("Status not found: " + statusId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.status.not.found", new Object[]{statusId}, Locale.ENGLISH)));
 
         status.setIsArchived(false);
         status.setIsActive(true);
@@ -294,7 +358,8 @@ public class IssueAdministrationService {
     @Transactional
     public void deleteStatus(String statusId) {
         StatusEntity status = statusRepository.findById(statusId)
-                .orElseThrow(() -> new IllegalArgumentException("Status not found: " + statusId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.status.not.found", new Object[]{statusId}, Locale.ENGLISH)));
 
         statusRepository.delete(status);
         logAudit("DELETE", "STATUS", statusId, status.getName(), "Status deleted");
@@ -317,7 +382,8 @@ public class IssueAdministrationService {
     @Transactional(readOnly = true)
     public IssueTypeSchemeResponse getIssueTypeScheme(String schemeId) {
         IssueTypeSchemeEntity scheme = issueTypeSchemeRepository.findById(schemeId)
-                .orElseThrow(() -> new IllegalArgumentException("Issue type scheme not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.issue.type.scheme.not.found", null, Locale.ENGLISH)));
         return toSchemeResponse(scheme);
     }
 
@@ -325,7 +391,8 @@ public class IssueAdministrationService {
     public IssueTypeSchemeResponse createIssueTypeScheme(Map<String, Object> data) {
         String name = (String) data.get("name");
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("name is required");
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.issue.type.name.required", null, Locale.ENGLISH));
         }
 
         IssueTypeSchemeEntity scheme = IssueTypeSchemeEntity.builder()
@@ -346,7 +413,8 @@ public class IssueAdministrationService {
     @Transactional
     public IssueTypeSchemeResponse updateIssueTypeScheme(String schemeId, Map<String, Object> data) {
         IssueTypeSchemeEntity scheme = issueTypeSchemeRepository.findById(schemeId)
-                .orElseThrow(() -> new IllegalArgumentException("Issue type scheme not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.issue.type.scheme.not.found", null, Locale.ENGLISH)));
 
         if (data.containsKey("name")) scheme.setName((String) data.get("name"));
         if (data.containsKey("description")) scheme.setDescription((String) data.get("description"));
@@ -372,7 +440,8 @@ public class IssueAdministrationService {
     @Transactional
     public void deleteIssueTypeScheme(String schemeId) {
         IssueTypeSchemeEntity scheme = issueTypeSchemeRepository.findById(schemeId)
-                .orElseThrow(() -> new IllegalArgumentException("Issue type scheme not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.issue.type.scheme.not.found", null, Locale.ENGLISH)));
 
         long projects = projectRepository.countByIssueTypeScheme(scheme.getId());
         if (projects == 0) {
@@ -380,7 +449,8 @@ public class IssueAdministrationService {
         }
         if (projects > 0) {
             throw new IllegalArgumentException(
-                    "Cannot delete scheme '" + scheme.getName() + "' — used by " + projects + " project(s)");
+                    messageSource.getMessage("error.issue.type.scheme.in.use",
+                            new Object[]{scheme.getName(), projects}, Locale.ENGLISH));
         }
 
         issueTypeSchemeRepository.delete(scheme);
@@ -390,7 +460,8 @@ public class IssueAdministrationService {
     @Transactional(readOnly = true)
     public List<SchemeProjectAssignmentDto> getSchemeProjectAssignments(String schemeId) {
         IssueTypeSchemeEntity scheme = issueTypeSchemeRepository.findById(schemeId)
-                .orElseThrow(() -> new IllegalArgumentException("Issue type scheme not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.issue.type.scheme.not.found", null, Locale.ENGLISH)));
 
         if (projectRepository.count() == 0) {
             projectCatalogSyncService.syncFromProjectService();
@@ -405,7 +476,8 @@ public class IssueAdministrationService {
     @Transactional
     public List<SchemeProjectAssignmentDto> assignSchemeToProjects(String schemeId, List<String> projectIds) {
         IssueTypeSchemeEntity scheme = issueTypeSchemeRepository.findById(schemeId)
-                .orElseThrow(() -> new IllegalArgumentException("Issue type scheme not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.issue.type.scheme.not.found", null, Locale.ENGLISH)));
 
         if (projectRepository.count() == 0) {
             projectCatalogSyncService.syncFromProjectService();
@@ -588,7 +660,8 @@ public class IssueAdministrationService {
     @Transactional(readOnly = true)
     public Map<String, Object> getScreenFields(String screenId) {
         ScreenEntity screen = screenRepository.findById(screenId)
-                .orElseThrow(() -> new IllegalArgumentException("Screen not found: " + screenId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.screen.not.found", new Object[]{screenId}, Locale.ENGLISH)));
         List<Map<String, Object>> tabs = new ArrayList<>();
         List<String> allFieldIds = new ArrayList<>();
         if (screen.getTabs() != null) {
@@ -643,7 +716,8 @@ public class IssueAdministrationService {
     @Transactional
     public ScreenEntity addScreenTab(String screenId, String tabName) {
         ScreenEntity screen = screenRepository.findById(screenId)
-                .orElseThrow(() -> new IllegalArgumentException("Screen not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.screen.not.found.simple", null, Locale.ENGLISH)));
 
         ScreenTab tab = ScreenTab.builder()
                 .screen(screen)
@@ -662,7 +736,8 @@ public class IssueAdministrationService {
     @Transactional
     public ScreenEntity addFieldToTab(String screenId, int tabIndex, String fieldId) {
         ScreenEntity screen = screenRepository.findById(screenId)
-                .orElseThrow(() -> new IllegalArgumentException("Screen not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.screen.not.found.simple", null, Locale.ENGLISH)));
 
         if (tabIndex >= 0 && tabIndex < screen.getTabs().size()) {
             ScreenTab tab = screen.getTabs().get(tabIndex);
@@ -760,8 +835,8 @@ public class IssueAdministrationService {
                 .entityName(entityName)
                 .details(details)
                 .result("SUCCESS")
-                .severity("INFO")
-                .source("UI")
+                .severity(defaultAuditSeverity)
+                .source(defaultAuditSource)
                 .build();
         auditLogRepository.save(auditLog);
     }

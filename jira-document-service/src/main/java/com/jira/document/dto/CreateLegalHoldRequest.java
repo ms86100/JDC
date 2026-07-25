@@ -13,14 +13,14 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateLegalHoldRequest {
 
-    @NotBlank(message = "Name is required")
+    @NotBlank(message = "{validation.hold.name.required}")
     private String name;
 
     private String description;
     private UUID legalMatterId;
     private String matterReference;
 
-    @NotNull(message = "Hold type is required")
+    @NotNull(message = "{validation.hold.type.required}")
     private String holdType;
 
     private LocalDateTime startDate;
@@ -35,6 +35,6 @@ public class CreateLegalHoldRequest {
     private Boolean isCritical;
     private String metadata;
 
-    @NotNull(message = "Custodian IDs are required")
+    @NotNull(message = "{validation.hold.custodianIds.required}")
     private UUID[] custodianIds;
 }

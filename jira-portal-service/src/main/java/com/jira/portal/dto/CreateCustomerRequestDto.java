@@ -13,21 +13,21 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateCustomerRequestDto {
 
-    @NotNull(message = "Portal ID is required")
+    @NotNull(message = "{validation.request.portalId.required}")
     private UUID portalId;
 
     private UUID requestTypeId;
 
-    @NotBlank(message = "Summary is required")
+    @NotBlank(message = "{validation.request.summary.required}")
     private String summary;
 
     private String description;
 
-    @NotBlank(message = "Customer name is required")
+    @NotBlank(message = "{validation.request.customerName.required}")
     private String customerName;
 
-    @NotBlank(message = "Customer email is required")
-    @Email(message = "Invalid email format")
+    @NotBlank(message = "{validation.request.customerEmail.required}")
+    @Email(message = "{validation.request.customerEmail.invalid}")
     private String customerEmail;
 
     private UUID customerId;

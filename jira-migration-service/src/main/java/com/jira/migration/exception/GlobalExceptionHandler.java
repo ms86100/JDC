@@ -1,6 +1,7 @@
 package com.jira.migration.exception;
 
 import lombok.*;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -8,17 +9,24 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private final MessageSource messageSource;
+
+    public GlobalExceptionHandler(MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
 
     @ExceptionHandler(MigrationException.class)
     public ResponseEntity<ErrorResponse> handleMigrationException(MigrationException ex) {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
-                .error("Migration Error")
+                .error(messageSource.getMessage("error.migration", null, "Migration Error", Locale.ENGLISH))
                 .message(ex.getMessage())
                 .errorCode(ex.getErrorCode())
                 .field(ex.getField())
@@ -31,7 +39,7 @@ public class GlobalExceptionHandler {
         ValidationErrorResponse error = ValidationErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
-                .error("Validation Error")
+                .error(messageSource.getMessage("error.validation", null, "Validation Error", Locale.ENGLISH))
                 .message(ex.getMessage())
                 .errorCode(ex.getErrorCode())
                 .field(ex.getField())
@@ -46,9 +54,9 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
-                .error("Bad Request")
+                .error(messageSource.getMessage("error.bad_request", null, "Bad Request", Locale.ENGLISH))
                 .message(ex.getMessage())
-                .errorCode("INVALID_REQUEST")
+                .errorCode(messageSource.getMessage("error.code.invalid_request", null, "INVALID_REQUEST", Locale.ENGLISH))
                 .build();
         return ResponseEntity.badRequest().body(error);
     }
@@ -58,9 +66,9 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
-                .error("Invalid State")
+                .error(messageSource.getMessage("error.invalid_state", null, "Invalid State", Locale.ENGLISH))
                 .message(ex.getMessage())
-                .errorCode("INVALID_STATE")
+                .errorCode(messageSource.getMessage("error.code.invalid_state", null, "INVALID_STATE", Locale.ENGLISH))
                 .build();
         return ResponseEntity.badRequest().body(error);
     }
@@ -70,7 +78,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.NOT_FOUND.value())
-                .error("Entity Not Found")
+                .error(messageSource.getMessage("error.entity_not_found", null, "Entity Not Found", Locale.ENGLISH))
                 .message(ex.getMessage())
                 .errorCode(ex.getErrorCode())
                 .details(Map.of(
@@ -86,7 +94,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error("Rollback Error")
+                .error(messageSource.getMessage("error.rollback", null, "Rollback Error", Locale.ENGLISH))
                 .message(ex.getMessage())
                 .errorCode(ex.getErrorCode())
                 .build();
@@ -107,7 +115,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(status.value())
-                .error("Storage Error")
+                .error(messageSource.getMessage("error.storage", null, "Storage Error", Locale.ENGLISH))
                 .message(ex.getMessage())
                 .errorCode(ex.getErrorType().name())
                 .details(Map.of(
@@ -123,9 +131,9 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error("Internal Server Error")
+                .error(messageSource.getMessage("error.internal", null, "Internal Server Error", Locale.ENGLISH))
                 .message(ex.getMessage())
-                .errorCode("INTERNAL_ERROR")
+                .errorCode(messageSource.getMessage("error.code.internal", null, "INTERNAL_ERROR", Locale.ENGLISH))
                 .build();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }

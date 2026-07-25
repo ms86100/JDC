@@ -10,6 +10,7 @@ import com.jira.migration.service.clients.*;
 import com.jira.migration.service.clients.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,9 @@ import java.util.*;
 @RequiredArgsConstructor
 @Slf4j
 public class ProjectPersisterHandler {
+
+    @Value("${app.project.default-type:COMPANY_MANAGED}")
+    private String defaultProjectType;
 
     private final ProjectMappingRepository projectMappingRepository;
     private final EntityStatusRepository entityStatusRepository;
@@ -179,7 +183,7 @@ public class ProjectPersisterHandler {
                 .name((String) data.getOrDefault("name", targetKey))
                 .description((String) data.get("description"))
                 .leadUserId((String) data.get("leadUserId"))
-                .projectType((String) data.getOrDefault("projectType", "COMPANY_MANAGED"))
+                .projectType((String) data.getOrDefault("projectType", defaultProjectType))
                 .projectTemplate((String) data.get("templateId"))
                 .category((String) data.get("category"))
                 .avatarUrl((String) data.get("avatarUrl"))

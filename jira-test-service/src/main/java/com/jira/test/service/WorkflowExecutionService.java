@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,15 @@ public class WorkflowExecutionService {
     private final WorkflowDefinitionRepository definitionRepository;
     private final WorkflowInstanceRepository instanceRepository;
     private final ObjectMapper objectMapper;
+
+    @Value("${app.defaults.workflow-initial-state:INITIATED}")
+    private String defaultWorkflowInitialState;
+
+    @Value("${app.defaults.workflow-final-states:COMPLETED,APPROVED,REJECTED,CANCELLED}")
+    private String defaultFinalStatesStr;
+
+    @Value("${app.defaults.workflow-cancelled-state:CANCELLED}")
+    private String workflowCancelledState;
 
     // ========== Definition Management ==========
 
@@ -217,7 +227,7 @@ public class WorkflowExecutionService {
 
         StateTransition cancelTransition = StateTransition.builder()
                 .fromState(instance.getCurrentState())
-                .toState("CANCELLED")
+                .toState(workflowCancelledState)
                 .transitionedBy(userId)
                 .transitionedAt(LocalDateTime.now())
                 .comment(reason != null ? reason : "Workflow cancelled")
@@ -226,7 +236,7 @@ public class WorkflowExecutionService {
         List<StateTransition> history = fromJson(instance.getStateHistoryJson());
         history.add(cancelTransition);
 
-        instance.setCurrentState("CANCELLED");
+        instance.setCurrentState(workflowCancelledState);
         instance.setStateHistoryJson(toJson(history));
         instance.setIsCompleted(true);
         instance.setCompletedAt(LocalDateTime.now());
@@ -358,10 +368,10 @@ public class WorkflowExecutionService {
                     return firstState.get("name").asText();
                 }
             }
-            return "INITIATED";
+            return defaultWorkflowInitialState;
         } catch (Exception e) {
             log.error("Failed to parse initial state", e);
-            return "INITIATED";
+            return defaultWorkflowInitialState;
         }
     }
 
@@ -444,11 +454,11 @@ public class WorkflowExecutionService {
             }
 
             // Default final states
-            return state.equals("COMPLETED") || state.equals("APPROVED") ||
-                    state.equals("REJECTED") || state.equals("CANCELLED");
+            List<String> defaults = Arrays.asList(defaultFinalStatesStr.split(","));
+            return defaults.contains(state);
         } catch (Exception e) {
-            return state.equals("COMPLETED") || state.equals("APPROVED") ||
-                    state.equals("REJECTED") || state.equals("CANCELLED");
+            List<String> defaults = Arrays.asList(defaultFinalStatesStr.split(","));
+            return defaults.contains(state);
         }
     }
 

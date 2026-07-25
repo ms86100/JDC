@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { issueApi, IssueResponse } from '../../../api/issueApi';
 import { commentApi } from '../../../api/commentApi';
 import { fieldApi } from '../../../api/fieldApi';
@@ -32,39 +32,23 @@ type TabType =
   | 'attachments'
   | 'details';
 
-/**
- * Full Issue Response - All Systems and Avionics Mandatory Fields
- */
 interface FullIssueResponse extends Omit<IssueResponse, 'watchers'> {
-  // Override watchers to accept both formats
   watchers?: string[] | Array<{ id: string; name: string; avatar: string }>;
-
-  // Core Metadata
   projectName?: string;
   issueKey: string;
-
-  // Issue Type & Category
   issueType: string;
   issueTypeIcon?: string;
   issueTypeColor?: string;
-
-  // Status & Priority
   status: string;
   statusCategory?: string;
   priority: string;
   priorityIcon?: string;
   priorityColor?: string;
-
-  // Resolution
   resolutionId?: string;
   resolutionName?: string;
   resolutionDate?: string;
-
-  // Project Information
   projectId: string;
   projectKey: string;
-
-  // User Relationships
   assigneeId?: string;
   assigneeName?: string;
   assigneeAvatar?: string;
@@ -73,34 +57,24 @@ interface FullIssueResponse extends Omit<IssueResponse, 'watchers'> {
   reporterAvatar?: string;
   creatorId?: string;
   creatorName?: string;
-
-  // Timestamps
   createdAt: string;
   updatedAt: string;
   lastViewedAt?: string;
   resolvedAt?: string;
   dueDate?: string;
-
-  // Title & Description
   title: string;
   description?: string;
   environment?: string;
-
-  // Versioning
   affectsVersions?: string[];
   affectsVersionNames?: string[];
   fixVersions?: string[];
   fixVersionNames?: string[];
-
-  // Organization
   components?: string[];
   labels?: string[];
   sprintId?: string;
   sprintName?: string;
   teamId?: string;
   teamName?: string;
-
-  // Agile Fields
   epicId?: string;
   epicName?: string;
   epicColor?: string;
@@ -108,28 +82,20 @@ interface FullIssueResponse extends Omit<IssueResponse, 'watchers'> {
   originalStoryPoints?: number;
   parentId?: string;
   parentKey?: string;
-
-  // Time Tracking
-  originalEstimate?: number;  // seconds
-  remainingEstimate?: number;  // seconds
-  timeSpent?: number;  // seconds
+  originalEstimate?: number;
+  remainingEstimate?: number;
+  timeSpent?: number;
   aggregateTimeEstimate?: number;
   aggregateTimeSpent?: number;
   workRatio?: number;
-
-  // Security
   securityLevelId?: string;
   securityLevelName?: string;
-
-  // Social
   votes?: number;
   voteCount?: number;
   watcherCount?: number;
   linkedIssues?: Array<{ type: string; key: string; title: string }>;
   subtasks?: IssueResponse[];
   parent?: { id: string; key: string; title: string };
-
-  // Custom Fields (dynamic)
   customFields?: Record<string, any>;
 }
 
@@ -139,10 +105,6 @@ export interface IssueDetailPageProps {
   onClose?: () => void;
 }
 
-/**
- * Sanitize HTML content to prevent XSS attacks.
- * Strips script tags, event handlers (quoted and unquoted), and javascript: URLs.
- */
 const sanitizeHtml = (html: string | undefined | null): string => {
   if (!html) return '';
   return html
@@ -169,6 +131,23 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
   const [newComment, setNewComment] = useState('');
   const [editingDescription, setEditingDescription] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(true);
+
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const transitionMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
+      }
+      if (transitionMenuRef.current && !transitionMenuRef.current.contains(e.target as Node)) {
+        setShowTransitionMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const { data: issue, isLoading } = useQuery({
     queryKey: ['issue', issueId],
@@ -238,7 +217,6 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
   const [screenInput, setScreenInput] = useState<Record<string, unknown>>({});
   const [pendingTransition, setPendingTransition] = useState<AvailableTransition | null>(null);
   const [transitionError, setTransitionError] = useState<string | null>(null);
-
   const [commentError, setCommentError] = useState<string | null>(null);
 
   const saveDescriptionMutation = useMutation({
@@ -410,7 +388,19 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
     });
   };
 
-  // Helper functions
+  const getStatusClass = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'done': case 'resolved': case 'closed':
+        return 'idm-status--done';
+      case 'in progress': case 'in_review':
+        return 'idm-status--inprogress';
+      case 'blocked':
+        return 'idm-status--blocked';
+      default:
+        return 'idm-status--todo';
+    }
+  };
+
   const getStatusStyle = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'done': case 'resolved': case 'closed':
@@ -424,11 +414,25 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
     }
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityClass = (priority: string) => {
     switch (priority?.toLowerCase()) {
-      case 'highest': case 'high': return '#D04437';
-      case 'medium': return '#FF8B00';
-      default: return '#6B778C';
+      case 'highest': case 'critical': return 'idm-priority--critical';
+      case 'high': return 'idm-priority--high';
+      case 'medium': return 'idm-priority--medium';
+      case 'low': return 'idm-priority--low';
+      case 'lowest': return 'idm-priority--lowest';
+      default: return 'idm-priority--medium';
+    }
+  };
+
+  const getPriorityIcon = (priority: string) => {
+    switch (priority?.toLowerCase()) {
+      case 'highest': case 'critical': return '↑↑';
+      case 'high': return '↑';
+      case 'medium': return '↔';
+      case 'low': return '↓';
+      case 'lowest': return '↓↓';
+      default: return '↔';
     }
   };
 
@@ -497,961 +501,793 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
     return formatDate(dateStr);
   };
 
+  const timeProgress = (() => {
+    if (!issue?.originalEstimate) return 0;
+    const spent = issue.timeSpent ?? 0;
+    return Math.min(100, Math.round((spent / issue.originalEstimate) * 100));
+  })();
+
   if (isLoading) {
     return (
-      <div className="idc-loading">
-        <div className="idc-spinner" />
+      <div className="idm-loading">
+        <div className="idm-loading-pulse">
+          <div className="idm-pulse-ring" />
+          <div className="idm-pulse-dot" />
+        </div>
+        <span className="idm-loading-text">Loading issue...</span>
       </div>
     );
   }
 
   if (!issue) {
     return (
-      <div className="idc-empty">
+      <div className="idm-empty-state">
+        <div className="idm-empty-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M9 12h6M12 9v6M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
         <h3>Issue not found</h3>
-        <Link to="/issues" className="idc-btn idc-btn-primary">Back to Issues</Link>
+        <p>The issue you're looking for doesn't exist or has been moved.</p>
+        <Link to="/issues" className="idm-btn idm-btn--primary">Back to Issues</Link>
       </div>
     );
   }
 
-  const statusStyle = getStatusStyle(issue.status || '');
+  const tabItems: { key: TabType; label: string; icon: string; badge?: number }[] = [
+    { key: 'comment', label: 'Comments', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
+    { key: 'activity', label: 'Activity', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { key: 'work', label: 'Work Log', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { key: 'links', label: 'Links', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' },
+    { key: 'labels', label: 'Labels', icon: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z' },
+    { key: 'attachments', label: 'Attachments', icon: 'M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13' },
+    { key: 'details', label: 'Details', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', badge: customFieldsWithValues > 0 ? customFieldsWithValues : undefined },
+  ];
 
   return (
-    <div className={`idc-issue-view ${embedded ? 'idc-issue-view-embedded' : ''}`}>
-      {!embedded && (
-      <div className="idc-breadcrumb">
-        <Link to="/issues" className="idc-breadcrumb-project">Issues</Link>
-        <span className="idc-breadcrumb-sep">/</span>
-        <Link to={`/projects/${issue.projectId}`} className="idc-breadcrumb-project">
-          {issue.projectName || issue.projectKey || 'Project'}
-        </Link>
-        <span className="idc-breadcrumb-sep">/</span>
-        <span className="idc-breadcrumb-key">{issue.issueKey}</span>
-      </div>
-      )}
-
-      {/* Issue Header - Systems and Avionics Style */}
-      <div className="idc-issue-header">
-        <div className="idc-issue-header-top">
-          {/* Type + Status badges */}
-          <div className="idc-type-status">
-            <span className="idc-type-badge">
-              <span className="idc-type-icon">{getTypeIcon(issue.issueType)}</span>
-              <span className="idc-type-name">{issue.issueType || 'Story'}</span>
-            </span>
-            <div
-              className="idc-status-badge"
-              style={{ background: statusStyle.background, color: statusStyle.color }}
-            >
-              {issue.status || 'To Do'}
-            </div>
+    <div className={`idm-root ${embedded ? 'idm-root--embedded' : ''}`}>
+      {/* ── HEADER BAR ── */}
+      <header className="idm-header">
+        <div className="idm-header-top">
+          {/* Breadcrumb + Key */}
+          <div className="idm-header-left">
+            {!embedded && (
+              <nav className="idm-breadcrumb" aria-label="Breadcrumb">
+                <Link to="/issues" className="idm-breadcrumb-link">Issues</Link>
+                <svg className="idm-breadcrumb-sep" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5l7 7-7 7" /></svg>
+                <Link to={`/projects/${issue.projectId}`} className="idm-breadcrumb-link">
+                  {issue.projectName || issue.projectKey || 'Project'}
+                </Link>
+                <svg className="idm-breadcrumb-sep" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5l7 7-7 7" /></svg>
+                <span className="idm-breadcrumb-current">{issue.issueKey}</span>
+              </nav>
+            )}
+            {embedded && (
+              <span className="idm-key-badge">{issue.issueKey}</span>
+            )}
           </div>
 
-          {/* Actions */}
-          <div className="idc-issue-actions">
-            <button className="idc-action-btn" onClick={() => setShowEditModal(true)}>Edit</button>
+          {/* Action Toolbar */}
+          <div className="idm-header-actions">
+            <button className="idm-tool-btn" onClick={() => setShowEditModal(true)} title="Edit issue">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+              <span>Edit</span>
+            </button>
+
             <IssueAdminMenu projectId={issue?.projectId} issueKey={issue?.issueKey} />
-            <div className="idc-dropdown-wrapper">
-              <button className="idc-action-btn" onClick={() => setShowMoreMenu(!showMoreMenu)}>
-                More <span className="idc-dropdown-caret">▾</span>
+
+            <div className="idm-dropdown-wrapper" ref={moreMenuRef}>
+              <button className="idm-tool-btn" onClick={() => setShowMoreMenu(!showMoreMenu)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg>
               </button>
               {showMoreMenu && (
-                <div className="idc-dropdown-menu">
-                  <button
-                    type="button"
-                    className="idc-dropdown-item"
-                    disabled={isWatching ? unwatchMutation.isPending : watchMutation.isPending}
-                    onClick={() => {
-                      if (isWatching) unwatchMutation.mutate();
-                      else watchMutation.mutate();
-                      setShowMoreMenu(false);
-                    }}
-                  >
-                    {isWatching ? 'Stop watching' : 'Watch issue'}
-                  </button>
-                  <button
-                    type="button"
-                    className="idc-dropdown-item"
-                    disabled={hasVoted ? unvoteMutation.isPending : voteMutation.isPending}
-                    onClick={() => {
-                      if (hasVoted) unvoteMutation.mutate();
-                      else voteMutation.mutate();
-                      setShowMoreMenu(false);
-                    }}
-                  >
-                    {hasVoted ? 'Remove vote' : 'Vote for issue'}
-                  </button>
-                  <button
-                    type="button"
-                    className="idc-dropdown-item"
-                    disabled={rankMutation.isPending}
-                    onClick={() => rankMutation.mutate(rankForTop())}
-                  >
-                    Rank to top
-                  </button>
-                  <button
-                    type="button"
-                    className="idc-dropdown-item"
-                    disabled={rankMutation.isPending}
-                    onClick={() => rankMutation.mutate(rankForBottom())}
-                  >
-                    Rank to bottom
-                  </button>
-                  <button
-                    type="button"
-                    className="idc-dropdown-item"
-                    onClick={() => {
-                      setActiveTab('work');
-                      setShowMoreMenu(false);
-                    }}
-                  >
-                    Log work
-                  </button>
-                  <button
-                    type="button"
-                    className="idc-dropdown-item"
-                    onClick={() => {
-                      setActiveTab('links');
-                      setShowMoreMenu(false);
-                    }}
-                  >
-                    Link issues
-                  </button>
-                  <button
-                    type="button"
-                    className="idc-dropdown-item"
-                    onClick={() => {
-                      setShowCreateSubtask(true);
-                      setShowMoreMenu(false);
-                    }}
-                  >
-                    Create subtask
-                  </button>
-                  <button
-                    type="button"
-                    className="idc-dropdown-item"
-                    disabled={cloneMutation.isPending}
-                    onClick={() => cloneMutation.mutate()}
-                  >
-                    {cloneMutation.isPending ? 'Cloning…' : 'Clone issue'}
-                  </button>
-                  <button
-                    type="button"
-                    className="idc-dropdown-item"
-                    onClick={() => {
-                      setShowMoveModal(true);
-                      setShowMoreMenu(false);
-                    }}
-                  >
-                    Move
-                  </button>
-                  <button
-                    type="button"
-                    className="idc-dropdown-item"
-                    onClick={() => {
-                      const url = window.location.href;
-                      void navigator.clipboard?.writeText(url);
-                      setShowMoreMenu(false);
-                    }}
-                  >
-                    Share issue (copy link)
-                  </button>
-                  <button
-                    type="button"
-                    className="idc-dropdown-item"
-                    onClick={() => {
-                      window.open(`/api/issues/${issueId}`, '_blank', 'noopener');
-                      setShowMoreMenu(false);
-                    }}
-                  >
-                    Export (API view)
-                  </button>
-                  {issue?.projectId && (
-                    <button
-                      type="button"
-                      className="idc-dropdown-item"
-                      onClick={() => {
-                        setShowMoreMenu(false);
-                        navigate(
-                          `/projects/${issue.projectId}/board/active?issueId=${issueId}`,
-                        );
-                      }}
+                <div className="idm-dropdown">
+                  <div className="idm-dropdown-section">
+                    <button type="button" className="idm-dropdown-item"
+                      disabled={isWatching ? unwatchMutation.isPending : watchMutation.isPending}
+                      onClick={() => { if (isWatching) unwatchMutation.mutate(); else watchMutation.mutate(); setShowMoreMenu(false); }}
                     >
-                      Find on board
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                      {isWatching ? 'Stop watching' : 'Watch issue'}
                     </button>
-                  )}
-                  {embedded && (
-                    <button
-                      type="button"
-                      className="idc-dropdown-item"
-                      onClick={() => {
-                        setShowMoreMenu(false);
-                        navigate(`/issues/${issueId}`);
-                      }}
+                    <button type="button" className="idm-dropdown-item"
+                      disabled={hasVoted ? unvoteMutation.isPending : voteMutation.isPending}
+                      onClick={() => { if (hasVoted) unvoteMutation.mutate(); else voteMutation.mutate(); setShowMoreMenu(false); }}
                     >
-                      Open in full view
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" /><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" /></svg>
+                      {hasVoted ? 'Remove vote' : 'Vote for issue'}
                     </button>
-                  )}
-                  <div className="idc-dropdown-divider"></div>
-                  <button
-                    type="button"
-                    className="idc-dropdown-item idc-dropdown-danger"
+                  </div>
+                  <div className="idm-dropdown-divider" />
+                  <div className="idm-dropdown-section">
+                    <button type="button" className="idm-dropdown-item" disabled={rankMutation.isPending}
+                      onClick={() => rankMutation.mutate(rankForTop())}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+                      Rank to top
+                    </button>
+                    <button type="button" className="idm-dropdown-item" disabled={rankMutation.isPending}
+                      onClick={() => rankMutation.mutate(rankForBottom())}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>
+                      Rank to bottom
+                    </button>
+                  </div>
+                  <div className="idm-dropdown-divider" />
+                  <div className="idm-dropdown-section">
+                    <button type="button" className="idm-dropdown-item"
+                      onClick={() => { setActiveTab('work'); setShowMoreMenu(false); }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      Log work
+                    </button>
+                    <button type="button" className="idm-dropdown-item"
+                      onClick={() => { setActiveTab('links'); setShowMoreMenu(false); }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" /></svg>
+                      Link issues
+                    </button>
+                    <button type="button" className="idm-dropdown-item"
+                      onClick={() => { setShowCreateSubtask(true); setShowMoreMenu(false); }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 4v16m8-8H4" /></svg>
+                      Create subtask
+                    </button>
+                    <button type="button" className="idm-dropdown-item" disabled={cloneMutation.isPending}
+                      onClick={() => cloneMutation.mutate()}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
+                      {cloneMutation.isPending ? 'Cloning...' : 'Clone issue'}
+                    </button>
+                    <button type="button" className="idm-dropdown-item"
+                      onClick={() => { setShowMoveModal(true); setShowMoreMenu(false); }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                      Move
+                    </button>
+                    <button type="button" className="idm-dropdown-item"
+                      onClick={() => { void navigator.clipboard?.writeText(window.location.href); setShowMoreMenu(false); }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" /></svg>
+                      Share (copy link)
+                    </button>
+                    <button type="button" className="idm-dropdown-item"
+                      onClick={() => { window.open(`/api/issues/${issueId}`, '_blank', 'noopener'); setShowMoreMenu(false); }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" /></svg>
+                      Export (API view)
+                    </button>
+                    {issue?.projectId && (
+                      <button type="button" className="idm-dropdown-item"
+                        onClick={() => { setShowMoreMenu(false); navigate(`/projects/${issue.projectId}/board/active?issueId=${issueId}`); }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
+                        Find on board
+                      </button>
+                    )}
+                    {embedded && (
+                      <button type="button" className="idm-dropdown-item"
+                        onClick={() => { setShowMoreMenu(false); navigate(`/issues/${issueId}`); }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>
+                        Open in full view
+                      </button>
+                    )}
+                  </div>
+                  <div className="idm-dropdown-divider" />
+                  <button type="button" className="idm-dropdown-item idm-dropdown-item--danger"
                     disabled={deleteMutation.isPending}
-                    onClick={() => {
-                      if (window.confirm('Delete this issue permanently?')) {
-                        deleteMutation.mutate();
-                      }
-                    }}
+                    onClick={() => { if (window.confirm('Delete this issue permanently?')) deleteMutation.mutate(); }}
                   >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     Delete
                   </button>
                 </div>
               )}
             </div>
-            <button
-              className="idc-status-transition-btn"
-              onClick={() => setShowTransitionMenu(!showTransitionMenu)}
+
+            <div className="idm-action-divider" />
+
+            {/* Transition Button */}
+            <div className="idm-dropdown-wrapper" ref={transitionMenuRef}>
+              <button className="idm-transition-btn" onClick={() => setShowTransitionMenu(!showTransitionMenu)}>
+                <span>{issue.status || 'Transition'}</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+              {showTransitionMenu && (
+                <div className="idm-dropdown idm-dropdown--transition">
+                  <div className="idm-dropdown-header">Workflow Transitions</div>
+                  {(availableTransitions?.transitions ?? []).length === 0 ? (
+                    <div className="idm-dropdown-empty">No transitions available</div>
+                  ) : (
+                    availableTransitions!.transitions.map((t) => (
+                      <button key={t.id} type="button" className="idm-dropdown-item"
+                        onClick={() => {
+                          setPendingTransition({
+                            id: t.id, name: t.name, description: t.description,
+                            toStatusId: t.toStatusId, hasScreen: t.hasScreen, screenFields: t.screenFields,
+                          });
+                          setScreenInput({}); setTransitionComment('');
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                        {t.name}{t.hasScreen ? ' ...' : ''}
+                      </button>
+                    ))
+                  )}
+                  {transitionError && (
+                    <p className="idm-dropdown-error" role="alert">{transitionError}</p>
+                  )}
+                  {pendingTransition && (
+                    <TransitionScreenForm
+                      transition={pendingTransition}
+                      comment={transitionComment}
+                      onCommentChange={setTransitionComment}
+                      screenInput={screenInput}
+                      onScreenInputChange={setScreenInput}
+                      onConfirm={confirmTransition}
+                      onCancel={() => { setPendingTransition(null); setScreenInput({}); setTransitionError(null); }}
+                      isSubmitting={transitionMutation.isPending}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="idm-action-divider" />
+
+            {/* Drawer Toggle */}
+            <button className={`idm-tool-btn idm-tool-btn--drawer ${drawerOpen ? 'idm-tool-btn--active' : ''}`}
+              onClick={() => setDrawerOpen(!drawerOpen)} title={drawerOpen ? 'Hide details' : 'Show details'}
             >
-              <span>{issue.status || 'Transition'}</span>
-              <span className="idc-dropdown-caret">▾</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M15 3v18" />
+              </svg>
             </button>
           </div>
         </div>
 
-        {/* Title */}
-        <h1 className="idc-issue-title">{issue.title}</h1>
-
-        {/* Meta info */}
-        <div className="idc-issue-meta">
-          <span className="idc-meta-key">{issue.issueKey}</span>
-          <span className="idc-meta-sep"> · </span>
-          <span className="idc-meta-created">
-            Created by {issue.reporterName || 'Unknown'} · {getRelativeTime(issue.createdAt)}
-          </span>
-        </div>
-
-        {/* Transition Menu */}
-        {showTransitionMenu && (
-          <div className="idc-transition-menu">
-            <div className="idc-transition-header">Workflow transitions</div>
-            {(availableTransitions?.transitions ?? []).length === 0 ? (
-              <div className="idc-transition-option" style={{ cursor: 'default', color: '#5e6c84' }}>
-                No transitions available
-              </div>
-            ) : (
-              availableTransitions!.transitions.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  className="idc-transition-option"
-                  onClick={() => {
-                    setPendingTransition({
-                      id: t.id,
-                      name: t.name,
-                      description: t.description,
-                      toStatusId: t.toStatusId,
-                      hasScreen: t.hasScreen,
-                      screenFields: t.screenFields,
-                    });
-                    setScreenInput({});
-                    setTransitionComment('');
-                  }}
-                >
-                  {t.name}
-                  {t.hasScreen ? ' …' : ''}
-                </button>
-              ))
-            )}
-            {transitionError && (
-              <p className="idc-transition-error" role="alert" style={{ color: '#de350b', padding: '8px 12px', fontSize: 13 }}>
-                {transitionError}
-              </p>
-            )}
-            {pendingTransition && (
-              <TransitionScreenForm
-                transition={pendingTransition}
-                comment={transitionComment}
-                onCommentChange={setTransitionComment}
-                screenInput={screenInput}
-                onScreenInputChange={setScreenInput}
-                onConfirm={confirmTransition}
-                onCancel={() => {
-                  setPendingTransition(null);
-                  setScreenInput({});
-                  setTransitionError(null);
-                }}
-                isSubmitting={transitionMutation.isPending}
-              />
+        {/* Title + Meta */}
+        <div className="idm-header-body">
+          <div className="idm-badges">
+            <span className="idm-type-badge">
+              <span className="idm-type-icon">{getTypeIcon(issue.issueType)}</span>
+              {issue.issueType || 'Story'}
+            </span>
+            <span className={`idm-status-lozenge ${getStatusClass(issue.status)}`}>
+              {issue.status || 'To Do'}
+            </span>
+            <span className={`idm-priority-badge ${getPriorityClass(issue.priority)}`}>
+              <span className="idm-priority-arrow">{getPriorityIcon(issue.priority)}</span>
+              {issue.priority}
+            </span>
+          </div>
+          <h1 className="idm-title">{issue.title}</h1>
+          <div className="idm-meta">
+            <span className="idm-meta-reporter">
+              <span className="idm-meta-avatar">{issue.reporterName?.charAt(0) || 'U'}</span>
+              {issue.reporterName || 'Unknown'}
+            </span>
+            <span className="idm-meta-dot" />
+            <span className="idm-meta-time" title={formatDateTime(issue.createdAt)}>
+              Created {getRelativeTime(issue.createdAt)}
+            </span>
+            {issue.updatedAt && issue.updatedAt !== issue.createdAt && (
+              <>
+                <span className="idm-meta-dot" />
+                <span className="idm-meta-time" title={formatDateTime(issue.updatedAt)}>
+                  Updated {getRelativeTime(issue.updatedAt)}
+                </span>
+              </>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      </header>
 
-      {/* Two Column Layout - Systems and Avionics Style */}
-      <div className="idc-issue-body">
-        {/* ========== LEFT PRIMARY CONTENT COLUMN ========== */}
-        <div className="idc-left-col">
+      {/* ── MAIN CONTENT AREA ── */}
+      <div className={`idm-body ${drawerOpen ? 'idm-body--drawer-open' : ''}`}>
 
-          {/* Description */}
-          <div className="idc-section">
-            <div className="idc-section-header">
-              <h3>Description</h3>
+        {/* ─── LEFT: PRIMARY CONTENT ─── */}
+        <main className="idm-main">
+
+          {/* Quick-Glance Bar */}
+          <div className="idm-glance-bar">
+            <div className="idm-glance-item">
+              <span className="idm-glance-label">Assignee</span>
+              <span className="idm-glance-value">
+                {issue.assigneeId ? (
+                  <span className="idm-avatar-chip">
+                    <span className="idm-avatar-sm">{issue.assigneeName?.charAt(0) || 'U'}</span>
+                    {issue.assigneeName}
+                  </span>
+                ) : (
+                  <span className="idm-no-value">Unassigned</span>
+                )}
+              </span>
+            </div>
+            <div className="idm-glance-sep" />
+            <div className="idm-glance-item">
+              <span className="idm-glance-label">Sprint</span>
+              <span className="idm-glance-value">
+                {issue.sprintName || <span className="idm-no-value">Backlog</span>}
+              </span>
+            </div>
+            <div className="idm-glance-sep" />
+            <div className="idm-glance-item">
+              <span className="idm-glance-label">Story Points</span>
+              <span className="idm-glance-value">
+                {issue.storyPoints !== undefined ? (
+                  <span className="idm-sp-badge">{issue.storyPoints}</span>
+                ) : (
+                  <span className="idm-no-value">-</span>
+                )}
+              </span>
+            </div>
+            {issue.dueDate && (
+              <>
+                <div className="idm-glance-sep" />
+                <div className="idm-glance-item">
+                  <span className="idm-glance-label">Due Date</span>
+                  <span className="idm-glance-value">{formatDate(issue.dueDate)}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Description Card */}
+          <section className="idm-card">
+            <div className="idm-card-header">
+              <h3 className="idm-card-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" /></svg>
+                Description
+              </h3>
               {!editingDescription && (
-                <button
-                  className="idc-section-btn"
-                  onClick={() => {
-                    setDescriptionDraft(issue.description || '');
-                    setEditingDescription(true);
-                  }}
-                >
+                <button className="idm-card-action" onClick={() => { setDescriptionDraft(issue.description || ''); setEditingDescription(true); }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                   Edit
                 </button>
               )}
             </div>
-            <div className="idc-description">
+            <div className="idm-card-body">
               {editingDescription ? (
-                <div>
+                <div className="idm-description-editor">
                   <textarea
-                    className="idc-description-textarea"
+                    className="idm-textarea"
                     value={descriptionDraft}
                     onChange={(e) => setDescriptionDraft(e.target.value)}
                     rows={6}
                     autoFocus
                     placeholder="Add a description..."
-                    style={{ width: '100%', padding: '8px 12px', fontSize: '14px', border: '2px solid #0052cc', borderRadius: '4px', resize: 'vertical', fontFamily: 'inherit' }}
                   />
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                    <button
-                      className="idc-section-btn"
-                      style={{ background: '#0052cc', color: '#fff', padding: '6px 16px', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
-                      disabled={saveDescriptionMutation.isPending}
+                  <div className="idm-editor-actions">
+                    <button className="idm-btn idm-btn--primary" disabled={saveDescriptionMutation.isPending}
                       onClick={() => saveDescriptionMutation.mutate(descriptionDraft)}
                     >
                       {saveDescriptionMutation.isPending ? 'Saving...' : 'Save'}
                     </button>
-                    <button
-                      className="idc-section-btn"
-                      style={{ padding: '6px 16px', borderRadius: '4px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}
-                      onClick={() => setEditingDescription(false)}
-                    >
-                      Cancel
-                    </button>
+                    <button className="idm-btn idm-btn--ghost" onClick={() => setEditingDescription(false)}>Cancel</button>
                   </div>
                 </div>
               ) : (
-                <div
-                  onClick={() => {
-                    setDescriptionDraft(issue.description || '');
-                    setEditingDescription(true);
-                  }}
-                  style={{ cursor: 'pointer' }}
+                <div className="idm-description-content"
+                  onClick={() => { setDescriptionDraft(issue.description || ''); setEditingDescription(true); }}
                 >
                   {issue.description ? (
-                    <div className="idc-description-text" dangerouslySetInnerHTML={{ __html: sanitizeHtml(issue.description) }} />
+                    <div className="idm-description-text" dangerouslySetInnerHTML={{ __html: sanitizeHtml(issue.description) }} />
                   ) : (
-                    <span className="idc-description-placeholder">
+                    <div className="idm-description-placeholder">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 4v16m8-8H4" /></svg>
                       Click to add description...
-                    </span>
+                    </div>
                   )}
                 </div>
               )}
             </div>
-          </div>
+          </section>
 
           {/* Environment */}
           {issue.environment && (
-            <div className="idc-section">
-              <div className="idc-section-header">
-                <h3>Environment</h3>
+            <section className="idm-card">
+              <div className="idm-card-header">
+                <h3 className="idm-card-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" /></svg>
+                  Environment
+                </h3>
               </div>
-              <div className="idc-environment">
-                <p>{issue.environment}</p>
-              </div>
-            </div>
+              <div className="idm-card-body"><p className="idm-env-text">{issue.environment}</p></div>
+            </section>
           )}
 
-          {/* Activity Tabs — single panel, no nested borders */}
-          <div className="idc-tabs-panel">
-          <div className="idc-tabs" role="tablist" aria-label="Issue panels">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'comment'}
-              className={`idc-tab ${activeTab === 'comment' ? 'idc-tab-active' : ''}`}
-              onClick={() => setActiveTab('comment')}
-            >
-              Comment
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'activity'}
-              className={`idc-tab ${activeTab === 'activity' ? 'idc-tab-active' : ''}`}
-              onClick={() => setActiveTab('activity')}
-            >
-              Activity
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'work'}
-              className={`idc-tab ${activeTab === 'work' ? 'idc-tab-active' : ''}`}
-              onClick={() => setActiveTab('work')}
-            >
-              Work log
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'links'}
-              className={`idc-tab ${activeTab === 'links' ? 'idc-tab-active' : ''}`}
-              onClick={() => setActiveTab('links')}
-            >
-              Links
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'labels'}
-              className={`idc-tab ${activeTab === 'labels' ? 'idc-tab-active' : ''}`}
-              onClick={() => setActiveTab('labels')}
-            >
-              Labels
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'attachments'}
-              className={`idc-tab ${activeTab === 'attachments' ? 'idc-tab-active' : ''}`}
-              onClick={() => setActiveTab('attachments')}
-            >
-              Attachments
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'details'}
-              className={`idc-tab ${activeTab === 'details' ? 'idc-tab-active' : ''}`}
-              onClick={() => setActiveTab('details')}
-            >
-              Details
-              {customFieldsWithValues > 0 && (
-                <span className="icf-tab-badge" title="Custom fields with values">
-                  {customFieldsWithValues}
-                </span>
-              )}
-            </button>
-          </div>
-
-          <div className="idc-tab-content" role="tabpanel">
-            {/* Comments Tab */}
-            {activeTab === 'comment' && (
-              <div className="idc-comment-section">
-                <div className="idc-comment-list">
-                  {comments?.map((c: any) => (
-                    <div key={c.id} className="idc-comment">
-                      <div className="idc-comment-avatar">
-                        {c.authorName?.charAt(0) || 'U'}
-                      </div>
-                      <div className="idc-comment-body">
-                        <div className="idc-comment-header">
-                          <span className="idc-comment-author">{c.authorName}</span>
-                          <span className="idc-comment-time">{getRelativeTime(c.createdAt)}</span>
-                        </div>
-                        <p className="idc-comment-text">{c.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="idc-comment-input">
-                  {commentError && (
-                    <p className="idc-comment-error" style={{ color: '#de350b', marginBottom: 8 }}>
-                      {commentError}
-                    </p>
+          {/* Activity Tabs */}
+          <section className="idm-card idm-card--tabs">
+            <div className="idm-tabs" role="tablist" aria-label="Issue panels">
+              {tabItems.map((t) => (
+                <button key={t.key} type="button" role="tab"
+                  aria-selected={activeTab === t.key}
+                  className={`idm-tab ${activeTab === t.key ? 'idm-tab--active' : ''}`}
+                  onClick={() => setActiveTab(t.key)}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d={t.icon} /></svg>
+                  {t.label}
+                  {t.badge !== undefined && (
+                    <span className="idm-tab-badge">{t.badge}</span>
                   )}
-                  <textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Add a comment..."
-                    className="idc-comment-textarea"
-                  />
-                  <button
-                    className="idc-btn idc-btn-primary"
-                    onClick={() => {
-                      if (newComment.trim()) {
-                        addCommentMutation.mutate(newComment);
-                      }
-                    }}
-                    disabled={addCommentMutation.isPending}
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            )}
+                </button>
+              ))}
+            </div>
 
-            {/* Activity Tab (Change History + Transitions) */}
-            {activeTab === 'activity' && issueId && (
-              <div className="idc-activity-section">
-                <ActivityTab issueId={issueId} />
-              </div>
-            )}
-
-            {/* Work Log Tab */}
-            {activeTab === 'work' && issueId && (
-              <div className="idc-work-section">
-                <WorklogsTab issueId={issueId} />
-              </div>
-            )}
-
-            {activeTab === 'links' && issueId && (
-              <div className="idc-links-section">
-                <IssueLinksTab issueId={issueId} />
-              </div>
-            )}
-
-            {activeTab === 'labels' && issueId && (
-              <div className="idc-labels-section">
-                <LabelsTab issueId={issueId} />
-              </div>
-            )}
-
-            {activeTab === 'attachments' && issueId && (
-              <div className="idc-attachments-section">
-                <AttachmentsTab issueId={issueId} />
-              </div>
-            )}
-
-            {/* Details Tab - Field Mappings */}
-            {activeTab === 'details' && (
-              <div className="idc-details-section">
-                {resolvedIssueUuid && (
-                  <div className="mb-6 idc-custom-fields-block">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Custom fields</h4>
-                    <p className="icf-hint mb-2">
-                      Migrated and admin-defined fields (Epic Name, Parent Link, Target dates, etc.)
-                    </p>
-                    <IssueCustomFieldsPanel
-                      issueId={resolvedIssueUuid}
-                      issueKey={issue?.issueKey}
-                      projectId={issue?.projectId}
-                      issueTypeId={issue?.issueTypeId}
-                      variant="inline"
-                    />
+            <div className="idm-tab-panel" role="tabpanel">
+              {activeTab === 'comment' && (
+                <div className="idm-comments">
+                  <div className="idm-comment-compose">
+                    {commentError && <p className="idm-error-msg">{commentError}</p>}
+                    <div className="idm-compose-row">
+                      <span className="idm-avatar-sm idm-avatar--brand">{user?.username?.charAt(0) || 'U'}</span>
+                      <textarea className="idm-textarea idm-textarea--comment" value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)} placeholder="Add a comment..."
+                      />
+                    </div>
+                    <div className="idm-compose-footer">
+                      <button className="idm-btn idm-btn--primary idm-btn--sm"
+                        onClick={() => { if (newComment.trim()) addCommentMutation.mutate(newComment); }}
+                        disabled={addCommentMutation.isPending || !newComment.trim()}
+                      >
+                        {addCommentMutation.isPending ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
                   </div>
-                )}
-                <div className="idc-details-grid">
-                  <div className="idc-detail-item">
-                    <span className="idc-detail-label">Type</span>
-                    <span className="idc-detail-value">
-                      <span className="idc-type-icon-sm">{getTypeIcon(issue.issueType)}</span>
-                      {issue.issueType}
-                    </span>
-                  </div>
-                  <div className="idc-detail-item">
-                    <span className="idc-detail-label">Priority</span>
-                    <span className="idc-detail-value" style={{ color: getPriorityColor(issue.priority) }}>
-                      {issue.priority}
-                    </span>
-                  </div>
-                  <div className="idc-detail-item">
-                    <span className="idc-detail-label">Status</span>
-                    <span className="idc-detail-value">{issue.status}</span>
-                  </div>
-                  <div className="idc-detail-item">
-                    <span className="idc-detail-label">Resolution</span>
-                    <span className="idc-detail-value">{issue.resolutionName || '-'}</span>
-                  </div>
-                  <div className="idc-detail-item">
-                    <span className="idc-detail-label">Affects Version</span>
-                    <span className="idc-detail-value">
-                      {issue.affectsVersionNames?.length ? issue.affectsVersionNames.join(', ') : issue.affectsVersions?.length ? issue.affectsVersions.join(', ') : '-'}
-                    </span>
-                  </div>
-                  <div className="idc-detail-item">
-                    <span className="idc-detail-label">Fix Version</span>
-                    <span className="idc-detail-value">
-                      {issue.fixVersionNames?.length ? issue.fixVersionNames.join(', ') : issue.fixVersions?.length ? issue.fixVersions.join(', ') : '-'}
-                    </span>
-                  </div>
-                  <div className="idc-detail-item">
-                    <span className="idc-detail-label">Components</span>
-                    <span className="idc-detail-value">
-                      {issue.components?.length ? issue.components.join(', ') : '-'}
-                    </span>
+                  <div className="idm-comment-list">
+                    {comments?.map((c: any) => (
+                      <div key={c.id} className="idm-comment-item">
+                        <span className="idm-avatar-sm">{c.authorName?.charAt(0) || 'U'}</span>
+                        <div className="idm-comment-body">
+                          <div className="idm-comment-meta">
+                            <span className="idm-comment-author">{c.authorName}</span>
+                            <span className="idm-comment-time">{getRelativeTime(c.createdAt)}</span>
+                          </div>
+                          <p className="idm-comment-text">{c.content}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-          </div>
+              )}
 
-          {/* Subtasks Section */}
+              {activeTab === 'activity' && issueId && <ActivityTab issueId={issueId} />}
+              {activeTab === 'work' && issueId && <WorklogsTab issueId={issueId} />}
+              {activeTab === 'links' && issueId && <IssueLinksTab issueId={issueId} />}
+              {activeTab === 'labels' && issueId && <LabelsTab issueId={issueId} />}
+              {activeTab === 'attachments' && issueId && <AttachmentsTab issueId={issueId} />}
+
+              {activeTab === 'details' && (
+                <div className="idm-details-panel">
+                  {resolvedIssueUuid && (
+                    <div className="idm-custom-fields-block">
+                      <h4 className="idm-detail-section-title">Custom Fields</h4>
+                      <IssueCustomFieldsPanel issueId={resolvedIssueUuid} issueKey={issue?.issueKey}
+                        projectId={issue?.projectId} issueTypeId={issue?.issueTypeId} variant="inline"
+                      />
+                    </div>
+                  )}
+                  <div className="idm-details-grid">
+                    {[
+                      { label: 'Type', value: <><span className="idm-type-icon-sm">{getTypeIcon(issue.issueType)}</span>{issue.issueType}</> },
+                      { label: 'Priority', value: <span className={getPriorityClass(issue.priority)}>{issue.priority}</span> },
+                      { label: 'Status', value: issue.status },
+                      { label: 'Resolution', value: issue.resolutionName || '-' },
+                      { label: 'Affects Version', value: (issue.affectsVersionNames ?? issue.affectsVersions)?.join(', ') || '-' },
+                      { label: 'Fix Version', value: (issue.fixVersionNames ?? issue.fixVersions)?.join(', ') || '-' },
+                      { label: 'Components', value: issue.components?.join(', ') || '-' },
+                    ].map((d) => (
+                      <div key={d.label} className="idm-detail-row">
+                        <span className="idm-detail-label">{d.label}</span>
+                        <span className="idm-detail-value">{d.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Subtasks */}
           {issue.subtasks && issue.subtasks.length > 0 && (
-            <div className="idc-section">
-              <div className="idc-section-header">
-                <h3>Subtasks ({issue.subtasks.length})</h3>
+            <section className="idm-card">
+              <div className="idm-card-header">
+                <h3 className="idm-card-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                  Subtasks
+                  <span className="idm-count-badge">{issue.subtasks.length}</span>
+                </h3>
               </div>
-              <div className="idc-subtask-list">
+              <div className="idm-subtask-list">
                 {issue.subtasks.map((subtask: any) => (
-                  <Link key={subtask.id} to={`/issues/${subtask.id}`} className="idc-subtask-item">
-                    <span className="idc-subtask-status" style={getStatusStyle(subtask.status)}>
-                      {subtask.status}
-                    </span>
-                    <span className="idc-subtask-key">{subtask.issueKey}</span>
-                    <span className="idc-subtask-title">{subtask.title}</span>
+                  <Link key={subtask.id} to={`/issues/${subtask.id}`} className="idm-subtask-row">
+                    <span className={`idm-status-dot ${getStatusClass(subtask.status)}`} />
+                    <span className="idm-subtask-key">{subtask.issueKey}</span>
+                    <span className="idm-subtask-title">{subtask.title}</span>
+                    <span className={`idm-subtask-status ${getStatusClass(subtask.status)}`}>{subtask.status}</span>
                   </Link>
                 ))}
               </div>
-            </div>
+            </section>
           )}
-        </div>
+        </main>
 
-        {/* ========== RIGHT METADATA SIDEBAR ========== */}
-        <div className="idc-right-col">
+        {/* ─── RIGHT: DRAWER SIDEBAR ─── */}
+        <aside className={`idm-drawer ${drawerOpen ? 'idm-drawer--open' : ''}`} aria-label="Issue details drawer">
 
-          {/* PEOPLE Section */}
-          <div className="idc-sidebar-section">
-            <h4 className="idc-sidebar-section-title">People</h4>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Assignee</span>
-              <div className="idc-sidebar-value">
-                {issue.assigneeId ? (
-                  <div className="idc-user-chip">
-                    <span className="idc-user-avatar-sm">{issue.assigneeName?.charAt(0) || 'U'}</span>
-                    <span>{issue.assigneeName}</span>
-                  </div>
-                ) : (
-                  <span className="idc-no-value">Unassigned</span>
-                )}
+          {/* People */}
+          <div className="idm-drawer-card">
+            <h4 className="idm-drawer-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
+              People
+            </h4>
+            <div className="idm-drawer-rows">
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Assignee</span>
+                <div className="idm-drawer-value">
+                  {issue.assigneeId ? (
+                    <span className="idm-avatar-chip"><span className="idm-avatar-sm">{issue.assigneeName?.charAt(0) || 'U'}</span>{issue.assigneeName}</span>
+                  ) : (
+                    <span className="idm-no-value">Unassigned</span>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Reporter</span>
-              <div className="idc-sidebar-value">
-                <div className="idc-user-chip">
-                  <span className="idc-user-avatar-sm idc-avatar-green">{issue.reporterName?.charAt(0) || 'U'}</span>
-                  <span>{issue.reporterName}</span>
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Reporter</span>
+                <div className="idm-drawer-value">
+                  <span className="idm-avatar-chip"><span className="idm-avatar-sm idm-avatar--green">{issue.reporterName?.charAt(0) || 'U'}</span>{issue.reporterName}</span>
+                </div>
+              </div>
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Votes</span>
+                <div className="idm-drawer-value idm-drawer-value--actions">
+                  <span className="idm-stat">{issue.voteCount || 0}</span>
+                  <button type="button" className="idm-micro-btn" onClick={() => voteMutation.mutate()} disabled={voteMutation.isPending}>
+                    {voteMutation.isPending ? '...' : 'Vote'}
+                  </button>
+                </div>
+              </div>
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Watchers</span>
+                <div className="idm-drawer-value idm-drawer-value--actions">
+                  <span className="idm-stat">{issue.watcherCount || 0}</span>
+                  <button type="button" className="idm-micro-btn" onClick={() => { if (isWatching) unwatchMutation.mutate(); else watchMutation.mutate(); }}
+                    disabled={watchMutation.isPending || unwatchMutation.isPending}
+                  >
+                    {isWatching ? 'Unwatch' : 'Watch'}
+                  </button>
                 </div>
               </div>
             </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Votes</span>
-              <div className="idc-sidebar-value">
-                <span className="idc-vote-count">
-                  {issue.voteCount || 0}
-                  <button
-                    type="button"
-                    className="idc-vote-btn"
-                    onClick={() => voteMutation.mutate()}
-                    disabled={voteMutation.isPending}
-                  >
-                    {voteMutation.isPending ? 'Voting…' : 'Vote for this issue'}
-                  </button>
-                </span>
-              </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Watchers</span>
-              <div className="idc-sidebar-value">
-                <span>{issue.watcherCount || 0}</span>
-                <button
-                  type="button"
-                  className="idc-vote-btn"
-                  style={{ marginLeft: 8 }}
-                  onClick={() => watchMutation.mutate()}
-                  disabled={watchMutation.isPending || unwatchMutation.isPending}
-                >
-                  Watch
-                </button>
-                <button
-                  type="button"
-                  className="idc-vote-btn"
-                  style={{ marginLeft: 4 }}
-                  onClick={() => unwatchMutation.mutate()}
-                  disabled={watchMutation.isPending || unwatchMutation.isPending}
-                >
-                  Unwatch
-                </button>
-              </div>
-            </div>
           </div>
 
-          {/* DETAILS Section */}
-          <div className="idc-sidebar-section">
-            <h4 className="idc-sidebar-section-title">Details</h4>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Priority</span>
-              <div className="idc-sidebar-value">
-                <span style={{ color: getPriorityColor(issue.priority) }}>{issue.priority}</span>
-              </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Resolution</span>
-              <div className="idc-sidebar-value">
-                {issue.resolutionName ? (
-                  <span>{issue.resolutionName}</span>
-                ) : (
-                  <span className="idc-no-value">Unresolved</span>
-                )}
-              </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Components</span>
-              <div className="idc-sidebar-value">
-                {issue.components?.length ? (
-                  <div className="idc-components">
-                    {issue.components.map(c => (
-                      <span key={c} className="idc-component-tag">{c}</span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="idc-no-value">None</span>
-                )}
-              </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Labels</span>
-              <div className="idc-sidebar-value">
-                {issue.labels?.length ? (
-                  <div className="idc-labels">
-                    {issue.labels.map(l => (
-                      <span key={l} className="idc-label">{l}</span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="idc-no-value">None</span>
-                )}
-              </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Security</span>
-              <div className="idc-sidebar-value">
-                {issue.securityLevelName ? (
-                  <span>{issue.securityLevelName}</span>
-                ) : (
-                  <span className="idc-no-value">None</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {resolvedIssueUuid && (
-            <div className="idc-sidebar-section">
-              <h4 className="idc-sidebar-section-title">
-                Custom fields
-                {customFieldsWithValues > 0 && (
-                  <span className="icf-tab-badge" style={{ marginLeft: 6 }}>
-                    {customFieldsWithValues}
+          {/* Details */}
+          <div className="idm-drawer-card">
+            <h4 className="idm-drawer-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+              Details
+            </h4>
+            <div className="idm-drawer-rows">
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Priority</span>
+                <div className="idm-drawer-value">
+                  <span className={`idm-priority-badge idm-priority-badge--sm ${getPriorityClass(issue.priority)}`}>
+                    <span className="idm-priority-arrow">{getPriorityIcon(issue.priority)}</span>
+                    {issue.priority}
                   </span>
-                )}
+                </div>
+              </div>
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Resolution</span>
+                <div className="idm-drawer-value">{issue.resolutionName || <span className="idm-no-value">Unresolved</span>}</div>
+              </div>
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Components</span>
+                <div className="idm-drawer-value">
+                  {issue.components?.length ? (
+                    <div className="idm-tag-list">{issue.components.map(c => <span key={c} className="idm-tag">{c}</span>)}</div>
+                  ) : (
+                    <span className="idm-no-value">None</span>
+                  )}
+                </div>
+              </div>
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Labels</span>
+                <div className="idm-drawer-value">
+                  {issue.labels?.length ? (
+                    <div className="idm-tag-list">{issue.labels.map(l => <span key={l} className="idm-tag idm-tag--label">{l}</span>)}</div>
+                  ) : (
+                    <span className="idm-no-value">None</span>
+                  )}
+                </div>
+              </div>
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Security</span>
+                <div className="idm-drawer-value">{issue.securityLevelName || <span className="idm-no-value">None</span>}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Custom Fields */}
+          {resolvedIssueUuid && (
+            <div className="idm-drawer-card">
+              <h4 className="idm-drawer-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v18M3 12h18" /></svg>
+                Custom Fields
+                {customFieldsWithValues > 0 && <span className="idm-count-badge">{customFieldsWithValues}</span>}
               </h4>
-              <IssueCustomFieldsPanel
-                issueId={resolvedIssueUuid}
-                issueKey={issue.issueKey}
-                projectId={issue.projectId}
-                issueTypeId={issue.issueTypeId}
-                variant="sidebar"
+              <IssueCustomFieldsPanel issueId={resolvedIssueUuid} issueKey={issue.issueKey}
+                projectId={issue.projectId} issueTypeId={issue.issueTypeId} variant="sidebar"
               />
-              <button
-                type="button"
-                className="icf-view-all-btn"
-                onClick={() => setActiveTab('details')}
-              >
-                View all in Details tab →
+              <button type="button" className="idm-view-all-btn" onClick={() => setActiveTab('details')}>
+                View all in Details tab
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
               </button>
             </div>
           )}
 
-          {/* TIME TRACKING Section */}
-          <div className="idc-sidebar-section">
-            <h4 className="idc-sidebar-section-title">Time Tracking</h4>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Original Estimate</span>
-              <div className="idc-sidebar-value">
-                <span>{formatTimeWithDays(issue.originalEstimate)}</span>
-              </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Remaining Estimate</span>
-              <div className="idc-sidebar-value">
-                <span>{formatTimeWithDays(issue.remainingEstimate)}</span>
-              </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Time Spent</span>
-              <div className="idc-sidebar-value">
-                <span>{formatTimeWithDays(issue.timeSpent)}</span>
-              </div>
-            </div>
-            {issue.workRatio !== undefined && (
-              <div className="idc-sidebar-item">
-                <span className="idc-sidebar-label">Work Ratio</span>
-                <div className="idc-sidebar-value">
-                  <span>{issue.workRatio}%</span>
+          {/* Time Tracking */}
+          <div className="idm-drawer-card">
+            <h4 className="idm-drawer-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+              Time Tracking
+            </h4>
+            {(issue.originalEstimate || issue.timeSpent) && (
+              <div className="idm-time-bar">
+                <div className="idm-time-bar-track">
+                  <div className="idm-time-bar-fill" style={{ width: `${timeProgress}%` }} />
                 </div>
+                <span className="idm-time-bar-label">{timeProgress}%</span>
               </div>
             )}
+            <div className="idm-drawer-rows">
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Original Estimate</span>
+                <div className="idm-drawer-value idm-mono">{formatTimeWithDays(issue.originalEstimate)}</div>
+              </div>
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Remaining</span>
+                <div className="idm-drawer-value idm-mono">{formatTimeWithDays(issue.remainingEstimate)}</div>
+              </div>
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Time Spent</span>
+                <div className="idm-drawer-value idm-mono">{formatTimeWithDays(issue.timeSpent)}</div>
+              </div>
+              {issue.workRatio !== undefined && (
+                <div className="idm-drawer-row">
+                  <span className="idm-drawer-label">Work Ratio</span>
+                  <div className="idm-drawer-value idm-mono">{issue.workRatio}%</div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* AGILE Section */}
-          <div className="idc-sidebar-section">
-            <h4 className="idc-sidebar-section-title">Agile</h4>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Sprint</span>
-              <div className="idc-sidebar-value">
-                {issue.sprintName ? (
-                  <span className="idc-sprint-tag">{issue.sprintName}</span>
-                ) : (
-                  <span className="idc-no-value">Backlog</span>
-                )}
-              </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Story Points</span>
-              <div className="idc-sidebar-value">
-                {issue.storyPoints !== undefined ? (
-                  <span className="idc-story-points">{issue.storyPoints}</span>
-                ) : (
-                  <span className="idc-no-value">None</span>
-                )}
-              </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Epic Link</span>
-              <div className="idc-sidebar-value">
-                {issue.epicId ? (
-                  <Link to={`/epics/${issue.epicId}`} className="idc-epic-link">
-                    <span className="idc-epic-icon" style={{ color: issue.epicColor }}>⚡</span>
-                    <span>{issue.epicName}</span>
-                  </Link>
-                ) : (
-                  <span className="idc-no-value">None</span>
-                )}
-              </div>
-            </div>
-            {issue.teamName && (
-              <div className="idc-sidebar-item">
-                <span className="idc-sidebar-label">Team</span>
-                <div className="idc-sidebar-value">
-                  <span>{issue.teamName}</span>
+          {/* Agile */}
+          <div className="idm-drawer-card">
+            <h4 className="idm-drawer-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+              Agile
+            </h4>
+            <div className="idm-drawer-rows">
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Sprint</span>
+                <div className="idm-drawer-value">
+                  {issue.sprintName ? <span className="idm-tag idm-tag--sprint">{issue.sprintName}</span> : <span className="idm-no-value">Backlog</span>}
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* DATES Section */}
-          <div className="idc-sidebar-section">
-            <h4 className="idc-sidebar-section-title">Dates</h4>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Created</span>
-              <div className="idc-sidebar-value">
-                <span>{formatDateTime(issue.createdAt)}</span>
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Story Points</span>
+                <div className="idm-drawer-value">
+                  {issue.storyPoints !== undefined ? <span className="idm-sp-badge">{issue.storyPoints}</span> : <span className="idm-no-value">None</span>}
+                </div>
               </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Updated</span>
-              <div className="idc-sidebar-value">
-                <span>{formatDateTime(issue.updatedAt)}</span>
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Epic Link</span>
+                <div className="idm-drawer-value">
+                  {issue.epicId ? (
+                    <Link to={`/epics/${issue.epicId}`} className="idm-tag idm-tag--epic">
+                      <span style={{ color: issue.epicColor }}>&#x26A1;</span> {issue.epicName}
+                    </Link>
+                  ) : (
+                    <span className="idm-no-value">None</span>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Resolved</span>
-              <div className="idc-sidebar-value">
-                <span>{issue.resolvedAt ? formatDateTime(issue.resolvedAt) : '-'}</span>
-              </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Due Date</span>
-              <div className="idc-sidebar-value">
-                <span>{issue.dueDate ? formatDate(issue.dueDate) : '-'}</span>
-              </div>
-            </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Last Viewed</span>
-              <div className="idc-sidebar-value">
-                <span>{issue.lastViewedAt ? formatDateTime(issue.lastViewedAt) : '-'}</span>
-              </div>
+              {issue.teamName && (
+                <div className="idm-drawer-row">
+                  <span className="idm-drawer-label">Team</span>
+                  <div className="idm-drawer-value">{issue.teamName}</div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* VERSIONS Section */}
-          <div className="idc-sidebar-section">
-            <h4 className="idc-sidebar-section-title">Versions</h4>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Affects Version/s</span>
-              <div className="idc-sidebar-value">
-                {(issue.affectsVersionNames ?? issue.affectsVersions)?.length ? (
-                  <div className="idc-version-list">
-                    {(issue.affectsVersionNames ?? issue.affectsVersions ?? []).map((v, i) => (
-                      <span key={i} className="idc-version-tag">{v}</span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="idc-no-value">None</span>
-                )}
-              </div>
+          {/* Dates */}
+          <div className="idm-drawer-card">
+            <h4 className="idm-drawer-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              Dates
+            </h4>
+            <div className="idm-drawer-rows">
+              <div className="idm-drawer-row"><span className="idm-drawer-label">Created</span><div className="idm-drawer-value">{formatDateTime(issue.createdAt)}</div></div>
+              <div className="idm-drawer-row"><span className="idm-drawer-label">Updated</span><div className="idm-drawer-value">{formatDateTime(issue.updatedAt)}</div></div>
+              <div className="idm-drawer-row"><span className="idm-drawer-label">Resolved</span><div className="idm-drawer-value">{issue.resolvedAt ? formatDateTime(issue.resolvedAt) : '-'}</div></div>
+              <div className="idm-drawer-row"><span className="idm-drawer-label">Due Date</span><div className="idm-drawer-value">{issue.dueDate ? formatDate(issue.dueDate) : '-'}</div></div>
+              <div className="idm-drawer-row"><span className="idm-drawer-label">Last Viewed</span><div className="idm-drawer-value">{issue.lastViewedAt ? formatDateTime(issue.lastViewedAt) : '-'}</div></div>
             </div>
-            <div className="idc-sidebar-item">
-              <span className="idc-sidebar-label">Fix Version/s</span>
-              <div className="idc-sidebar-value">
-                {(issue.fixVersionNames ?? issue.fixVersions)?.length ? (
-                  <div className="idc-version-list">
-                    {(issue.fixVersionNames ?? issue.fixVersions ?? []).map((v, i) => (
-                      <span key={i} className="idc-version-tag">{v}</span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="idc-no-value">None</span>
-                )}
+          </div>
+
+          {/* Versions */}
+          <div className="idm-drawer-card">
+            <h4 className="idm-drawer-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
+              Versions
+            </h4>
+            <div className="idm-drawer-rows">
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Affects</span>
+                <div className="idm-drawer-value">
+                  {(issue.affectsVersionNames ?? issue.affectsVersions)?.length ? (
+                    <div className="idm-tag-list">{(issue.affectsVersionNames ?? issue.affectsVersions ?? []).map((v, i) => <span key={i} className="idm-tag idm-tag--version">{v}</span>)}</div>
+                  ) : (
+                    <span className="idm-no-value">None</span>
+                  )}
+                </div>
+              </div>
+              <div className="idm-drawer-row">
+                <span className="idm-drawer-label">Fix Version</span>
+                <div className="idm-drawer-value">
+                  {(issue.fixVersionNames ?? issue.fixVersions)?.length ? (
+                    <div className="idm-tag-list">{(issue.fixVersionNames ?? issue.fixVersions ?? []).map((v, i) => <span key={i} className="idm-tag idm-tag--version">{v}</span>)}</div>
+                  ) : (
+                    <span className="idm-no-value">None</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
           {/* Linked Issues */}
           {issue.linkedIssues && issue.linkedIssues.length > 0 && (
-            <div className="idc-sidebar-section">
-              <h4 className="idc-sidebar-section-title">Linked Issues</h4>
-              <div className="idc-linked-list">
+            <div className="idm-drawer-card">
+              <h4 className="idm-drawer-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" /><path d="M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 10-5.656-5.656l-1.1 1.1" /></svg>
+                Linked Issues
+                <span className="idm-count-badge">{issue.linkedIssues.length}</span>
+              </h4>
+              <div className="idm-linked-list">
                 {issue.linkedIssues.map((link, idx) => (
-                  <div key={idx} className="idc-linked-item">
-                    <span className="idc-linked-type">{link.type}</span>
-                    <Link to={`/issues/${link.key}`} className="idc-linked-key">{link.key}</Link>
-                    <span className="idc-linked-title">{link.title}</span>
+                  <div key={idx} className="idm-linked-row">
+                    <span className="idm-linked-type">{link.type}</span>
+                    <Link to={`/issues/${link.key}`} className="idm-linked-key">{link.key}</Link>
+                    <span className="idm-linked-title">{link.title}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
-        </div>
+        </aside>
       </div>
 
-      {/* Edit Modal */}
+      {/* ── MODALS ── */}
       {showEditModal && (
         <EditIssueModal
           issue={issue}
           onClose={() => setShowEditModal(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
-            setShowEditModal(false);
-          }}
+          onSuccess={() => { queryClient.invalidateQueries({ queryKey: ['issue', issueId] }); setShowEditModal(false); }}
         />
       )}
-
       {showCreateSubtask && issue && (
         <CreateIssueModal
-          projectId={issue.projectId}
-          projectKey={issue.projectKey}
-          parentIssueId={issueId}
-          defaultTitle={`Subtask of ${issue.issueKey}`}
+          projectId={issue.projectId} projectKey={issue.projectKey}
+          parentIssueId={issueId} defaultTitle={`Subtask of ${issue.issueKey}`}
           onClose={() => setShowCreateSubtask(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
-            setShowCreateSubtask(false);
-          }}
+          onSuccess={() => { queryClient.invalidateQueries({ queryKey: ['issue', issueId] }); setShowCreateSubtask(false); }}
         />
       )}
-
       {showMoveModal && issue && (
         <IssueMoveModal
           currentProjectId={issue.projectId}

@@ -10,7 +10,7 @@ import java.util.UUID;
 @Builder
 public class AssignVersionToIssueRequest {
 
-    @NotNull(message = "Issue ID is required")
+    @NotNull(message = "{validation.version.issueId.required}")
     private UUID issueId;
 
     private UUID versionId;

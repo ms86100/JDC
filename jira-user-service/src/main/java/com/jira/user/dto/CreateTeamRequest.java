@@ -13,13 +13,13 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateTeamRequest {
 
-    @NotNull(message = "Organization ID is required")
+    @NotNull(message = "{validation.organization.id.required}")
     private UUID organizationId;
 
-    @NotBlank(message = "Team name is required")
-    @Size(max = 255, message = "Team name must not exceed 255 characters")
+    @NotBlank(message = "{validation.team.name.required}")
+    @Size(max = 255, message = "{validation.team.name.size}")
     private String name;
 
-    @Size(max = 2000, message = "Description must not exceed 2000 characters")
+    @Size(max = 2000, message = "{validation.team.description.size}")
     private String description;
 }

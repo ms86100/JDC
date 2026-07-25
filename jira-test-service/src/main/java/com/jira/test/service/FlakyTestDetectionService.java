@@ -9,6 +9,7 @@ import com.jira.test.exception.*;
 import com.jira.test.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,29 +32,50 @@ public class FlakyTestDetectionService {
     private final TestQuarantineRepository quarantineRepository;
     private final ObjectMapper objectMapper;
 
-    private static final BigDecimal FLaky_THRESHOLD = new BigDecimal("0.3");
-    private static final BigDecimal HIGH_FLAKY_THRESHOLD = new BigDecimal("0.5");
-    private static final BigDecimal ML_CONFIDENCE_THRESHOLD = new BigDecimal("0.75");
-    private static final int MIN_EXECUTIONS_FOR_ANALYSIS = 5;
-    private static final int RETENTION_DAYS = 30;
+    @Value("${app.flaky.threshold:0.3}")
+    private BigDecimal flakyThreshold;
 
-    // ML model coefficients for flakiness prediction (simplified linear model)
-    private static final Map<String, Double> ML_COEFFICIENTS = Map.of(
-            "failureRate", 0.4,
-            "recencyWeight", 0.25,
-            "patternCount", 0.15,
-            "envDiversity", 0.1,
-            "timingVariance", 0.1
-    );
+    @Value("${app.flaky.high-threshold:0.5}")
+    private BigDecimal highFlakyThreshold;
 
-    // Retry configuration
-    private static final int MAX_RETRY_ATTEMPTS = 3;
-    private static final int RETRY_DELAY_MS = 1000;
+    @Value("${app.flaky.ml-confidence-threshold:0.75}")
+    private BigDecimal mlConfidenceThreshold;
 
-    // Pattern recognition thresholds
-    private static final double INTERMITTENT_THRESHOLD = 0.3;
-    private static final double TIMING_THRESHOLD = 0.4;
-    private static final double DATA_DEPENDENCY_THRESHOLD = 0.35;
+    @Value("${app.flaky.min-executions:5}")
+    private int minExecutionsForAnalysis;
+
+    @Value("${app.flaky.retention-days:30}")
+    private int retentionDays;
+
+    @Value("${app.flaky.max-retry-attempts:3}")
+    private int maxRetryAttempts;
+
+    @Value("${app.flaky.retry-delay-ms:1000}")
+    private int retryDelayMs;
+
+    @Value("${app.flaky.intermittent-threshold:0.3}")
+    private double intermittentThreshold;
+
+    @Value("${app.flaky.timing-threshold:0.4}")
+    private double timingThreshold;
+
+    @Value("${app.flaky.data-dependency-threshold:0.35}")
+    private double dataDependencyThreshold;
+
+    @Value("${app.flaky.ml-coefficient.failure-rate:0.4}")
+    private double mlCoefficientFailureRate;
+
+    @Value("${app.flaky.ml-coefficient.recency-weight:0.25}")
+    private double mlCoefficientRecencyWeight;
+
+    @Value("${app.flaky.ml-coefficient.pattern-count:0.15}")
+    private double mlCoefficientPatternCount;
+
+    @Value("${app.flaky.ml-coefficient.env-diversity:0.1}")
+    private double mlCoefficientEnvDiversity;
+
+    @Value("${app.flaky.ml-coefficient.timing-variance:0.1}")
+    private double mlCoefficientTimingVariance;
 
     // ==================== Execution Recording ====================
 
@@ -189,10 +211,20 @@ public class FlakyTestDetectionService {
         return Math.min(cv, 1.0); // Normalize to [0, 1]
     }
 
+    private Map<String, Double> getMLCoefficients() {
+        return Map.of(
+                "failureRate", mlCoefficientFailureRate,
+                "recencyWeight", mlCoefficientRecencyWeight,
+                "patternCount", mlCoefficientPatternCount,
+                "envDiversity", mlCoefficientEnvDiversity,
+                "timingVariance", mlCoefficientTimingVariance
+        );
+    }
+
     private double calculateMLScore(Map<String, Double> factors) {
         double score = 0.0;
 
-        for (Map.Entry<String, Double> entry : ML_COEFFICIENTS.entrySet()) {
+        for (Map.Entry<String, Double> entry : getMLCoefficients().entrySet()) {
             Double factorValue = factors.getOrDefault(entry.getKey(), 0.0);
             score += factorValue * entry.getValue();
         }
@@ -210,13 +242,13 @@ public class FlakyTestDetectionService {
     }
 
     private String determinePredictedStatus(BigDecimal score, BigDecimal confidence) {
-        if (confidence.compareTo(ML_CONFIDENCE_THRESHOLD) < 0) {
+        if (confidence.compareTo(mlConfidenceThreshold) < 0) {
             return "insufficient_data";
         }
 
-        if (score.compareTo(HIGH_FLAKY_THRESHOLD) >= 0) {
+        if (score.compareTo(highFlakyThreshold) >= 0) {
             return "likely_flaky";
-        } else if (score.compareTo(FLaky_THRESHOLD) >= 0) {
+        } else if (score.compareTo(flakyThreshold) >= 0) {
             return "possibly_flaky";
         } else {
             return "likely_stable";
@@ -228,7 +260,7 @@ public class FlakyTestDetectionService {
     public RetryStrategy determineRetryStrategy(UUID testId) {
         FlakyTestAnalysis analysis = flakyAnalysisRepository.findByTestId(testId).orElse(null);
 
-        if (analysis == null || analysis.getTotalExecutions() < MIN_EXECUTIONS_FOR_ANALYSIS) {
+        if (analysis == null || analysis.getTotalExecutions() < minExecutionsForAnalysis) {
             return RetryStrategy.builder()
                     .testId(testId)
                     .maxAttempts(1)
@@ -254,20 +286,20 @@ public class FlakyTestDetectionService {
 
         if (failureRate > 0.6 && hasTiming) {
             strategyType = "EXPONENTIAL_BACKOFF";
-            maxAttempts = MAX_RETRY_ATTEMPTS;
-            delayMs = RETRY_DELAY_MS;
+            maxAttempts = maxRetryAttempts;
+            delayMs = retryDelayMs;
         } else if (failureRate > 0.4 && hasIntermittent) {
             strategyType = "FIXED_DELAY";
-            maxAttempts = Math.min(MAX_RETRY_ATTEMPTS, 2);
-            delayMs = RETRY_DELAY_MS * 2;
+            maxAttempts = Math.min(maxRetryAttempts, 2);
+            delayMs = retryDelayMs * 2;
         } else if (failureRate > 0.2 && hasDataDependency) {
             strategyType = "SEQUENTIAL";
             maxAttempts = 2;
-            delayMs = RETRY_DELAY_MS;
+            delayMs = retryDelayMs;
         } else if (failureRate > 0.1) {
             strategyType = "SINGLE_RETRY";
             maxAttempts = 1;
-            delayMs = RETRY_DELAY_MS;
+            delayMs = retryDelayMs;
         } else {
             strategyType = "NONE";
             maxAttempts = 0;
@@ -276,7 +308,7 @@ public class FlakyTestDetectionService {
 
         // Adjust based on ML prediction
         FlakinessPrediction prediction = predictFlakiness(testId);
-        if (prediction.getPredictionScore().compareTo(HIGH_FLAKY_THRESHOLD) >= 0) {
+        if (prediction.getPredictionScore().compareTo(highFlakyThreshold) >= 0) {
             maxAttempts = Math.max(maxAttempts, 2);
         }
 
@@ -307,7 +339,7 @@ public class FlakyTestDetectionService {
 
     public List<RetryRecommendation> getRetryRecommendations(UUID projectId) {
         List<FlakyTestAnalysis> flakyTests = flakyAnalysisRepository.findAll().stream()
-                .filter(a -> a.getFlakyScore().compareTo(FLaky_THRESHOLD) >= 0)
+                .filter(a -> a.getFlakyScore().compareTo(flakyThreshold) >= 0)
                 .collect(Collectors.toList());
 
         List<RetryRecommendation> recommendations = new ArrayList<>();
@@ -518,7 +550,7 @@ public class FlakyTestDetectionService {
 
     private BigDecimal calculateRootCauseConfidence(List<FlakyTestPattern> patterns,
                                                     List<ExecutionFlakinessRecord> records) {
-        if (records.size() < MIN_EXECUTIONS_FOR_ANALYSIS) {
+        if (records.size() < minExecutionsForAnalysis) {
             return BigDecimal.valueOf(0.3);
         }
 
@@ -555,7 +587,7 @@ public class FlakyTestDetectionService {
         int min = durations.stream().mapToInt(i -> i).min().orElse(0);
         int max = durations.stream().mapToInt(i -> i).max().orElse(0);
         double variance = calculateVariance(durations, avg);
-        boolean hasTimingIssue = variance > TIMING_THRESHOLD;
+        boolean hasTimingIssue = variance > timingThreshold;
 
         return TimingAnalysis.builder()
                 .averageDuration((int) avg)
@@ -646,13 +678,13 @@ public class FlakyTestDetectionService {
     public void identifyPatterns(UUID testId) {
         List<ExecutionFlakinessRecord> records = recordRepository.findByTestId(testId);
 
-        if (records.size() < MIN_EXECUTIONS_FOR_ANALYSIS) {
+        if (records.size() < minExecutionsForAnalysis) {
             return;
         }
 
         // Analyze timing patterns
         double timingVariance = calculateTimingVariance(records);
-        if (timingVariance > TIMING_THRESHOLD) {
+        if (timingVariance > timingThreshold) {
             createOrUpdatePattern(testId, "timing", "Test execution time varies significantly",
                     BigDecimal.valueOf(timingVariance), null, null,
                     "Review async operations and add explicit waits");
@@ -685,7 +717,7 @@ public class FlakyTestDetectionService {
                         e.getKey().toLowerCase().contains("undefined"))
                 .count();
 
-        if (dataRelatedFailures > records.size() * DATA_DEPENDENCY_THRESHOLD) {
+        if (dataRelatedFailures > records.size() * dataDependencyThreshold) {
             createOrUpdatePattern(testId, "data-dependent", "Test depends on external data",
                     BigDecimal.valueOf((double) dataRelatedFailures / records.size()),
                     null, null, "Use test data factories, mock external data");
@@ -695,7 +727,7 @@ public class FlakyTestDetectionService {
         long retryCount = records.stream()
                 .filter(r -> r.getRetryAttempt() != null && r.getRetryAttempt() > 0)
                 .count();
-        if (retryCount > records.size() * INTERMITTENT_THRESHOLD) {
+        if (retryCount > records.size() * intermittentThreshold) {
             createOrUpdatePattern(testId, "intermittent", "Test requires retries to pass",
                     BigDecimal.valueOf((double) retryCount / records.size()),
                     null, null, "Investigate race conditions or async operations");
@@ -815,8 +847,8 @@ public class FlakyTestDetectionService {
     // ==================== Auto-Quarantine Evaluation ====================
 
     private void evaluateAutoQuarantine(FlakyTestAnalysis analysis) {
-        if (analysis.getFlakyScore().compareTo(HIGH_FLAKY_THRESHOLD) >= 0 &&
-            analysis.getTotalExecutions() >= MIN_EXECUTIONS_FOR_ANALYSIS) {
+        if (analysis.getFlakyScore().compareTo(highFlakyThreshold) >= 0 &&
+            analysis.getTotalExecutions() >= minExecutionsForAnalysis) {
 
             if (quarantineRepository.findByTestId(analysis.getTestId()).isEmpty()) {
                 analysis.setCurrentStatus("quarantine_candidate");
@@ -831,7 +863,7 @@ public class FlakyTestDetectionService {
         FlakyTestAnalysis analysis = flakyAnalysisRepository.findByTestId(testId).orElse(null);
         if (analysis == null) return false;
         return "quarantine_candidate".equals(analysis.getCurrentStatus()) ||
-               analysis.getFlakyScore().compareTo(HIGH_FLAKY_THRESHOLD) >= 0;
+               analysis.getFlakyScore().compareTo(highFlakyThreshold) >= 0;
     }
 
     // ==================== Helper Methods ====================
@@ -880,9 +912,9 @@ public class FlakyTestDetectionService {
     }
 
     private void updateTestStatus(FlakyTestAnalysis analysis) {
-        if (analysis.getFlakyScore().compareTo(HIGH_FLAKY_THRESHOLD) >= 0) {
+        if (analysis.getFlakyScore().compareTo(highFlakyThreshold) >= 0) {
             analysis.setCurrentStatus("flaky");
-        } else if (analysis.getFlakyScore().compareTo(FLaky_THRESHOLD) >= 0) {
+        } else if (analysis.getFlakyScore().compareTo(flakyThreshold) >= 0) {
             analysis.setCurrentStatus("flaky");
         } else {
             analysis.setCurrentStatus("stable");

@@ -9,6 +9,7 @@ import com.jira.comment.exception.ResourceNotFoundException;
 import com.jira.comment.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 public class CommentService {
 
     private final CommentRepository commentRepository;
+    private final MessageSource messageSource;
 
     @Transactional
     public CommentResponse createComment(CreateCommentRequest request, UUID userId) {
@@ -31,10 +33,13 @@ public class CommentService {
         Comment parentComment = null;
         if (request.getParentCommentId() != null) {
             parentComment = commentRepository.findById(request.getParentCommentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Parent comment not found: " + request.getParentCommentId()));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            messageSource.getMessage("comment.parent.not.found",
+                                    new Object[]{request.getParentCommentId()}, Locale.ENGLISH)));
 
             if (parentComment.getDeleted()) {
-                throw new ResourceNotFoundException("Parent comment has been deleted");
+                throw new ResourceNotFoundException(
+                        messageSource.getMessage("comment.parent.deleted", null, Locale.ENGLISH));
             }
         }
 
@@ -90,22 +95,25 @@ public class CommentService {
         log.info("Updating comment: {} by user: {}", commentId, userId);
 
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Comment not found: " + commentId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageSource.getMessage("comment.not.found",
+                                new Object[]{commentId}, Locale.ENGLISH)));
 
         if (comment.getDeleted()) {
-            throw new ResourceNotFoundException("Comment has been deleted");
+            throw new ResourceNotFoundException(
+                    messageSource.getMessage("comment.deleted", null, Locale.ENGLISH));
         }
 
         if (!comment.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("User is not authorized to update this comment");
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("comment.update.unauthorized", null, Locale.ENGLISH));
         }
 
         // Optimistic locking: check version if provided
         if (request.getVersion() != null && !request.getVersion().equals(comment.getVersion())) {
             throw new OptimisticLockException(
-                "Comment was modified by another user. Please refresh and try again. " +
-                "Expected version: " + comment.getVersion() + ", provided: " + request.getVersion()
-            );
+                    messageSource.getMessage("comment.optimistic.lock",
+                            new Object[]{comment.getVersion(), request.getVersion()}, Locale.ENGLISH));
         }
 
         comment.setContent(request.getContent());
@@ -123,14 +131,18 @@ public class CommentService {
         log.info("Deleting (soft) comment: {} by user: {}", commentId, userId);
 
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Comment not found: " + commentId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageSource.getMessage("comment.not.found",
+                                new Object[]{commentId}, Locale.ENGLISH)));
 
         if (comment.getDeleted()) {
-            throw new ResourceNotFoundException("Comment has already been deleted");
+            throw new ResourceNotFoundException(
+                    messageSource.getMessage("comment.already.deleted", null, Locale.ENGLISH));
         }
 
         if (!comment.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("User is not authorized to delete this comment");
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("comment.delete.unauthorized", null, Locale.ENGLISH));
         }
 
         comment.setDeleted(true);

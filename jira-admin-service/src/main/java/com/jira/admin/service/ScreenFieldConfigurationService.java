@@ -4,6 +4,7 @@ import com.jira.admin.entity.*;
 import com.jira.admin.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,24 @@ public class ScreenFieldConfigurationService {
     private final ScreenRepository screenRepository;
     private final IssueTypeScreenSchemeRepository issueTypeScreenSchemeRepository;
     private final ProjectRepository projectRepository;
+
+    @Value("${app.screen.tab.description-fields:summary,description,environment}")
+    private String descriptionTabFieldsStr;
+
+    @Value("${app.screen.tab.details-create-fields:issuetype,priority,assignee,reporter,labels,security,duedate,components,fixVersions,affectsVersions}")
+    private String detailsCreateTabFieldsStr;
+
+    @Value("${app.screen.tab.details-edit-fields:issuetype,priority,assignee,reporter,labels,security,duedate,components,fixVersions,affectsVersions,linkedIssues,subtasks,attachment}")
+    private String detailsEditTabFieldsStr;
+
+    @Value("${app.screen.tab.people-fields:watcher,vote,comment}")
+    private String peopleTabFieldsStr;
+
+    @Value("${app.screen.tab.development-fields:sprint,epic,storyPoints,flagged,worklog}")
+    private String developmentTabFieldsStr;
+
+    @Value("${app.screen.tab.activity-fields:activity}")
+    private String activityTabFieldsStr;
 
     /**
      * Get field configuration for a specific issue type and project.
@@ -271,7 +290,7 @@ public class ScreenFieldConfigurationService {
         ScreenConfigResult.ScreenTabConfig descTab = new ScreenConfigResult.ScreenTabConfig();
         descTab.setTabName("Description");
         descTab.setTabOrder(1);
-        descTab.setFields(Arrays.asList("summary", "description", "environment"));
+        descTab.setFields(Arrays.asList(descriptionTabFieldsStr.split(",")));
         tabs.add(descTab);
 
         // Details tab
@@ -279,12 +298,9 @@ public class ScreenFieldConfigurationService {
         detailsTab.setTabName("Details");
         detailsTab.setTabOrder(2);
         if ("create".equals(operation)) {
-            detailsTab.setFields(Arrays.asList("issuetype", "priority", "assignee", "reporter", "labels",
-                "security", "duedate", "components", "fixVersions", "affectsVersions"));
+            detailsTab.setFields(Arrays.asList(detailsCreateTabFieldsStr.split(",")));
         } else {
-            detailsTab.setFields(Arrays.asList("issuetype", "priority", "assignee", "reporter", "labels",
-                "security", "duedate", "components", "fixVersions", "affectsVersions",
-                "linkedIssues", "subtasks", "attachment"));
+            detailsTab.setFields(Arrays.asList(detailsEditTabFieldsStr.split(",")));
         }
         tabs.add(detailsTab);
 
@@ -293,7 +309,7 @@ public class ScreenFieldConfigurationService {
             ScreenConfigResult.ScreenTabConfig peopleTab = new ScreenConfigResult.ScreenTabConfig();
             peopleTab.setTabName("People");
             peopleTab.setTabOrder(3);
-            peopleTab.setFields(Arrays.asList("watcher", "vote", "comment"));
+            peopleTab.setFields(Arrays.asList(peopleTabFieldsStr.split(",")));
             tabs.add(peopleTab);
         }
 
@@ -302,7 +318,7 @@ public class ScreenFieldConfigurationService {
             ScreenConfigResult.ScreenTabConfig devTab = new ScreenConfigResult.ScreenTabConfig();
             devTab.setTabName("Development");
             devTab.setTabOrder(4);
-            devTab.setFields(Arrays.asList("sprint", "epic", "storyPoints", "flagged", "worklog"));
+            devTab.setFields(Arrays.asList(developmentTabFieldsStr.split(",")));
             tabs.add(devTab);
         }
 
@@ -311,7 +327,7 @@ public class ScreenFieldConfigurationService {
             ScreenConfigResult.ScreenTabConfig activityTab = new ScreenConfigResult.ScreenTabConfig();
             activityTab.setTabName("Activity");
             activityTab.setTabOrder(5);
-            activityTab.setFields(Arrays.asList("activity"));
+            activityTab.setFields(Arrays.asList(activityTabFieldsStr.split(",")));
             tabs.add(activityTab);
         }
 

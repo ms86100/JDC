@@ -16,6 +16,27 @@ public class StandardReportService {
     @Value("${issue.service.url:http://jira-issue-service:8084}")
     private String issueServiceUrl;
 
+    @Value("${app.defaults.report-period:MONTHLY}")
+    private String defaultReportPeriod;
+
+    @Value("${app.defaults.recently-created-period:DAILY}")
+    private String defaultRecentlyCreatedPeriod;
+
+    @Value("${app.defaults.time-since-field:updatedAt}")
+    private String defaultTimeSinceField;
+
+    @Value("${app.defaults.threshold-days:30}")
+    private int defaultThresholdDays;
+
+    @Value("${app.defaults.unassigned-label:Unassigned}")
+    private String unassignedLabel;
+
+    @Value("${app.defaults.unknown-label:Unknown}")
+    private String unknownLabel;
+
+    @Value("${app.defaults.group-by-all-label:all}")
+    private String groupByAllLabel;
+
     private final RestTemplate restTemplate;
 
     @SuppressWarnings("unchecked")
@@ -56,7 +77,7 @@ public class StandardReportService {
         Map<String, Double> averages = new LinkedHashMap<>();
         groups.forEach((k, v) -> averages.put(k, v.stream().mapToLong(Long::longValue).average().orElse(0)));
 
-        return Map.of("projectId", projectId, "groupBy", groupBy != null ? groupBy : "all", "averageAgeDays", averages, "totalUnresolved", issues.size());
+        return Map.of("projectId", projectId, "groupBy", groupBy != null ? groupBy : groupByAllLabel, "averageAgeDays", averages, "totalUnresolved", issues.size());
     }
 
     @SuppressWarnings("unchecked")
@@ -77,7 +98,7 @@ public class StandardReportService {
         Map<String, Double> averages = new LinkedHashMap<>();
         groups.forEach((k, v) -> averages.put(k, v.stream().mapToLong(Long::longValue).average().orElse(0)));
 
-        return Map.of("projectId", projectId, "period", period != null ? period : "MONTHLY", "averageResolutionDays", averages);
+        return Map.of("projectId", projectId, "period", period != null ? period : defaultReportPeriod, "averageResolutionDays", averages);
     }
 
     @SuppressWarnings("unchecked")
@@ -107,7 +128,7 @@ public class StandardReportService {
             if (periodKey != null) created.merge(periodKey, 1, Integer::sum);
         }
 
-        return Map.of("projectId", projectId, "days", days, "period", period != null ? period : "DAILY", "created", created, "totalIssues", issues.size());
+        return Map.of("projectId", projectId, "days", days, "period", period != null ? period : defaultRecentlyCreatedPeriod, "created", created, "totalIssues", issues.size());
     }
 
     @SuppressWarnings("unchecked")
@@ -119,7 +140,7 @@ public class StandardReportService {
         List<Map<String, String>> staleIssues = new ArrayList<>();
 
         for (Map<String, Object> issue : issues) {
-            long fieldMs = parseTimestampMs(issue.get(field != null ? field : "updatedAt"));
+            long fieldMs = parseTimestampMs(issue.get(field != null ? field : defaultTimeSinceField));
             if (fieldMs > 0) {
                 long daysSince = (now - fieldMs) / (1000 * 60 * 60 * 24);
                 if (daysSince >= thresholdDays) {
@@ -131,7 +152,7 @@ public class StandardReportService {
             }
         }
 
-        return Map.of("projectId", projectId, "field", field != null ? field : "updatedAt", "thresholdDays", thresholdDays, "issues", staleIssues, "totalStale", staleIssues.size());
+        return Map.of("projectId", projectId, "field", field != null ? field : defaultTimeSinceField, "thresholdDays", thresholdDays, "issues", staleIssues, "totalStale", staleIssues.size());
     }
 
     @SuppressWarnings("unchecked")
@@ -140,7 +161,7 @@ public class StandardReportService {
 
         Map<String, Map<String, Object>> assigneeWorkload = new LinkedHashMap<>();
         for (Map<String, Object> issue : issues) {
-            String assignee = issue.get("assigneeName") != null ? issue.get("assigneeName").toString() : "Unassigned";
+            String assignee = issue.get("assigneeName") != null ? issue.get("assigneeName").toString() : unassignedLabel;
             assigneeWorkload.computeIfAbsent(assignee, k -> new LinkedHashMap<>(Map.of("issueCount", 0, "storyPoints", 0)));
             Map<String, Object> workload = assigneeWorkload.get(assignee);
             workload.put("issueCount", (int) workload.get("issueCount") + 1);
@@ -157,7 +178,7 @@ public class StandardReportService {
 
         Map<String, Map<String, Object>> projectWorkload = new LinkedHashMap<>();
         for (Map<String, Object> issue : issues) {
-            String project = issue.get("projectKey") != null ? issue.get("projectKey").toString() : "Unknown";
+            String project = issue.get("projectKey") != null ? issue.get("projectKey").toString() : unknownLabel;
             projectWorkload.computeIfAbsent(project, k -> new LinkedHashMap<>(Map.of("issueCount", 0, "storyPoints", 0)));
             Map<String, Object> workload = projectWorkload.get(project);
             workload.put("issueCount", (int) workload.get("issueCount") + 1);
@@ -189,7 +210,7 @@ public class StandardReportService {
         if (timestamp == null) return null;
         String ts = timestamp.toString();
         if (ts.length() < 10) return null;
-        return switch (period != null ? period.toUpperCase() : "MONTHLY") {
+        return switch (period != null ? period.toUpperCase() : defaultReportPeriod) {
             case "DAILY" -> ts.substring(0, 10);
             case "WEEKLY" -> {
                 try {
@@ -205,14 +226,14 @@ public class StandardReportService {
     }
 
     private String resolveGroupKey(Map<String, Object> issue, String field) {
-        if (field == null) return "all";
+        if (field == null) return groupByAllLabel;
         return switch (field.toLowerCase()) {
-            case "status" -> issue.get("statusName") != null ? issue.get("statusName").toString() : "Unknown";
-            case "priority" -> issue.get("priorityName") != null ? issue.get("priorityName").toString() : "Unknown";
-            case "assignee" -> issue.get("assigneeName") != null ? issue.get("assigneeName").toString() : "Unassigned";
-            case "type", "issuetype" -> issue.get("issueTypeName") != null ? issue.get("issueTypeName").toString() : "Unknown";
-            case "reporter" -> issue.get("reporterName") != null ? issue.get("reporterName").toString() : "Unknown";
-            default -> issue.get(field) != null ? issue.get(field).toString() : "Unknown";
+            case "status" -> issue.get("statusName") != null ? issue.get("statusName").toString() : unknownLabel;
+            case "priority" -> issue.get("priorityName") != null ? issue.get("priorityName").toString() : unknownLabel;
+            case "assignee" -> issue.get("assigneeName") != null ? issue.get("assigneeName").toString() : unassignedLabel;
+            case "type", "issuetype" -> issue.get("issueTypeName") != null ? issue.get("issueTypeName").toString() : unknownLabel;
+            case "reporter" -> issue.get("reporterName") != null ? issue.get("reporterName").toString() : unknownLabel;
+            default -> issue.get(field) != null ? issue.get(field).toString() : unknownLabel;
         };
     }
 
@@ -231,7 +252,7 @@ public class StandardReportService {
     }
 
     private int parseThresholdDays(String olderThan) {
-        if (olderThan == null) return 30;
+        if (olderThan == null) return defaultThresholdDays;
         try {
             String num = olderThan.replaceAll("[^0-9]", "");
             int val = Integer.parseInt(num);
@@ -239,7 +260,7 @@ public class StandardReportService {
             if (olderThan.contains("m") && !olderThan.contains("min")) return val * 30;
             return val;
         } catch (Exception e) {
-            return 30;
+            return defaultThresholdDays;
         }
     }
 }

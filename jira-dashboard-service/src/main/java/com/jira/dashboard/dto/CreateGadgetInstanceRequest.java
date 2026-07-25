@@ -12,7 +12,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateGadgetInstanceRequest {
 
-    @NotNull(message = "Gadget ID is required")
+    @NotNull(message = "{validation.gadget.id.required}")
     private UUID gadgetId;
 
     private String title;

@@ -6,11 +6,14 @@ import com.jira.admin.service.BackupService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -21,6 +24,10 @@ import java.util.UUID;
 public class BackupController {
 
     private final BackupService backupService;
+    private final MessageSource messageSource;
+
+    @Value("${app.backup.status.completed:COMPLETED}")
+    private String statusCompleted;
 
     @PostMapping
     @Operation(summary = "Create a new system backup")
@@ -52,9 +59,9 @@ public class BackupController {
     public ResponseEntity<Map<String, Object>> downloadBackup(@PathVariable String id) {
         return backupService.getBackupStatus(id)
                 .map(backup -> {
-                    if (!"COMPLETED".equals(backup.getStatus())) {
+                    if (!statusCompleted.equals(backup.getStatus())) {
                         return ResponseEntity.badRequest().<Map<String, Object>>body(
-                                Map.of("error", "Backup is not ready for download"));
+                                Map.of("error", messageSource.getMessage("error.backup.not.ready", null, Locale.ENGLISH)));
                     }
                     return ResponseEntity.ok(Map.<String, Object>of(
                             "backupId", backup.getId(),

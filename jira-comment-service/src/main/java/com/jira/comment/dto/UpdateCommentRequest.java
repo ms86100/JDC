@@ -12,7 +12,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UpdateCommentRequest {
 
-    @NotBlank(message = "Content is required")
+    @NotBlank(message = "{validation.content.required}")
     private String content;
 
     /**

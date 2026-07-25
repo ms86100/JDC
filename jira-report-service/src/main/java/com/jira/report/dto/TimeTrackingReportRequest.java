@@ -12,10 +12,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class TimeTrackingReportRequest {
 
-    @NotNull(message = "Start date is required")
+    @NotNull(message = "{validation.startDate.required}")
     private LocalDateTime startDate;
 
-    @NotNull(message = "End date is required")
+    @NotNull(message = "{validation.endDate.required}")
     private LocalDateTime endDate;
 
     private UUID projectId;

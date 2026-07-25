@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @RestController
@@ -23,6 +25,7 @@ import java.util.UUID;
 public class PortalController {
 
     private final PortalService portalService;
+    private final MessageSource messageSource;
 
     // Portal Management
     @PostMapping
@@ -30,7 +33,7 @@ public class PortalController {
     public ResponseEntity<CustomerPortalResponse> createPortal(
             @Valid @RequestBody CreatePortalRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(portalService.createPortal(request, actor));
@@ -68,7 +71,7 @@ public class PortalController {
     public ResponseEntity<CustomerPortalResponse> publishPortal(
             @Parameter(description = "Portal ID") @PathVariable UUID id,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.ok(portalService.publishPortal(id, actor));
     }
@@ -101,7 +104,7 @@ public class PortalController {
     public ResponseEntity<Page<CustomerRequestResponse>> getPortalRequests(
             @Parameter(description = "Portal ID") @PathVariable UUID portalId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "${app.portal.defaults.page-size:20}") int size) {
         return ResponseEntity.ok(portalService.getRequestsByPortal(portalId, PageRequest.of(page, size)));
     }
 
@@ -111,7 +114,7 @@ public class PortalController {
             @Parameter(description = "Request ID") @PathVariable UUID id,
             @RequestParam String status,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.ok(portalService.updateRequestStatus(id, status, actor));
     }

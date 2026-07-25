@@ -63,6 +63,11 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
 
+app:
+  defaults:
+    dashboard-layout: DEFAULT
+    share-permission-type: VIEW
+
 logging:
   level:
     com.jira: DEBUG

@@ -6,6 +6,8 @@ import com.jira.report.exception.ResourceNotFoundException;
 import com.jira.report.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -13,6 +15,7 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -27,10 +30,37 @@ public class ReportService {
     private final SavedReportRepository savedReportRepository;
 
     private final RestTemplate restTemplate;
+    private final MessageSource messageSource;
 
-    private static final String ISSUE_SERVICE_URL = "http://localhost:8084";
-    private static final String SPRINT_SERVICE_URL = "http://localhost:8085";
-    private static final String PROJECT_SERVICE_URL = "http://localhost:8083";
+    @Value("${app.service.issue-url:http://localhost:8084}")
+    private String issueServiceUrl;
+
+    @Value("${app.service.sprint-url:http://localhost:8085}")
+    private String sprintServiceUrl;
+
+    @Value("${app.service.project-url:http://localhost:8083}")
+    private String projectServiceUrl;
+
+    @Value("${app.defaults.time-tracking-report-prefix:Time Tracking Report - }")
+    private String timeTrackingReportPrefix;
+
+    @Value("${app.defaults.sprint-report-name:Sprint Report}")
+    private String defaultSprintReportName;
+
+    @Value("${app.defaults.project-report-prefix:Project Report - }")
+    private String projectReportPrefix;
+
+    @Value("${app.defaults.time-tracking-report-type:USER}")
+    private String defaultTimeTrackingReportType;
+
+    @Value("${app.defaults.project-report-type:SUMMARY}")
+    private String defaultProjectReportType;
+
+    @Value("${app.defaults.time-format-zero:0h 0m}")
+    private String timeFormatZero;
+
+    @Value("${app.defaults.time-format-pattern:%dh %dm}")
+    private String timeFormatPattern;
 
     @Transactional
     public TimeTrackingReportResponse generateTimeTrackingReport(TimeTrackingReportRequest request, UUID userId) {
@@ -38,13 +68,13 @@ public class ReportService {
                 userId, request.getStartDate(), request.getEndDate());
 
         TimeTrackingReport report = TimeTrackingReport.builder()
-                .name("Time Tracking Report - " + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE))
+                .name(timeTrackingReportPrefix + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE))
                 .projectId(request.getProjectId())
                 .issueId(request.getIssueId())
                 .userId(request.getUserId() != null ? request.getUserId() : userId)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
-                .reportType(request.getReportType() != null ? request.getReportType() : "USER")
+                .reportType(request.getReportType() != null ? request.getReportType() : defaultTimeTrackingReportType)
                 .totalTimeSeconds(0L)
                 .worklogDetails("[]")
                 .breakdown("{}")
@@ -77,7 +107,7 @@ public class ReportService {
         // In production, fetch actual sprint data from sprint service
         SprintReport report = SprintReport.builder()
                 .sprintId(request.getSprintId())
-                .sprintName(request.getSprintName() != null ? request.getSprintName() : "Sprint Report")
+                .sprintName(request.getSprintName() != null ? request.getSprintName() : defaultSprintReportName)
                 .projectId(request.getProjectId())
                 .startDate(LocalDateTime.now().minusDays(14))
                 .endDate(LocalDateTime.now())
@@ -120,7 +150,7 @@ public class ReportService {
         log.info("Generating project report for project {}", request.getProjectId());
 
         ProjectReport report = ProjectReport.builder()
-                .name("Project Report - " + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE))
+                .name(projectReportPrefix + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE))
                 .projectId(request.getProjectId())
                 .projectKey(request.getProjectKey())
                 .reportDate(LocalDateTime.now())
@@ -134,7 +164,7 @@ public class ReportService {
                 .issuesByStatus("{}")
                 .issuesByPriority("{}")
                 .recentActivity("[]")
-                .reportType(request.getReportType() != null ? request.getReportType() : "SUMMARY")
+                .reportType(request.getReportType() != null ? request.getReportType() : defaultProjectReportType)
                 .build();
 
         report = projectReportRepository.save(report);
@@ -189,7 +219,7 @@ public class ReportService {
         SavedReport report = savedReportRepository.findById(reportId)
                 .orElseThrow(() -> new ResourceNotFoundException("SavedReport", "id", reportId));
         if (userId != null && !report.getOwnerId().equals(userId)) {
-            throw new IllegalArgumentException("Not authorized to delete this report");
+            throw new IllegalArgumentException(messageSource.getMessage("error.report.delete.unauthorized", null, Locale.ENGLISH));
         }
         savedReportRepository.delete(report);
     }
@@ -277,9 +307,9 @@ public class ReportService {
     }
 
     private String formatTime(Long seconds) {
-        if (seconds == null || seconds == 0) return "0h 0m";
+        if (seconds == null || seconds == 0) return timeFormatZero;
         long hours = seconds / 3600;
         long minutes = (seconds % 3600) / 60;
-        return String.format("%dh %dm", hours, minutes);
+        return String.format(timeFormatPattern, hours, minutes);
     }
 }

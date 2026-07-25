@@ -7,6 +7,7 @@ import com.jira.admin.repository.WebhookDeliveryLogRepository;
 import com.jira.admin.repository.WebhookRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ public class WebhookDispatchService {
     private final WebhookRepository webhookRepository;
     private final WebhookDeliveryLogRepository deliveryLogRepository;
     private final RestTemplate restTemplate;
+    private final MessageSource messageSource;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final int MAX_RETRY_ATTEMPTS = 3;
@@ -88,7 +90,8 @@ public class WebhookDispatchService {
     @Transactional
     public WebhookDeliveryLogEntity testWebhook(String webhookId) {
         WebhookEntity webhook = webhookRepository.findById(webhookId)
-                .orElseThrow(() -> new IllegalArgumentException("Webhook not found: " + webhookId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.webhook.not.found", new Object[]{webhookId}, java.util.Locale.ENGLISH)));
 
         Map<String, Object> testPayload = Map.of(
                 "event", "test",

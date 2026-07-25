@@ -11,7 +11,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class GenerateProjectReportRequest {
 
-    @NotNull(message = "Project ID is required")
+    @NotNull(message = "{validation.projectId.required}")
     private UUID projectId;
 
     private String projectKey;

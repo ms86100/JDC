@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -14,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @RestController
@@ -23,13 +26,17 @@ import java.util.UUID;
 public class DocumentController {
 
     private final DocumentService documentService;
+    private final MessageSource messageSource;
+
+    @Value("${app.document.defaults.version-updated-label:Updated}")
+    private String versionUpdatedLabel;
 
     @PostMapping
     @Operation(summary = "Create a document", description = "Creates a new document")
     public ResponseEntity<DocumentResponse> createDocument(
             @Valid @RequestBody CreateDocumentRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(documentService.createDocument(request, actor));
@@ -48,7 +55,7 @@ public class DocumentController {
             @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.ok(documentService.getDocumentsByOwner(actor, PageRequest.of(page, size)));
     }
@@ -66,7 +73,7 @@ public class DocumentController {
             @Parameter(description = "Document ID") @PathVariable UUID id,
             @Valid @RequestBody CreateDocumentRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.ok(documentService.updateDocument(id, request, actor));
     }
@@ -100,9 +107,9 @@ public class DocumentController {
             @Parameter(description = "Document ID") @PathVariable UUID id,
             @RequestBody com.jira.document.dto.CreateDocumentRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(documentService.createVersion(id, request.getContent(), "Updated", actor));
+                .body(documentService.createVersion(id, request.getContent(), versionUpdatedLabel, actor));
     }
 }

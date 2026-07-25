@@ -7,6 +7,7 @@ import com.jira.user.exception.ResourceNotFoundException;
 import com.jira.user.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,7 +28,32 @@ public class JiraUserManagementService {
     private final CwdMembershipRepository membershipRepository;
     private final DirectoryRepository directoryRepository;
 
-    private static final UUID DEFAULT_DIRECTORY_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    @Value("${app.defaults.directory-id:00000000-0000-0000-0000-000000000001}")
+    private UUID defaultDirectoryId;
+
+    @Value("${app.defaults.active-status:ACTIVE}")
+    private String activeStatus;
+
+    @Value("${app.defaults.membership-type:GROUP_USER}")
+    private String membershipType;
+
+    @Value("${app.defaults.admin-group-keyword:administrators}")
+    private String adminGroupKeyword;
+
+    @Value("${app.defaults.software-group-keyword:software}")
+    private String softwareGroupKeyword;
+
+    @Value("${app.defaults.directory-name-fallback:Internal Directory}")
+    private String defaultDirectoryName;
+
+    @Value("${app.defaults.default-application:Platform Software}")
+    private String defaultApplication;
+
+    @Value("${app.defaults.default-login-count:0}")
+    private int defaultLoginCount;
+
+    @Value("${app.defaults.generated-password-length:12}")
+    private int generatedPasswordLength;
 
     // ============ USER OPERATIONS ============
 
@@ -38,13 +64,13 @@ public class JiraUserManagementService {
         Page<CwdUser> users;
         if (search != null && !search.isBlank()) {
             if (status != null && !status.isBlank()) {
-                boolean isActive = "ACTIVE".equalsIgnoreCase(status);
-                users = userRepository.searchUsersByStatus(DEFAULT_DIRECTORY_ID, search, isActive, pageable);
+                boolean isActive = activeStatus.equalsIgnoreCase(status);
+                users = userRepository.searchUsersByStatus(defaultDirectoryId, search, isActive, pageable);
             } else {
-                users = userRepository.searchUsers(DEFAULT_DIRECTORY_ID, search, pageable);
+                users = userRepository.searchUsers(defaultDirectoryId, search, pageable);
             }
         } else {
-            users = userRepository.findByDirectoryIdAndActive(DEFAULT_DIRECTORY_ID, true, pageable);
+            users = userRepository.findByDirectoryIdAndActive(defaultDirectoryId, true, pageable);
         }
 
         return users.map(this::mapToUserResponse);
@@ -59,18 +85,18 @@ public class JiraUserManagementService {
 
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
-        if (userRepository.existsByLowerUserNameAndDirectoryId(request.getUserName().toLowerCase(), DEFAULT_DIRECTORY_ID)) {
+        if (userRepository.existsByLowerUserNameAndDirectoryId(request.getUserName().toLowerCase(), defaultDirectoryId)) {
             throw new DuplicateResourceException("Username already exists: " + request.getUserName());
         }
 
-        if (userRepository.existsByEmailAddressAndDirectoryId(request.getEmail(), DEFAULT_DIRECTORY_ID)) {
+        if (userRepository.existsByEmailAddressAndDirectoryId(request.getEmail(), defaultDirectoryId)) {
             throw new DuplicateResourceException("Email already exists: " + request.getEmail());
         }
 
         String[] nameParts = splitName(request.getFullName());
 
         CwdUser user = CwdUser.builder()
-                .directoryId(DEFAULT_DIRECTORY_ID)
+                .directoryId(defaultDirectoryId)
                 .userName(request.getUserName())
                 .emailAddress(request.getEmail())
                 .displayName(request.getFullName())
@@ -92,7 +118,7 @@ public class JiraUserManagementService {
         CwdUser user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 
-        membershipRepository.deleteAllByChildIdAndMembershipType(userId, "GROUP_USER");
+        membershipRepository.deleteAllByChildIdAndMembershipType(userId, membershipType);
         userRepository.delete(user);
         log.info("Deleted user: {} ({})", user.getUserName(), userId);
     }
@@ -135,9 +161,9 @@ public class JiraUserManagementService {
 
         Page<CwdGroup> groups;
         if (search != null && !search.isBlank()) {
-            groups = groupRepository.searchGroups(DEFAULT_DIRECTORY_ID, search, pageable);
+            groups = groupRepository.searchGroups(defaultDirectoryId, search, pageable);
         } else {
-            groups = groupRepository.findByDirectoryIdAndActive(DEFAULT_DIRECTORY_ID, true, pageable);
+            groups = groupRepository.findByDirectoryIdAndActive(defaultDirectoryId, true, pageable);
         }
 
         return groups.map(this::mapToGroupResponse);
@@ -152,19 +178,19 @@ public class JiraUserManagementService {
 
     @Transactional(readOnly = true)
     public GroupResponse getGroupByName(String name) {
-        CwdGroup group = groupRepository.findByLowerGroupNameAndDirectoryId(name.toLowerCase(), DEFAULT_DIRECTORY_ID)
+        CwdGroup group = groupRepository.findByLowerGroupNameAndDirectoryId(name.toLowerCase(), defaultDirectoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + name));
         return mapToGroupResponse(group);
     }
 
     @Transactional
     public GroupResponse createGroup(CreateGroupRequest request) {
-        if (groupRepository.existsByLowerGroupNameAndDirectoryId(request.getName().toLowerCase(), DEFAULT_DIRECTORY_ID)) {
+        if (groupRepository.existsByLowerGroupNameAndDirectoryId(request.getName().toLowerCase(), defaultDirectoryId)) {
             throw new DuplicateResourceException("Group already exists: " + request.getName());
         }
 
         CwdGroup group = CwdGroup.builder()
-                .directoryId(DEFAULT_DIRECTORY_ID)
+                .directoryId(defaultDirectoryId)
                 .groupName(request.getName())
                 .description(request.getDescription())
                 .active(true)
@@ -203,7 +229,7 @@ public class JiraUserManagementService {
         CwdGroup group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));
 
-        membershipRepository.findByParentIdAndMembershipType(groupId, "GROUP_USER")
+        membershipRepository.findByParentIdAndMembershipType(groupId, membershipType)
                 .forEach(m -> membershipRepository.delete(m));
 
         groupRepository.delete(group);
@@ -214,7 +240,7 @@ public class JiraUserManagementService {
 
     @Transactional(readOnly = true)
     public List<UserResponse> getGroupMembers(UUID groupId) {
-        return membershipRepository.findByParentIdAndMembershipType(groupId, "GROUP_USER")
+        return membershipRepository.findByParentIdAndMembershipType(groupId, membershipType)
                 .stream()
                 .map(m -> userRepository.findById(m.getChildId()).orElse(null))
                 .filter(u -> u != null)
@@ -224,11 +250,11 @@ public class JiraUserManagementService {
 
     @Transactional
     public void addUserToGroup(UUID userId, UUID groupId) {
-        if (!membershipRepository.existsByParentIdAndChildIdAndMembershipType(groupId, userId, "GROUP_USER")) {
+        if (!membershipRepository.existsByParentIdAndChildIdAndMembershipType(groupId, userId, membershipType)) {
             CwdMembership membership = CwdMembership.builder()
                     .parentId(groupId)
                     .childId(userId)
-                    .membershipType("GROUP_USER")
+                    .membershipType(membershipType)
                     .build();
             membershipRepository.save(membership);
             log.info("Added user {} to group {}", userId, groupId);
@@ -237,7 +263,7 @@ public class JiraUserManagementService {
 
     @Transactional
     public void removeUserFromGroup(UUID userId, UUID groupId) {
-        membershipRepository.deleteByParentIdAndChildIdAndMembershipType(groupId, userId, "GROUP_USER");
+        membershipRepository.deleteByParentIdAndChildIdAndMembershipType(groupId, userId, membershipType);
         log.info("Removed user {} from group {}", userId, groupId);
     }
 
@@ -250,8 +276,8 @@ public class JiraUserManagementService {
                 .map(g -> UserResponse.GroupInfo.builder()
                         .id(g.getId())
                         .name(g.getGroupName())
-                        .isAdmin(g.isSystem() && g.getGroupName().contains("administrators"))
-                        .isJiraSoftware(g.getGroupName().contains("software"))
+                        .isAdmin(g.isSystem() && g.getGroupName().contains(adminGroupKeyword))
+                        .isJiraSoftware(g.getGroupName().contains(softwareGroupKeyword))
                         .build())
                 .collect(Collectors.toList());
 
@@ -267,18 +293,18 @@ public class JiraUserManagementService {
                 .updatedDate(user.getUpdatedDate())
                 .directoryId(user.getDirectoryId())
                 .directoryName(directoryRepository.findById(user.getDirectoryId())
-                        .map(d -> d.getDirectoryName()).orElse("Internal Directory"))
+                        .map(d -> d.getDirectoryName()).orElse(defaultDirectoryName))
                 .groups(groupInfos)
-                .applications(List.of("Platform Software"))
+                .applications(List.of(defaultApplication))
                 .loginInfo(UserResponse.LoginInfo.builder()
-                        .loginCount(0)
+                        .loginCount(defaultLoginCount)
                         .lastLogin(user.getLastAuthDate())
                         .build())
                 .build();
     }
 
     private GroupResponse mapToGroupResponse(CwdGroup group) {
-        int userCount = membershipRepository.countByParentIdAndType(group.getId(), "GROUP_USER");
+        int userCount = membershipRepository.countByParentIdAndType(group.getId(), membershipType);
 
         return GroupResponse.builder()
                 .id(group.getId())
@@ -309,7 +335,7 @@ public class JiraUserManagementService {
     }
 
     private String generatePassword() {
-        return UUID.randomUUID().toString().substring(0, 12);
+        return UUID.randomUUID().toString().substring(0, generatedPasswordLength);
     }
 
 }

@@ -13,20 +13,20 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateProfileRequest {
 
-    @NotNull(message = "User ID is required")
+    @NotNull(message = "{validation.userid.required}")
     private UUID userId;
 
-    @NotBlank(message = "First name is required")
-    @Size(max = 100, message = "First name must not exceed 100 characters")
+    @NotBlank(message = "{validation.firstname.required}")
+    @Size(max = 100, message = "{validation.firstname.size}")
     private String firstName;
 
-    @NotBlank(message = "Last name is required")
-    @Size(max = 100, message = "Last name must not exceed 100 characters")
+    @NotBlank(message = "{validation.lastname.required}")
+    @Size(max = 100, message = "{validation.lastname.size}")
     private String lastName;
 
-    @Size(max = 500, message = "Avatar URL must not exceed 500 characters")
+    @Size(max = 500, message = "{validation.avatar.size}")
     private String avatarUrl;
 
-    @Size(max = 50, message = "Timezone must not exceed 50 characters")
+    @Size(max = 50, message = "{validation.timezone.size}")
     private String timezone;
 }

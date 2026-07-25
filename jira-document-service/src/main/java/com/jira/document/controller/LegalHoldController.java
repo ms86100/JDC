@@ -7,11 +7,13 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @RestController
@@ -21,13 +23,14 @@ import java.util.UUID;
 public class LegalHoldController {
 
     private final DocumentService documentService;
+    private final MessageSource messageSource;
 
     @PostMapping
     @Operation(summary = "Create legal hold", description = "Creates a new legal hold for data preservation")
     public ResponseEntity<LegalHoldResponse> createLegalHold(
             @Valid @RequestBody CreateLegalHoldRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(documentService.createLegalHold(request, actor));
@@ -46,7 +49,7 @@ public class LegalHoldController {
             @Parameter(description = "Hold ID") @PathVariable UUID id,
             @RequestParam(required = false) String reason,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.ok(documentService.releaseLegalHold(id, actor, reason));
     }

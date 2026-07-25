@@ -9,6 +9,7 @@ import com.jira.test.repository.TestIssueRepository;
 import com.jira.test.repository.TestStepRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,24 @@ public class TestRunService {
     private final TestIssueRepository testIssueRepository;
     private final TestStepRepository testStepRepository;
 
+    @Value("${app.defaults.test-run-status.initial:PENDING}")
+    private String defaultTestRunInitialStatus;
+
+    @Value("${app.defaults.test-run-status.in-progress:IN_PROGRESS}")
+    private String defaultTestRunInProgressStatus;
+
+    @Value("${app.defaults.annotation-type:NOTE}")
+    private String defaultAnnotationType;
+
+    @Value("${app.defaults.annotation-author:Unknown}")
+    private String defaultAnnotationAuthor;
+
+    @Value("${app.defaults.flaky-score-threshold:0.3}")
+    private double flakyScoreThreshold;
+
+    @Value("${app.defaults.html-report-header-color:#4CAF50}")
+    private String htmlReportHeaderColor;
+
     @Transactional
     public TestRunResponse createTestRun(CreateTestRunRequest request) {
         log.info("Creating test run for test: {}", request.getTestId());
@@ -39,7 +58,7 @@ public class TestRunService {
                 .executionId(request.getExecutionId())
                 .projectId(request.getProjectId())
                 .executedBy(request.getExecutedBy())
-                .status("PENDING")
+                .status(defaultTestRunInitialStatus)
                 .environment(request.getEnvironment())
                 .browser(request.getBrowser())
                 .platform(request.getPlatform())
@@ -64,11 +83,11 @@ public class TestRunService {
         TestRun testRun = testRunRepository.findById(runId)
                 .orElseThrow(() -> new ResourceNotFoundException("TestRun", "id", runId));
 
-        if (!"PENDING".equals(testRun.getStatus())) {
-            throw new InvalidOperationException("Test run is not in PENDING status");
+        if (!defaultTestRunInitialStatus.equals(testRun.getStatus())) {
+            throw new InvalidOperationException("Test run is not in " + defaultTestRunInitialStatus + " status");
         }
 
-        testRun.setStatus("IN_PROGRESS");
+        testRun.setStatus(defaultTestRunInProgressStatus);
         testRun.setStartedAt(LocalDateTime.now());
         testRun.setExecutedAt(LocalDateTime.now());
         testRun.setExecutedBy(testRun.getExecutedBy());
@@ -86,8 +105,8 @@ public class TestRunService {
         TestRun testRun = testRunRepository.findById(runId)
                 .orElseThrow(() -> new ResourceNotFoundException("TestRun", "id", runId));
 
-        if (!"IN_PROGRESS".equals(testRun.getStatus())) {
-            throw new InvalidOperationException("Test run is not in IN_PROGRESS status");
+        if (!defaultTestRunInProgressStatus.equals(testRun.getStatus())) {
+            throw new InvalidOperationException("Test run is not in " + defaultTestRunInProgressStatus + " status");
         }
 
         testRun.setStatus(request.getStatus());
@@ -197,7 +216,7 @@ public class TestRunService {
                 .flakyScore(flakyScore)
                 .lastRunAt(latest != null ? latest.getExecutedAt() : null)
                 .lastRunStatus(latest != null ? latest.getStatus() : null)
-                .isFlaky(flakyScore > 0.3)
+                .isFlaky(flakyScore > flakyScoreThreshold)
                 .build();
     }
 
@@ -228,6 +247,7 @@ public class TestRunService {
                 .evidenceLinks(new ArrayList<>())
                 .isRetry(true)
                 .parentRunId(parentRunId)
+                .status(defaultTestRunInitialStatus)
                 .passedSteps(0)
                 .failedSteps(0)
                 .blockedSteps(0)
@@ -599,8 +619,8 @@ public class TestRunService {
 
         String existing = testRun.getAnnotations();
         String newAnnotation = String.format("[%s] %s (%s): %s",
-                request.getType() != null ? request.getType() : "NOTE",
-                request.getAuthorName() != null ? request.getAuthorName() : "Unknown",
+                request.getType() != null ? request.getType() : defaultAnnotationType,
+                request.getAuthorName() != null ? request.getAuthorName() : defaultAnnotationAuthor,
                 LocalDateTime.now().toLocalDate(),
                 request.getContent());
 
@@ -903,7 +923,7 @@ public class TestRunService {
         html.append("<style>\nbody { font-family: Arial, sans-serif; margin: 20px; }\n");
         html.append("table { border-collapse: collapse; width: 100%; }\n");
         html.append("th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }\n");
-        html.append("th { background-color: #4CAF50; color: white; }\n");
+        html.append("th { background-color: ").append(htmlReportHeaderColor).append("; color: white; }\n");
         html.append(".passed { color: green; }\n");
         html.append(".failed { color: red; }\n");
         html.append("</style>\n</head>\n<body>\n");

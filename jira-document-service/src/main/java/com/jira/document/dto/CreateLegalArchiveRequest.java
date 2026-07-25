@@ -13,7 +13,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateLegalArchiveRequest {
 
-    @NotBlank(message = "Name is required")
+    @NotBlank(message = "{validation.archive.name.required}")
     private String name;
 
     private String description;
@@ -21,7 +21,7 @@ public class CreateLegalArchiveRequest {
     private UUID legalMatterId;
     private String matterReference;
 
-    @NotNull(message = "Archive type is required")
+    @NotNull(message = "{validation.archive.type.required}")
     private String archiveType;
 
     private LocalDateTime retentionDate;

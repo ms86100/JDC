@@ -15,10 +15,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UploadAttachmentRequest {
 
-    @NotNull(message = "Issue ID is required")
+    @NotNull(message = "{validation.issueId.required}")
     private UUID issueId;
 
-    @NotBlank(message = "Filename is required")
+    @NotBlank(message = "{validation.filename.required}")
     private String filename;
 
     private UUID uploaderId;

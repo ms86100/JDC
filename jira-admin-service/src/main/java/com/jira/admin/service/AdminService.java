@@ -4,6 +4,8 @@ import com.jira.admin.entity.*;
 import com.jira.admin.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,7 +14,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AdminService {
 
@@ -21,6 +22,36 @@ public class AdminService {
     private final ProjectRepository projectRepository;
     private final AppearanceRepository appearanceRepository;
     private final LicenseRepository licenseRepository;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.user-role:USER}")
+    private String defaultUserRole;
+
+    @Value("${app.defaults.timezone:UTC}")
+    private String defaultTimezone;
+
+    @Value("${app.defaults.language:en-US}")
+    private String defaultLanguage;
+
+    @Value("${app.defaults.password-hash-placeholder:$2a$10$placeholder}")
+    private String defaultPasswordHashPlaceholder;
+
+    @Value("${app.health.service-names:Database,Email Service,File Storage}")
+    private String healthServiceNamesStr;
+
+    public AdminService(SystemSettingsRepository settingsRepository,
+                        UserRepository userRepository,
+                        ProjectRepository projectRepository,
+                        AppearanceRepository appearanceRepository,
+                        LicenseRepository licenseRepository,
+                        MessageSource messageSource) {
+        this.settingsRepository = settingsRepository;
+        this.userRepository = userRepository;
+        this.projectRepository = projectRepository;
+        this.appearanceRepository = appearanceRepository;
+        this.licenseRepository = licenseRepository;
+        this.messageSource = messageSource;
+    }
 
     // Note: initializeDefaults() removed - seed data is handled by consolidated-migration
 
@@ -52,7 +83,8 @@ public class AdminService {
 
     public SystemSettingsEntity updateSetting(String key, String value) {
         SystemSettingsEntity setting = settingsRepository.findBySettingKey(key)
-                .orElseThrow(() -> new IllegalArgumentException("Setting not found: " + key));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.setting.not.found", new Object[]{key}, Locale.ENGLISH)));
         setting.setSettingValue(value);
         return settingsRepository.save(setting);
     }
@@ -101,22 +133,24 @@ public class AdminService {
         String email = (String) data.get("email");
 
         if (userRepository.findByUsername(username).isPresent()) {
-            throw new IllegalArgumentException("Username already exists");
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.username.exists", null, Locale.ENGLISH));
         }
         if (userRepository.findByEmail(email).isPresent()) {
-            throw new IllegalArgumentException("Email already exists");
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.email.exists", null, Locale.ENGLISH));
         }
 
         UserEntity user = UserEntity.builder()
                 .username(username)
                 .email(email)
                 .displayName((String) data.getOrDefault("displayName", username))
-                .passwordHash("$2a$10$placeholder") // In real app, would be hashed
+                .passwordHash(defaultPasswordHashPlaceholder) // In real app, would be hashed
                 .status(UserEntity.UserStatus.ACTIVE)
-                .role((String) data.getOrDefault("role", "USER"))
+                .role((String) data.getOrDefault("role", defaultUserRole))
                 .emailVerified(false)
-                .timezone("UTC")
-                .language("en-US")
+                .timezone(defaultTimezone)
+                .language(defaultLanguage)
                 .build();
 
         return userRepository.save(user);
@@ -124,7 +158,8 @@ public class AdminService {
 
     public UserEntity updateUser(String userId, Map<String, Object> updates) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.user.not.found", new Object[]{userId}, Locale.ENGLISH)));
 
         if (updates.containsKey("displayName")) user.setDisplayName((String) updates.get("displayName"));
         if (updates.containsKey("email")) user.setEmail((String) updates.get("email"));
@@ -170,7 +205,8 @@ public class AdminService {
 
     public ProjectEntity updateProject(String projectId, Map<String, Object> updates) {
         ProjectEntity project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.project.not.found", new Object[]{projectId}, Locale.ENGLISH)));
 
         if (updates.containsKey("name")) project.setName((String) updates.get("name"));
         if (updates.containsKey("description")) project.setDescription((String) updates.get("description"));
@@ -189,7 +225,8 @@ public class AdminService {
 
     public AppearanceEntity getAppearance() {
         return appearanceRepository.findAll().stream().findFirst()
-                .orElseThrow(() -> new IllegalStateException("Appearance not configured"));
+                .orElseThrow(() -> new IllegalStateException(
+                        messageSource.getMessage("error.appearance.not.configured", null, Locale.ENGLISH)));
     }
 
     public AppearanceEntity updateAppearance(Map<String, Object> updates) {
@@ -211,7 +248,8 @@ public class AdminService {
 
     public LicenseEntity getLicense() {
         return licenseRepository.findAll().stream().findFirst()
-                .orElseThrow(() -> new IllegalStateException("License not configured"));
+                .orElseThrow(() -> new IllegalStateException(
+                        messageSource.getMessage("error.license.not.configured", null, Locale.ENGLISH)));
     }
 
     // ==================== System Health ====================
@@ -230,11 +268,11 @@ public class AdminService {
         metrics.put("cpuUsage", 35.0);
         health.put("metrics", metrics);
 
-        List<Map<String, Object>> services = Arrays.asList(
-                createServiceStatus("Database", true, "HEALTHY"),
-                createServiceStatus("Email Service", true, "HEALTHY"),
-                createServiceStatus("File Storage", true, "HEALTHY")
-        );
+        List<String> serviceNames = Arrays.asList(healthServiceNamesStr.split(","));
+        List<Map<String, Object>> services = new ArrayList<>();
+        for (String serviceName : serviceNames) {
+            services.add(createServiceStatus(serviceName.trim(), true, "HEALTHY"));
+        }
         health.put("services", services);
 
         Map<String, Object> disk = new HashMap<>();

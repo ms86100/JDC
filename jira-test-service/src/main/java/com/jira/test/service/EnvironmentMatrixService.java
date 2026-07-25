@@ -13,6 +13,7 @@ import com.jira.test.repository.EnvironmentMatrixRepository;
 import com.jira.test.repository.EnvironmentProvisioningRuleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,27 @@ public class EnvironmentMatrixService {
     private final EnvironmentCombinationRepository combinationRepository;
     private final EnvironmentProvisioningRuleRepository provisioningRuleRepository;
     private final ObjectMapper objectMapper;
+
+    @Value("${app.defaults.provisioning-status:PENDING}")
+    private String defaultProvisioningStatus;
+
+    @Value("${app.defaults.execution-estimated-duration:300}")
+    private int defaultEstimatedDuration;
+
+    @Value("${app.defaults.cloud-provider:AWS}")
+    private String defaultCloudProvider;
+
+    @Value("${app.defaults.provisioning.max-concurrent:5}")
+    private int defaultMaxConcurrent;
+
+    @Value("${app.defaults.provisioning.timeout-seconds:300}")
+    private int defaultTimeoutSeconds;
+
+    @Value("${app.defaults.provisioning.retry-count:3}")
+    private int defaultRetryCount;
+
+    @Value("${app.defaults.provisioning.max-parallel-tasks:10}")
+    private int maxParallelTasks;
 
     // Cloud provider stubs
     private static final Map<String, CloudProviderConfig> CLOUD_PROVIDERS = new HashMap<>();
@@ -101,7 +123,7 @@ public class EnvironmentMatrixService {
                     .combinationData(serializeMap(combo))
                     .isValid(errors.isEmpty())
                     .validationErrors(errors.isEmpty() ? null : serializeErrors(errors))
-                    .provisioningStatus("PENDING")
+                    .provisioningStatus(defaultProvisioningStatus)
                     .build();
 
             combinationRepository.save(combination);
@@ -357,7 +379,7 @@ public class EnvironmentMatrixService {
                         .testCaseId(tcId)
                         .priority(priority++)
                         .environmentConfig(parseStringMap(combo.getCombinationData()))
-                        .estimatedDuration(300) // 5 minutes default
+                        .estimatedDuration(defaultEstimatedDuration)
                         .dependsOn(new ArrayList<>())
                         .build();
                 tasks.add(task);
@@ -388,7 +410,7 @@ public class EnvironmentMatrixService {
 
         for (ExecutionTask task : tasks) {
             currentGroup.add(task);
-            if (currentGroup.size() >= 10) { // Max 10 parallel tasks
+            if (currentGroup.size() >= maxParallelTasks) {
                 groups.add(new ArrayList<>(currentGroup));
                 currentGroup.clear();
             }
@@ -402,7 +424,7 @@ public class EnvironmentMatrixService {
     }
 
     private int calculateTotalDuration(List<List<ExecutionTask>> groups) {
-        return groups.size() * 300; // Simplified: groups * average duration
+        return groups.size() * defaultEstimatedDuration;
     }
 
     // ==================== Cloud Provider Integration ====================
@@ -426,7 +448,7 @@ public class EnvironmentMatrixService {
 
         return CloudProviderInfo.builder()
                 .providers(providers)
-                .defaultProvider("AWS")
+                .defaultProvider(defaultCloudProvider)
                 .build();
     }
 
@@ -677,9 +699,9 @@ public class EnvironmentMatrixService {
                 .capabilitiesTemplate(serializeMap(request.getCapabilitiesTemplate()))
                 .environmentTemplate(request.getEnvironmentTemplate() != null ?
                         serializeMap(request.getEnvironmentTemplate()) : null)
-                .maxConcurrent(request.getMaxConcurrent() != null ? request.getMaxConcurrent() : 5)
-                .timeoutSeconds(request.getTimeoutSeconds() != null ? request.getTimeoutSeconds() : 300)
-                .retryCount(request.getRetryCount() != null ? request.getRetryCount() : 3)
+                .maxConcurrent(request.getMaxConcurrent() != null ? request.getMaxConcurrent() : defaultMaxConcurrent)
+                .timeoutSeconds(request.getTimeoutSeconds() != null ? request.getTimeoutSeconds() : defaultTimeoutSeconds)
+                .retryCount(request.getRetryCount() != null ? request.getRetryCount() : defaultRetryCount)
                 .priority(request.getPriority() != null ? request.getPriority() : 0)
                 .createdBy(request.getCreatedBy())
                 .build();

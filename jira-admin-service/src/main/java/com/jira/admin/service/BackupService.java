@@ -11,18 +11,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import org.springframework.context.MessageSource;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class BackupService {
 
     private final BackupRepository backupRepository;
     private final BackupScheduleRepository backupScheduleRepository;
     private final RestTemplate restTemplate;
+    private final MessageSource messageSource;
 
     @Value("${jira.services.project-url:http://localhost:8083}")
     private String projectServiceUrl;
@@ -33,6 +35,31 @@ public class BackupService {
     @Value("${jira.services.workflow-url:http://localhost:8085}")
     private String workflowServiceUrl;
 
+    @Value("${app.backup.status.in-progress:IN_PROGRESS}")
+    private String statusInProgress;
+
+    @Value("${app.backup.status.completed:COMPLETED}")
+    private String statusCompleted;
+
+    @Value("${app.backup.status.failed:FAILED}")
+    private String statusFailed;
+
+    @Value("${app.backup.schedule.default-cron:0 0 2 * * ?}")
+    private String defaultScheduleCron;
+
+    @Value("${app.backup.schedule.default-retention-days:30}")
+    private int defaultRetentionDays;
+
+    public BackupService(BackupRepository backupRepository,
+                          BackupScheduleRepository backupScheduleRepository,
+                          RestTemplate restTemplate,
+                          MessageSource messageSource) {
+        this.backupRepository = backupRepository;
+        this.backupScheduleRepository = backupScheduleRepository;
+        this.restTemplate = restTemplate;
+        this.messageSource = messageSource;
+    }
+
     private static final DateTimeFormatter BACKUP_NAME_FORMAT =
             DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
@@ -42,7 +69,7 @@ public class BackupService {
 
         BackupEntity backup = BackupEntity.builder()
                 .filename(filename)
-                .status("IN_PROGRESS")
+                .status(statusInProgress)
                 .initiatedBy(initiatedBy)
                 .startedAt(LocalDateTime.now())
                 .build();
@@ -59,12 +86,12 @@ public class BackupService {
 
             long estimatedSize = exportData.toString().getBytes().length;
             backup.setFileSize(estimatedSize);
-            backup.setStatus("COMPLETED");
+            backup.setStatus(statusCompleted);
             backup.setCompletedAt(LocalDateTime.now());
             log.info("Backup {} completed successfully, estimated size: {} bytes", backup.getId(), estimatedSize);
         } catch (Exception e) {
             log.error("Backup {} failed: {}", backup.getId(), e.getMessage());
-            backup.setStatus("FAILED");
+            backup.setStatus(statusFailed);
             backup.setErrorMessage(e.getMessage());
             backup.setCompletedAt(LocalDateTime.now());
         }
@@ -85,10 +112,12 @@ public class BackupService {
     @Transactional
     public BackupEntity restoreFromBackup(String backupId) {
         BackupEntity backup = backupRepository.findById(backupId)
-                .orElseThrow(() -> new IllegalArgumentException("Backup not found: " + backupId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.backup.not.found", new Object[]{backupId}, Locale.ENGLISH)));
 
-        if (!"COMPLETED".equals(backup.getStatus())) {
-            throw new IllegalStateException("Cannot restore from backup with status: " + backup.getStatus());
+        if (!statusCompleted.equals(backup.getStatus())) {
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.backup.invalid.status", new Object[]{backup.getStatus()}, Locale.ENGLISH));
         }
 
         try {
@@ -98,7 +127,8 @@ public class BackupService {
             log.info("Restore from backup {} completed successfully", backupId);
         } catch (Exception e) {
             log.error("Restore from backup {} failed: {}", backupId, e.getMessage());
-            throw new IllegalStateException("Restore failed: " + e.getMessage(), e);
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.backup.restore.failed", new Object[]{e.getMessage()}, Locale.ENGLISH), e);
         }
 
         return backup;
@@ -122,8 +152,8 @@ public class BackupService {
         List<BackupScheduleEntity> schedules = backupScheduleRepository.findAll();
         if (schedules.isEmpty()) {
             return BackupScheduleEntity.builder()
-                    .cronExpression("0 0 2 * * ?")
-                    .retentionDays(30)
+                    .cronExpression(defaultScheduleCron)
+                    .retentionDays(defaultRetentionDays)
                     .isEnabled(false)
                     .build();
         }

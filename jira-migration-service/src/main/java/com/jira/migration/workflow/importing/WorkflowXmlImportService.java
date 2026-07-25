@@ -20,6 +20,7 @@ import com.jira.migration.workflow.validation.WorkflowXmlValidationReport;
 import com.jira.migration.workflow.validation.WorkflowXmlValidationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,9 @@ import java.util.*;
 @RequiredArgsConstructor
 @Slf4j
 public class WorkflowXmlImportService {
+
+    @Value("${app.workflow.default-simulation-transitions:Submit for Review,Start Progress,Approve,Deploy,Complete}")
+    private String defaultSimulationTransitionsStr;
 
     private final JiraDcWorkflowXmlParser workflowXmlParser;
     private final JiraDcWorkflowSchemeXmlParser schemeXmlParser;
@@ -75,7 +79,7 @@ public class WorkflowXmlImportService {
 
         WorkflowGraph graph = graphBuilder.build(descriptor);
         Map<String, Object> simulation = simulator.simulate(descriptor, graph, "1",
-                List.of("Submit for Review", "Start Progress", "Approve", "Deploy", "Complete"));
+                Arrays.asList(defaultSimulationTransitionsStr.split(",")));
 
         WorkflowSchemeModel scheme = schemeXml != null && !schemeXml.isBlank()
                 ? schemeXmlParser.parse(schemeXml) : null;

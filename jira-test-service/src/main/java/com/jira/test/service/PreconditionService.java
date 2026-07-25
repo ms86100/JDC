@@ -12,6 +12,7 @@ import com.jira.test.repository.TestPreconditionLinkRepository;
 import com.jira.test.repository.TestIssueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,27 @@ public class PreconditionService {
     private final TestPreconditionLinkRepository linkRepository;
     private final TestIssueRepository testIssueRepository;
 
+    @Value("${app.defaults.precondition-status:ACTIVE}")
+    private String defaultPreconditionStatus;
+
+    @Value("${app.defaults.precondition-category.environmental.color:#4CAF50}")
+    private String categoryEnvironmentalColor;
+
+    @Value("${app.defaults.precondition-category.data.color:#2196F3}")
+    private String categoryDataColor;
+
+    @Value("${app.defaults.precondition-category.system.color:#9C27B0}")
+    private String categorySystemColor;
+
+    @Value("${app.defaults.precondition-category.configuration.color:#FF9800}")
+    private String categoryConfigurationColor;
+
+    @Value("${app.defaults.precondition-category.network.color:#00BCD4}")
+    private String categoryNetworkColor;
+
+    @Value("${app.defaults.precondition-category.authentication.color:#F44336}")
+    private String categoryAuthenticationColor;
+
     // Cache for optimization - stores evaluation results to skip re-evaluation
     private final Map<String, CachedEvaluationResult> evaluationCache = new ConcurrentHashMap<>();
     private static final long CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -45,7 +67,7 @@ public class PreconditionService {
                 .preconditionType(request.getPreconditionType())
                 .conditionScript(request.getConditionScript())
                 .expectedResult(request.getExpectedResult())
-                .status("ACTIVE")
+                .status(defaultPreconditionStatus)
                 .category(request.getCategory())
                 .tags(request.getTags() != null ? String.join(",", request.getTags()) : null)
                 .version(1)
@@ -150,7 +172,7 @@ public class PreconditionService {
                 .preconditionType(template.getPreconditionType())
                 .conditionScript(template.getConditionScript())
                 .expectedResult(template.getExpectedResult())
-                .status("ACTIVE")
+                .status(defaultPreconditionStatus)
                 .category(template.getCategory())
                 .tags(template.getTags())
                 .version(1)
@@ -308,22 +330,22 @@ public class PreconditionService {
         return List.of(
                 PreconditionCategory.builder().id("ENVIRONMENTAL").name("Environmental")
                         .description("Preconditions related to environment setup")
-                        .icon("environment").color("#4CAF50").build(),
+                        .icon("environment").color(categoryEnvironmentalColor).build(),
                 PreconditionCategory.builder().id("DATA").name("Data")
                         .description("Preconditions related to data state")
-                        .icon("database").color("#2196F3").build(),
+                        .icon("database").color(categoryDataColor).build(),
                 PreconditionCategory.builder().id("SYSTEM").name("System")
                         .description("Preconditions related to system state")
-                        .icon("system").color("#9C27B0").build(),
+                        .icon("system").color(categorySystemColor).build(),
                 PreconditionCategory.builder().id("CONFIGURATION").name("Configuration")
                         .description("Preconditions related to configuration")
-                        .icon("settings").color("#FF9800").build(),
+                        .icon("settings").color(categoryConfigurationColor).build(),
                 PreconditionCategory.builder().id("NETWORK").name("Network")
                         .description("Preconditions related to network state")
-                        .icon("network").color("#00BCD4").build(),
+                        .icon("network").color(categoryNetworkColor).build(),
                 PreconditionCategory.builder().id("AUTHENTICATION").name("Authentication")
                         .description("Preconditions related to authentication")
-                        .icon("security").color("#F44336").build()
+                        .icon("security").color(categoryAuthenticationColor).build()
         );
     }
 
@@ -760,7 +782,7 @@ public class PreconditionService {
                 .preconditionType(original.getPreconditionType())
                 .conditionScript(original.getConditionScript())
                 .expectedResult(original.getExpectedResult())
-                .status("ACTIVE")
+                .status(defaultPreconditionStatus)
                 .category(original.getCategory())
                 .tags(original.getTags())
                 .version(1)

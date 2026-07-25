@@ -12,10 +12,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateCommentRequest {
 
-    @NotNull(message = "Issue ID is required")
+    @NotNull(message = "{validation.issue.id.required}")
     private UUID issueId;
 
-    @NotBlank(message = "Content is required")
+    @NotBlank(message = "{validation.content.required}")
     private String content;
 
     private UUID parentCommentId;

@@ -4,6 +4,8 @@ import com.jira.admin.entity.*;
 import com.jira.admin.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,13 @@ public class DataCenterService {
     private final SystemInfoRepository systemInfoRepository;
     private final IndexStatsRepository indexStatsRepository;
     private final AuditLogRepository auditLogRepository;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.audit-severity:INFO}")
+    private String defaultAuditSeverity;
+
+    @Value("${app.defaults.audit-source:UI}")
+    private String defaultAuditSource;
 
     // ==================== Cluster Nodes ====================
 
@@ -67,7 +76,8 @@ public class DataCenterService {
     @Transactional
     public void startNodeDrain(String nodeId) {
         ClusterNodeEntity node = clusterNodeRepository.findByNodeId(nodeId)
-                .orElseThrow(() -> new IllegalArgumentException("Node not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.node.not.found", null, Locale.ENGLISH)));
 
         node.setNodeState("DRAINING");
         clusterNodeRepository.save(node);
@@ -78,7 +88,8 @@ public class DataCenterService {
     @Transactional
     public void stopNodeDrain(String nodeId) {
         ClusterNodeEntity node = clusterNodeRepository.findByNodeId(nodeId)
-                .orElseThrow(() -> new IllegalArgumentException("Node not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.node.not.found", null, Locale.ENGLISH)));
 
         node.setNodeState("ACTIVE");
         clusterNodeRepository.save(node);
@@ -139,7 +150,8 @@ public class DataCenterService {
     @Transactional
     public ScheduledJobEntity runJobNow(String jobId) {
         ScheduledJobEntity job = scheduledJobRepository.findByJobId(jobId)
-                .orElseThrow(() -> new IllegalArgumentException("Job not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.job.not.found", null, Locale.ENGLISH)));
 
         job.setIsRunning(true);
         job.setLastRunAt(LocalDateTime.now());
@@ -159,7 +171,8 @@ public class DataCenterService {
     @Transactional
     public ScheduledJobEntity enableJob(String jobId) {
         ScheduledJobEntity job = scheduledJobRepository.findByJobId(jobId)
-                .orElseThrow(() -> new IllegalArgumentException("Job not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.job.not.found", null, Locale.ENGLISH)));
 
         job.setIsEnabled(true);
         scheduledJobRepository.save(job);
@@ -172,7 +185,8 @@ public class DataCenterService {
     @Transactional
     public ScheduledJobEntity disableJob(String jobId) {
         ScheduledJobEntity job = scheduledJobRepository.findByJobId(jobId)
-                .orElseThrow(() -> new IllegalArgumentException("Job not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.job.not.found", null, Locale.ENGLISH)));
 
         job.setIsEnabled(false);
         scheduledJobRepository.save(job);
@@ -192,7 +206,8 @@ public class DataCenterService {
     @Transactional
     public void startService(String serviceKey) {
         ServiceEntity service = serviceRepository.findByServiceName(serviceKey)
-                .orElseThrow(() -> new IllegalArgumentException("Service not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.service.not.found", null, Locale.ENGLISH)));
 
         service.setIsRunning(true);
         service.setLastStartedAt(LocalDateTime.now());
@@ -204,7 +219,8 @@ public class DataCenterService {
     @Transactional
     public void stopService(String serviceKey) {
         ServiceEntity service = serviceRepository.findByServiceName(serviceKey)
-                .orElseThrow(() -> new IllegalArgumentException("Service not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.service.not.found", null, Locale.ENGLISH)));
 
         service.setIsRunning(false);
         serviceRepository.save(service);
@@ -293,8 +309,8 @@ public class DataCenterService {
                 .entityName(entityName)
                 .details(details)
                 .result("SUCCESS")
-                .severity("INFO")
-                .source("UI")
+                .severity(defaultAuditSeverity)
+                .source(defaultAuditSource)
                 .build();
         auditLogRepository.save(auditLog);
     }

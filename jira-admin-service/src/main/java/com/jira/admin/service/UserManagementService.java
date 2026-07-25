@@ -2,8 +2,9 @@ package com.jira.admin.service;
 
 import com.jira.admin.entity.*;
 import com.jira.admin.repository.*;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -18,7 +19,6 @@ import java.util.stream.Collectors;
  * User Management Service - Enterprise user administration
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class UserManagementService {
 
@@ -31,6 +31,74 @@ public class UserManagementService {
     private final PasswordPolicyRepository passwordPolicyRepository;
     private final ApiTokenRepository apiTokenRepository;
     private final AuditLogRepository auditLogRepository;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.user-role:USER}")
+    private String defaultUserRole;
+
+    @Value("${app.defaults.timezone:UTC}")
+    private String defaultTimezone;
+
+    @Value("${app.defaults.language:en-US}")
+    private String defaultLanguage;
+
+    @Value("${app.defaults.password-hash-placeholder:$2a$10$placeholder}")
+    private String defaultPasswordHashPlaceholder;
+
+    @Value("${app.defaults.system-role-names:Administrators,Developers,Users}")
+    private String systemRoleNamesStr;
+
+    @Value("${app.defaults.ldap-port:389}")
+    private int defaultLdapPort;
+
+    @Value("${app.defaults.ldap-sync-interval:60}")
+    private int defaultLdapSyncInterval;
+
+    @Value("${app.defaults.password-min-length:8}")
+    private int defaultPasswordMinLength;
+
+    @Value("${app.defaults.password-max-length:128}")
+    private int defaultPasswordMaxLength;
+
+    @Value("${app.defaults.password-prevent-reuse:5}")
+    private int defaultPasswordPreventReuse;
+
+    @Value("${app.defaults.password-expire-days:90}")
+    private int defaultPasswordExpireDays;
+
+    @Value("${app.defaults.password-lockout-attempts:5}")
+    private int defaultPasswordLockoutAttempts;
+
+    @Value("${app.defaults.password-lockout-duration:30}")
+    private int defaultPasswordLockoutDuration;
+
+    @Value("${app.defaults.audit-severity:INFO}")
+    private String defaultAuditSeverity;
+
+    @Value("${app.defaults.audit-source:UI}")
+    private String defaultAuditSource;
+
+    public UserManagementService(UserRepository userRepository,
+                                  GroupRepository groupRepository,
+                                  UserGroupMembershipRepository userGroupMembershipRepository,
+                                  ProjectRoleRepository projectRoleRepository,
+                                  GlobalPermissionRepository globalPermissionRepository,
+                                  LdapConfigurationRepository ldapConfigurationRepository,
+                                  PasswordPolicyRepository passwordPolicyRepository,
+                                  ApiTokenRepository apiTokenRepository,
+                                  AuditLogRepository auditLogRepository,
+                                  MessageSource messageSource) {
+        this.userRepository = userRepository;
+        this.groupRepository = groupRepository;
+        this.userGroupMembershipRepository = userGroupMembershipRepository;
+        this.projectRoleRepository = projectRoleRepository;
+        this.globalPermissionRepository = globalPermissionRepository;
+        this.ldapConfigurationRepository = ldapConfigurationRepository;
+        this.passwordPolicyRepository = passwordPolicyRepository;
+        this.apiTokenRepository = apiTokenRepository;
+        this.auditLogRepository = auditLogRepository;
+        this.messageSource = messageSource;
+    }
 
     // ==================== Users ====================
 
@@ -58,22 +126,24 @@ public class UserManagementService {
 
         // Validate uniqueness
         if (userRepository.findByUsername(username).isPresent()) {
-            throw new IllegalArgumentException("Username already exists: " + username);
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.username.exists.detail", new Object[]{username}, Locale.ENGLISH));
         }
         if (userRepository.findByEmail(email).isPresent()) {
-            throw new IllegalArgumentException("Email already exists: " + email);
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.email.exists.detail", new Object[]{email}, Locale.ENGLISH));
         }
 
         UserEntity user = UserEntity.builder()
                 .username(username)
                 .email(email)
                 .displayName(displayName)
-                .passwordHash("$2a$10$placeholder")
+                .passwordHash(defaultPasswordHashPlaceholder)
                 .status(UserEntity.UserStatus.ACTIVE)
-                .role((String) data.getOrDefault("role", "USER"))
+                .role((String) data.getOrDefault("role", defaultUserRole))
                 .emailVerified(false)
-                .timezone((String) data.getOrDefault("timezone", "UTC"))
-                .language((String) data.getOrDefault("language", "en-US"))
+                .timezone((String) data.getOrDefault("timezone", defaultTimezone))
+                .language((String) data.getOrDefault("language", defaultLanguage))
                 .build();
 
         user = userRepository.save(user);
@@ -88,7 +158,8 @@ public class UserManagementService {
     @Transactional
     public UserEntity updateUser(String userId, Map<String, Object> updates) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.user.not.found", new Object[]{userId}, Locale.ENGLISH)));
 
         Map<String, String> oldValues = new HashMap<>();
 
@@ -126,7 +197,8 @@ public class UserManagementService {
     @Transactional
     public void deleteUser(String userId) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.user.not.found", new Object[]{userId}, Locale.ENGLISH)));
 
         String username = user.getUsername();
         userRepository.delete(user);
@@ -137,7 +209,8 @@ public class UserManagementService {
     @Transactional
     public void deactivateUser(String userId) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.user.not.found", new Object[]{userId}, Locale.ENGLISH)));
 
         user.setStatus(UserEntity.UserStatus.INACTIVE);
         userRepository.save(user);
@@ -148,7 +221,8 @@ public class UserManagementService {
     @Transactional
     public void activateUser(String userId) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.user.not.found", new Object[]{userId}, Locale.ENGLISH)));
 
         user.setStatus(UserEntity.UserStatus.ACTIVE);
         userRepository.save(user);
@@ -166,7 +240,8 @@ public class UserManagementService {
     @Transactional(readOnly = true)
     public List<UserEntity> getGroupMembers(String groupId) {
         groupRepository.findById(groupId)
-                .orElseThrow(() -> new IllegalArgumentException("Group not found: " + groupId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.group.not.found", new Object[]{groupId}, Locale.ENGLISH)));
         // Query through the membership repository since the GroupEntity users field is transient
         List<String> userIds = userGroupMembershipRepository.findUserIdsByGroupId(groupId);
         return userIds.stream()
@@ -195,14 +270,18 @@ public class UserManagementService {
     @Transactional
     public void addUserToGroup(String groupId, String userId) {
         GroupEntity group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new IllegalArgumentException("Group not found: " + groupId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.group.not.found", new Object[]{groupId}, Locale.ENGLISH)));
 
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.user.not.found", new Object[]{userId}, Locale.ENGLISH)));
 
         // Check if membership already exists to avoid duplicates
         if (userGroupMembershipRepository.existsByUserIdAndGroupId(userId, groupId)) {
-            throw new IllegalArgumentException("User " + user.getUsername() + " is already a member of group " + group.getGroupName());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.user.already.in.group",
+                            new Object[]{user.getUsername(), group.getGroupName()}, Locale.ENGLISH));
         }
 
         // Persist membership through the repository
@@ -219,14 +298,18 @@ public class UserManagementService {
     @Transactional
     public void removeUserFromGroup(String groupId, String userId) {
         GroupEntity group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new IllegalArgumentException("Group not found: " + groupId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.group.not.found", new Object[]{groupId}, Locale.ENGLISH)));
 
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.user.not.found", new Object[]{userId}, Locale.ENGLISH)));
 
         // Verify membership exists before removing
         if (!userGroupMembershipRepository.existsByUserIdAndGroupId(userId, groupId)) {
-            throw new IllegalArgumentException("User " + user.getUsername() + " is not a member of group " + group.getGroupName());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.user.not.in.group",
+                            new Object[]{user.getUsername(), group.getGroupName()}, Locale.ENGLISH));
         }
 
         // Remove membership through the repository
@@ -262,7 +345,8 @@ public class UserManagementService {
     @Transactional
     public ProjectRoleEntity updateProjectRole(String roleId, String name, String description) {
         ProjectRoleEntity role = projectRoleRepository.findById(java.util.UUID.fromString(roleId))
-                .orElseThrow(() -> new IllegalArgumentException("Project role not found: " + roleId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.project.role.not.found", new Object[]{roleId}, Locale.ENGLISH)));
 
         Map<String, String> oldValues = new HashMap<>();
 
@@ -286,12 +370,14 @@ public class UserManagementService {
     @Transactional
     public void deleteProjectRole(String roleId) {
         ProjectRoleEntity role = projectRoleRepository.findById(java.util.UUID.fromString(roleId))
-                .orElseThrow(() -> new IllegalArgumentException("Project role not found: " + roleId));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.project.role.not.found", new Object[]{roleId}, Locale.ENGLISH)));
 
         // Prevent deletion of system/default roles
-        List<String> systemRoleNames = List.of("Administrators", "Developers", "Users");
+        List<String> systemRoleNames = Arrays.asList(systemRoleNamesStr.split(","));
         if (Boolean.TRUE.equals(role.getDefaultRole()) || systemRoleNames.contains(role.getName())) {
-            throw new IllegalArgumentException("Cannot delete system/default role: " + role.getName());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.project.role.system.delete", new Object[]{role.getName()}, Locale.ENGLISH));
         }
 
         String roleName = role.getName();
@@ -330,7 +416,8 @@ public class UserManagementService {
     @Transactional
     public void revokeGlobalPermission(String permissionId) {
         GlobalPermissionEntity permission = globalPermissionRepository.findById(permissionId)
-                .orElseThrow(() -> new IllegalArgumentException("Permission not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.permission.not.found", null, Locale.ENGLISH)));
 
         globalPermissionRepository.delete(permission);
 
@@ -350,7 +437,7 @@ public class UserManagementService {
         LdapConfigurationEntity config = LdapConfigurationEntity.builder()
                 .name((String) data.get("name"))
                 .ldapHost((String) data.get("ldapHost"))
-                .ldapPort((Integer) data.getOrDefault("ldapPort", 389))
+                .ldapPort((Integer) data.getOrDefault("ldapPort", defaultLdapPort))
                 .useSsl((Boolean) data.getOrDefault("useSsl", false))
                 .baseDn((String) data.get("baseDn"))
                 .userSearchFilter((String) data.get("userSearchFilter"))
@@ -361,7 +448,7 @@ public class UserManagementService {
                 .managerPassword((String) data.get("managerPassword"))
                 .autoAddGroups((Boolean) data.getOrDefault("autoAddGroups", false))
                 .syncGroups((Boolean) data.getOrDefault("syncGroups", true))
-                .syncInterval((Integer) data.getOrDefault("syncInterval", 60))
+                .syncInterval((Integer) data.getOrDefault("syncInterval", defaultLdapSyncInterval))
                 .isEnabled(true)
                 .isDefault(false)
                 .build();
@@ -390,16 +477,16 @@ public class UserManagementService {
     public PasswordPolicyEntity createPasswordPolicy(Map<String, Object> data) {
         PasswordPolicyEntity policy = PasswordPolicyEntity.builder()
                 .name((String) data.get("name"))
-                .minLength((Integer) data.getOrDefault("minLength", 8))
-                .maxLength((Integer) data.getOrDefault("maxLength", 128))
+                .minLength((Integer) data.getOrDefault("minLength", defaultPasswordMinLength))
+                .maxLength((Integer) data.getOrDefault("maxLength", defaultPasswordMaxLength))
                 .requireUppercase((Boolean) data.getOrDefault("requireUppercase", true))
                 .requireLowercase((Boolean) data.getOrDefault("requireLowercase", true))
                 .requireDigit((Boolean) data.getOrDefault("requireDigit", true))
                 .requireSpecial((Boolean) data.getOrDefault("requireSpecial", false))
-                .preventReuse((Integer) data.getOrDefault("preventReuse", 5))
-                .expireDays((Integer) data.getOrDefault("expireDays", 90))
-                .lockoutAttempts((Integer) data.getOrDefault("lockoutAttempts", 5))
-                .lockoutDuration((Integer) data.getOrDefault("lockoutDuration", 30))
+                .preventReuse((Integer) data.getOrDefault("preventReuse", defaultPasswordPreventReuse))
+                .expireDays((Integer) data.getOrDefault("expireDays", defaultPasswordExpireDays))
+                .lockoutAttempts((Integer) data.getOrDefault("lockoutAttempts", defaultPasswordLockoutAttempts))
+                .lockoutDuration((Integer) data.getOrDefault("lockoutDuration", defaultPasswordLockoutDuration))
                 .isDefault(false)
                 .build();
 
@@ -449,7 +536,8 @@ public class UserManagementService {
     @Transactional
     public void revokeApiToken(String tokenId) {
         ApiTokenEntity token = apiTokenRepository.findById(tokenId)
-                .orElseThrow(() -> new IllegalArgumentException("Token not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.token.not.found", null, Locale.ENGLISH)));
 
         apiTokenRepository.delete(token);
 
@@ -490,8 +578,8 @@ public class UserManagementService {
                 .changedValues(changedValues)
                 .details(details)
                 .result(result)
-                .severity("INFO")
-                .source("UI")
+                .severity(defaultAuditSeverity)
+                .source(defaultAuditSource)
                 .build();
         auditLogRepository.save(auditLog);
     }

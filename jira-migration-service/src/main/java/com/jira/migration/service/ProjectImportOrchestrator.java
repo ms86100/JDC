@@ -11,16 +11,36 @@ import com.jira.migration.persister.IssuePersisterHandler.IssuePersisterResult;
 import com.jira.migration.service.clients.dto.IssueResponse;
 import com.jira.migration.persister.CommentPersisterHandler.CommentPersistResult;
 import com.jira.migration.service.clients.dto.ProjectResponse;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
-@Service
-@RequiredArgsConstructor
+@Component
 @Slf4j
 public class ProjectImportOrchestrator {
+
+    @Value("${app.import.default-issue-type:Task}")
+    private String defaultIssueType;
+
+    @Value("${app.import.default-issue-summary:Migrated issue}")
+    private String defaultIssueSummary;
+
+    @Value("${app.import.default-sprint-name:Migrated Sprint}")
+    private String defaultSprintName;
+
+    @Value("${app.import.default-component-name:Migrated Component}")
+    private String defaultComponentName;
+
+    @Value("${app.import.default-version-name:1.0.0-migrated}")
+    private String defaultVersionName;
+
+    @Value("${app.import.default-permission-scheme-name:Migrated Permission Scheme}")
+    private String defaultPermissionSchemeName;
+
+    @Value("${app.import.default-notification-scheme-name:Migrated Notification Scheme}")
+    private String defaultNotificationSchemeName;
 
     private final ProjectServiceClient projectServiceClient;
     private final IssueServiceClient issueServiceClient;
@@ -42,6 +62,49 @@ public class ProjectImportOrchestrator {
     private final MigrationJobLogService jobLogService;
     private final ProjectWorkflowXmlBootstrap workflowXmlBootstrap;
     private final WorkflowXmlImportService workflowXmlImportService;
+
+    public ProjectImportOrchestrator(
+            ProjectServiceClient projectServiceClient,
+            IssueServiceClient issueServiceClient,
+            ProjectPersisterHandler projectPersisterHandler,
+            IssuePersisterHandler issuePersisterHandler,
+            WorkflowPersisterHandler workflowPersisterHandler,
+            UserPersisterHandler userPersisterHandler,
+            SprintPersisterHandler sprintPersisterHandler,
+            ComponentPersisterHandler componentPersisterHandler,
+            VersionPersisterHandler versionPersisterHandler,
+            PermissionSchemePersisterHandler permissionSchemePersisterHandler,
+            NotificationSchemePersisterHandler notificationSchemePersisterHandler,
+            CustomFieldPersisterHandler customFieldPersisterHandler,
+            CommentPersisterHandler commentPersisterHandler,
+            CommentServiceClient commentServiceClient,
+            MigrationIssueResultService issueResultService,
+            IncrementalMigrationService incrementalMigrationService,
+            ScreenFieldConfigPersisterHandler screenFieldConfigPersisterHandler,
+            MigrationJobLogService jobLogService,
+            ProjectWorkflowXmlBootstrap workflowXmlBootstrap,
+            WorkflowXmlImportService workflowXmlImportService) {
+        this.projectServiceClient = projectServiceClient;
+        this.issueServiceClient = issueServiceClient;
+        this.projectPersisterHandler = projectPersisterHandler;
+        this.issuePersisterHandler = issuePersisterHandler;
+        this.workflowPersisterHandler = workflowPersisterHandler;
+        this.userPersisterHandler = userPersisterHandler;
+        this.sprintPersisterHandler = sprintPersisterHandler;
+        this.componentPersisterHandler = componentPersisterHandler;
+        this.versionPersisterHandler = versionPersisterHandler;
+        this.permissionSchemePersisterHandler = permissionSchemePersisterHandler;
+        this.notificationSchemePersisterHandler = notificationSchemePersisterHandler;
+        this.customFieldPersisterHandler = customFieldPersisterHandler;
+        this.commentPersisterHandler = commentPersisterHandler;
+        this.commentServiceClient = commentServiceClient;
+        this.issueResultService = issueResultService;
+        this.incrementalMigrationService = incrementalMigrationService;
+        this.screenFieldConfigPersisterHandler = screenFieldConfigPersisterHandler;
+        this.jobLogService = jobLogService;
+        this.workflowXmlBootstrap = workflowXmlBootstrap;
+        this.workflowXmlImportService = workflowXmlImportService;
+    }
 
     public ImportEntityResult importEntityType(
             UUID jobId,
@@ -104,8 +167,8 @@ public class ProjectImportOrchestrator {
             try {
                 CreateIssueRequest req = CreateIssueRequest.builder()
                         .projectId(targetId.toString())
-                        .issueType(src.getIssueType() != null ? src.getIssueType() : "Task")
-                        .summary(src.getSummary() != null ? src.getSummary() : "Migrated issue")
+                        .issueType(src.getIssueType() != null ? src.getIssueType() : defaultIssueType)
+                        .summary(src.getSummary() != null ? src.getSummary() : defaultIssueSummary)
                         .description(src.getDescription())
                         .priority(src.getPriority())
                         .build();
@@ -185,7 +248,7 @@ public class ProjectImportOrchestrator {
 
     private ImportEntityResult importSprints(UUID jobId, UUID targetId) {
         Map<String, Object> sprint = Map.of(
-                "name", "Migrated Sprint",
+                "name", defaultSprintName,
                 "projectId", targetId.toString(),
                 "goal", "Imported sprint"
         );
@@ -199,7 +262,7 @@ public class ProjectImportOrchestrator {
         ProjectResponse target = projectServiceClient.getProject(targetId.toString());
         Map<String, Object> comp = Map.of(
                 "projectKey", target.getKey(),
-                "name", "Migrated Component",
+                "name", defaultComponentName,
                 "description", "From project " + sourceId
         );
         var result = componentPersisterHandler.persistComponent(comp, jobId);
@@ -212,7 +275,7 @@ public class ProjectImportOrchestrator {
         ProjectResponse target = projectServiceClient.getProject(targetId.toString());
         Map<String, Object> ver = Map.of(
                 "projectKey", target.getKey(),
-                "name", "1.0.0-migrated",
+                "name", defaultVersionName,
                 "description", "Migrated version"
         );
         var result = versionPersisterHandler.persistVersion(ver, jobId);
@@ -223,7 +286,7 @@ public class ProjectImportOrchestrator {
 
     private ImportEntityResult importPermissionScheme(UUID jobId, UUID targetId) {
         Map<String, Object> scheme = Map.of(
-                "name", "Migrated Permission Scheme",
+                "name", defaultPermissionSchemeName,
                 "description", "Project " + targetId,
                 "projectId", targetId.toString()
         );
@@ -235,7 +298,7 @@ public class ProjectImportOrchestrator {
 
     private ImportEntityResult importNotificationScheme(UUID jobId, UUID targetId) {
         Map<String, Object> scheme = Map.of(
-                "name", "Migrated Notification Scheme",
+                "name", defaultNotificationSchemeName,
                 "description", "Project " + targetId
         );
         var result = notificationSchemePersisterHandler.persistNotificationScheme(scheme, jobId);

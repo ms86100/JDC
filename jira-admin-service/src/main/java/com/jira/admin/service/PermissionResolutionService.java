@@ -4,6 +4,7 @@ import com.jira.admin.entity.*;
 import com.jira.admin.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,15 @@ public class PermissionResolutionService {
     public static final String HOLDER_USER = "USER";
     public static final String HOLDER_GROUP = "GROUP";
     public static final String HOLDER_PROJECT_ROLE = "PROJECT_ROLE";
+
+    @Value("${app.permissions.admin-group-id:grp-jira-administrators}")
+    private String adminGroupId;
+
+    @Value("${app.permissions.admin-role-id:role-admin}")
+    private String adminRoleId;
+
+    @Value("${app.permissions.group-id-prefix:grp-}")
+    private String groupIdPrefix;
 
     /**
      * Check if user has a specific permission in a project.
@@ -117,7 +127,7 @@ public class PermissionResolutionService {
 
         // Global permissions are typically granted to specific groups
         // For now, check if user is in jira-administrators group
-        if (userGroups.contains("grp-jira-administrators")) {
+        if (userGroups.contains(adminGroupId)) {
             // Admin group has all global permissions
             return true;
         }
@@ -160,7 +170,7 @@ public class PermissionResolutionService {
     @Transactional(readOnly = true)
     public boolean isProjectAdmin(String projectId, String userId) {
         List<String> roles = getUserRolesInProject(projectId, userId);
-        return roles.contains("role-admin");
+        return roles.contains(adminRoleId);
     }
 
     /**
@@ -331,6 +341,6 @@ public class PermissionResolutionService {
     }
 
     private boolean isGroup(String holderId) {
-        return holderId != null && holderId.startsWith("grp-");
+        return holderId != null && holderId.startsWith(groupIdPrefix);
     }
 }

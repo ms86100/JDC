@@ -10,6 +10,7 @@ import com.jira.user.exception.ResourceNotFoundException;
 import com.jira.user.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,12 @@ public class UserService {
     private final TeamRepository teamRepository;
     private final OrganizationMemberRepository organizationMemberRepository;
 
+    @Value("${app.defaults.timezone:UTC}")
+    private String defaultTimezone;
+
+    @Value("${app.defaults.member-role:MEMBER}")
+    private String defaultMemberRole;
+
     @Transactional
     public ProfileResponse createProfile(CreateProfileRequest request) {
         log.info("Creating profile for user: {}", request.getUserId());
@@ -40,7 +47,7 @@ public class UserService {
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .avatarUrl(request.getAvatarUrl())
-                .timezone(request.getTimezone() != null ? request.getTimezone() : "UTC")
+                .timezone(request.getTimezone() != null ? request.getTimezone() : defaultTimezone)
                 .build();
 
         profile = profileRepository.save(profile);
@@ -140,7 +147,7 @@ public class UserService {
         OrganizationMember member = OrganizationMember.builder()
                 .orgId(orgId)
                 .userId(request.getUserId())
-                .role(request.getRole() != null ? request.getRole() : "MEMBER")
+                .role(request.getRole() != null ? request.getRole() : defaultMemberRole)
                 .build();
 
         member = organizationMemberRepository.save(member);
@@ -153,7 +160,7 @@ public class UserService {
         return OrganizationMemberResponse.builder()
                 .orgId(orgId)
                 .userId(request.getUserId())
-                .role(request.getRole() != null ? request.getRole() : "MEMBER")
+                .role(request.getRole() != null ? request.getRole() : defaultMemberRole)
                 .userFirstName(firstName)
                 .userLastName(lastName)
                 .joinedAt(member.getJoinedAt())

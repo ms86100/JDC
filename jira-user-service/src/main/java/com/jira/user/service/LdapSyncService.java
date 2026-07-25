@@ -11,6 +11,7 @@ import com.jira.user.repository.DirectoryRepository;
 import com.jira.user.repository.DirectorySyncLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.ldap.core.AttributesMapper;
 import org.springframework.ldap.core.LdapTemplate;
 import org.springframework.ldap.core.support.LdapContextSource;
@@ -33,6 +34,27 @@ public class LdapSyncService {
     private final CwdUserRepository cwdUserRepository;
     private final CwdGroupRepository cwdGroupRepository;
 
+    @Value("${app.ldap.default-user-search-filter:(objectClass=person)}")
+    private String defaultUserSearchFilter;
+
+    @Value("${app.ldap.default-group-search-filter:(objectClass=group)}")
+    private String defaultGroupSearchFilter;
+
+    @Value("${app.ldap.sync-status.syncing:SYNCING}")
+    private String syncStatusSyncing;
+
+    @Value("${app.ldap.sync-status.running:RUNNING}")
+    private String syncStatusRunning;
+
+    @Value("${app.ldap.sync-status.completed:COMPLETED}")
+    private String syncStatusCompleted;
+
+    @Value("${app.ldap.sync-status.idle:IDLE}")
+    private String syncStatusIdle;
+
+    @Value("${app.ldap.sync-status.failed:FAILED}")
+    private String syncStatusFailed;
+
     @Transactional
     public DirectorySyncLog syncDirectory(UUID directoryId) {
         Directory directory = directoryRepository.findById(directoryId)
@@ -47,18 +69,18 @@ public class LdapSyncService {
             throw new IllegalArgumentException("LDAP server URL is not configured for directory: " + directoryId);
         }
 
-        if ("SYNCING".equals(directory.getSyncStatus())) {
+        if (syncStatusSyncing.equals(directory.getSyncStatus())) {
             log.warn("Sync already in progress for directory: {}", directoryId);
             throw new IllegalStateException("Sync already in progress for directory: " + directoryId);
         }
 
-        directory.setSyncStatus("SYNCING");
+        directory.setSyncStatus(syncStatusSyncing);
         directoryRepository.save(directory);
 
         DirectorySyncLog syncLog = DirectorySyncLog.builder()
                 .directoryId(directoryId)
                 .startedAt(LocalDateTime.now())
-                .status("RUNNING")
+                .status(syncStatusRunning)
                 .build();
         syncLog = syncLogRepository.save(syncLog);
 
@@ -161,11 +183,11 @@ public class LdapSyncService {
             syncLog.setUsersAdded(usersAdded);
             syncLog.setUsersUpdated(usersUpdated);
             syncLog.setGroupsSynced(groupsSynced);
-            syncLog.setStatus("COMPLETED");
+            syncLog.setStatus(syncStatusCompleted);
             syncLog.setCompletedAt(LocalDateTime.now());
             syncLogRepository.save(syncLog);
 
-            directory.setSyncStatus("IDLE");
+            directory.setSyncStatus(syncStatusIdle);
             directory.setLastSyncAt(LocalDateTime.now());
             directoryRepository.save(directory);
 
@@ -177,12 +199,12 @@ public class LdapSyncService {
         } catch (Exception e) {
             log.error("LDAP sync failed for directory {}: {}", directoryId, e.getMessage(), e);
 
-            syncLog.setStatus("FAILED");
+            syncLog.setStatus(syncStatusFailed);
             syncLog.setErrors(e.getMessage());
             syncLog.setCompletedAt(LocalDateTime.now());
             syncLogRepository.save(syncLog);
 
-            directory.setSyncStatus("FAILED");
+            directory.setSyncStatus(syncStatusFailed);
             directoryRepository.save(directory);
 
             return syncLog;
@@ -206,7 +228,7 @@ public class LdapSyncService {
 
     private List<LdapUserRecord> fetchLdapUsers(LdapTemplate ldapTemplate, Directory directory) {
         String searchBase = directory.getUserSearchBase() != null ? directory.getUserSearchBase() : "";
-        String filter = directory.getUserSearchFilter() != null ? directory.getUserSearchFilter() : "(objectClass=person)";
+        String filter = directory.getUserSearchFilter() != null ? directory.getUserSearchFilter() : defaultUserSearchFilter;
 
         try {
             return ldapTemplate.search(
@@ -223,7 +245,7 @@ public class LdapSyncService {
 
     private List<LdapGroupRecord> fetchLdapGroups(LdapTemplate ldapTemplate, Directory directory) {
         String searchBase = directory.getGroupSearchBase() != null ? directory.getGroupSearchBase() : "";
-        String filter = directory.getGroupSearchFilter() != null ? directory.getGroupSearchFilter() : "(objectClass=group)";
+        String filter = directory.getGroupSearchFilter() != null ? directory.getGroupSearchFilter() : defaultGroupSearchFilter;
 
         try {
             return ldapTemplate.search(

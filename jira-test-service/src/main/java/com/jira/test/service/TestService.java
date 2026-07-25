@@ -6,6 +6,7 @@ import com.jira.test.exception.*;
 import com.jira.test.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,12 @@ public class TestService {
     private final TestPlanItemRepository testPlanItemRepository;
     private final RequirementLinkRepository requirementLinkRepository;
 
+    @Value("${app.defaults.test-type:MANUAL}")
+    private String defaultTestType;
+
+    @Value("${app.defaults.step-type:WHEN}")
+    private String defaultStepType;
+
     @Transactional
     public TestResponse createTest(CreateTestRequest request) {
         log.info("Creating test: {} for project: {}", request.getName(), request.getProjectId());
@@ -38,7 +45,7 @@ public class TestService {
                 .projectId(request.getProjectId())
                 .name(request.getName())
                 .description(request.getDescription())
-                .testType(request.getTestType() != null ? request.getTestType() : "MANUAL")
+                .testType(request.getTestType() != null ? request.getTestType() : defaultTestType)
                 .labels(request.getLabels() != null ? request.getLabels() : List.of())
                 .priority(request.getPriority())
                 .ownerId(request.getOwnerId())
@@ -54,7 +61,7 @@ public class TestService {
                 TestStep step = TestStep.builder()
                         .testId(test.getId())
                         .stepOrder(stepDto.getStepOrder() != null ? stepDto.getStepOrder() : order++)
-                        .stepType(stepDto.getStepType() != null ? stepDto.getStepType() : "WHEN")
+                        .stepType(stepDto.getStepType() != null ? stepDto.getStepType() : defaultStepType)
                         .description(stepDto.getDescription())
                         .testData(stepDto.getTestData())
                         .expectedResult(stepDto.getExpectedResult())
@@ -130,7 +137,7 @@ public class TestService {
                 .projectId(request.getProjectId())
                 .name(request.getName())
                 .description(request.getDescription())
-                .testType(request.getTestType() != null ? request.getTestType() : "MANUAL")
+                .testType(request.getTestType() != null ? request.getTestType() : defaultTestType)
                 .labels(request.getLabels() != null ? request.getLabels() : List.of())
                 .build();
 

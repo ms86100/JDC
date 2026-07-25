@@ -7,11 +7,13 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @RestController
@@ -21,6 +23,7 @@ import java.util.UUID;
 public class ReportController {
 
     private final ReportService reportService;
+    private final MessageSource messageSource;
 
     // Time Tracking Reports
     @PostMapping("/time-tracking")
@@ -28,7 +31,7 @@ public class ReportController {
     public ResponseEntity<TimeTrackingReportResponse> generateTimeTrackingReport(
             @Valid @RequestBody TimeTrackingReportRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.userId.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(reportService.generateTimeTrackingReport(request, actor));
@@ -38,7 +41,7 @@ public class ReportController {
     @Operation(summary = "Get user's time tracking reports", description = "Returns all time tracking reports for the current user")
     public ResponseEntity<List<TimeTrackingReportResponse>> getTimeTrackingReports(
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.userId.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.ok(reportService.getTimeTrackingReportsByUser(actor));
     }
@@ -102,7 +105,7 @@ public class ReportController {
     public ResponseEntity<SavedReportResponse> saveReport(
             @Valid @RequestBody SaveReportRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.userId.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(reportService.saveReport(request, actor));
@@ -112,7 +115,7 @@ public class ReportController {
     @Operation(summary = "Get saved reports", description = "Returns all saved reports for the current user")
     public ResponseEntity<List<SavedReportResponse>> getSavedReports(
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.userId.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.ok(reportService.getSavedReports(actor));
     }
@@ -122,7 +125,7 @@ public class ReportController {
     public ResponseEntity<Void> deleteSavedReport(
             @Parameter(description = "Report ID") @PathVariable UUID id,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.userId.required", null, Locale.ENGLISH)); }
         reportService.deleteSavedReport(id, userId);
         return ResponseEntity.noContent().build();
     }

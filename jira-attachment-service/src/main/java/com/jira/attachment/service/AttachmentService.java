@@ -9,6 +9,7 @@ import com.jira.cluster.storage.StorageProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -29,12 +31,22 @@ public class AttachmentService {
 
     private final AttachmentRepository attachmentRepository;
     private final StorageProvider storageProvider;
+    private final MessageSource messageSource;
 
     @Value("${cdn.base-url:}")
     private String cdnBaseUrl;
 
     @Value("${jira.attachment.allowed-types:image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip,application/x-zip-compressed}")
     private List<String> allowedTypes;
+
+    @Value("${app.attachment.default-filename:unnamed}")
+    private String defaultFilename;
+
+    @Value("${app.attachment.cdn-path-prefix:/attachments/}")
+    private String cdnPathPrefix;
+
+    @Value("${app.attachment.api-download-pattern:/api/attachments/%s/download}")
+    private String apiDownloadPattern;
 
     @Transactional
     public AttachmentResponse uploadAttachment(UUID issueId, MultipartFile file, UUID uploaderId, String uploaderName) {
@@ -64,10 +76,12 @@ public class AttachmentService {
             return toResponse(attachment);
         } catch (IOException e) {
             log.error("Failed to store file for issue {}", issueId, e);
-            throw new InvalidFileException("Failed to store file: " + e.getMessage(), e);
+            throw new InvalidFileException(messageSource.getMessage("error.file.store.failed",
+                    new Object[]{e.getMessage()}, "Failed to store file: " + e.getMessage(), Locale.ENGLISH), e);
         } catch (UncheckedIOException e) {
             log.error("Failed to store file for issue {}", issueId, e);
-            throw new InvalidFileException("Failed to store file: " + e.getMessage(), e);
+            throw new InvalidFileException(messageSource.getMessage("error.file.store.failed",
+                    new Object[]{e.getMessage()}, "Failed to store file: " + e.getMessage(), Locale.ENGLISH), e);
         }
     }
 
@@ -82,27 +96,31 @@ public class AttachmentService {
     @Transactional(readOnly = true)
     public AttachmentResponse getAttachment(UUID attachmentId) {
         Attachment attachment = attachmentRepository.findById(attachmentId)
-                .orElseThrow(() -> new AttachmentNotFoundException("Attachment not found: " + attachmentId));
+                .orElseThrow(() -> new AttachmentNotFoundException(messageSource.getMessage("error.attachment.not.found",
+                        new Object[]{attachmentId}, "Attachment not found: " + attachmentId, Locale.ENGLISH)));
         return toResponse(attachment);
     }
 
     @Transactional(readOnly = true)
     public Resource downloadAttachment(UUID attachmentId) {
         Attachment attachment = attachmentRepository.findById(attachmentId)
-                .orElseThrow(() -> new AttachmentNotFoundException("Attachment not found: " + attachmentId));
+                .orElseThrow(() -> new AttachmentNotFoundException(messageSource.getMessage("error.attachment.not.found",
+                        new Object[]{attachmentId}, "Attachment not found: " + attachmentId, Locale.ENGLISH)));
 
         try {
             InputStream stream = storageProvider.retrieve(attachment.getStoragePath());
             return new InputStreamResource(stream);
         } catch (UncheckedIOException e) {
-            throw new AttachmentNotFoundException("File not found in storage: " + attachmentId, e);
+            throw new AttachmentNotFoundException(messageSource.getMessage("error.file.not.found.storage",
+                    new Object[]{attachmentId}, "File not found in storage: " + attachmentId, Locale.ENGLISH), e);
         }
     }
 
     @Transactional
     public void deleteAttachment(UUID attachmentId) {
         Attachment attachment = attachmentRepository.findById(attachmentId)
-                .orElseThrow(() -> new AttachmentNotFoundException("Attachment not found: " + attachmentId));
+                .orElseThrow(() -> new AttachmentNotFoundException(messageSource.getMessage("error.attachment.not.found",
+                        new Object[]{attachmentId}, "Attachment not found: " + attachmentId, Locale.ENGLISH)));
 
         try {
             storageProvider.delete(attachment.getStoragePath());
@@ -132,26 +150,28 @@ public class AttachmentService {
 
     private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new InvalidFileException("File is empty");
+            throw new InvalidFileException(messageSource.getMessage("error.file.empty",
+                    null, "File is empty", Locale.ENGLISH));
         }
 
         String contentType = file.getContentType();
         if (contentType == null || !allowedTypes.contains(contentType)) {
-            throw new InvalidFileException("File type not allowed: " + contentType);
+            throw new InvalidFileException(messageSource.getMessage("error.file.type.not.allowed",
+                    new Object[]{contentType}, "File type not allowed: " + contentType, Locale.ENGLISH));
         }
     }
 
     private String sanitizeFilename(String filename) {
         if (filename == null) {
-            return "unnamed";
+            return defaultFilename;
         }
         return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 
     private AttachmentResponse toResponse(Attachment attachment) {
         String downloadUrl = (cdnBaseUrl != null && !cdnBaseUrl.isBlank())
-                ? cdnBaseUrl + "/attachments/" + attachment.getId()
-                : "/api/attachments/" + attachment.getId() + "/download";
+                ? cdnBaseUrl + cdnPathPrefix + attachment.getId()
+                : String.format(apiDownloadPattern, attachment.getId());
 
         return AttachmentResponse.builder()
                 .id(attachment.getId())

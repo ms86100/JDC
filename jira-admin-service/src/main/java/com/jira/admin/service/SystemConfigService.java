@@ -5,10 +5,13 @@ import com.jira.admin.entity.SystemConfigurationEntity;
 import com.jira.admin.repository.SystemConfigurationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Service for system_configuration CRUD operations.
@@ -19,6 +22,13 @@ import java.util.List;
 public class SystemConfigService {
 
     private final SystemConfigurationRepository configRepository;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.config-value-type:STRING}")
+    private String defaultValueType;
+
+    @Value("${app.defaults.config-category:custom}")
+    private String defaultConfigCategory;
 
     @Transactional(readOnly = true)
     public List<SystemConfigurationEntity> getAllConfigs() {
@@ -28,7 +38,8 @@ public class SystemConfigService {
     @Transactional(readOnly = true)
     public SystemConfigurationEntity getByKey(String configKey) {
         return configRepository.findByConfigKey(configKey)
-                .orElseThrow(() -> new IllegalArgumentException("Configuration not found: " + configKey));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.config.not.found", new Object[]{configKey}, Locale.ENGLISH)));
     }
 
     @Transactional(readOnly = true)
@@ -39,10 +50,12 @@ public class SystemConfigService {
     @Transactional
     public SystemConfigurationEntity updateByKey(String configKey, String newValue) {
         SystemConfigurationEntity config = configRepository.findByConfigKey(configKey)
-                .orElseThrow(() -> new IllegalArgumentException("Configuration not found: " + configKey));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.config.not.found", new Object[]{configKey}, Locale.ENGLISH)));
 
         if (!config.getIsEditable()) {
-            throw new IllegalStateException("Configuration '" + configKey + "' is not editable");
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.config.not.editable", new Object[]{configKey}, Locale.ENGLISH));
         }
 
         config.setConfigValue(newValue);
@@ -54,14 +67,15 @@ public class SystemConfigService {
     @Transactional
     public SystemConfigurationEntity create(SystemConfigRequest request) {
         if (configRepository.existsByConfigKey(request.getConfigKey())) {
-            throw new IllegalArgumentException("Configuration key already exists: " + request.getConfigKey());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.config.key.exists", new Object[]{request.getConfigKey()}, Locale.ENGLISH));
         }
 
         SystemConfigurationEntity config = SystemConfigurationEntity.builder()
                 .configKey(request.getConfigKey())
                 .configValue(request.getConfigValue())
-                .valueType(request.getValueType() != null ? request.getValueType() : "STRING")
-                .category(request.getCategory() != null ? request.getCategory() : "custom")
+                .valueType(request.getValueType() != null ? request.getValueType() : defaultValueType)
+                .category(request.getCategory() != null ? request.getCategory() : defaultConfigCategory)
                 .description(request.getDescription())
                 .isEditable(request.getIsEditable() != null ? request.getIsEditable() : true)
                 .build();
@@ -74,7 +88,8 @@ public class SystemConfigService {
     @Transactional
     public void deleteByKey(String configKey) {
         SystemConfigurationEntity config = configRepository.findByConfigKey(configKey)
-                .orElseThrow(() -> new IllegalArgumentException("Configuration not found: " + configKey));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.config.not.found", new Object[]{configKey}, Locale.ENGLISH)));
         configRepository.delete(config);
         log.info("System configuration deleted: {}", configKey);
     }

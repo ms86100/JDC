@@ -11,7 +11,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class GenerateSprintReportRequest {
 
-    @NotNull(message = "Sprint ID is required")
+    @NotNull(message = "{validation.sprintId.required}")
     private UUID sprintId;
 
     private String sprintName;

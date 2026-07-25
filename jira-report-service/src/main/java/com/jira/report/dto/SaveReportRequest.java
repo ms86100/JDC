@@ -12,12 +12,12 @@ import java.util.UUID;
 @AllArgsConstructor
 public class SaveReportRequest {
 
-    @NotBlank(message = "Report name is required")
+    @NotBlank(message = "{validation.reportName.required}")
     private String name;
 
     private UUID projectId;
 
-    @NotNull(message = "Report type is required")
+    @NotNull(message = "{validation.reportType.required}")
     private String reportType;
 
     private String reportConfig;

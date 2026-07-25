@@ -18,7 +18,7 @@ VALUES
     ('a0000000-0000-0000-0000-000000000108', 'DCL',            'dcl',            'document',      'Design Change Log entry',                     false, 27),
     ('a0000000-0000-0000-0000-000000000109', 'Deliverable',    'deliverable',    'package',       'Deliverable artifact',                        false, 28),
     ('a0000000-0000-0000-0000-000000000110', 'Test Request',   'test_request',   'test',          'Test Request for V&V execution',              false, 29)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 -- Also handle conflict on name (some environments may already have partial seeds)
 -- This is safe because ON CONFLICT (id) DO NOTHING above covers the ID case.
@@ -58,7 +58,7 @@ BEGIN
          'Aircraft Design System Scheme',
          'Workflow scheme for SYSDOPS aircraft design V&V lifecycle — maps each issue type to its specialized workflow',
          true, wf_vvo, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT DO NOTHING;
 
     -- Map each issue type to its workflow
     INSERT INTO jira_workflow.workflow_scheme_mappings (id, scheme_id, issue_type_id, workflow_id, created_at)

@@ -6,6 +6,7 @@ import com.jira.dashboard.exception.ResourceNotFoundException;
 import com.jira.dashboard.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,12 @@ public class DashboardService {
     private final GadgetInstanceRepository gadgetInstanceRepository;
     private final GadgetRepository gadgetRepository;
 
+    @Value("${app.defaults.dashboard-layout:DEFAULT}")
+    private String defaultDashboardLayout;
+
+    @Value("${app.defaults.share-permission-type:VIEW}")
+    private String defaultSharePermissionType;
+
     @Transactional
     public DashboardResponse createDashboard(CreateDashboardRequest request, UUID ownerId) {
         log.info("Creating dashboard '{}' for user {}", request.getName(), ownerId);
@@ -35,7 +42,7 @@ public class DashboardService {
                 .ownerId(ownerId)
                 .projectId(request.getProjectId())
                 .isShared(request.getIsShared() != null ? request.getIsShared() : false)
-                .layout(request.getLayout() != null ? request.getLayout() : "DEFAULT")
+                .layout(request.getLayout() != null ? request.getLayout() : defaultDashboardLayout)
                 .config(request.getConfig())
                 .build();
 
@@ -128,7 +135,7 @@ public class DashboardService {
                 .shareType(request.getShareType())
                 .shareId(request.getShareId())
                 .shareName(request.getShareName())
-                .permissionType(request.getPermissionType() != null ? request.getPermissionType() : "VIEW")
+                .permissionType(request.getPermissionType() != null ? request.getPermissionType() : defaultSharePermissionType)
                 .build();
 
         dashboardShareRepository.save(share);

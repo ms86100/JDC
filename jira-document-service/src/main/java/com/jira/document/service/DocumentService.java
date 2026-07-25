@@ -6,12 +6,16 @@ import com.jira.document.exception.ResourceNotFoundException;
 import com.jira.document.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -20,13 +24,47 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DocumentService {
 
-    private static final java.util.Set<String> VALID_ARCHIVE_STATUSES =
-            java.util.Set.of("ACTIVE", "ARCHIVED", "DISPOSED", "DISPUTED");
-
     private final DocumentRepository documentRepository;
     private final DocumentVersionRepository documentVersionRepository;
     private final LegalArchiveRepository legalArchiveRepository;
     private final LegalHoldRepository legalHoldRepository;
+    private final MessageSource messageSource;
+
+    @Value("${app.document.defaults.page-layout:DEFAULT}")
+    private String defaultPageLayout;
+
+    @Value("${app.document.defaults.is-published:false}")
+    private boolean defaultIsPublished;
+
+    @Value("${app.document.defaults.initial-version-label:Initial version}")
+    private String initialVersionLabel;
+
+    @Value("${app.document.defaults.content-updated-label:Content updated}")
+    private String contentUpdatedLabel;
+
+    @Value("${app.legal-archive.defaults.initial-status:ACTIVE}")
+    private String archiveInitialStatus;
+
+    @Value("${app.legal-archive.valid-statuses:ACTIVE,ARCHIVED,DISPOSED,DISPUTED}")
+    private String validArchiveStatusesStr;
+
+    @Value("${app.legal-hold.defaults.initial-status:PENDING}")
+    private String holdInitialStatus;
+
+    @Value("${app.legal-hold.defaults.active-status:ACTIVE}")
+    private String holdActiveStatus;
+
+    @Value("${app.legal-hold.defaults.released-status:RELEASED}")
+    private String holdReleasedStatus;
+
+    @Value("${app.legal-hold.defaults.auto-extend:false}")
+    private boolean defaultAutoExtend;
+
+    @Value("${app.legal-hold.defaults.extension-period-days:30}")
+    private int defaultExtensionPeriodDays;
+
+    @Value("${app.legal-hold.defaults.is-critical:false}")
+    private boolean defaultIsCritical;
 
     // Document Management
     @Transactional
@@ -45,8 +83,8 @@ public class DocumentService {
                 .versionLabel(request.getVersionLabel())
                 .attachmentUrl(request.getAttachmentUrl())
                 .metadata(request.getMetadata())
-                .isPublished(request.getIsPublished() != null ? request.getIsPublished() : false)
-                .pageLayout(request.getPageLayout() != null ? request.getPageLayout() : "DEFAULT")
+                .isPublished(request.getIsPublished() != null ? request.getIsPublished() : defaultIsPublished)
+                .pageLayout(request.getPageLayout() != null ? request.getPageLayout() : defaultPageLayout)
                 .labels(request.getLabels())
                 .externalUrl(request.getExternalUrl())
                 .build();
@@ -54,7 +92,7 @@ public class DocumentService {
         document = documentRepository.save(document);
 
         // Create initial version
-        createVersion(document.getId(), request.getContent(), "Initial version", userId);
+        createVersion(document.getId(), request.getContent(), initialVersionLabel, userId);
 
         return toDocumentResponse(document);
     }
@@ -88,7 +126,7 @@ public class DocumentService {
 
         // Before saving the updated document, create a version
         if (request.getContent() != null) {
-            createVersion(documentId, request.getContent(), "Content updated", userId);
+            createVersion(documentId, request.getContent(), contentUpdatedLabel, userId);
         }
 
         document.setTitle(request.getTitle());
@@ -155,7 +193,7 @@ public class DocumentService {
                 .legalMatterId(request.getLegalMatterId())
                 .matterReference(request.getMatterReference())
                 .archiveType(request.getArchiveType())
-                .status("ACTIVE")
+                .status(archiveInitialStatus)
                 .retentionDate(request.getRetentionDate())
                 .dispositionAction(request.getDispositionAction())
                 .legalBasis(request.getLegalBasis())
@@ -187,8 +225,11 @@ public class DocumentService {
 
     @Transactional
     public LegalArchiveResponse updateLegalArchiveStatus(UUID archiveId, String status) {
-        if (!VALID_ARCHIVE_STATUSES.contains(status)) {
-            throw new IllegalArgumentException("Invalid archive status: " + status + ". Allowed: " + VALID_ARCHIVE_STATUSES);
+        Set<String> validStatuses = Set.of(validArchiveStatusesStr.split(","));
+        if (!validStatuses.contains(status)) {
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.archive.invalid-status",
+                            new Object[]{status, validStatuses}, Locale.ENGLISH));
         }
         log.info("Updating legal archive {} status to {}", archiveId, status);
         LegalArchive archive = legalArchiveRepository.findById(archiveId)
@@ -209,19 +250,19 @@ public class DocumentService {
                 .legalMatterId(request.getLegalMatterId())
                 .matterReference(request.getMatterReference())
                 .holdType(request.getHoldType())
-                .status("PENDING")
+                .status(holdInitialStatus)
                 .initiatedBy(userId)
                 .custodianIds(request.getCustodianIds())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
-                .autoExtend(request.getAutoExtend() != null ? request.getAutoExtend() : false)
-                .extensionPeriodDays(request.getExtensionPeriodDays() != null ? request.getExtensionPeriodDays() : 30)
+                .autoExtend(request.getAutoExtend() != null ? request.getAutoExtend() : defaultAutoExtend)
+                .extensionPeriodDays(request.getExtensionPeriodDays() != null ? request.getExtensionPeriodDays() : defaultExtensionPeriodDays)
                 .scope(request.getScope())
                 .preservationInstructions(request.getPreservationInstructions())
                 .dataCategories(request.getDataCategories())
                 .projectIds(request.getProjectIds())
                 .legalBasis(request.getLegalBasis())
-                .isCritical(request.getIsCritical() != null ? request.getIsCritical() : false)
+                .isCritical(request.getIsCritical() != null ? request.getIsCritical() : defaultIsCritical)
                 .metadata(request.getMetadata())
                 .build();
 
@@ -235,10 +276,12 @@ public class DocumentService {
         log.info("Activating legal hold: {}", holdId);
         LegalHold hold = legalHoldRepository.findById(holdId)
                 .orElseThrow(() -> new ResourceNotFoundException("LegalHold", "id", holdId));
-        if (!"PENDING".equals(hold.getStatus())) {
-            throw new IllegalStateException("Only PENDING holds can be activated. Current status: " + hold.getStatus());
+        if (!holdInitialStatus.equals(hold.getStatus())) {
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.hold.activate.invalid-status",
+                            new Object[]{holdInitialStatus, hold.getStatus()}, Locale.ENGLISH));
         }
-        hold.setStatus("ACTIVE");
+        hold.setStatus(holdActiveStatus);
         hold = legalHoldRepository.save(hold);
         return toLegalHoldResponse(hold);
     }
@@ -248,10 +291,12 @@ public class DocumentService {
         log.info("Releasing legal hold: {} by user {}", holdId, userId);
         LegalHold hold = legalHoldRepository.findById(holdId)
                 .orElseThrow(() -> new ResourceNotFoundException("LegalHold", "id", holdId));
-        if (!"ACTIVE".equals(hold.getStatus())) {
-            throw new IllegalStateException("Only ACTIVE holds can be released. Current status: " + hold.getStatus());
+        if (!holdActiveStatus.equals(hold.getStatus())) {
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.hold.release.invalid-status",
+                            new Object[]{holdActiveStatus, hold.getStatus()}, Locale.ENGLISH));
         }
-        hold.setStatus("RELEASED");
+        hold.setStatus(holdReleasedStatus);
         hold.setReleasedAt(java.time.LocalDateTime.now());
         hold.setReleasedBy(userId);
         hold.setReleaseReason(reason);
@@ -268,7 +313,7 @@ public class DocumentService {
 
     @Transactional(readOnly = true)
     public List<LegalHoldResponse> getActiveLegalHolds() {
-        return legalHoldRepository.findByStatus("ACTIVE").stream()
+        return legalHoldRepository.findByStatus(holdActiveStatus).stream()
                 .map(this::toLegalHoldResponse)
                 .collect(Collectors.toList());
     }

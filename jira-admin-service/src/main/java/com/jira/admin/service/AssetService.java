@@ -9,10 +9,13 @@ import com.jira.admin.repository.AssetRepository;
 import com.jira.admin.repository.AssetTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -24,6 +27,13 @@ public class AssetService {
     private final AssetTypeRepository assetTypeRepository;
     private final AssetRepository assetRepository;
     private final AssetIssueLinkRepository assetIssueLinkRepository;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.asset-status:ACTIVE}")
+    private String defaultAssetStatus;
+
+    @Value("${app.defaults.asset-link-type:RELATED}")
+    private String defaultAssetLinkType;
 
     // ==================== Asset Types ====================
 
@@ -37,7 +47,8 @@ public class AssetService {
     @Transactional(readOnly = true)
     public AssetTypeResponse getAssetTypeById(UUID id) {
         AssetTypeEntity entity = assetTypeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Asset type not found: " + id));
+                .orElseThrow(() -> new RuntimeException(
+                        messageSource.getMessage("error.asset.type.not.found", new Object[]{id}, Locale.ENGLISH)));
         return mapAssetTypeToResponse(entity);
     }
 
@@ -57,7 +68,8 @@ public class AssetService {
     @Transactional
     public AssetTypeResponse updateAssetType(UUID id, CreateAssetTypeRequest request) {
         AssetTypeEntity entity = assetTypeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Asset type not found: " + id));
+                .orElseThrow(() -> new RuntimeException(
+                        messageSource.getMessage("error.asset.type.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (request.getName() != null) {
             entity.setName(request.getName());
         }
@@ -78,7 +90,8 @@ public class AssetService {
     @Transactional
     public void deactivateAssetType(UUID id) {
         AssetTypeEntity entity = assetTypeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Asset type not found: " + id));
+                .orElseThrow(() -> new RuntimeException(
+                        messageSource.getMessage("error.asset.type.not.found", new Object[]{id}, Locale.ENGLISH)));
         entity.setIsActive(false);
         assetTypeRepository.save(entity);
         log.info("Deactivated asset type: {} ({})", entity.getName(), entity.getId());
@@ -117,7 +130,8 @@ public class AssetService {
     @Transactional(readOnly = true)
     public AssetResponse getAssetById(UUID id) {
         AssetEntity entity = assetRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Asset not found: " + id));
+                .orElseThrow(() -> new RuntimeException(
+                        messageSource.getMessage("error.asset.not.found", new Object[]{id}, Locale.ENGLISH)));
         return mapAssetToResponse(entity);
     }
 
@@ -125,13 +139,14 @@ public class AssetService {
     public AssetResponse createAsset(CreateAssetRequest request) {
         // Verify asset type exists
         assetTypeRepository.findById(request.getAssetTypeId())
-                .orElseThrow(() -> new RuntimeException("Asset type not found: " + request.getAssetTypeId()));
+                .orElseThrow(() -> new RuntimeException(
+                        messageSource.getMessage("error.asset.type.not.found", new Object[]{request.getAssetTypeId()}, Locale.ENGLISH)));
 
         AssetEntity entity = AssetEntity.builder()
                 .assetTypeId(request.getAssetTypeId())
                 .name(request.getName())
                 .description(request.getDescription())
-                .status(request.getStatus() != null ? request.getStatus() : "ACTIVE")
+                .status(request.getStatus() != null ? request.getStatus() : defaultAssetStatus)
                 .subStatus(request.getSubStatus())
                 .location(request.getLocation())
                 .attributes(request.getAttributes())
@@ -146,7 +161,8 @@ public class AssetService {
     @Transactional
     public AssetResponse updateAsset(UUID id, CreateAssetRequest request) {
         AssetEntity entity = assetRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Asset not found: " + id));
+                .orElseThrow(() -> new RuntimeException(
+                        messageSource.getMessage("error.asset.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (request.getName() != null) {
             entity.setName(request.getName());
         }
@@ -176,7 +192,8 @@ public class AssetService {
     @Transactional
     public void deactivateAsset(UUID id) {
         AssetEntity entity = assetRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Asset not found: " + id));
+                .orElseThrow(() -> new RuntimeException(
+                        messageSource.getMessage("error.asset.not.found", new Object[]{id}, Locale.ENGLISH)));
         entity.setIsActive(false);
         assetRepository.save(entity);
         log.info("Deactivated asset: {} ({})", entity.getName(), entity.getId());
@@ -187,12 +204,13 @@ public class AssetService {
     @Transactional
     public AssetIssueLinkResponse linkAssetToIssue(AssetIssueLinkRequest request) {
         if (assetIssueLinkRepository.existsByAssetIdAndIssueId(request.getAssetId(), request.getIssueId())) {
-            throw new IllegalStateException("Asset is already linked to this issue");
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.asset.already.linked", null, Locale.ENGLISH));
         }
         AssetIssueLinkEntity entity = AssetIssueLinkEntity.builder()
                 .assetId(request.getAssetId())
                 .issueId(request.getIssueId())
-                .linkType(request.getLinkType() != null ? request.getLinkType() : "RELATED")
+                .linkType(request.getLinkType() != null ? request.getLinkType() : defaultAssetLinkType)
                 .build();
         AssetIssueLinkEntity saved = assetIssueLinkRepository.save(entity);
         log.info("Linked asset {} to issue {} (type={})", saved.getAssetId(), saved.getIssueId(), saved.getLinkType());
@@ -202,7 +220,8 @@ public class AssetService {
     @Transactional
     public void unlinkAssetFromIssue(UUID linkId) {
         AssetIssueLinkEntity entity = assetIssueLinkRepository.findById(linkId)
-                .orElseThrow(() -> new RuntimeException("Asset-issue link not found: " + linkId));
+                .orElseThrow(() -> new RuntimeException(
+                        messageSource.getMessage("error.asset.link.not.found", new Object[]{linkId}, Locale.ENGLISH)));
         assetIssueLinkRepository.delete(entity);
         log.info("Unlinked asset {} from issue {}", entity.getAssetId(), entity.getIssueId());
     }

@@ -4,10 +4,13 @@ import com.jira.admin.dto.ApplicationLinkResponse;
 import com.jira.admin.entity.ApplicationLinkEntity;
 import com.jira.admin.repository.ApplicationLinkRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -16,6 +19,19 @@ import java.util.stream.Collectors;
 public class IntegrationService {
 
     private final ApplicationLinkRepository applicationLinkRepository;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.application-link-name:Confluence}")
+    private String defaultApplicationLinkName;
+
+    @Value("${app.defaults.application-type:confluence}")
+    private String defaultApplicationType;
+
+    @Value("${app.defaults.link-direction:two-way}")
+    private String defaultLinkDirection;
+
+    @Value("${app.defaults.link-initial-status:pending}")
+    private String defaultLinkStatus;
 
     @Transactional(readOnly = true)
     public List<ApplicationLinkResponse> listApplicationLinks() {
@@ -26,14 +42,15 @@ public class IntegrationService {
 
     @Transactional
     public ApplicationLinkResponse createApplicationLink(Map<String, Object> body) {
-        String name = String.valueOf(body.getOrDefault("name", "Confluence"));
+        String name = String.valueOf(body.getOrDefault("name", defaultApplicationLinkName));
         String url = String.valueOf(body.getOrDefault("url", "")).trim();
         if (url.isEmpty()) {
-            throw new IllegalArgumentException("url is required");
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.integration.url.required", null, Locale.ENGLISH));
         }
 
-        String applicationType = String.valueOf(body.getOrDefault("applicationType", "confluence"));
-        String direction = String.valueOf(body.getOrDefault("direction", "two-way"));
+        String applicationType = String.valueOf(body.getOrDefault("applicationType", defaultApplicationType));
+        String direction = String.valueOf(body.getOrDefault("direction", defaultLinkDirection));
 
         boolean makePrimary = Boolean.TRUE.equals(body.get("primary"))
                 || applicationLinkRepository.count() == 0;
@@ -50,7 +67,7 @@ public class IntegrationService {
                 .url(url.endsWith("/") ? url.substring(0, url.length() - 1) : url)
                 .applicationType(applicationType)
                 .direction(direction)
-                .status("pending")
+                .status(defaultLinkStatus)
                 .primary(makePrimary)
                 .build();
 
@@ -60,7 +77,8 @@ public class IntegrationService {
     @Transactional
     public void deleteApplicationLink(String id) {
         ApplicationLinkEntity link = applicationLinkRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Application link not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.integration.link.not.found", null, Locale.ENGLISH)));
         boolean wasPrimary = Boolean.TRUE.equals(link.getPrimary());
         applicationLinkRepository.delete(link);
         if (wasPrimary) {
@@ -75,7 +93,8 @@ public class IntegrationService {
     @Transactional
     public ApplicationLinkResponse setPrimary(String id) {
         ApplicationLinkEntity target = applicationLinkRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Application link not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.integration.link.not.found", null, Locale.ENGLISH)));
         applicationLinkRepository.findAll().forEach(link -> {
             link.setPrimary(link.getId().equals(target.getId()));
             applicationLinkRepository.save(link);
@@ -86,7 +105,8 @@ public class IntegrationService {
     @Transactional(readOnly = true)
     public Map<String, String> testConnection(String id) {
         ApplicationLinkEntity link = applicationLinkRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Application link not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.integration.link.not.found", null, Locale.ENGLISH)));
         return Map.of(
                 "linkId", link.getId(),
                 "status", "pending",

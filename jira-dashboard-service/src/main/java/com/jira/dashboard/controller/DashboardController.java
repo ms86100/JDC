@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @RestController
@@ -23,13 +25,14 @@ import java.util.UUID;
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final MessageSource messageSource;
 
     @PostMapping
     @Operation(summary = "Create a new dashboard", description = "Creates a new dashboard for the current user")
     public ResponseEntity<DashboardResponse> createDashboard(
             @Valid @RequestBody CreateDashboardRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         DashboardResponse response = dashboardService.createDashboard(request, actor);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -41,7 +44,7 @@ public class DashboardController {
             @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.ok(dashboardService.getDashboardsByOwner(actor, PageRequest.of(page, size)));
     }
@@ -50,7 +53,7 @@ public class DashboardController {
     @Operation(summary = "Get accessible dashboards", description = "Returns all dashboards the user can access")
     public ResponseEntity<List<DashboardResponse>> getAccessibleDashboards(
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.ok(dashboardService.getAccessibleDashboards(actor));
     }
@@ -59,7 +62,7 @@ public class DashboardController {
     @Operation(summary = "Get favorite dashboards", description = "Returns user's favorite dashboards")
     public ResponseEntity<List<DashboardResponse>> getFavoriteDashboards(
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.ok(dashboardService.getFavoriteDashboards(actor));
     }
@@ -77,7 +80,7 @@ public class DashboardController {
             @Parameter(description = "Dashboard ID") @PathVariable UUID id,
             @RequestBody UpdateDashboardRequest request,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.ok(dashboardService.updateDashboard(id, request, actor));
     }
@@ -103,7 +106,7 @@ public class DashboardController {
     public ResponseEntity<DashboardResponse> toggleFavorite(
             @Parameter(description = "Dashboard ID") @PathVariable UUID id,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        if (userId == null) { throw new IllegalArgumentException("X-User-Id header is required"); }
+        if (userId == null) { throw new IllegalArgumentException(messageSource.getMessage("error.header.user-id.required", null, Locale.ENGLISH)); }
         UUID actor = userId;
         return ResponseEntity.ok(dashboardService.toggleFavorite(id, actor));
     }

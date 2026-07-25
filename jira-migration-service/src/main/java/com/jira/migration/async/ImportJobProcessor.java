@@ -55,6 +55,7 @@ import com.jira.migration.websocket.dto.MigrationError;
 import com.jira.migration.websocket.dto.ValidationUpdate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -74,6 +75,18 @@ import java.util.concurrent.Executors;
 @RequiredArgsConstructor
 @Slf4j
 public class ImportJobProcessor {
+
+    @Value("${app.import.default-filename:import.csv}")
+    private String defaultImportFilename;
+
+    @Value("${app.import.default-project-key:DEMO}")
+    private String defaultProjectKey;
+
+    @Value("${app.import.reindex-entity-types:ISSUE,COMMENT,PROJECT}")
+    private String reindexEntityTypesStr;
+
+    @Value("${app.import.parallel-entity-types:Comment,Attachment,Worklog}")
+    private String parallelEntityTypesStr;
 
     private final MigrationService migrationService;
     private final CsvParser csvParser;
@@ -165,7 +178,7 @@ public class ImportJobProcessor {
 
             CsvParser.CsvParseResult parseResult = importSpreadsheetParser.parse(
                     fileContent,
-                    fileName != null ? fileName : "import.csv"
+                    fileName != null ? fileName : defaultImportFilename
             );
 
             log.info("Parsed {} rows from {}", parseResult.getTotalRows(), fileName);
@@ -568,7 +581,7 @@ public class ImportJobProcessor {
                         parseResult.getTotalEntities(), totalFailed.get(), "PROCESSING", entityType);
 
                 boolean parallelSafe = workers != null
-                        && List.of("Comment", "Attachment", "Worklog").contains(entityType);
+                        && Arrays.asList(parallelEntityTypesStr.split(",")).contains(entityType);
 
                 if (parallelSafe && !typeEntities.isEmpty()) {
                     List<JiraDcXmlParser.ParsedEntity> toProcess = resume
@@ -1280,7 +1293,7 @@ public class ImportJobProcessor {
 
         return switch (type) {
             case "Project" -> {
-                String projectKey = fields.getOrDefault("key", "DEMO");
+                String projectKey = fields.getOrDefault("key", defaultProjectKey);
                 UUID targetId = UUID.randomUUID();
                 projectMappingRepository.save(ProjectMapping.builder()
                         .jobId(jobId)
@@ -1453,7 +1466,7 @@ public class ImportJobProcessor {
     private void schedulePostImportReindex(UUID jobId) {
         try {
             migrationEventPublisher.enqueue(jobId, "IMPORT_COMPLETED", Map.of("reindex", true));
-            migrationJobReindexService.triggerReindex(jobId, List.of("ISSUE", "COMMENT", "PROJECT"));
+            migrationJobReindexService.triggerReindex(jobId, Arrays.asList(reindexEntityTypesStr.split(",")));
         } catch (Exception e) {
             log.warn("Post-import reindex scheduling failed for {}: {}", jobId, e.getMessage());
         }

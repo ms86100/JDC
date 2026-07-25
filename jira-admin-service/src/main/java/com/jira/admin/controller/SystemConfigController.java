@@ -7,11 +7,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -21,6 +23,7 @@ import java.util.Map;
 public class SystemConfigController {
 
     private final SystemConfigService configService;
+    private final MessageSource messageSource;
 
     @GetMapping
     @Operation(summary = "Get all system configurations")
@@ -53,7 +56,8 @@ public class SystemConfigController {
             @RequestBody Map<String, String> body) {
         String newValue = body.get("value");
         if (newValue == null) {
-            throw new IllegalArgumentException("Request body must contain 'value' field");
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.request.body.value.required", null, Locale.ENGLISH));
         }
         return ResponseEntity.ok(SystemConfigResponse.fromEntity(configService.updateByKey(key, newValue)));
     }

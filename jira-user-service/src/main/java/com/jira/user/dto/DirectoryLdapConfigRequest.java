@@ -12,13 +12,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class DirectoryLdapConfigRequest {
 
-    @NotBlank(message = "Server URL is required")
+    @NotBlank(message = "{validation.ldap.server.url.required}")
     private String serverUrl;
 
-    @NotBlank(message = "Base DN is required")
+    @NotBlank(message = "{validation.ldap.base.dn.required}")
     private String baseDn;
 
-    @NotBlank(message = "Bind DN is required")
+    @NotBlank(message = "{validation.ldap.bind.dn.required}")
     private String bindDn;
 
     private String bindPassword;

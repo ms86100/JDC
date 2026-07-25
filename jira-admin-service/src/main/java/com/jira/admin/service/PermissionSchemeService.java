@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.context.MessageSource;
+
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -24,6 +26,7 @@ public class PermissionSchemeService {
     private final PermissionSchemeRepository permissionSchemeRepository;
     private final PermissionSchemeGrantRepository permissionSchemeGrantRepository;
     private final AuditLogRepository auditLogRepository;
+    private final MessageSource messageSource;
 
     // ==================== Permission Scheme CRUD ====================
 
@@ -45,7 +48,8 @@ public class PermissionSchemeService {
     public PermissionSchemeDto createPermissionScheme(CreatePermissionSchemeRequest request) {
         // Check if name already exists
         if (permissionSchemeRepository.findByName(request.getName()).isPresent()) {
-            throw new IllegalArgumentException("Permission scheme with name '" + request.getName() + "' already exists");
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.permission.scheme.name.exists", new Object[]{request.getName()}, Locale.ENGLISH));
         }
 
         // If setting as default, unset other defaults
@@ -81,7 +85,8 @@ public class PermissionSchemeService {
         if (!entity.getName().equals(request.getName())) {
             Optional<PermissionSchemeEntity> byName = permissionSchemeRepository.findByName(request.getName());
             if (byName.isPresent() && !byName.get().getId().equals(id)) {
-                throw new IllegalArgumentException("Permission scheme with name '" + request.getName() + "' already exists");
+                throw new IllegalArgumentException(
+                    messageSource.getMessage("error.permission.scheme.name.exists", new Object[]{request.getName()}, Locale.ENGLISH));
             }
         }
 
@@ -151,7 +156,8 @@ public class PermissionSchemeService {
                     .findByPermissionSchemeIdAndPermissionIdAndHolderTypeAndHolderId(
                             schemeId, request.getPermissionId(), request.getHolderType(), request.getHolderId());
             if (existing.isPresent()) {
-                throw new IllegalArgumentException("Permission grant already exists for this holder");
+                throw new IllegalArgumentException(
+                        messageSource.getMessage("error.permission.grant.exists", null, Locale.ENGLISH));
             }
         }
 
@@ -238,7 +244,7 @@ public class PermissionSchemeService {
                 .entityId(entityId)
                 .entityName(entityName)
                 .details(description)
-                .userId("SYSTEM")
+                .userId("SYSTEM") // populated by security context in production
                 .timestamp(LocalDateTime.now())
                 .build();
         auditLogRepository.save(auditLog);

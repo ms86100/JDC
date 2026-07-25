@@ -4,12 +4,14 @@ import com.jira.admin.dto.MasterDataRequest;
 import com.jira.admin.dto.MasterDataResponse;
 import com.jira.admin.entity.*;
 import com.jira.admin.repository.*;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -18,7 +20,6 @@ import java.util.UUID;
  * notification events, quick filters).
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class PlatformMasterDataService {
 
@@ -33,6 +34,45 @@ public class PlatformMasterDataService {
     private final MasterBoardColumnTemplateRepository columnTemplateRepo;
     private final MasterNotificationEventRepository notifEventRepo;
     private final MasterQuickFilterPresetRepository quickFilterRepo;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.status-color:#6C757D}")
+    private String defaultStatusColor;
+
+    @Value("${app.defaults.status-category:TODO}")
+    private String defaultStatusCategory;
+
+    @Value("${app.defaults.issue-type-icon:standard}")
+    private String defaultIssueTypeIcon;
+
+    @Value("${app.defaults.permission-category:CUSTOM}")
+    private String defaultPermissionCategory;
+
+    public PlatformMasterDataService(MasterStatusRepository statusRepo,
+                                      MasterPriorityRepository priorityRepo,
+                                      MasterIssueTypeRepository issueTypeRepo,
+                                      MasterResolutionRepository resolutionRepo,
+                                      MasterLinkTypeRepository linkTypeRepo,
+                                      MasterRoleRepository roleRepo,
+                                      MasterPermissionRepository permissionRepo,
+                                      MasterBoardTypeRepository boardTypeRepo,
+                                      MasterBoardColumnTemplateRepository columnTemplateRepo,
+                                      MasterNotificationEventRepository notifEventRepo,
+                                      MasterQuickFilterPresetRepository quickFilterRepo,
+                                      MessageSource messageSource) {
+        this.statusRepo = statusRepo;
+        this.priorityRepo = priorityRepo;
+        this.issueTypeRepo = issueTypeRepo;
+        this.resolutionRepo = resolutionRepo;
+        this.linkTypeRepo = linkTypeRepo;
+        this.roleRepo = roleRepo;
+        this.permissionRepo = permissionRepo;
+        this.boardTypeRepo = boardTypeRepo;
+        this.columnTemplateRepo = columnTemplateRepo;
+        this.notifEventRepo = notifEventRepo;
+        this.quickFilterRepo = quickFilterRepo;
+        this.messageSource = messageSource;
+    }
 
     // ==================== Statuses ====================
 
@@ -45,20 +85,22 @@ public class PlatformMasterDataService {
     @Transactional(readOnly = true)
     public MasterDataResponse getStatus(UUID id) {
         return MasterDataResponse.fromStatus(statusRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Status not found: " + id)));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.status.not.found", new Object[]{id}, Locale.ENGLISH))));
     }
 
     @Transactional
     public MasterDataResponse createStatus(MasterDataRequest req) {
         if (statusRepo.existsByStatusKey(req.getKey())) {
-            throw new IllegalArgumentException("Status key already exists: " + req.getKey());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.master.status.key.exists", new Object[]{req.getKey()}, Locale.ENGLISH));
         }
         MasterStatusEntity entity = MasterStatusEntity.builder()
                 .statusKey(req.getKey())
                 .displayName(req.getDisplayName())
                 .description(req.getDescription())
-                .category(req.getCategory() != null ? req.getCategory() : "TODO")
-                .color(req.getColor() != null ? req.getColor() : "#6C757D")
+                .category(req.getCategory() != null ? req.getCategory() : defaultStatusCategory)
+                .color(req.getColor() != null ? req.getColor() : defaultStatusColor)
                 .icon(req.getIcon())
                 .sortOrder(req.getSortOrder() != null ? req.getSortOrder() : 0)
                 .isSystem(req.getIsSystem() != null ? req.getIsSystem() : false)
@@ -72,7 +114,8 @@ public class PlatformMasterDataService {
     @Transactional
     public MasterDataResponse updateStatus(UUID id, MasterDataRequest req) {
         MasterStatusEntity entity = statusRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Status not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.status.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (req.getDisplayName() != null) entity.setDisplayName(req.getDisplayName());
         if (req.getDescription() != null) entity.setDescription(req.getDescription());
         if (req.getCategory() != null) entity.setCategory(req.getCategory());
@@ -88,9 +131,11 @@ public class PlatformMasterDataService {
     @Transactional
     public void deleteStatus(UUID id) {
         MasterStatusEntity entity = statusRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Status not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.status.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (entity.getIsSystem()) {
-            throw new IllegalStateException("Cannot delete system status: " + entity.getStatusKey());
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.master.status.system.delete", new Object[]{entity.getStatusKey()}, Locale.ENGLISH));
         }
         statusRepo.delete(entity);
         log.info("Master status deleted: {}", entity.getStatusKey());
@@ -107,19 +152,21 @@ public class PlatformMasterDataService {
     @Transactional(readOnly = true)
     public MasterDataResponse getPriority(UUID id) {
         return MasterDataResponse.fromPriority(priorityRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Priority not found: " + id)));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.priority.not.found", new Object[]{id}, Locale.ENGLISH))));
     }
 
     @Transactional
     public MasterDataResponse createPriority(MasterDataRequest req) {
         if (priorityRepo.existsByPriorityKey(req.getKey())) {
-            throw new IllegalArgumentException("Priority key already exists: " + req.getKey());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.master.priority.key.exists", new Object[]{req.getKey()}, Locale.ENGLISH));
         }
         MasterPriorityEntity entity = MasterPriorityEntity.builder()
                 .priorityKey(req.getKey())
                 .displayName(req.getDisplayName())
                 .description(req.getDescription())
-                .color(req.getColor() != null ? req.getColor() : "#6C757D")
+                .color(req.getColor() != null ? req.getColor() : defaultStatusColor)
                 .iconUrl(req.getIconUrl())
                 .sortOrder(req.getSortOrder() != null ? req.getSortOrder() : 0)
                 .isDefault(req.getIsDefault() != null ? req.getIsDefault() : false)
@@ -133,7 +180,8 @@ public class PlatformMasterDataService {
     @Transactional
     public MasterDataResponse updatePriority(UUID id, MasterDataRequest req) {
         MasterPriorityEntity entity = priorityRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Priority not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.priority.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (req.getDisplayName() != null) entity.setDisplayName(req.getDisplayName());
         if (req.getDescription() != null) entity.setDescription(req.getDescription());
         if (req.getColor() != null) entity.setColor(req.getColor());
@@ -149,7 +197,8 @@ public class PlatformMasterDataService {
     @Transactional
     public void deletePriority(UUID id) {
         MasterPriorityEntity entity = priorityRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Priority not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.priority.not.found", new Object[]{id}, Locale.ENGLISH)));
         priorityRepo.delete(entity);
         log.info("Master priority deleted: {}", entity.getPriorityKey());
     }
@@ -165,19 +214,21 @@ public class PlatformMasterDataService {
     @Transactional(readOnly = true)
     public MasterDataResponse getIssueType(UUID id) {
         return MasterDataResponse.fromIssueType(issueTypeRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Issue type not found: " + id)));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.issue.type.not.found", new Object[]{id}, Locale.ENGLISH))));
     }
 
     @Transactional
     public MasterDataResponse createIssueType(MasterDataRequest req) {
         if (issueTypeRepo.existsByTypeKey(req.getKey())) {
-            throw new IllegalArgumentException("Issue type key already exists: " + req.getKey());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.master.issue.type.key.exists", new Object[]{req.getKey()}, Locale.ENGLISH));
         }
         MasterIssueTypeEntity entity = MasterIssueTypeEntity.builder()
                 .typeKey(req.getKey())
                 .displayName(req.getDisplayName())
                 .description(req.getDescription())
-                .icon(req.getIcon() != null ? req.getIcon() : "standard")
+                .icon(req.getIcon() != null ? req.getIcon() : defaultIssueTypeIcon)
                 .color(req.getColor())
                 .isSubtask(req.getIsSubtask() != null ? req.getIsSubtask() : false)
                 .isSystem(req.getIsSystem() != null ? req.getIsSystem() : false)
@@ -192,7 +243,8 @@ public class PlatformMasterDataService {
     @Transactional
     public MasterDataResponse updateIssueType(UUID id, MasterDataRequest req) {
         MasterIssueTypeEntity entity = issueTypeRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Issue type not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.issue.type.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (req.getDisplayName() != null) entity.setDisplayName(req.getDisplayName());
         if (req.getDescription() != null) entity.setDescription(req.getDescription());
         if (req.getIcon() != null) entity.setIcon(req.getIcon());
@@ -207,9 +259,11 @@ public class PlatformMasterDataService {
     @Transactional
     public void deleteIssueType(UUID id) {
         MasterIssueTypeEntity entity = issueTypeRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Issue type not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.issue.type.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (entity.getIsSystem()) {
-            throw new IllegalStateException("Cannot delete system issue type: " + entity.getTypeKey());
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.master.issue.type.system.delete", new Object[]{entity.getTypeKey()}, Locale.ENGLISH));
         }
         issueTypeRepo.delete(entity);
         log.info("Master issue type deleted: {}", entity.getTypeKey());
@@ -226,13 +280,15 @@ public class PlatformMasterDataService {
     @Transactional(readOnly = true)
     public MasterDataResponse getResolution(UUID id) {
         return MasterDataResponse.fromResolution(resolutionRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Resolution not found: " + id)));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.resolution.not.found", new Object[]{id}, Locale.ENGLISH))));
     }
 
     @Transactional
     public MasterDataResponse createResolution(MasterDataRequest req) {
         if (resolutionRepo.existsByResolutionKey(req.getKey())) {
-            throw new IllegalArgumentException("Resolution key already exists: " + req.getKey());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.master.resolution.key.exists", new Object[]{req.getKey()}, Locale.ENGLISH));
         }
         MasterResolutionEntity entity = MasterResolutionEntity.builder()
                 .resolutionKey(req.getKey())
@@ -250,7 +306,8 @@ public class PlatformMasterDataService {
     @Transactional
     public MasterDataResponse updateResolution(UUID id, MasterDataRequest req) {
         MasterResolutionEntity entity = resolutionRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Resolution not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.resolution.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (req.getDisplayName() != null) entity.setDisplayName(req.getDisplayName());
         if (req.getDescription() != null) entity.setDescription(req.getDescription());
         if (req.getSortOrder() != null) entity.setSortOrder(req.getSortOrder());
@@ -264,7 +321,8 @@ public class PlatformMasterDataService {
     @Transactional
     public void deleteResolution(UUID id) {
         MasterResolutionEntity entity = resolutionRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Resolution not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.resolution.not.found", new Object[]{id}, Locale.ENGLISH)));
         resolutionRepo.delete(entity);
         log.info("Master resolution deleted: {}", entity.getResolutionKey());
     }
@@ -280,13 +338,15 @@ public class PlatformMasterDataService {
     @Transactional(readOnly = true)
     public MasterDataResponse getLinkType(UUID id) {
         return MasterDataResponse.fromLinkType(linkTypeRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Link type not found: " + id)));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.link.type.not.found", new Object[]{id}, Locale.ENGLISH))));
     }
 
     @Transactional
     public MasterDataResponse createLinkType(MasterDataRequest req) {
         if (linkTypeRepo.existsByLinkKey(req.getKey())) {
-            throw new IllegalArgumentException("Link type key already exists: " + req.getKey());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.master.link.type.key.exists", new Object[]{req.getKey()}, Locale.ENGLISH));
         }
         MasterLinkTypeEntity entity = MasterLinkTypeEntity.builder()
                 .linkKey(req.getKey())
@@ -305,7 +365,8 @@ public class PlatformMasterDataService {
     @Transactional
     public MasterDataResponse updateLinkType(UUID id, MasterDataRequest req) {
         MasterLinkTypeEntity entity = linkTypeRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Link type not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.link.type.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (req.getOutwardName() != null) entity.setOutwardName(req.getOutwardName());
         if (req.getInwardName() != null) entity.setInwardName(req.getInwardName());
         if (req.getDescription() != null) entity.setDescription(req.getDescription());
@@ -319,9 +380,11 @@ public class PlatformMasterDataService {
     @Transactional
     public void deleteLinkType(UUID id) {
         MasterLinkTypeEntity entity = linkTypeRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Link type not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.link.type.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (entity.getIsSystem()) {
-            throw new IllegalStateException("Cannot delete system link type: " + entity.getLinkKey());
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.master.link.type.system.delete", new Object[]{entity.getLinkKey()}, Locale.ENGLISH));
         }
         linkTypeRepo.delete(entity);
         log.info("Master link type deleted: {}", entity.getLinkKey());
@@ -338,13 +401,15 @@ public class PlatformMasterDataService {
     @Transactional(readOnly = true)
     public MasterDataResponse getRole(UUID id) {
         return MasterDataResponse.fromRole(roleRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Role not found: " + id)));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.role.not.found", new Object[]{id}, Locale.ENGLISH))));
     }
 
     @Transactional
     public MasterDataResponse createRole(MasterDataRequest req) {
         if (roleRepo.existsByRoleKey(req.getKey())) {
-            throw new IllegalArgumentException("Role key already exists: " + req.getKey());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.master.role.key.exists", new Object[]{req.getKey()}, Locale.ENGLISH));
         }
         MasterRoleEntity entity = MasterRoleEntity.builder()
                 .roleKey(req.getKey())
@@ -361,7 +426,8 @@ public class PlatformMasterDataService {
     @Transactional
     public MasterDataResponse updateRole(UUID id, MasterDataRequest req) {
         MasterRoleEntity entity = roleRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Role not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.role.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (req.getDisplayName() != null) entity.setDisplayName(req.getDisplayName());
         if (req.getDescription() != null) entity.setDescription(req.getDescription());
         if (req.getIsActive() != null) entity.setIsActive(req.getIsActive());
@@ -373,9 +439,11 @@ public class PlatformMasterDataService {
     @Transactional
     public void deleteRole(UUID id) {
         MasterRoleEntity entity = roleRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Role not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.role.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (entity.getIsSystem()) {
-            throw new IllegalStateException("Cannot delete system role: " + entity.getRoleKey());
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.master.role.system.delete", new Object[]{entity.getRoleKey()}, Locale.ENGLISH));
         }
         roleRepo.delete(entity);
         log.info("Master role deleted: {}", entity.getRoleKey());
@@ -392,19 +460,21 @@ public class PlatformMasterDataService {
     @Transactional(readOnly = true)
     public MasterDataResponse getPermission(UUID id) {
         return MasterDataResponse.fromPermission(permissionRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Permission not found: " + id)));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.permission.not.found", new Object[]{id}, Locale.ENGLISH))));
     }
 
     @Transactional
     public MasterDataResponse createPermission(MasterDataRequest req) {
         if (permissionRepo.existsByPermissionKey(req.getKey())) {
-            throw new IllegalArgumentException("Permission key already exists: " + req.getKey());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.master.permission.key.exists", new Object[]{req.getKey()}, Locale.ENGLISH));
         }
         MasterPermissionEntity entity = MasterPermissionEntity.builder()
                 .permissionKey(req.getKey())
                 .displayName(req.getDisplayName())
                 .description(req.getDescription())
-                .category(req.getCategory() != null ? req.getCategory() : "CUSTOM")
+                .category(req.getCategory() != null ? req.getCategory() : defaultPermissionCategory)
                 .isSystem(req.getIsSystem() != null ? req.getIsSystem() : false)
                 .isActive(true)
                 .build();
@@ -416,7 +486,8 @@ public class PlatformMasterDataService {
     @Transactional
     public MasterDataResponse updatePermission(UUID id, MasterDataRequest req) {
         MasterPermissionEntity entity = permissionRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Permission not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.permission.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (req.getDisplayName() != null) entity.setDisplayName(req.getDisplayName());
         if (req.getDescription() != null) entity.setDescription(req.getDescription());
         if (req.getCategory() != null) entity.setCategory(req.getCategory());
@@ -429,9 +500,11 @@ public class PlatformMasterDataService {
     @Transactional
     public void deletePermission(UUID id) {
         MasterPermissionEntity entity = permissionRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Permission not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.permission.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (entity.getIsSystem()) {
-            throw new IllegalStateException("Cannot delete system permission: " + entity.getPermissionKey());
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.master.permission.system.delete", new Object[]{entity.getPermissionKey()}, Locale.ENGLISH));
         }
         permissionRepo.delete(entity);
         log.info("Master permission deleted: {}", entity.getPermissionKey());
@@ -448,13 +521,15 @@ public class PlatformMasterDataService {
     @Transactional(readOnly = true)
     public MasterDataResponse getBoardType(UUID id) {
         return MasterDataResponse.fromBoardType(boardTypeRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Board type not found: " + id)));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.board.type.not.found", new Object[]{id}, Locale.ENGLISH))));
     }
 
     @Transactional
     public MasterDataResponse createBoardType(MasterDataRequest req) {
         if (boardTypeRepo.existsByTypeKey(req.getKey())) {
-            throw new IllegalArgumentException("Board type key already exists: " + req.getKey());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.master.board.type.key.exists", new Object[]{req.getKey()}, Locale.ENGLISH));
         }
         MasterBoardTypeEntity entity = MasterBoardTypeEntity.builder()
                 .typeKey(req.getKey())
@@ -470,7 +545,8 @@ public class PlatformMasterDataService {
     @Transactional
     public MasterDataResponse updateBoardType(UUID id, MasterDataRequest req) {
         MasterBoardTypeEntity entity = boardTypeRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Board type not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.board.type.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (req.getDisplayName() != null) entity.setDisplayName(req.getDisplayName());
         if (req.getDescription() != null) entity.setDescription(req.getDescription());
         if (req.getIsActive() != null) entity.setIsActive(req.getIsActive());
@@ -482,7 +558,8 @@ public class PlatformMasterDataService {
     @Transactional
     public void deleteBoardType(UUID id) {
         MasterBoardTypeEntity entity = boardTypeRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Board type not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.board.type.not.found", new Object[]{id}, Locale.ENGLISH)));
         boardTypeRepo.delete(entity);
         log.info("Master board type deleted: {}", entity.getTypeKey());
     }
@@ -498,19 +575,21 @@ public class PlatformMasterDataService {
     @Transactional(readOnly = true)
     public MasterDataResponse getNotificationEvent(UUID id) {
         return MasterDataResponse.fromNotificationEvent(notifEventRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Notification event not found: " + id)));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.notif.event.not.found", new Object[]{id}, Locale.ENGLISH))));
     }
 
     @Transactional
     public MasterDataResponse createNotificationEvent(MasterDataRequest req) {
         if (notifEventRepo.existsByEventKey(req.getKey())) {
-            throw new IllegalArgumentException("Notification event key already exists: " + req.getKey());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("error.master.notif.event.key.exists", new Object[]{req.getKey()}, Locale.ENGLISH));
         }
         MasterNotificationEventEntity entity = MasterNotificationEventEntity.builder()
                 .eventKey(req.getKey())
                 .displayName(req.getDisplayName())
                 .description(req.getDescription())
-                .category(req.getCategory() != null ? req.getCategory() : "CUSTOM")
+                .category(req.getCategory() != null ? req.getCategory() : defaultPermissionCategory)
                 .isSystem(req.getIsSystem() != null ? req.getIsSystem() : false)
                 .isActive(true)
                 .build();
@@ -522,7 +601,8 @@ public class PlatformMasterDataService {
     @Transactional
     public MasterDataResponse updateNotificationEvent(UUID id, MasterDataRequest req) {
         MasterNotificationEventEntity entity = notifEventRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Notification event not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.notif.event.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (req.getDisplayName() != null) entity.setDisplayName(req.getDisplayName());
         if (req.getDescription() != null) entity.setDescription(req.getDescription());
         if (req.getCategory() != null) entity.setCategory(req.getCategory());
@@ -535,9 +615,11 @@ public class PlatformMasterDataService {
     @Transactional
     public void deleteNotificationEvent(UUID id) {
         MasterNotificationEventEntity entity = notifEventRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Notification event not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.notif.event.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (entity.getIsSystem()) {
-            throw new IllegalStateException("Cannot delete system notification event: " + entity.getEventKey());
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.master.notif.event.system.delete", new Object[]{entity.getEventKey()}, Locale.ENGLISH));
         }
         notifEventRepo.delete(entity);
         log.info("Master notification event deleted: {}", entity.getEventKey());
@@ -554,7 +636,8 @@ public class PlatformMasterDataService {
     @Transactional(readOnly = true)
     public MasterDataResponse getQuickFilter(UUID id) {
         return MasterDataResponse.fromQuickFilter(quickFilterRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Quick filter not found: " + id)));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.quick.filter.not.found", new Object[]{id}, Locale.ENGLISH))));
     }
 
     @Transactional
@@ -575,7 +658,8 @@ public class PlatformMasterDataService {
     @Transactional
     public MasterDataResponse updateQuickFilter(UUID id, MasterDataRequest req) {
         MasterQuickFilterPresetEntity entity = quickFilterRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Quick filter not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.quick.filter.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (req.getDisplayName() != null) entity.setFilterName(req.getDisplayName());
         if (req.getJqlQuery() != null) entity.setJqlQuery(req.getJqlQuery());
         if (req.getIcon() != null) entity.setIcon(req.getIcon());
@@ -589,9 +673,11 @@ public class PlatformMasterDataService {
     @Transactional
     public void deleteQuickFilter(UUID id) {
         MasterQuickFilterPresetEntity entity = quickFilterRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Quick filter not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        messageSource.getMessage("error.master.quick.filter.not.found", new Object[]{id}, Locale.ENGLISH)));
         if (entity.getIsSystem()) {
-            throw new IllegalStateException("Cannot delete system quick filter: " + entity.getFilterName());
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.master.quick.filter.system.delete", new Object[]{entity.getFilterName()}, Locale.ENGLISH));
         }
         quickFilterRepo.delete(entity);
         log.info("Master quick filter deleted: {}", entity.getFilterName());

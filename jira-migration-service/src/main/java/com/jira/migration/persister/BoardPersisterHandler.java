@@ -1,7 +1,7 @@
 package com.jira.migration.persister;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,9 +12,14 @@ import java.util.*;
  * Handles Scrum/Kanban board creation and configuration
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class BoardPersisterHandler {
+
+    @Value("${app.board.default-board-type:SCRUM}")
+    private String defaultBoardType;
+
+    @Value("${app.board.default-kanban-columns:To Do,In Progress,Done}")
+    private String defaultKanbanColumnsStr;
 
     @Transactional(rollbackFor = Exception.class)
     public BoardPersistResult persistBoard(Map<String, Object> boardData, UUID jobId) {
@@ -26,7 +31,7 @@ public class BoardPersisterHandler {
                 throw new IllegalArgumentException("Board name is required");
             }
 
-            String boardType = (String) boardData.getOrDefault("boardType", "SCRUM"); // SCRUM, KANBAN
+            String boardType = (String) boardData.getOrDefault("boardType", defaultBoardType); // SCRUM, KANBAN
             String projectKey = (String) boardData.get("projectKey");
             if (projectKey == null) {
                 throw new IllegalArgumentException("Project key is required for board");
@@ -67,9 +72,9 @@ public class BoardPersisterHandler {
     }
 
     private void createDefaultKanbanColumns(UUID boardId) {
-        String[] defaultColumns = {"To Do", "In Progress", "Done"};
+        String[] defaultColumns = defaultKanbanColumnsStr.split(",");
         for (int i = 0; i < defaultColumns.length; i++) {
-            persistBoardColumn(boardId, defaultColumns[i], i, i == 2); // last column is "done"
+            persistBoardColumn(boardId, defaultColumns[i].trim(), i, i == defaultColumns.length - 1); // last column is "done"
         }
     }
 

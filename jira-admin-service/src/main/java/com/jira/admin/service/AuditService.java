@@ -4,6 +4,7 @@ import com.jira.admin.entity.AuditLogEntity;
 import com.jira.admin.repository.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -22,6 +23,12 @@ import java.util.*;
 public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
+
+    @Value("${app.defaults.audit-severity:INFO}")
+    private String defaultAuditSeverity;
+
+    @Value("${app.defaults.audit-source:UI}")
+    private String defaultAuditSource;
 
     @Transactional(readOnly = true)
     public Page<AuditLogEntity> getAuditLogs(
@@ -89,8 +96,8 @@ public class AuditService {
                 .changedValues(changedValuesJson)
                 .details(details)
                 .result(result)
-                .severity(severity != null ? severity : "INFO")
-                .source(source != null ? source : "UI")
+                .severity(severity != null ? severity : defaultAuditSeverity)
+                .source(source != null ? source : defaultAuditSource)
                 .userAgent(userAgent)
                 .build();
 

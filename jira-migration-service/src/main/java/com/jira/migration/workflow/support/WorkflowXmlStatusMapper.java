@@ -1,5 +1,6 @@
 package com.jira.migration.workflow.support;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Locale;
@@ -8,6 +9,9 @@ import java.util.UUID;
 
 @Component
 public class WorkflowXmlStatusMapper {
+
+    @Value("${app.workflow.default-status-name:Open}")
+    private String defaultStatusName;
 
     private static final Map<String, UUID> OS_STATUS_TO_PLATFORM = Map.ofEntries(
             Map.entry("10000", UUID.fromString("00000000-0000-0000-0001-000000000009")),
@@ -53,6 +57,6 @@ public class WorkflowXmlStatusMapper {
         if (stepName != null) {
             return stepName;
         }
-        return osStatusId != null ? osStatusId : "Open";
+        return osStatusId != null ? osStatusId : defaultStatusName;
     }
 }

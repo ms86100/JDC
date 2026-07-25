@@ -13,11 +13,11 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateDashboardRequest {
 
-    @NotBlank(message = "Dashboard name is required")
-    @Size(max = 255, message = "Dashboard name must not exceed 255 characters")
+    @NotBlank(message = "{validation.dashboard.name.required}")
+    @Size(max = 255, message = "{validation.dashboard.name.size}")
     private String name;
 
-    @Size(max = 1000, message = "Description must not exceed 1000 characters")
+    @Size(max = 1000, message = "{validation.dashboard.description.size}")
     private String description;
 
     private UUID projectId;

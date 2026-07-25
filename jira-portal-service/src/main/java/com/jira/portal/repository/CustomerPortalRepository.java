@@ -19,9 +19,9 @@ public interface CustomerPortalRepository extends JpaRepository<CustomerPortal, 
 
     List<CustomerPortal> findByStatus(String status);
 
-    @Query("SELECT cp FROM CustomerPortal cp WHERE cp.isPublic = true AND cp.status = 'PUBLISHED'")
-    List<CustomerPortal> findPublicPortals();
+    @Query("SELECT cp FROM CustomerPortal cp WHERE cp.isPublic = true AND cp.status = :status")
+    List<CustomerPortal> findPublicPortals(@Param("status") String status);
 
-    @Query("SELECT cp FROM CustomerPortal cp WHERE cp.status = 'PUBLISHED'")
-    List<CustomerPortal> findPublishedPortals();
+    @Query("SELECT cp FROM CustomerPortal cp WHERE cp.status = :status")
+    List<CustomerPortal> findPublishedPortals(@Param("status") String status);
 }

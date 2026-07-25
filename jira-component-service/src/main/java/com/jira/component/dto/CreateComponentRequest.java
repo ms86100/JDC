@@ -11,17 +11,17 @@ import java.util.UUID;
 @Builder
 public class CreateComponentRequest {
 
-    @NotNull(message = "Project ID is required")
+    @NotNull(message = "{validation.projectId.required}")
     private UUID projectId;
 
-    @NotBlank(message = "Component name is required")
+    @NotBlank(message = "{validation.component.name.required}")
     private String name;
 
     private String description;
 
     private UUID leadUserId;
 
-    private String assigneeType = "PROJECT_DEFAULT";
+    private String assigneeType;
 
     private UUID defaultAssignee;
 

@@ -19,6 +19,7 @@ const C = {
 
 /* ─── tabs ─── */
 const TABS = [
+  'SYSDOPS Relations',
   'System Overview',
   'Cluster Architecture',
   'Enterprise Hardening',
@@ -255,6 +256,430 @@ function EndpointRow({ method, path, desc }: { method: string; path: string; des
 /* =========================================================================
    Tab render functions
    ========================================================================= */
+
+function MermaidBlock({ title, chart }: { title: string; chart: string }) {
+  return (
+    <div className="ads-card" style={{ marginBottom: 20 }}>
+      <h4 className="ads-card-title">{title}</h4>
+      <pre style={{
+        background: '#1e1e1e', color: '#d4d4d4', padding: 20, borderRadius: 6,
+        fontSize: 12, lineHeight: 1.7, overflowX: 'auto', whiteSpace: 'pre',
+        fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace',",
+      }}>{chart}</pre>
+    </div>
+  );
+}
+
+function renderSysdopsRelations() {
+  return (
+    <div>
+      <SectionHeading>SYSDOPS Module Relationship Architecture</SectionHeading>
+      <Paragraph>
+        SYSDOPS (System DevOps) is an Airbus Jira Data Center platform managing the full aircraft
+        system Verification &amp; Validation lifecycle per ARP4754A (systems engineering V-model) and
+        EASA Part 21 (change classification). It replaces legacy tools (TrackDev, LTM, FADEC database)
+        with four object categories &mdash; Requirement, Test, Change, Defect &mdash; linked by typed
+        Jira issue links to form a complete traceability chain from design requirements through
+        laboratory verification to certification authority submission.
+      </Paragraph>
+
+      {/* ── 1. Multi-Project Architecture ── */}
+      <MermaidBlock title="1. Multi-Project Architecture (4 Project Templates)" chart={`graph LR
+    subgraph DO["DO Project (Design Office)"]
+        HLVVO["HLVVO\\n(Review Package)"]
+        VVO["VVO\\n(V&V Objective)"]
+        TR["Test Request\\n(LTR/FTR)"]
+        DI["Design Item"]
+        CC["Change Card\\n(7 tabs)"]
+        DCL["DCL\\n(Spec Clarification)"]
+        DEL["Deliverable"]
+        SS["System Standard\\n(M1659.2)"]
+    end
+
+    subgraph LAB["LAB Project (Laboratory)"]
+        LVVO["VVO (read-only)"]
+        TEST["Test\\n(Procedure + Steps)"]
+        TP["Test Plan\\n(Campaign)"]
+        TE["Test Execution\\n(Run Instance)"]
+        PC["Pre-Condition"]
+    end
+
+    subgraph DEF["DEFECT Project (Shared)"]
+        TECH["TechEvent\\n(M1668 Anomaly)"]
+        BD["Bench Defect\\n(Test Means)"]
+        PR["Problem Report\\n(Certification)"]
+    end
+
+    subgraph SUP["SUPPLIER Project"]
+        S_DCL["DCL (synced)"]
+        S_DI["DI (shared)"]
+        S_TE["TechEvent (synced)"]
+    end
+
+    VVO -->|"transfer via ID Doors"| LVVO
+    LVVO -->|"tested by"| TEST
+    TEST -->|"executed in"| TE
+    TE -->|"grouped by"| TP
+    TE -->|"defect from"| TECH
+    TECH -->|"creates"| CC
+    TECH -->|"creates"| BD
+    TECH -->|"links"| PR
+    DCL <-->|"bidirectional sync"| S_DCL
+    DI -->|"copy to supplier"| S_DI
+    TECH -->|"supplier analysis"| S_TE
+    PR -->|"transmitted to"| EASA["EASA/FAA\\n(Certification Authority)"]`} />
+
+      {/* ── 2. Entity Relationship Diagram ── */}
+      <MermaidBlock title="2. Entity Relationship Diagram (Full Traceability Chain)" chart={`erDiagram
+    HLVVO ||--|{ VVO : "is parent of (1:N)"
+    VVO ||--|{ TEST : "tested by (1:N)"
+    VVO }|--|| TEST_REQUEST : "contained in (N:1)"
+    VVO ||--o| VVO : "clone/supersede (version chain)"
+    TEST ||--|{ TEST_EXECUTION : "executed as (1:N)"
+    TEST_EXECUTION }|--|| TEST_PLAN : "grouped in (N:1)"
+    TEST_EXECUTION ||--o{ TECH_EVENT : "defect from"
+    TECH_EVENT ||--o{ BENCH_DEFECT : "creates"
+    TECH_EVENT ||--o{ PROBLEM_REPORT : "links PR"
+    TECH_EVENT ||--o| CHANGE_CARD : "creates change"
+    DESIGN_ITEM ||--|{ CHANGE_CARD : "is parent of (1:N)"
+    SYSTEM_STANDARD ||--|{ REVIEW_SUB_TASK : "auto-creates (1:N)"
+
+    VVO {
+        UUID id PK
+        string summary
+        string status "NEW|TO_BE_VERIFIED|VERIFIED|RELEASED|CANCELLED|SUPERSEDED"
+        string id_doors "DOORS traceability"
+        int vvo_version "auto-incremented on clone"
+        string fix_version "baseline identifier"
+        string[] applicability "A320_CEONEO|A330|A350..."
+        string[] vvo_usage "Maturity|Formal|NonRegression"
+        string vvo_scope "Interface|Functional"
+        UUID hlvvo_id FK
+        UUID clone_source_id FK
+    }
+
+    HLVVO {
+        UUID id PK
+        string summary
+        string status "NEW|PLAN|VVO_WRITING|SUPPLIER_REVIEW|AUTHORIZE"
+        jsonb proofreading_data
+    }
+
+    TECH_EVENT {
+        UUID id PK
+        string summary
+        string status "12 states per M1668"
+        UUID program_id FK "cascading"
+        UUID test_mean_id FK "cascading"
+        UUID system_id FK "cascading"
+        string defect_type "Hardware|Software"
+        string defect_impact "Safety|Functional|Operational"
+        string reporter_team
+    }
+
+    CHANGE_CARD {
+        UUID id PK
+        string change_type "ANOMALY|EVOLUTION"
+        string classification "EASA Part 21 types"
+        string design_review_rag "Green|Amber|Red"
+        UUID parent_design_item_id FK
+    }`} />
+
+      {/* ── 3. V&V Lifecycle Flow ── */}
+      <MermaidBlock title="3. End-to-End V&V Lifecycle (DO → LAB → DEFECT → Certification)" chart={`sequenceDiagram
+    participant DO as Design Office
+    participant DOORS as IBM DOORS
+    participant LAB as Laboratory
+    participant DEF as DEFECT Project
+    participant SUP as Supplier
+    participant CERT as EASA/FAA
+
+    Note over DO: Phase 1 - Requirement Definition
+    DO->>DO: Author VVOs (25+ fields each)
+    DO->>DO: Group into HLVVOs for review
+    DO->>DO: HLVVO → "Authorize" auto-transitions child VVOs to Verified
+
+    Note over DO: Phase 2 - Baseline & DOORS
+    DO->>DO: Tag VVOs with Fix Version (baseline)
+    DO->>DO: Bulk transition Verified → Released
+    DO->>DOORS: Export Released/Cancelled VVOs (CSV via XPorter)
+    DOORS->>DO: Import DOORS IDs back (6 validation rules)
+
+    Note over DO,LAB: Phase 3 - Transfer
+    DO->>LAB: Transfer VVOs via "ID Doors" identifier
+    LAB->>LAB: VVOs arrive read-only, status = New
+
+    Note over LAB: Phase 4 - Test Campaign
+    LAB->>LAB: Write Test procedures linked to VVOs
+    LAB->>LAB: Auto-populate Component/Applicability from VVO
+    LAB->>LAB: Create Campaign from CSV (per {test, applicability} pair)
+    LAB->>LAB: Execute Tests on SIB/FIB/SIMULATOR benches
+
+    Note over LAB,DEF: Phase 5 - Defect Management
+    LAB->>DEF: Create TechEvent (M1668 system anomaly)
+    DEF->>SUP: "Supplier Analysis" → sync TechEvent to supplier
+    SUP->>DEF: Supplier responds with analysis
+    DEF->>DO: "Create Change" → Change Card in DO project
+    DEF->>DEF: "Link Problem Report" → for certification
+
+    Note over DEF,CERT: Phase 6 - Certification
+    DEF->>CERT: Open Problem Reports transmitted to authorities
+    DO->>DO: Implement Change Cards → new System Standard
+    DO->>DO: New baseline cycle begins`} />
+
+      {/* ── 4. VVO State Machines ── */}
+      <MermaidBlock title="4. VVO Workflow State Machines (DO + LAB + HLVVO)" chart={`stateDiagram-v2
+    state "VVO (Design Office)" as DO_VVO {
+        [*] --> NEW
+        NEW --> TO_BE_VERIFIED: Submit for review
+        TO_BE_VERIFIED --> VERIFIED: Reviewer approves
+        VERIFIED --> RELEASED: PM releases (baseline)
+        NEW --> CANCELLED: Descope
+        TO_BE_VERIFIED --> CANCELLED: Descope
+        VERIFIED --> SUPERSEDED: Newer clone reaches Verified
+        RELEASED --> SUPERSEDED: Newer clone reaches Released
+        note right of VERIFIED: Edition locked from here
+        note right of RELEASED: Part of baseline snapshot
+        note right of SUPERSEDED: Auto-set when clone transitions
+    }
+
+    state "VVO (Laboratory)" as LAB_VVO {
+        [*] --> LAB_NEW
+        LAB_NEW --> COVERED: All test procedures written
+        COVERED --> UPDATE: VVO modified by DO transfer
+        LAB_NEW --> LAB_CANCELLED: Not applicable
+        LAB_NEW --> TO_BE_CORRECTED: Error found
+        TO_BE_CORRECTED --> LAB_NEW: Correction applied
+        UPDATE --> COVERED: Impact analysis done
+        note right of UPDATE: Auto-cascades to linked Tests
+    }
+
+    state "HLVVO" as HLVVO_SM {
+        [*] --> H_NEW
+        H_NEW --> PLAN: Target date set
+        PLAN --> VVO_WRITING: VVO authoring begins
+        VVO_WRITING --> SUPPLIER_REVIEW: Sent for review
+        SUPPLIER_REVIEW --> AUTHORIZE: Review passed
+        note right of AUTHORIZE: All child VVOs → Verified
+    }`} />
+
+      {/* ── 5. TechEvent M1668 Workflow ── */}
+      <MermaidBlock title="5. TechEvent M1668 Workflow (System Anomaly Management)" chart={`stateDiagram-v2
+    [*] --> OPEN: Anomaly detected during test
+    OPEN --> UNDER_ORIGINATOR_ANALYSIS: V&V team investigates
+    OPEN --> PROPOSED_FOR_CANCELLATION: Not a real defect
+    OPEN --> TO_BE_REFINED: Needs clarification
+
+    UNDER_ORIGINATOR_ANALYSIS --> UNDER_RESOLVER_ANALYSIS: Routed to resolver
+    UNDER_ORIGINATOR_ANALYSIS --> UNDER_TEST_MEAN_ANALYSIS: Bench issue suspected
+
+    UNDER_RESOLVER_ANALYSIS --> CLASSIFIED: Root cause identified
+    UNDER_RESOLVER_ANALYSIS --> READY_FOR_REVIEW: Awaiting review
+
+    CLASSIFIED --> TO_BE_ASSESSED: Fix proposed
+    TO_BE_ASSESSED --> RESOLVED_CORRECTED: Fix verified
+    TO_BE_ASSESSED --> RESOLVED_CONTAINED: Workaround applied
+    RESOLVED_CORRECTED --> CLOSED: Complete
+    RESOLVED_CONTAINED --> CLOSED: Complete
+
+    PROPOSED_FOR_CANCELLATION --> CANCELLED: Confirmed not a defect
+    TO_BE_REFINED --> UNDER_ORIGINATOR_ANALYSIS: Clarification provided
+
+    note right of UNDER_RESOLVER_ANALYSIS: "Supplier Analysis" button\\ncreates synced TechEvent\\nin supplier project
+    note right of CLASSIFIED: "Create Change" button\\ncreates Change Card in DO
+    note left of OPEN: "Link Problem Report"\\ncreates certification PR`} />
+
+      {/* ── 6. Master Data Cascading ── */}
+      <MermaidBlock title="6. Master Data Cascading Hierarchy (Data Hub)" chart={`graph TD
+    PROG["Aircraft Program\\n─────────────────\\nA320 CEO/NEO | A330 CEO/NEO\\nA350 | A380 | New Avionics (NAx)"]
+
+    PROG --> TM["Test Means (per program)\\n────────────────\\nSIB-1 | SIB-2 | FIB\\nSIMULATOR-A320 | IRON BIRD"]
+
+    PROG --> SYS["Aircraft Systems (per program)\\n──────────────────────\\nFMS | AP/FD | FADEC | ADIRS\\nEFIS | TCAS | TAWS"]
+
+    PROG --> ATA["ATA Chapters (per program)\\n───────────────────\\nATA 22 Auto Flight | ATA 23 Comms\\nATA 31 Indicating | ATA 34 Navigation\\nATA 42 IMA | ATA 46 Info Sys | ATA 73 Engine"]
+
+    SYS --> SUP["System Suppliers (per program + system)\\n────────────────────────────\\nFMS: Honeywell, Thales\\nAP/FD: Collins Aerospace\\nFADEC: Safran Electronics"]
+
+    SYS --> FN["System Functions (per system)\\n────────────────────────\\nFMS: Lateral Guidance, Vertical Guidance,\\nFlight Plan Mgmt, Performance Computation,\\nNavigation Database\\nAP/FD: Autopilot Control Laws"]
+
+    PROG --> RT["Reporter Teams\\n────────────\\nLAB nFMS 1V | DO nFMS 1PYC\\nFlight Test | Certification"]
+
+    PROG --> DO2["Defect Origins\\n─────────────\\nArchitecture | Facilities\\nInstrumentation & Tools\\nSimulation | Wiring | Hydraulic"]
+
+    style PROG fill:#0052cc,color:#fff
+    style TM fill:#00875a,color:#fff
+    style SYS fill:#00875a,color:#fff
+    style ATA fill:#00875a,color:#fff
+    style SUP fill:#00B8D9,color:#fff
+    style FN fill:#00B8D9,color:#fff
+    style RT fill:#6554C0,color:#fff
+    style DO2 fill:#6554C0,color:#fff`} />
+
+      {/* ── 7. Change Management Flow ── */}
+      <MermaidBlock title="7. Change Management Flow (DCL → Design Item → Change Card)" chart={`graph LR
+    subgraph "Specification Discussion"
+        DCL["DCL\\n(Design Clarification Log)\\n────────\\nBidirectional sync\\nwith supplier project"]
+    end
+
+    subgraph "Design Evolution"
+        DI["Design Item\\n────────\\nHigh-level change\\nOptional parent\\nCan share with supplier"]
+    end
+
+    subgraph "Change Implementation"
+        CC["Change Card (7 Tabs)\\n────────────────────\\nDesign: Type, Impact, Risk, Function\\nEIF: Engine functions, ICD impact\\nPlanning: Dates, Story Points\\nReview: QC, Code Gen, RAG status\\nCertification: EASA classification\\nMaturity Test: P1-P3 priority\\nSafety: DAL assessment"]
+    end
+
+    subgraph "Version Release"
+        SS["System Standard\\n(M1659.2)\\n────────────\\n17-state workflow\\n10 auto-created\\nReview Sub-Tasks"]
+        RST["Review Sub-Tasks\\n────────────\\nKoM | PR | FCR | PDR\\nDDR | CDR | LAR | FAR\\nFFR | CR\\n────────────\\nPASSED_RED → auto-clone"]
+    end
+
+    DCL -->|"evolution needed"| DI
+    DI -->|"is parent of"| CC
+    CC -->|"implemented in"| SS
+    SS -->|"auto-creates"| RST
+
+    TECH["TechEvent\\n(from DEFECT)"] -->|"Create Change"| CC
+    CC -->|"Classification"| EASA["EASA Part 21\\nType 0|1A|1B|2|3\\nSignificant CAT/HAZ\\nSignificant MAJ\\nFunctional|Process"]`} />
+
+      {/* ── 8. Service Ownership ── */}
+      <MermaidBlock title="8. Microservice Ownership Map" chart={`graph TD
+    subgraph "jira-test-service :8095"
+        V1["VvoController /api/vvo"]
+        V2["HlvvoController /api/hlvvo"]
+        V3["TechEventController /api/tech-events"]
+        V4["BenchDefectController /api/bench-defects"]
+        V5["ProblemReportController /api/problem-reports"]
+        V6["VvoBaselineController /api/vvo/baseline"]
+        V7["VvReportingController /api/vv-reports"]
+        V8["CampaignController /api/campaigns"]
+        V9["DocumentExportController /api/export-templates"]
+        V10["VvTestRequestController /api/test-requests"]
+        V11["WorkflowInternalController /api/issues"]
+    end
+
+    subgraph "jira-admin-service :8093"
+        A1["MasterDataController /api/admin/master-data"]
+        A2["AssetController /api/admin/assets"]
+    end
+
+    subgraph "jira-issue-service :8084"
+        I1["ChangeManagementController /api/issues/{id}/change-card"]
+        I2["ChangeManagementController /api/issues/{id}/design-item"]
+        I3["ChangeManagementController /api/issues/{id}/dcl"]
+        I4["ChangeManagementController /api/issues/{id}/deliverable"]
+        I5["ChangeManagementController /api/issues/{id}/system-standard"]
+        I6["ChangeManagementController /api/issues/{id}/review-sub-task"]
+        I7["ChangeManagementController /api/issues/{id}/modification"]
+    end
+
+    subgraph "jira-workflow-service :8085"
+        W1["WorkflowDefinitions (V18-V22)"]
+        W2["AutomationRuleService"]
+        W3["WorkflowIntegrationClient"]
+    end
+
+    V11 <-->|"WorkflowBridgeService\\n(bidirectional REST)"| W3`} />
+
+      {/* ── 9. 4-Step Baseline Process ── */}
+      <MermaidBlock title="9. VVO Baseline Process (4 Steps, 6 Use Cases)" chart={`graph TD
+    subgraph "Step 1: Prepare"
+        S1A["Clone VVOs needing new version\\n→ auto-increment Version field\\n→ clear Fix Version & HLVVO link\\n→ create clone link to original"]
+        S1B["Cancel removed VVOs\\n→ must still appear in baseline for DOORS"]
+        S1C["Create new VVOs"]
+    end
+
+    subgraph "Step 2: Review"
+        S2["HLVVO review process\\n→ Authorize transition\\n→ child VVOs auto-transition to Verified\\n→ old cloned versions → Superseded"]
+    end
+
+    subgraph "Step 3: Tag Baseline"
+        S3["Bulk update Fix Version\\nfor all Released + Verified + Cancelled VVOs\\n→ Tags them with baseline ID (e.g., STD-3.2)"]
+    end
+
+    subgraph "Step 4: Publish"
+        S4A["Bulk transition Verified → Released"]
+        S4B["Export to DOORS via XPorter CSV"]
+        S4C["Import DOORS IDs back\\n(6 validation rules)"]
+    end
+
+    S1A --> S2
+    S1B --> S2
+    S1C --> S2
+    S2 --> S3
+    S3 --> S4A
+    S4A --> S4B
+    S4B --> S4C
+
+    style S1A fill:#0052cc,color:#fff
+    style S2 fill:#ff8b00,color:#fff
+    style S3 fill:#00875a,color:#fff
+    style S4A fill:#36b37e,color:#fff
+    style S4B fill:#6554C0,color:#fff`} />
+
+      {/* ── 10. Campaign Automation ── */}
+      <MermaidBlock title="10. Test Campaign Automation (CSV-Driven)" chart={`sequenceDiagram
+    participant DO as Design Office
+    participant LTR as Test Request (LTR)
+    participant CSV as CSV / GSheet
+    participant LAB as LAB Project
+    participant TP as Test Plan
+    participant TE as Test Execution
+
+    DO->>LTR: Export VVO list via XPorter
+    Note over LTR: Columns: ID Doors, Summary,\\nApplicability, Version, Fix Version, Priority
+    LTR->>CSV: User selects applicabilities
+
+    CSV->>TP: Attach CSV to Test Plan
+    TP->>TP: Press "Create Campaign" button
+
+    loop For each VVO line in CSV
+        TP->>TP: Find Tests linked to VVO
+        alt Test status == APPROVED
+            alt No existing TestExecution for {test, applicability}
+                TP->>TE: Create Test Execution
+                Note over TE: testEnvironment = CSV.Applicability\\nfixVersion = TestPlan.FixVersion\\ncomponent = Test.Component\\npriority = MAX(linked VVO priorities)
+            end
+        end
+        TP->>TP: Associate VVO to TestPlan ("Relates" link)
+    end
+
+    TP->>DO: Email log with detailed actions`} />
+
+      {/* ── Summary Table ── */}
+      <div className="ads-card" style={{ marginBottom: 20 }}>
+        <h4 className="ads-card-title">Module Summary: What We Built and Why</h4>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead>
+              <tr><th>Module</th><th>Issue Types</th><th>Service</th><th>Business Rationale</th></tr>
+            </thead>
+            <tbody>
+              {[
+                ['VVO Management', 'VVO (6-state), HLVVO (5-state)', 'test-service', 'Central requirement artifact for V&V. Without VVOs, LAB cannot write test procedures and certification audits fail.'],
+                ['Baseline & DOORS', 'VVO (Fix Version tagging)', 'test-service', 'Configuration-controlled snapshot for regulatory compliance. DOORS integration is mandatory for Airbus process.'],
+                ['Test Campaign', 'Test, Test Plan, Test Execution', 'test-service', 'Automates campaign creation from 2-3 days to minutes. CSV-driven, idempotent, priority-aware.'],
+                ['Defect Management', 'TechEvent (12-state), BenchDefect, ProblemReport', 'test-service', 'M1668-compliant anomaly tracking. Single shared DEFECT project. Only open PRs go to EASA/FAA.'],
+                ['Change Management', 'Change Card (7 tabs), Design Item, DCL', 'issue-service', 'EASA Part 21 change classification. Safety/certification review workflow. Supplier DCL sync.'],
+                ['System Standard', 'System Standard (17-state), Review Sub-Task', 'issue-service', 'M1659.2 version management. Auto-creates 10 review milestones. PASSED_RED auto-clones.'],
+                ['Master Data', '8 reference types (cascading)', 'admin-service', 'Data Hub for all configurable values. Never hardcoded. New programs/benches require zero code changes.'],
+                ['Workflow Integration', 'WorkflowBridgeService', 'test + workflow', 'Bidirectional REST bridge. Fallback to local transition maps when workflow-service is unavailable.'],
+              ].map(([mod, types, svc, why], i) => (
+                <tr key={i}>
+                  <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{mod}</td>
+                  <td style={{ fontSize: 12 }}>{types}</td>
+                  <td style={{ fontFamily: 'monospace', fontSize: 11 }}>{svc}</td>
+                  <td style={{ fontSize: 12 }}>{why}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function renderSystemOverview() {
   return (
@@ -3914,6 +4339,8 @@ export default function ArchitecturePage() {
 
   function renderContent() {
     switch (activeTab) {
+      case 'SYSDOPS Relations':
+        return renderSysdopsRelations();
       case 'System Overview':
         return renderSystemOverview();
       case 'Cluster Architecture':
