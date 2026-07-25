@@ -74,6 +74,14 @@ logging:
   file:
     path: ${LOG_PATH:../../logs}/auth
 
+cluster:
+  oauth2:
+    enabled: ${OAUTH2_ENABLED:false}
+    trusted-issuers:
+      - ${OAUTH2_ISSUER_URI:}
+    jwk-set-uri: ${OAUTH2_JWK_SET_URI:}
+    local-auth-fallback: true
+
 springdoc:
   api-docs:
     path: /api-docs
