@@ -22,6 +22,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/api/workflow/scripts/field-behaviors/evaluate").permitAll()
+                .requestMatchers("/api/workflow/scripts/calculated-fields/evaluate").permitAll()
                 .requestMatchers("/api/**").permitAll()
             )
             .httpBasic(basic -> basic.disable());

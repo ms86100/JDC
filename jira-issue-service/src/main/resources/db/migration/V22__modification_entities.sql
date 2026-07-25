@@ -18,12 +18,15 @@ CREATE INDEX IF NOT EXISTS idx_modification_metadata_issue ON jira_issue.modific
 CREATE INDEX IF NOT EXISTS idx_modification_metadata_type ON jira_issue.modification_metadata(mod_type);
 
 -- Register MOD issue type (matches pattern from V3__issue_types_and_schemes.sql)
-INSERT INTO jira_issue.issue_types (id, name, description, icon_url, is_subtask)
+INSERT INTO jira_issue.issue_types (id, name, description, icon_url, is_subtask, issue_type_key, icon, sequence)
 VALUES (
     'f0000001-0000-0000-0000-000000000001',
     'MOD',
     'Modification issue type for tracking MAJOR and MINOR aircraft modifications',
     '/icons/issuetypes/modification.svg',
-    false
+    false,
+    'mod',
+    'modification',
+    30
 )
 ON CONFLICT (id) DO NOTHING;

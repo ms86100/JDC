@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import Editor from '@monaco-editor/react';
+import { useState, useRef, useEffect } from 'react';
+import Editor, { useMonaco } from '@monaco-editor/react';
 import { scriptApi, ScriptConsoleResponse } from '../../../api/scriptApi';
+import { registerJdcCompletionProvider } from '../utils/jdcCompletionProvider';
 
 interface ScriptConsoleProps {
   initialScript?: string;
@@ -40,6 +41,18 @@ export default function ScriptConsole({ initialScript = '', initialType = 'CONDI
   const [result, setResult] = useState<ScriptConsoleResponse | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const monaco = useMonaco();
+  const completionDisposable = useRef<{ dispose(): void } | null>(null);
+
+  useEffect(() => {
+    if (monaco && !completionDisposable.current) {
+      completionDisposable.current = registerJdcCompletionProvider(monaco);
+    }
+    return () => {
+      completionDisposable.current?.dispose();
+      completionDisposable.current = null;
+    };
+  }, [monaco]);
 
   const handleRun = async () => {
     setRunning(true);

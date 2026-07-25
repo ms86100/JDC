@@ -38,8 +38,11 @@ public class ScriptExecutionService {
 
     public ScriptResult executeConsole(String scriptBody, String scriptType, Map<String, Object> mockContext) {
         Map<String, Object> ctx = mockContext != null ? mockContext : Map.of();
-        Map<String, Object> bindings = jdcScriptBindings.buildBindings(ctx);
-        String resolvedBody = resolveIncludes(scriptBody);
+        java.util.Set<String> resolvedKeys = new java.util.HashSet<>();
+        String resolvedBody = resolveIncludes(scriptBody, resolvedKeys);
+        Map<String, Object> enrichedCtx = new java.util.HashMap<>(ctx);
+        enrichedCtx.put("_resolvedIncludes", resolvedKeys);
+        Map<String, Object> bindings = jdcScriptBindings.buildBindings(enrichedCtx);
         ScriptResult result = graalScriptEngine.execute(resolvedBody, bindings, properties.getConsoleTimeoutMs());
 
         logExecution(null, "console-test", scriptType, "CONSOLE", ctx, result);
@@ -75,27 +78,50 @@ public class ScriptExecutionService {
     }
 
     private ScriptResult executeScript(ScriptDefinition script, Map<String, Object> ctx, String executionMode) {
-        Map<String, Object> bindings = jdcScriptBindings.buildBindings(ctx);
-        String resolvedBody = resolveIncludes(script.getScriptBody());
+        java.util.Set<String> resolvedKeys = new java.util.HashSet<>();
+        String resolvedBody = resolveIncludes(script.getScriptBody(), resolvedKeys);
+        Map<String, Object> enrichedCtx = new java.util.HashMap<>(ctx);
+        enrichedCtx.put("_resolvedIncludes", resolvedKeys);
+        Map<String, Object> bindings = jdcScriptBindings.buildBindings(enrichedCtx);
+
+        ScriptTracer tracer = new ScriptTracer(true);
+        bindings.put("_tracer", tracer);
+
+        // Wire tracer and mutation buffer into JdcApi
+        JdcApi jdcApi = null;
+        Object jdcObj = bindings.get("jdc");
+        if (jdcObj instanceof JdcApi j) {
+            jdcApi = j;
+            jdcApi.setTracer(tracer);
+        }
+        MutationBuffer buffer = new MutationBuffer();
+        if (jdcApi != null) {
+            jdcApi.setMutationBuffer(buffer);
+        }
+
         ScriptResult result = graalScriptEngine.execute(script.getScriptKey(), resolvedBody, bindings, properties.getTimeoutMs());
 
-        logExecution(script.getId(), script.getScriptKey(), script.getScriptType(), executionMode, ctx, result);
+        // Auto-flush buffered mutations on success
+        if (result.success() && jdcApi != null) {
+            try { jdcApi.flush(); } catch (Exception e) { log.warn("Auto-flush failed: {}", e.getMessage()); }
+        }
+
+        logExecution(script.getId(), script.getScriptKey(), script.getScriptType(), executionMode, ctx, result, tracer);
         return result;
     }
 
-    private String resolveIncludes(String scriptBody) {
+    private String resolveIncludes(String scriptBody, java.util.Set<String> resolvedKeys) {
         if (scriptBody == null || !scriptBody.contains("include(")) return scriptBody;
 
         StringBuilder resolved = new StringBuilder();
-        java.util.Set<String> included = new java.util.HashSet<>();
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
                 "(?:include\\.include|include)\\([\"']([a-z][a-z0-9-]{2,63})[\"']\\)");
         java.util.regex.Matcher matcher = pattern.matcher(scriptBody);
 
         while (matcher.find()) {
             String key = matcher.group(1);
-            if (included.contains(key)) continue;
-            included.add(key);
+            if (resolvedKeys.contains(key)) continue;
+            resolvedKeys.add(key);
             scriptDefinitionRepository.findByScriptKey(key).ifPresent(lib -> {
                 if (Boolean.TRUE.equals(lib.getIsEnabled())) {
                     resolved.append("// --- included: ").append(key).append(" ---\n");
@@ -112,6 +138,12 @@ public class ScriptExecutionService {
 
     private void logExecution(UUID scriptId, String scriptKey, String scriptType,
                               String executionMode, Map<String, Object> ctx, ScriptResult result) {
+        logExecution(scriptId, scriptKey, scriptType, executionMode, ctx, result, null);
+    }
+
+    private void logExecution(UUID scriptId, String scriptKey, String scriptType,
+                              String executionMode, Map<String, Object> ctx, ScriptResult result,
+                              ScriptTracer tracer) {
         try {
             ScriptExecutionLog logEntry = ScriptExecutionLog.builder()
                     .scriptId(scriptId)
@@ -126,6 +158,7 @@ public class ScriptExecutionService {
                     .resultValue(result.value() != null ? result.value().toString() : null)
                     .errorMessage(result.errorMessage())
                     .executionMs(result.executionMs())
+                    .apiCallCount(tracer != null ? tracer.getApiCallCount() : 0)
                     .build();
             executionLogRepository.save(logEntry);
         } catch (Exception e) {

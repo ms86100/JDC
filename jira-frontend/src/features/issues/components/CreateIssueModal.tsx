@@ -133,12 +133,23 @@ export default function CreateIssueModal({
     enabled: !!form.projectId,
   });
 
-  const { isFieldVisible, isFieldRequired, isFieldReadOnly, getFieldWarning, getFieldLabel } = useFieldBehaviors({
+  const { isFieldVisible, isFieldRequired, isFieldReadOnly, getFieldWarning, getFieldLabel, getFieldDefault, getFieldOptions, getFieldHelpText } = useFieldBehaviors({
     screenContext: 'CREATE',
     projectId: form.projectId || undefined,
     issueTypeId: form.issueTypeId || undefined,
     issueData: form as unknown as Record<string, unknown>,
     enabled: !!form.projectId,
+  });
+
+  const fb = (fieldName: string) => ({
+    visible: isFieldVisible(fieldName),
+    required: isFieldRequired(fieldName),
+    readOnly: isFieldReadOnly(fieldName),
+    warning: getFieldWarning(fieldName),
+    label: getFieldLabel(fieldName),
+    helpText: getFieldHelpText(fieldName),
+    options: getFieldOptions(fieldName),
+    defaultValue: getFieldDefault(fieldName),
   });
 
   // Create Mutation
@@ -325,30 +336,38 @@ export default function CreateIssueModal({
               )}
             </div>
 
-            {/* RIGHT COLUMN - Additional fields */}
+            {/* RIGHT COLUMN - Additional fields (all with field behavior support) */}
             <div className="form-column right-col">
+              {fb('priority').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Priority</label>
+                <label className="ab-label">{fb('priority').label || 'Priority'}{fb('priority').required ? ' *' : ''}</label>
                 <select
                   className="ab-select"
                   value={form.priorityId || ''}
                   onChange={(e) => setForm({ ...form, priorityId: e.target.value || undefined })}
+                  disabled={fb('priority').readOnly}
+                  required={fb('priority').required}
                 >
                   <option value="">None</option>
-                  {priorities.map((priority: IssuePriority) => (
-                    <option key={priority.id} value={priority.id}>
-                      {priority.name}
+                  {(fb('priority').options || priorities).map((priority: any) => (
+                    <option key={priority.id || priority.value} value={priority.id || priority.value}>
+                      {priority.name || priority.label}
                     </option>
                   ))}
                 </select>
+                {fb('priority').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('priority').warning}</span>}
               </div>
+              )}
 
+              {fb('assignee').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Assignee</label>
+                <label className="ab-label">{fb('assignee').label || 'Assignee'}{fb('assignee').required ? ' *' : ''}</label>
                 <select
                   className="ab-select"
                   value={form.assigneeId || ''}
                   onChange={(e) => setForm({ ...form, assigneeId: e.target.value || undefined })}
+                  disabled={fb('assignee').readOnly}
+                  required={fb('assignee').required}
                 >
                   <option value="">Unassigned</option>
                   {projectUsers.map((user: any) => (
@@ -357,14 +376,19 @@ export default function CreateIssueModal({
                     </option>
                   ))}
                 </select>
+                {fb('assignee').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('assignee').warning}</span>}
               </div>
+              )}
 
+              {fb('reporter').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Reporter</label>
+                <label className="ab-label">{fb('reporter').label || 'Reporter'}{fb('reporter').required ? ' *' : ''}</label>
                 <select
                   className="ab-select"
                   value={form.reporterId || ''}
                   onChange={(e) => setForm({ ...form, reporterId: e.target.value || undefined })}
+                  disabled={fb('reporter').readOnly}
+                  required={fb('reporter').required}
                 >
                   <option value="">Auto-assigned</option>
                   {projectUsers.map((user: any) => (
@@ -373,14 +397,19 @@ export default function CreateIssueModal({
                     </option>
                   ))}
                 </select>
+                {fb('reporter').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('reporter').warning}</span>}
               </div>
+              )}
 
+              {fb('sprint').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Sprint</label>
+                <label className="ab-label">{fb('sprint').label || 'Sprint'}{fb('sprint').required ? ' *' : ''}</label>
                 <select
                   className="ab-select"
                   value={form.sprintId || ''}
                   onChange={(e) => setForm({ ...form, sprintId: e.target.value || undefined })}
+                  disabled={fb('sprint').readOnly}
+                  required={fb('sprint').required}
                 >
                   <option value="">No Sprint</option>
                   {(sprints as any[]).map((sprint: any) => (
@@ -389,32 +418,45 @@ export default function CreateIssueModal({
                     </option>
                   ))}
                 </select>
+                {fb('sprint').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('sprint').warning}</span>}
               </div>
+              )}
 
+              {fb('epicLink').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Epic Link</label>
+                <label className="ab-label">{fb('epicLink').label || 'Epic Link'}{fb('epicLink').required ? ' *' : ''}</label>
                 <input
                   type="text"
                   className="ab-input"
                   value={form.epicId || ''}
                   onChange={(e) => setForm({ ...form, epicId: e.target.value || undefined })}
                   placeholder="PROJ-Epic-123"
+                  readOnly={fb('epicLink').readOnly}
+                  required={fb('epicLink').required}
                 />
+                {fb('epicLink').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('epicLink').warning}</span>}
               </div>
+              )}
 
+              {fb('parentIssue').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Parent Issue</label>
+                <label className="ab-label">{fb('parentIssue').label || 'Parent Issue'}{fb('parentIssue').required ? ' *' : ''}</label>
                 <input
                   type="text"
                   className="ab-input"
                   value={form.parentId || ''}
                   onChange={(e) => setForm({ ...form, parentId: e.target.value || undefined })}
                   placeholder="PROJ-123"
+                  readOnly={fb('parentIssue').readOnly}
+                  required={fb('parentIssue').required}
                 />
+                {fb('parentIssue').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('parentIssue').warning}</span>}
               </div>
+              )}
 
+              {fb('fixVersions').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Fix Version(s)</label>
+                <label className="ab-label">{fb('fixVersions').label || 'Fix Version(s)'}{fb('fixVersions').required ? ' *' : ''}</label>
                 <select
                   className="ab-select"
                   multiple
@@ -424,6 +466,8 @@ export default function CreateIssueModal({
                     setForm({ ...form, fixVersionIds: selected });
                   }}
                   style={{ minHeight: '80px' }}
+                  disabled={fb('fixVersions').readOnly}
+                  required={fb('fixVersions').required}
                 >
                   {(versions as any[]).filter((v: any) => !v.archived).map((version: any) => (
                     <option key={version.id} value={version.id}>
@@ -431,10 +475,13 @@ export default function CreateIssueModal({
                     </option>
                   ))}
                 </select>
+                {fb('fixVersions').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('fixVersions').warning}</span>}
               </div>
+              )}
 
+              {fb('affectsVersions').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Affects Version(s)</label>
+                <label className="ab-label">{fb('affectsVersions').label || 'Affects Version(s)'}{fb('affectsVersions').required ? ' *' : ''}</label>
                 <select
                   className="ab-select"
                   multiple
@@ -444,6 +491,8 @@ export default function CreateIssueModal({
                     setForm({ ...form, affectsVersionIds: selected });
                   }}
                   style={{ minHeight: '80px' }}
+                  disabled={fb('affectsVersions').readOnly}
+                  required={fb('affectsVersions').required}
                 >
                   {(versions as any[]).filter((v: any) => !v.archived).map((version: any) => (
                     <option key={version.id} value={version.id}>
@@ -451,10 +500,13 @@ export default function CreateIssueModal({
                     </option>
                   ))}
                 </select>
+                {fb('affectsVersions').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('affectsVersions').warning}</span>}
               </div>
+              )}
 
+              {fb('components').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Components</label>
+                <label className="ab-label">{fb('components').label || 'Components'}{fb('components').required ? ' *' : ''}</label>
                 <select
                   className="ab-select"
                   multiple
@@ -464,6 +516,8 @@ export default function CreateIssueModal({
                     setForm({ ...form, componentIds: selected });
                   }}
                   style={{ minHeight: '80px' }}
+                  disabled={fb('components').readOnly}
+                  required={fb('components').required}
                 >
                   {(components as any[]).map((component: any) => (
                     <option key={component.id} value={component.id}>
@@ -471,10 +525,13 @@ export default function CreateIssueModal({
                     </option>
                   ))}
                 </select>
+                {fb('components').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('components').warning}</span>}
               </div>
+              )}
 
+              {fb('labels').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Labels</label>
+                <label className="ab-label">{fb('labels').label || 'Labels'}{fb('labels').required ? ' *' : ''}</label>
                 <div className="labels-input-wrapper">
                   <input
                     type="text"
@@ -488,8 +545,9 @@ export default function CreateIssueModal({
                       }
                     }}
                     placeholder="Type label and press Enter"
+                    readOnly={fb('labels').readOnly}
                   />
-                  <button type="button" className="ab-btn ab-btn-secondary btn-sm" onClick={handleAddLabel}>
+                  <button type="button" className="ab-btn ab-btn-secondary btn-sm" onClick={handleAddLabel} disabled={fb('labels').readOnly}>
                     Add
                   </button>
                 </div>
@@ -503,10 +561,13 @@ export default function CreateIssueModal({
                     ))}
                   </div>
                 )}
+                {fb('labels').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('labels').warning}</span>}
               </div>
+              )}
 
+              {fb('storyPoints').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Story Points</label>
+                <label className="ab-label">{fb('storyPoints').label || 'Story Points'}{fb('storyPoints').required ? ' *' : ''}</label>
                 <input
                   type="number"
                   className="ab-input"
@@ -514,11 +575,16 @@ export default function CreateIssueModal({
                   onChange={(e) => setForm({ ...form, storyPoints: e.target.value ? parseInt(e.target.value) : undefined })}
                   placeholder="e.g., 5"
                   min="0"
+                  readOnly={fb('storyPoints').readOnly}
+                  required={fb('storyPoints').required}
                 />
+                {fb('storyPoints').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('storyPoints').warning}</span>}
               </div>
+              )}
 
+              {fb('originalEstimate').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Original Estimate</label>
+                <label className="ab-label">{fb('originalEstimate').label || 'Original Estimate'}{fb('originalEstimate').required ? ' *' : ''}</label>
                 <input
                   type="text"
                   className="ab-input"
@@ -527,11 +593,16 @@ export default function CreateIssueModal({
                     setForm({ ...form, originalEstimateSeconds: parseTimeToSeconds(e.target.value) });
                   }}
                   placeholder="e.g., 4h"
+                  readOnly={fb('originalEstimate').readOnly}
+                  required={fb('originalEstimate').required}
                 />
+                {fb('originalEstimate').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('originalEstimate').warning}</span>}
               </div>
+              )}
 
+              {fb('remainingEstimate').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Remaining Estimate</label>
+                <label className="ab-label">{fb('remainingEstimate').label || 'Remaining Estimate'}{fb('remainingEstimate').required ? ' *' : ''}</label>
                 <input
                   type="text"
                   className="ab-input"
@@ -540,18 +611,27 @@ export default function CreateIssueModal({
                     setForm({ ...form, remainingEstimateSeconds: parseTimeToSeconds(e.target.value) });
                   }}
                   placeholder="e.g., 4h"
+                  readOnly={fb('remainingEstimate').readOnly}
+                  required={fb('remainingEstimate').required}
                 />
+                {fb('remainingEstimate').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('remainingEstimate').warning}</span>}
               </div>
+              )}
 
+              {fb('dueDate').visible && (
               <div className="ab-form-group">
-                <label className="ab-label">Due Date</label>
+                <label className="ab-label">{fb('dueDate').label || 'Due Date'}{fb('dueDate').required ? ' *' : ''}</label>
                 <input
                   type="date"
                   className="ab-input"
                   value={form.dueDate || ''}
                   onChange={(e) => setForm({ ...form, dueDate: e.target.value || undefined })}
+                  readOnly={fb('dueDate').readOnly}
+                  required={fb('dueDate').required}
                 />
+                {fb('dueDate').warning && <span className="ab-field-warning" style={{ color: '#b45309', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>&#9888; {fb('dueDate').warning}</span>}
               </div>
+              )}
             </div>
           </div>
 

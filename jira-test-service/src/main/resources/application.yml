@@ -56,15 +56,15 @@ logging:
 
 issue:
   service:
-    url: ${ISSUE_SERVICE_URL:http://jira-issue-service:8084}
+    url: ${ISSUE_SERVICE_URL:http://issue-service:8084}
 
 project:
   service:
-    url: ${PROJECT_SERVICE_URL:http://jira-project-service:8083}
+    url: ${PROJECT_SERVICE_URL:http://project-service:8083}
 
 workflow:
   service:
-    url: ${WORKFLOW_SERVICE_URL:http://jira-workflow-service:8085}
+    url: ${WORKFLOW_SERVICE_URL:http://workflow-service:8085}
 
 test:
   storage:

@@ -53,9 +53,9 @@ springdoc:
 
 services:
   issue:
-    url: ${ISSUE_SERVICE_URL:http://jira-issue-service:8084}
+    url: ${ISSUE_SERVICE_URL:http://issue-service:8084}
   project:
-    url: ${PROJECT_SERVICE_URL:http://jira-project-service:8083}
+    url: ${PROJECT_SERVICE_URL:http://project-service:8083}
 
 logging:
   level:

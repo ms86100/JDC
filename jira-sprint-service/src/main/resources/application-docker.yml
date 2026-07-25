@@ -36,6 +36,12 @@ spring:
     create-schemas: true
     validate-on-migrate: true
 
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
 management:
   endpoints:
     web:

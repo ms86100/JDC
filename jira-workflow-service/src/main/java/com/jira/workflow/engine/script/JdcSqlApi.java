@@ -61,6 +61,20 @@ public class JdcSqlApi {
     }
 
     @HostAccess.Export
+    public int[] batch(String dataSourceName, String sql, List<Object[]> paramsList) {
+        try {
+            JdbcTemplate jdbc = getJdbc(dataSourceName);
+            if (jdbc == null || paramsList == null) return new int[0];
+            if (readOnly && !isSafeQuery(sql)) return new int[0];
+            if (!isSafeUpdate(sql) && !isSafeQuery(sql)) return new int[0];
+            return jdbc.batchUpdate(sql, paramsList);
+        } catch (Exception e) {
+            log.warn("SQL batch failed: {}", e.getMessage());
+            return new int[0];
+        }
+    }
+
+    @HostAccess.Export
     public List<String> getDataSources() {
         return new ArrayList<>(dataSources.keySet());
     }

@@ -20,6 +20,7 @@ public class ScriptResponse {
     private String scriptType;
     private String scriptKey;
     private String scriptBody;
+    private String category;
     private Integer version;
     private Boolean isEnabled;
     private UUID createdBy;

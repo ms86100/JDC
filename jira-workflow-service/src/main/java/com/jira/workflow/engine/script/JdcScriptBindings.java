@@ -2,7 +2,6 @@ package com.jira.workflow.engine.script;
 
 import com.jira.workflow.config.ScriptEngineProperties;
 import com.jira.workflow.engine.WorkflowIntegrationClient;
-import com.jira.workflow.repository.ScriptDefinitionRepository;
 import com.jira.workflow.repository.ScriptPersistentVarRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +11,7 @@ import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -22,8 +22,6 @@ public class JdcScriptBindings {
     private final ScriptEngineProperties properties;
     private final Map<String, DataSource> scriptDataSources;
     private final ScriptPersistentVarRepository persistentVarRepository;
-    private final ScriptDefinitionRepository scriptDefinitionRepository;
-    private final GraalScriptEngine graalScriptEngine;
 
     @Value("${jira.services.notification-url:http://jira-notification-service:8087}")
     private String notificationServiceUrl;
@@ -33,6 +31,9 @@ public class JdcScriptBindings {
 
     @Value("${jira.services.confluence-url:}")
     private String confluenceUrl;
+
+    @Value("${jira.services.plan-url:http://jira-plan-service:8092}")
+    private String planServiceUrl;
 
     public Map<String, Object> buildBindings(Map<String, Object> workflowContext) {
         Map<String, Object> bindings = new HashMap<>();
@@ -51,8 +52,21 @@ public class JdcScriptBindings {
         bindings.put("email", new JdcEmailApi(integrationClient.restTemplate(), notificationServiceUrl));
         bindings.put("ldap", new JdcLdapApi(integrationClient.restTemplate(), userServiceUrl));
         bindings.put("confluence", new JdcConfluenceApi(integrationClient.restTemplate(), confluenceUrl));
+        bindings.put("sprint", new JdcSprintApi(integrationClient.restTemplate(), planServiceUrl, integrationClient.getIssueServiceUrl()));
+        JdcWebhookApi webhookApi = new JdcWebhookApi();
+        if (workflowContext.containsKey("_requestHeaders")) {
+            @SuppressWarnings("unchecked")
+            Map<String, String> reqHeaders = (Map<String, String>) workflowContext.get("_requestHeaders");
+            webhookApi.setRequestHeaders(reqHeaders);
+        }
+        bindings.put("webhook", webhookApi);
+        bindings.put("test", new JdcTestApi());
+        bindings.put("file", new JdcFileApi());
 
-        JdcIncludeApi includeApi = new JdcIncludeApi(scriptDefinitionRepository, graalScriptEngine);
+        Set<String> resolvedIncludes = workflowContext.containsKey("_resolvedIncludes")
+                ? new java.util.HashSet<>((java.util.Collection<String>) workflowContext.get("_resolvedIncludes"))
+                : new java.util.HashSet<>();
+        JdcIncludeApi includeApi = new JdcIncludeApi(resolvedIncludes);
         bindings.put("include", includeApi);
 
         bindings.put("issueId", workflowContext.get("issueId"));

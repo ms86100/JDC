@@ -1,9 +1,11 @@
 import { Fragment, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
-import { scriptApi, ScriptDefinition, ScriptExecutionLog, ScriptVersion, ScriptSchedule } from '../../../api/scriptApi';
+import { scriptApi, ScriptDefinition, ScriptExecutionLog, ScriptVersion, ScriptSchedule, ScriptListener, ScriptFieldBehavior } from '../../../api/scriptApi';
 import ScriptConsole from '../components/ScriptConsole';
+import ProfilerDashboard from '../components/ScriptProfilerDashboard';
 
-type Tab = 'scripts' | 'console' | 'logs';
+type Tab = 'scripts' | 'console' | 'logs' | 'listeners' | 'behaviors' | 'profiler';
 
 const TYPE_LABELS: Record<string, string> = {
   CONDITION: 'Condition',
@@ -28,6 +30,7 @@ function extractError(err: unknown): string {
 }
 
 export default function WorkflowScriptsPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>('scripts');
   const [scripts, setScripts] = useState<ScriptDefinition[]>([]);
   const [logs, setLogs] = useState<ScriptExecutionLog[]>([]);
@@ -50,6 +53,31 @@ export default function WorkflowScriptsPage() {
   const [schedule, setSchedule] = useState<ScriptSchedule | null>(null);
   const [showSchedule, setShowSchedule] = useState<string | null>(null);
   const [cronInput, setCronInput] = useState('0 0 9 * * MON-FRI');
+
+  // Listeners tab state
+  const [listeners, setListeners] = useState<ScriptListener[]>([]);
+  const [showAddListener, setShowAddListener] = useState(false);
+  const [listenerScriptId, setListenerScriptId] = useState('');
+  const [listenerEventType, setListenerEventType] = useState('ISSUE_CREATED');
+  const [listenerProjectFilter, setListenerProjectFilter] = useState('');
+  const [listenerIssueTypeFilter, setListenerIssueTypeFilter] = useState('');
+
+  // Behaviors tab state
+  const [behaviors, setBehaviors] = useState<ScriptFieldBehavior[]>([]);
+  const [showAddBehavior, setShowAddBehavior] = useState(false);
+  const [behaviorScriptId, setBehaviorScriptId] = useState('');
+  const [behaviorScreenContext, setBehaviorScreenContext] = useState('CREATE');
+  const [behaviorProjectFilter, setBehaviorProjectFilter] = useState('');
+  const [behaviorIssueTypeFilter, setBehaviorIssueTypeFilter] = useState('');
+
+  const EVENT_TYPES = [
+    'ISSUE_CREATED', 'ISSUE_UPDATED', 'ISSUE_TRANSITIONED', 'ISSUE_DELETED',
+    'COMMENT_ADDED', 'COMMENT_UPDATED', 'COMMENT_DELETED',
+    'WORKLOG_ADDED', 'ATTACHMENT_ADDED', 'ATTACHMENT_DELETED',
+    'VERSION_RELEASED', 'SPRINT_STARTED', 'SPRINT_COMPLETED',
+  ];
+
+  const SCREEN_CONTEXTS = ['CREATE', 'EDIT', 'TRANSITION', 'VIEW'];
 
   const showToast = (msg: string, type: 'error' | 'success') => {
     setToast({ msg, type });
@@ -79,6 +107,8 @@ export default function WorkflowScriptsPage() {
 
   useEffect(() => { fetchScripts(); }, []);
   useEffect(() => { if (activeTab === 'logs') fetchLogs(); }, [activeTab]);
+  useEffect(() => { if (activeTab === 'listeners') { fetchListeners(); fetchScripts(); } }, [activeTab]);
+  useEffect(() => { if (activeTab === 'behaviors') { fetchBehaviors(); fetchScripts(); } }, [activeTab]);
 
   const generateKey = (name: string) =>
     name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 64);
@@ -205,6 +235,91 @@ export default function WorkflowScriptsPage() {
     }
   };
 
+  // === Listeners ===
+  const fetchListeners = async () => {
+    try {
+      const res = await scriptApi.getAllListeners();
+      setListeners(res.data);
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
+    }
+  };
+
+  const handleCreateListener = async () => {
+    if (!listenerScriptId) { showToast('Please select a script', 'error'); return; }
+    try {
+      await scriptApi.createListener(listenerScriptId, {
+        eventType: listenerEventType,
+        projectFilter: listenerProjectFilter || undefined,
+        issueTypeFilter: listenerIssueTypeFilter || undefined,
+      });
+      showToast('Listener created', 'success');
+      setShowAddListener(false);
+      setListenerScriptId(''); setListenerProjectFilter(''); setListenerIssueTypeFilter('');
+      fetchListeners();
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
+    }
+  };
+
+  const handleToggleListener = async (listenerId: string) => {
+    try {
+      await scriptApi.toggleListener(listenerId);
+      fetchListeners();
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
+    }
+  };
+
+  const handleDeleteListener = async (listenerId: string) => {
+    if (!window.confirm('Delete this listener?')) return;
+    try {
+      await scriptApi.deleteListener(listenerId);
+      showToast('Listener deleted', 'success');
+      fetchListeners();
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
+    }
+  };
+
+  // === Behaviors ===
+  const fetchBehaviors = async () => {
+    try {
+      const res = await scriptApi.getAllBehaviors();
+      setBehaviors(res.data);
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
+    }
+  };
+
+  const handleCreateBehavior = async () => {
+    if (!behaviorScriptId) { showToast('Please select a script', 'error'); return; }
+    try {
+      await scriptApi.createFieldBehavior(behaviorScriptId, {
+        screenContext: behaviorScreenContext,
+        projectId: behaviorProjectFilter || undefined,
+        issueTypeId: behaviorIssueTypeFilter || undefined,
+      });
+      showToast('Behavior created', 'success');
+      setShowAddBehavior(false);
+      setBehaviorScriptId(''); setBehaviorProjectFilter(''); setBehaviorIssueTypeFilter('');
+      fetchBehaviors();
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
+    }
+  };
+
+  const handleDeleteBehavior = async (behaviorId: string) => {
+    if (!window.confirm('Delete this behavior?')) return;
+    try {
+      await scriptApi.deleteFieldBehavior(behaviorId);
+      showToast('Behavior deleted', 'success');
+      fetchBehaviors();
+    } catch (err: unknown) {
+      showToast(extractError(err), 'error');
+    }
+  };
+
   const handleExport = async (id: string) => {
     try {
       const res = await scriptApi.exportScript(id);
@@ -221,7 +336,20 @@ export default function WorkflowScriptsPage() {
     { key: 'scripts', label: 'Scripts' },
     { key: 'console', label: 'Console' },
     { key: 'logs', label: 'Execution Log' },
+    { key: 'listeners', label: 'Listeners' },
+    { key: 'behaviors', label: 'Behaviors' },
+    { key: 'profiler', label: 'Profiler' },
   ];
+
+  const getScriptName = (scriptId: string) => {
+    const script = scripts.find(s => s.id === scriptId);
+    return script ? script.name : scriptId;
+  };
+
+  const getScriptKey = (scriptId: string) => {
+    const script = scripts.find(s => s.id === scriptId);
+    return script ? script.scriptKey : '';
+  };
 
   return (
     <div>
@@ -298,6 +426,7 @@ export default function WorkflowScriptsPage() {
                         </button>
                       </td>
                       <td className="px-4 py-3 text-right space-x-2">
+                        <button onClick={() => navigate(`/workflows/admin/scripts/${script.id}/edit`)} className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Open Editor</button>
                         <button onClick={() => openEdit(script)} className="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
                         <button onClick={() => loadVersions(script.id)} className="text-gray-600 hover:text-gray-800 text-sm">Versions</button>
                         <button onClick={() => loadSchedule(script.id)} className="text-purple-600 hover:text-purple-800 text-sm">Schedule</button>
@@ -404,6 +533,191 @@ export default function WorkflowScriptsPage() {
             </table>
           )}
         </div>
+      )}
+
+      {activeTab === 'listeners' && (
+        <div>
+          <div className="flex justify-end mb-3">
+            <button onClick={() => setShowAddListener(!showAddListener)}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
+              {showAddListener ? 'Cancel' : 'Add Listener'}
+            </button>
+          </div>
+
+          {showAddListener && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Script</label>
+                  <select value={listenerScriptId} onChange={(e) => setListenerScriptId(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                    <option value="">Select a script...</option>
+                    {scripts.map(s => <option key={s.id} value={s.id}>{s.name} ({s.scriptKey})</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Event Type</label>
+                  <select value={listenerEventType} onChange={(e) => setListenerEventType(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                    {EVENT_TYPES.map(et => <option key={et} value={et}>{et}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Project Filter (UUID, optional)</label>
+                  <input type="text" value={listenerProjectFilter} onChange={(e) => setListenerProjectFilter(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Project UUID (optional)" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Issue Type Filter (UUID, optional)</label>
+                  <input type="text" value={listenerIssueTypeFilter} onChange={(e) => setListenerIssueTypeFilter(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Issue Type UUID (optional)" />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button onClick={handleCreateListener}
+                  disabled={!listenerScriptId}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50">
+                  Create
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            {listeners.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">No listeners configured. Click "Add Listener" to get started.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Script Name</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Key</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Event Type</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Project Filter</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Issue Type Filter</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Enabled</th>
+                    <th className="text-right px-4 py-3 font-medium text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {listeners.map((listener) => (
+                    <tr key={listener.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium">{getScriptName(listener.scriptId)}</td>
+                      <td className="px-4 py-3"><code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{getScriptKey(listener.scriptId)}</code></td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">{listener.eventType}</span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 text-xs">{listener.projectFilter || '-'}</td>
+                      <td className="px-4 py-3 text-gray-600 text-xs">{listener.issueTypeFilter || '-'}</td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => handleToggleListener(listener.id)}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${listener.isEnabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                          <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${listener.isEnabled ? 'translate-x-4' : 'translate-x-1'}`} />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button onClick={() => handleDeleteListener(listener.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'behaviors' && (
+        <div>
+          <div className="flex justify-end mb-3">
+            <button onClick={() => setShowAddBehavior(!showAddBehavior)}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
+              {showAddBehavior ? 'Cancel' : 'Add Behavior'}
+            </button>
+          </div>
+
+          {showAddBehavior && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Script</label>
+                  <select value={behaviorScriptId} onChange={(e) => setBehaviorScriptId(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                    <option value="">Select a script...</option>
+                    {scripts.map(s => <option key={s.id} value={s.id}>{s.name} ({s.scriptKey})</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Screen Context</label>
+                  <select value={behaviorScreenContext} onChange={(e) => setBehaviorScreenContext(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                    {SCREEN_CONTEXTS.map(sc => <option key={sc} value={sc}>{sc}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Project Filter (UUID, optional)</label>
+                  <input type="text" value={behaviorProjectFilter} onChange={(e) => setBehaviorProjectFilter(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Project UUID (optional)" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Issue Type Filter (UUID, optional)</label>
+                  <input type="text" value={behaviorIssueTypeFilter} onChange={(e) => setBehaviorIssueTypeFilter(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Issue Type UUID (optional)" />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button onClick={handleCreateBehavior}
+                  disabled={!behaviorScriptId}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50">
+                  Create
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            {behaviors.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">No field behaviors configured. Click "Add Behavior" to get started.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Script Name</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Key</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Screen Context</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Project Filter</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Issue Type Filter</th>
+                    <th className="text-right px-4 py-3 font-medium text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {behaviors.map((behavior) => (
+                    <tr key={behavior.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium">{getScriptName(behavior.scriptId)}</td>
+                      <td className="px-4 py-3"><code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{getScriptKey(behavior.scriptId)}</code></td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs px-2 py-0.5 rounded bg-teal-100 text-teal-700">{behavior.screenContext}</span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 text-xs">{behavior.projectId || '-'}</td>
+                      <td className="px-4 py-3 text-gray-600 text-xs">{behavior.issueTypeId || '-'}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button onClick={() => handleDeleteBehavior(behavior.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'profiler' && (
+        <ProfilerDashboard />
       )}
 
       {showModal && (

@@ -4,9 +4,10 @@ export interface ScriptDefinition {
   id: string;
   name: string;
   description?: string;
-  scriptType: 'CONDITION' | 'VALIDATOR' | 'POST_FUNCTION';
+  scriptType: 'CONDITION' | 'VALIDATOR' | 'POST_FUNCTION' | 'LISTENER' | 'FIELD_BEHAVIOR' | 'CALCULATED_FIELD' | 'CONSOLE' | 'SCHEDULED' | 'LIBRARY';
   scriptKey: string;
   scriptBody: string;
+  category?: string;
   version: number;
   isEnabled: boolean;
   createdBy?: string;
@@ -183,6 +184,12 @@ export const scriptApi = {
   deleteListener: (listenerId: string) =>
     apiClient.delete(`${BASE}/listeners/${listenerId}`),
 
+  toggleListener: (listenerId: string) =>
+    apiClient.patch<ScriptListener>(`${BASE}/listeners/${listenerId}/toggle`),
+
+  getAllListeners: () =>
+    apiClient.get<ScriptListener[]>(`${BASE}/listeners`),
+
   // Field Behaviors
   getFieldBehaviors: (scriptId: string) =>
     apiClient.get<ScriptFieldBehavior[]>(`${BASE}/${scriptId}/field-behaviors`),
@@ -193,10 +200,30 @@ export const scriptApi = {
   deleteFieldBehavior: (behaviorId: string) =>
     apiClient.delete(`${BASE}/field-behaviors/${behaviorId}`),
 
+  getAllBehaviors: () =>
+    apiClient.get<ScriptFieldBehavior[]>(`${BASE}/field-behaviors`),
+
   evaluateFieldBehaviors: (data: { screenContext: string; projectId?: string; issueTypeId?: string; issueData?: Record<string, unknown>; userId?: string }) =>
     apiClient.post<{ fields: Array<{ fieldName: string; visible?: boolean; required?: boolean; readOnly?: boolean; defaultValue?: unknown }> }>(`${BASE}/field-behaviors/evaluate`, data),
 
   // Execute by key (for external integrations)
   executeByKey: (scriptKey: string, context?: Record<string, unknown>) =>
     apiClient.post<ScriptConsoleResponse>(`${BASE}/execute-by-key/${scriptKey}`, context || {}),
+
+  getTemplates: () =>
+    apiClient.get<Array<{ name: string; description: string; category: string; scriptType: string; scriptKey: string; scriptBody: string }>>(`${BASE}/templates`),
+
+  searchScripts: (query?: string, type?: string, category?: string, enabled?: boolean) =>
+    apiClient.get<ScriptDefinition[]>(`${BASE}/search`, {
+      params: { ...(query ? { query } : {}), ...(type ? { type } : {}), ...(category ? { category } : {}), ...(enabled !== undefined ? { enabled } : {}) },
+    }),
+
+  getUsage: (scriptId: string) =>
+    apiClient.get<{ scriptKey: string; listeners: unknown[]; fieldBehaviors: unknown[]; calculatedFields: unknown[]; includedBy: string[] }>(`${BASE}/${scriptId}/usage`),
+
+  getVersionBody: (scriptId: string, versionNumber: number) =>
+    apiClient.get<{ version: number; scriptBody: string; changeSummary: string; createdAt: string }>(`${BASE}/${scriptId}/versions/${versionNumber}`),
+
+  getProfilerStats: () =>
+    apiClient.get<{ totalExecutions: number; successRate: number; slowestScripts: Array<{ scriptKey: string; avgMs: number }>; executionsByMode: Record<string, number> }>(`${BASE}/profiler/stats`),
 };

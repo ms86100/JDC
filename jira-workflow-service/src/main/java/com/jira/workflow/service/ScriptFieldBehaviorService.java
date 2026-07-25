@@ -88,6 +88,11 @@ public class ScriptFieldBehaviorService {
         return behaviorRepository.findByScriptId(scriptId);
     }
 
+    @Transactional(readOnly = true)
+    public List<ScriptFieldBehavior> getAllBehaviors() {
+        return behaviorRepository.findAll();
+    }
+
     @Transactional
     public void deleteBehavior(UUID behaviorId) {
         behaviorRepository.deleteById(behaviorId);

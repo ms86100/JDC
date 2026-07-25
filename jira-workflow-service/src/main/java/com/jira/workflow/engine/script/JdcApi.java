@@ -1,16 +1,25 @@
 package com.jira.workflow.engine.script;
 
 import com.jira.workflow.engine.WorkflowIntegrationClient;
+import lombok.extern.slf4j.Slf4j;
 import org.graalvm.polyglot.HostAccess;
+import org.graalvm.polyglot.Value;
 
+import java.util.HashMap;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+@Slf4j
 
 public class JdcApi {
 
     private final WorkflowIntegrationClient client;
     private final Map<String, Object> context;
+    private String lastError = null;
+    private ScriptTracer tracer;
+    private MutationBuffer mutationBuffer;
 
     @HostAccess.Export public final IssueApi issue;
     @HostAccess.Export public final ProjectApi project;
@@ -28,6 +37,16 @@ public class JdcApi {
         this.workflow = new WorkflowApi();
         this.search = new SearchApi();
         this.log = new LogApi();
+    }
+
+    @HostAccess.Export
+    public String getLastError() {
+        return lastError;
+    }
+
+    @HostAccess.Export
+    public void clearLastError() {
+        lastError = null;
     }
 
     // === Backward-compatible top-level methods ===
@@ -126,19 +145,30 @@ public class JdcApi {
         @HostAccess.Export
         public Object getFieldValue(String fieldName) {
             try {
+                long _t = System.currentTimeMillis();
                 Map<String, Object> issueData = castMap(context.getOrDefault("issueData", Map.of()));
-                return issueData.get(fieldName);
+                Object result = issueData.get(fieldName);
+                trace("issue", "getFieldValue", _t);
+                return result;
             } catch (Exception e) { return null; }
         }
 
         @HostAccess.Export
         public boolean setFieldValue(String fieldName, Object value) {
             try {
+                long _t = System.currentTimeMillis();
                 Object id = context.get("issueId");
                 if (id == null || fieldName == null) return false;
+                if (mutationBuffer != null && !mutationBuffer.isCommitted()) {
+                    mutationBuffer.addMutation(MutationBuffer.Mutation.SET_FIELD, id.toString(),
+                            Map.of(fieldName, value != null ? value : ""));
+                    trace("issue", "setFieldValue[buffered]", _t);
+                    return true;
+                }
                 client.patchIssueFields(UUID.fromString(id.toString()), Map.of(fieldName, value));
+                trace("issue", "setFieldValue", _t);
                 return true;
-            } catch (Exception e) { return false; }
+            } catch (Exception e) { lastError = e.getMessage(); return false; }
         }
 
         @HostAccess.Export
@@ -155,6 +185,7 @@ public class JdcApi {
         @HostAccess.Export
         public boolean addComment(String text) {
             try {
+                long _t = System.currentTimeMillis();
                 Object issueId = context.get("issueId");
                 Object userId = context.get("userId");
                 if (issueId == null || text == null) return false;
@@ -162,16 +193,20 @@ public class JdcApi {
                         UUID.fromString(issueId.toString()),
                         text,
                         userId != null ? UUID.fromString(userId.toString()) : null);
+                trace("issue", "addComment", _t);
                 return true;
-            } catch (Exception e) { return false; }
+            } catch (Exception e) { lastError = e.getMessage(); return false; }
         }
 
         @HostAccess.Export
         public List<Map<String, Object>> getComments() {
             try {
+                long _t = System.currentTimeMillis();
                 Object id = context.get("issueId");
                 if (id == null) return List.of();
-                return client.fetchComments(UUID.fromString(id.toString()));
+                List<Map<String, Object>> result = client.fetchComments(UUID.fromString(id.toString()));
+                trace("issue", "getComments", _t);
+                return result;
             } catch (Exception e) { return List.of(); }
         }
 
@@ -187,9 +222,12 @@ public class JdcApi {
         @HostAccess.Export
         public List<Map<String, Object>> getWatchers() {
             try {
+                long _t = System.currentTimeMillis();
                 Object id = context.get("issueId");
                 if (id == null) return List.of();
-                return client.fetchWatchers(UUID.fromString(id.toString()));
+                List<Map<String, Object>> result = client.fetchWatchers(UUID.fromString(id.toString()));
+                trace("issue", "getWatchers", _t);
+                return result;
             } catch (Exception e) { return List.of(); }
         }
 
@@ -216,15 +254,18 @@ public class JdcApi {
                         UUID.fromString(targetId.toString()),
                         linkType != null ? UUID.fromString(linkType) : null);
                 return true;
-            } catch (Exception e) { return false; }
+            } catch (Exception e) { lastError = e.getMessage(); return false; }
         }
 
         @HostAccess.Export
         public List<Map<String, Object>> getLinkedIssues() {
             try {
+                long _t = System.currentTimeMillis();
                 Object id = context.get("issueId");
                 if (id == null) return List.of();
-                return client.fetchLinkedIssuesForWorkflow(UUID.fromString(id.toString()));
+                List<Map<String, Object>> result = client.fetchLinkedIssuesForWorkflow(UUID.fromString(id.toString()));
+                trace("issue", "getLinkedIssues", _t);
+                return result;
             } catch (Exception e) { return List.of(); }
         }
 
@@ -240,18 +281,22 @@ public class JdcApi {
         @HostAccess.Export
         public Map<String, Object> createIssue(String projectId, String issueTypeId, String summary, Map<String, Object> fields) {
             try {
+                long _t = System.currentTimeMillis();
                 Map<String, Object> data = new java.util.HashMap<>(fields != null ? fields : Map.of());
                 data.put("projectId", projectId);
                 data.put("issueTypeId", issueTypeId);
                 data.put("summary", summary);
                 Object userId = context.get("userId");
-                return client.createIssue(data, userId != null ? UUID.fromString(userId.toString()) : null);
-            } catch (Exception e) { return Map.of(); }
+                Map<String, Object> result = client.createIssue(data, userId != null ? UUID.fromString(userId.toString()) : null);
+                trace("issue", "createIssue", _t);
+                return result;
+            } catch (Exception e) { lastError = e.getMessage(); return Map.of(); }
         }
 
         @HostAccess.Export
         public Map<String, Object> cloneIssue(String issueIdOrKey) {
             try {
+                long _t = System.currentTimeMillis();
                 if (issueIdOrKey == null) return Map.of();
                 UUID id;
                 if (issueIdOrKey.contains("-")) {
@@ -262,37 +307,46 @@ public class JdcApi {
                 } else {
                     id = UUID.fromString(issueIdOrKey);
                 }
-                return client.cloneIssue(id);
-            } catch (Exception e) { return Map.of(); }
+                Map<String, Object> result = client.cloneIssue(id);
+                trace("issue", "cloneIssue", _t);
+                return result;
+            } catch (Exception e) { lastError = e.getMessage(); return Map.of(); }
         }
 
         @HostAccess.Export
         public Map<String, Object> moveIssue(String issueId, String targetProjectId) {
             try {
+                long _t = System.currentTimeMillis();
                 if (issueId == null || targetProjectId == null) return Map.of();
-                return client.moveIssue(UUID.fromString(issueId), UUID.fromString(targetProjectId));
-            } catch (Exception e) { return Map.of(); }
+                Map<String, Object> result = client.moveIssue(UUID.fromString(issueId), UUID.fromString(targetProjectId));
+                trace("issue", "moveIssue", _t);
+                return result;
+            } catch (Exception e) { lastError = e.getMessage(); return Map.of(); }
         }
 
         @HostAccess.Export
         public boolean deleteIssue(String issueId) {
             try {
+                long _t = System.currentTimeMillis();
                 if (issueId == null) return false;
                 client.deleteIssue(UUID.fromString(issueId));
+                trace("issue", "deleteIssue", _t);
                 return true;
-            } catch (Exception e) { return false; }
+            } catch (Exception e) { lastError = e.getMessage(); return false; }
         }
 
         @HostAccess.Export
         public boolean transitionIssue(String issueId, String transitionId) {
             try {
+                long _t = System.currentTimeMillis();
                 if (issueId == null || transitionId == null) return false;
                 Object projectId = context.get("projectId");
                 client.transitionIssue(UUID.fromString(issueId),
                         projectId != null ? UUID.fromString(projectId.toString()) : null,
                         transitionId);
+                trace("issue", "transitionIssue", _t);
                 return true;
-            } catch (Exception e) { return false; }
+            } catch (Exception e) { lastError = e.getMessage(); return false; }
         }
 
         @HostAccess.Export
@@ -347,9 +401,12 @@ public class JdcApi {
         @HostAccess.Export
         public List<Map<String, Object>> getSubtasks() {
             try {
+                long _t = System.currentTimeMillis();
                 Object id = context.get("issueId");
                 if (id == null) return List.of();
-                return client.fetchSubtasks(UUID.fromString(id.toString()));
+                List<Map<String, Object>> result = client.fetchSubtasks(UUID.fromString(id.toString()));
+                trace("issue", "getSubtasks", _t);
+                return result;
             } catch (Exception e) { return List.of(); }
         }
 
@@ -385,6 +442,296 @@ public class JdcApi {
                         userId != null ? UUID.fromString(userId.toString()) : null);
                 return true;
             } catch (Exception e) { return false; }
+        }
+
+        // --- Attachment Methods ---
+
+        @HostAccess.Export
+        public List<Map<String, Object>> getAttachments() {
+            try {
+                Object id = context.get("issueId");
+                if (id == null) return List.of();
+                return client.fetchAttachments(UUID.fromString(id.toString()));
+            } catch (Exception e) { return List.of(); }
+        }
+
+        @HostAccess.Export
+        public boolean deleteAttachment(String attachmentId) {
+            try {
+                if (attachmentId == null) return false;
+                client.deleteAttachment(UUID.fromString(attachmentId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public String getAttachmentContent(String attachmentId) {
+            try {
+                if (attachmentId == null) return "";
+                byte[] content = client.fetchAttachmentContent(UUID.fromString(attachmentId));
+                if (content == null || content.length == 0) return "";
+                return Base64.getEncoder().encodeToString(content);
+            } catch (Exception e) { return ""; }
+        }
+
+        @HostAccess.Export
+        public String getAttachmentUrl(String attachmentId) {
+            try {
+                if (attachmentId == null) return "";
+                return client.getAttachmentUrl(UUID.fromString(attachmentId));
+            } catch (Exception e) { return ""; }
+        }
+
+        @HostAccess.Export
+        public boolean copyAttachments(String targetIssueId) {
+            try {
+                Object id = context.get("issueId");
+                if (id == null || targetIssueId == null) return false;
+                client.copyAttachments(UUID.fromString(id.toString()), UUID.fromString(targetIssueId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public Map<String, Object> addAttachment(String issueId, String filename, String base64Content) {
+            try {
+                if (issueId == null || filename == null || base64Content == null) return Map.of();
+                return client.uploadAttachment(UUID.fromString(issueId), filename, base64Content);
+            } catch (Exception e) { lastError = e.getMessage(); return Map.of(); }
+        }
+
+        // --- Comment Mutation Methods ---
+
+        @HostAccess.Export
+        public boolean deleteComment(String commentId) {
+            try {
+                if (commentId == null) return false;
+                client.deleteComment(UUID.fromString(commentId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean updateComment(String commentId, String newText) {
+            try {
+                if (commentId == null || newText == null) return false;
+                Object userId = context.get("userId");
+                client.updateComment(UUID.fromString(commentId), newText,
+                        userId != null ? UUID.fromString(userId.toString()) : null);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public Map<String, Object> getLastComment() {
+            try {
+                Object id = context.get("issueId");
+                if (id == null) return Map.of();
+                List<Map<String, Object>> comments = client.fetchComments(UUID.fromString(id.toString()));
+                if (comments == null || comments.isEmpty()) return Map.of();
+                return comments.get(comments.size() - 1);
+            } catch (Exception e) { return Map.of(); }
+        }
+
+        // --- Field Metadata (Task 2.5) ---
+
+        @HostAccess.Export
+        public boolean hasField(String fieldName) {
+            try {
+                Object id = context.get("issueId");
+                if (id == null || fieldName == null) return false;
+                Map<String, Object> issue = client.fetchIssue(UUID.fromString(id.toString()));
+                return issue.containsKey(fieldName);
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public List<Map<String, Object>> getAvailableFieldValues(String fieldName, String projectId, String issueTypeId) {
+            try {
+                if (fieldName == null) return List.of();
+                return client.fetchAvailableFieldValues(fieldName,
+                    projectId != null ? UUID.fromString(projectId) : null,
+                    issueTypeId != null ? UUID.fromString(issueTypeId) : null);
+            } catch (Exception e) { return List.of(); }
+        }
+
+        @HostAccess.Export
+        public String getFieldType(String fieldName) {
+            try {
+                if (fieldName == null) return null;
+                Map<String, Object> meta = client.fetchFieldMetadata(fieldName);
+                return meta.getOrDefault("fieldType", "unknown").toString();
+            } catch (Exception e) { return null; }
+        }
+
+        @HostAccess.Export
+        public boolean clearField(String fieldName) {
+            try {
+                return setFieldValue(fieldName, null);
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public List<Map<String, Object>> getCustomFieldOptions(String fieldName) {
+            try {
+                if (fieldName == null) return List.of();
+                return client.fetchCustomFieldOptions(fieldName);
+            } catch (Exception e) { return List.of(); }
+        }
+
+        @HostAccess.Export
+        public String getFieldId(String fieldName) {
+            try {
+                if (fieldName == null) return null;
+                Map<String, Object> meta = client.fetchFieldMetadata(fieldName);
+                Object id = meta.get("id");
+                return id != null ? id.toString() : null;
+            } catch (Exception e) { return null; }
+        }
+
+        @HostAccess.Export
+        public String getFieldName(String fieldId) {
+            try {
+                if (fieldId == null) return null;
+                Map<String, Object> meta = client.fetchFieldMetadata(fieldId);
+                Object name = meta.get("name");
+                return name != null ? name.toString() : null;
+            } catch (Exception e) { return null; }
+        }
+
+        @HostAccess.Export
+        public boolean isFieldRequired(String fieldName, String screenId) {
+            try {
+                if (fieldName == null) return false;
+                Map<String, Object> meta = client.fetchFieldMetadata(fieldName);
+                Object required = meta.get("required");
+                return Boolean.TRUE.equals(required);
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public Map<String, Object> getFieldConfig(String fieldName) {
+            try {
+                if (fieldName == null) return Map.of();
+                return client.fetchFieldMetadata(fieldName);
+            } catch (Exception e) { return Map.of(); }
+        }
+
+        @HostAccess.Export
+        public String getFieldScreenTab(String fieldName) {
+            try {
+                if (fieldName == null) return null;
+                Map<String, Object> meta = client.fetchFieldMetadata(fieldName);
+                Object tab = meta.get("screenTab");
+                return tab != null ? tab.toString() : null;
+            } catch (Exception e) { return null; }
+        }
+
+        @HostAccess.Export
+        public boolean addCustomFieldOption(String fieldName, String optionValue) {
+            try {
+                if (fieldName == null || optionValue == null) return false;
+                client.addFieldOption(fieldName, optionValue);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        // --- Comment Visibility (SIL parity) ---
+
+        @HostAccess.Export
+        public boolean setCommentVisibility(String commentId, String restrictionType, String restrictionValue) {
+            try {
+                if (commentId == null) return false;
+                Map<String, Object> body = new HashMap<>();
+                body.put("restrictionType", restrictionType);
+                body.put("restrictionValue", restrictionValue);
+                client.updateCommentVisibility(UUID.fromString(commentId), body);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        // --- Issue Function Completion (Task 2.8) ---
+
+        @HostAccess.Export
+        public boolean unlinkIssue(String sourceIssueId, String targetIssueId) {
+            try {
+                if (sourceIssueId == null || targetIssueId == null) return false;
+                client.unlinkIssues(UUID.fromString(sourceIssueId), UUID.fromString(targetIssueId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean setRank(String issueId, int rank) {
+            try {
+                if (issueId == null) return false;
+                client.setIssueRank(UUID.fromString(issueId), rank);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public String getSecurityLevel() {
+            try {
+                Object id = context.get("issueId");
+                if (id == null) return null;
+                Map<String, Object> issue = client.fetchIssue(UUID.fromString(id.toString()));
+                Object level = issue.get("securityLevel");
+                return level != null ? level.toString() : null;
+            } catch (Exception e) { return null; }
+        }
+
+        @HostAccess.Export
+        public boolean setSecurityLevel(String issueId, String levelId) {
+            try {
+                if (issueId == null) return false;
+                Map<String, Object> fields = new HashMap<>();
+                fields.put("securityLevelId", levelId);
+                client.patchIssueFields(UUID.fromString(issueId), fields);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        // --- Worklog Completion (Task 2.9) ---
+
+        @HostAccess.Export
+        public boolean deleteWorklog(String worklogId) {
+            try {
+                if (worklogId == null) return false;
+                client.deleteWorklog(UUID.fromString(worklogId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean updateWorklog(String worklogId, String timeSpent, String comment) {
+            try {
+                if (worklogId == null) return false;
+                client.updateWorklog(UUID.fromString(worklogId), timeSpent, comment);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public String getRemainingEstimate() {
+            try {
+                Object id = context.get("issueId");
+                if (id == null) return null;
+                Map<String, Object> issue = client.fetchIssue(UUID.fromString(id.toString()));
+                Object estimate = issue.get("remainingEstimate");
+                return estimate != null ? estimate.toString() : null;
+            } catch (Exception e) { return null; }
+        }
+
+        @HostAccess.Export
+        public String getOriginalEstimate() {
+            try {
+                Object id = context.get("issueId");
+                if (id == null) return null;
+                Map<String, Object> issue = client.fetchIssue(UUID.fromString(id.toString()));
+                Object estimate = issue.get("originalEstimate");
+                return estimate != null ? estimate.toString() : null;
+            } catch (Exception e) { return null; }
         }
     }
 
@@ -480,6 +827,75 @@ public class JdcApi {
                 return client.createComponent(data);
             } catch (Exception e) { return Map.of(); }
         }
+
+        @HostAccess.Export
+        public boolean archiveVersion(String versionId) {
+            try {
+                if (versionId == null) return false;
+                client.archiveVersion(UUID.fromString(versionId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean deleteVersion(String versionId) {
+            try {
+                if (versionId == null) return false;
+                client.deleteVersion(UUID.fromString(versionId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean unreleaseVersion(String versionId) {
+            try {
+                if (versionId == null) return false;
+                client.unreleaseVersion(UUID.fromString(versionId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean deleteComponent(String componentId) {
+            try {
+                if (componentId == null) return false;
+                client.deleteComponent(UUID.fromString(componentId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public List<Map<String, Object>> getProjectRoles(String projectId) {
+            try {
+                if (projectId == null) return List.of();
+                return client.fetchProjectRoles(UUID.fromString(projectId));
+            } catch (Exception e) { return List.of(); }
+        }
+
+        @HostAccess.Export
+        public List<Map<String, Object>> getAllProjects(String query) {
+            try {
+                return client.searchProjects(query);
+            } catch (Exception e) { return List.of(); }
+        }
+
+        @HostAccess.Export
+        public Object getProjectProperty(String projectId, String key) {
+            try {
+                if (projectId == null || key == null) return null;
+                Map<String, Object> props = client.fetchProjectProperties(UUID.fromString(projectId));
+                return props.get(key);
+            } catch (Exception e) { return null; }
+        }
+
+        @HostAccess.Export
+        public boolean setProjectProperty(String projectId, String key, Object value) {
+            try {
+                if (projectId == null || key == null) return false;
+                client.setProjectProperty(UUID.fromString(projectId), key, value);
+                return true;
+            } catch (Exception e) { return false; }
+        }
     }
 
     // === Sub-API: jdc.user ===
@@ -541,6 +957,90 @@ public class JdcApi {
                 return List.of();
             } catch (Exception e) { return List.of(); }
         }
+
+        @HostAccess.Export
+        public boolean addUserToGroup(String userId, String groupName) {
+            try {
+                if (userId == null || groupName == null) return false;
+                client.addUserToGroup(UUID.fromString(userId), groupName);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean removeUserFromGroup(String userId, String groupName) {
+            try {
+                if (userId == null || groupName == null) return false;
+                client.removeUserFromGroup(UUID.fromString(userId), groupName);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean isAdmin(String userId) {
+            try {
+                if (userId == null) return false;
+                return client.checkUserIsAdmin(UUID.fromString(userId));
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public Map<String, Object> getUserByEmail(String email) {
+            try {
+                if (email == null) return Map.of();
+                return client.fetchUserByEmail(email);
+            } catch (Exception e) { return Map.of(); }
+        }
+
+        @HostAccess.Export
+        public List<Map<String, Object>> getAllUsers(String query, int limit) {
+            try {
+                return client.searchUsers(query, Math.min(limit, 200));
+            } catch (Exception e) { return List.of(); }
+        }
+
+        @HostAccess.Export
+        public Map<String, Object> createUser(String username, String email, String displayName) {
+            try {
+                if (username == null || email == null) return Map.of();
+                return client.createUser(username, email, displayName);
+            } catch (Exception e) { return Map.of(); }
+        }
+
+        @HostAccess.Export
+        public boolean deactivateUser(String userId) {
+            try {
+                if (userId == null) return false;
+                client.deactivateUser(UUID.fromString(userId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public boolean deleteUser(String userId) {
+            try {
+                if (userId == null) return false;
+                client.deleteUser(UUID.fromString(userId));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        @HostAccess.Export
+        public Map<String, Object> createGroup(String groupName) {
+            try {
+                if (groupName == null) return Map.of();
+                return client.createGroup(groupName);
+            } catch (Exception e) { return Map.of(); }
+        }
+
+        @HostAccess.Export
+        public boolean deleteGroup(String groupName) {
+            try {
+                if (groupName == null) return false;
+                client.deleteGroup(groupName);
+                return true;
+            } catch (Exception e) { return false; }
+        }
     }
 
     // === Sub-API: jdc.workflow ===
@@ -564,6 +1064,39 @@ public class JdcApi {
             try {
                 return client.fetchIssueStatuses();
             } catch (Exception e) { return List.of(); }
+        }
+
+        @HostAccess.Export
+        public List<Map<String, Object>> getAvailableActions(String issueId) {
+            try {
+                if (issueId == null) return List.of();
+                return client.fetchAvailableTransitions(UUID.fromString(issueId));
+            } catch (Exception e) { return List.of(); }
+        }
+
+        @HostAccess.Export
+        public String getWorkflowName(String issueId) {
+            try {
+                if (issueId == null) return null;
+                Map<String, Object> wf = client.fetchWorkflowForIssue(UUID.fromString(issueId));
+                return wf.getOrDefault("name", "").toString();
+            } catch (Exception e) { return null; }
+        }
+
+        @HostAccess.Export
+        public Map<String, Object> getWorkflowScheme(String projectId) {
+            try {
+                if (projectId == null) return Map.of();
+                return client.fetchWorkflowScheme(UUID.fromString(projectId));
+            } catch (Exception e) { return Map.of(); }
+        }
+
+        @HostAccess.Export
+        public Map<String, Object> getTransitionProperties(String transitionId) {
+            try {
+                if (transitionId == null) return Map.of();
+                return client.fetchTransitionProperties(UUID.fromString(transitionId));
+            } catch (Exception e) { return Map.of(); }
         }
     }
 
@@ -642,6 +1175,84 @@ public class JdcApi {
 
         private String sanitize(String msg) {
             return msg.replace("\r\n", " ").replace("\n", " ").replace("\r", " ");
+        }
+    }
+
+    // === Security — runAs (SIL parity) ===
+
+    @HostAccess.Export
+    public Object runAs(String userId, Value callback) {
+        try {
+            if (userId == null || callback == null || !callback.canExecute()) return null;
+            Object originalUserId = context.get("userId");
+            context.put("userId", userId);
+            try {
+                return callback.execute();
+            } finally {
+                context.put("userId", originalUserId);
+            }
+        } catch (Exception e) {
+            log.warn("runAs failed: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    @HostAccess.Export
+    public List<String> getUserPermissions(String userId) {
+        try {
+            if (userId == null) return List.of();
+            return client.fetchUserPermissions(UUID.fromString(userId));
+        } catch (Exception e) { return List.of(); }
+    }
+
+    // === Tracer / MutationBuffer support ===
+
+    public void setTracer(ScriptTracer tracer) {
+        this.tracer = tracer;
+    }
+
+    private void trace(String api, String method, long startMs) {
+        if (tracer != null) tracer.traceApiCall(api, method, startMs);
+    }
+
+    public void setMutationBuffer(MutationBuffer buffer) {
+        this.mutationBuffer = buffer;
+    }
+
+    @HostAccess.Export
+    public boolean flush() {
+        try {
+            if (mutationBuffer == null || mutationBuffer.size() == 0) return true;
+            for (MutationBuffer.Mutation m : mutationBuffer.getMutations()) {
+                switch (m.type()) {
+                    case MutationBuffer.Mutation.SET_FIELD -> {
+                        UUID issueId = UUID.fromString(m.target());
+                        client.patchIssueFields(issueId, m.data());
+                    }
+                    case MutationBuffer.Mutation.ADD_COMMENT -> {
+                        UUID issueId = UUID.fromString(m.target());
+                        String text = (String) m.data().get("text");
+                        UUID userId = m.data().get("userId") != null ? UUID.fromString(m.data().get("userId").toString()) : null;
+                        client.addComment(issueId, text, userId);
+                    }
+                    case MutationBuffer.Mutation.ADD_LABEL -> {
+                        UUID issueId = UUID.fromString(m.target());
+                        String label = (String) m.data().get("label");
+                        client.addLabel(issueId, label);
+                    }
+                    case MutationBuffer.Mutation.REMOVE_LABEL -> {
+                        UUID issueId = UUID.fromString(m.target());
+                        String label = (String) m.data().get("label");
+                        client.removeLabel(issueId, label);
+                    }
+                }
+            }
+            mutationBuffer.markCommitted();
+            mutationBuffer.clear();
+            return true;
+        } catch (Exception e) {
+            log.warn("Flush failed: {}", e.getMessage());
+            return false;
         }
     }
 

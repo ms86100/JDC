@@ -53,18 +53,19 @@ springdoc:
 
 jira:
   services:
-    issue-url: ${ISSUE_SERVICE_URL:http://jira-issue-service:8084}
-    test-url: ${TEST_SERVICE_URL:http://jira-test-service:8095}
-    comment-url: ${COMMENT_SERVICE_URL:http://jira-comment-service:8086}
-    attachment-url: ${ATTACHMENT_SERVICE_URL:http://jira-attachment-service:8090}
-    admin-url: ${ADMIN_SERVICE_URL:http://jira-admin-service:8093}
-    user-url: ${USER_SERVICE_URL:http://jira-user-service:8082}
-    notification-url: ${NOTIFICATION_SERVICE_URL:http://jira-notification-service:8087}
-    search-url: ${SEARCH_SERVICE_URL:http://jira-search-service:8088}
-    project-url: ${PROJECT_SERVICE_URL:http://jira-project-service:8083}
-    version-url: ${VERSION_SERVICE_URL:http://jira-version-service:8096}
-    component-url: ${COMPONENT_SERVICE_URL:http://jira-component-service:8097}
-    sprint-url: ${SPRINT_SERVICE_URL:http://jira-sprint-service:8091}
+    issue-url: ${ISSUE_SERVICE_URL:http://issue-service:8084}
+    test-url: ${TEST_SERVICE_URL:http://test-service:8095}
+    comment-url: ${COMMENT_SERVICE_URL:http://comment-service:8086}
+    attachment-url: ${ATTACHMENT_SERVICE_URL:http://attachment-service:8090}
+    admin-url: ${ADMIN_SERVICE_URL:http://admin-service:8093}
+    user-url: ${USER_SERVICE_URL:http://user-service:8082}
+    notification-url: ${NOTIFICATION_SERVICE_URL:http://notification-service:8087}
+    search-url: ${SEARCH_SERVICE_URL:http://search-service:8088}
+    project-url: ${PROJECT_SERVICE_URL:http://project-service:8083}
+    version-url: ${VERSION_SERVICE_URL:http://version-service:8096}
+    component-url: ${COMPONENT_SERVICE_URL:http://component-service:8097}
+    sprint-url: ${SPRINT_SERVICE_URL:http://sprint-service:8091}
+    plan-url: ${PLAN_SERVICE_URL:http://plan-service:8092}
   workflow:
     transition-fallback: false
     outbox:
@@ -82,6 +83,7 @@ jira:
     env-whitelist-keys: []
     scheduled-enabled: false
     sql-write-enabled: false
+    datasources: {}
     scheduled-poll-interval-ms: 30000
 
 logging:

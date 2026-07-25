@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,9 @@ public class WorkflowIntegrationClient {
 
     @Value("${jira.services.test-url:http://jira-test-service:8095}")
     private String testServiceUrl;
+
+    @Value("${jira.services.plan-url:http://jira-plan-service:8098}")
+    private String planServiceUrl;
 
     /**
      * Fetch issue data from issue-service first, then fall back to test-service.
@@ -847,6 +851,549 @@ public class WorkflowIntegrationClient {
         } catch (Exception e) {
             log.warn("Failed to create component: {}", e.getMessage());
             return new HashMap<>();
+        }
+    }
+
+    // === Attachment Methods ===
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchAttachments(UUID issueId) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    attachmentServiceUrl + "/api/attachments/issue/" + issueId, List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch attachments for issue {}: {}", issueId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    public byte[] fetchAttachmentContent(UUID attachmentId) {
+        try {
+            return restTemplate().getForObject(
+                    attachmentServiceUrl + "/api/attachments/" + attachmentId + "/download",
+                    byte[].class);
+        } catch (Exception e) {
+            log.warn("Failed to fetch attachment content {}: {}", attachmentId, e.getMessage());
+            return new byte[0];
+        }
+    }
+
+    public void deleteAttachment(UUID attachmentId) {
+        try {
+            restTemplate().delete(attachmentServiceUrl + "/api/attachments/" + attachmentId);
+        } catch (Exception e) {
+            log.warn("Failed to delete attachment {}: {}", attachmentId, e.getMessage());
+        }
+    }
+
+    public String getAttachmentUrl(UUID attachmentId) {
+        return attachmentServiceUrl + "/api/attachments/" + attachmentId + "/download";
+    }
+
+    public void copyAttachments(UUID sourceIssueId, UUID targetIssueId) {
+        try {
+            List<Map<String, Object>> attachments = fetchAttachments(sourceIssueId);
+            for (Map<String, Object> att : attachments) {
+                Object attId = att.get("id");
+                if (attId == null) continue;
+                byte[] content = fetchAttachmentContent(UUID.fromString(attId.toString()));
+                if (content == null || content.length == 0) continue;
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+                Map<String, Object> meta = new HashMap<>();
+                meta.put("issueId", targetIssueId.toString());
+                meta.put("fileName", att.getOrDefault("fileName", "attachment"));
+                meta.put("contentType", att.getOrDefault("contentType", "application/octet-stream"));
+                HttpHeaders uploadHeaders = new HttpHeaders();
+                uploadHeaders.setContentType(MediaType.APPLICATION_JSON);
+                Map<String, Object> body = new HashMap<>(meta);
+                body.put("data", Base64.getEncoder().encodeToString(content));
+                restTemplate().postForObject(
+                        attachmentServiceUrl + "/api/attachments",
+                        new HttpEntity<>(body, uploadHeaders), Map.class);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to copy attachments from issue {} to {}: {}",
+                    sourceIssueId, targetIssueId, e.getMessage());
+        }
+    }
+
+    public Map<String, Object> uploadAttachment(UUID issueId, String filename, String base64Content) {
+        try {
+            byte[] content = java.util.Base64.getDecoder().decode(base64Content);
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.MULTIPART_FORM_DATA);
+            org.springframework.util.MultiValueMap<String, Object> body = new org.springframework.util.LinkedMultiValueMap<>();
+            body.add("issueId", issueId.toString());
+            body.add("uploaderName", "script-engine");
+            org.springframework.core.io.ByteArrayResource fileResource = new org.springframework.core.io.ByteArrayResource(content) {
+                @Override
+                public String getFilename() { return filename; }
+            };
+            body.add("file", fileResource);
+            Map<?, ?> response = restTemplate().postForObject(
+                    attachmentServiceUrl + "/api/attachments",
+                    new org.springframework.http.HttpEntity<>(body, headers), Map.class);
+            return response != null ? castMap(response) : new java.util.HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to upload attachment: {}", e.getMessage());
+            return new java.util.HashMap<>();
+        }
+    }
+
+    // === Comment Mutation Methods ===
+
+    public void deleteComment(UUID commentId) {
+        try {
+            restTemplate().delete(commentServiceUrl + "/api/comments/" + commentId);
+        } catch (Exception e) {
+            log.warn("Failed to delete comment {}: {}", commentId, e.getMessage());
+        }
+    }
+
+    public void updateComment(UUID commentId, String newText, UUID userId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            if (userId != null) headers.set("X-User-Id", userId.toString());
+            Map<String, Object> body = Map.of("content", newText);
+            restTemplate().put(
+                    commentServiceUrl + "/api/comments/" + commentId,
+                    new HttpEntity<>(body, headers));
+        } catch (Exception e) {
+            log.warn("Failed to update comment {}: {}", commentId, e.getMessage());
+        }
+    }
+
+    // === User/Group Management (Task 2.4) ===
+
+    public void addUserToGroup(UUID userId, String groupName) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            restTemplate().postForObject(
+                    userServiceUrl + "/api/admin/groups/" + groupName + "/members",
+                    new HttpEntity<>(Map.of("userId", userId.toString()), headers), Map.class);
+        } catch (Exception e) {
+            log.warn("Failed to add user {} to group {}: {}", userId, groupName, e.getMessage());
+        }
+    }
+
+    public void removeUserFromGroup(UUID userId, String groupName) {
+        try {
+            restTemplate().exchange(
+                    userServiceUrl + "/api/admin/groups/" + groupName + "/members/" + userId,
+                    HttpMethod.DELETE, new HttpEntity<>(new HttpHeaders()), Void.class);
+        } catch (Exception e) {
+            log.warn("Failed to remove user {} from group {}: {}", userId, groupName, e.getMessage());
+        }
+    }
+
+    public boolean checkUserIsAdmin(UUID userId) {
+        try {
+            Map<?, ?> response = restTemplate().getForObject(
+                    userServiceUrl + "/api/admin/users/" + userId, Map.class);
+            if (response != null) {
+                Object role = response.get("role");
+                return "ADMIN".equalsIgnoreCase(String.valueOf(role));
+            }
+            return false;
+        } catch (Exception e) {
+            log.warn("Failed to check admin status for user {}: {}", userId, e.getMessage());
+            return false;
+        }
+    }
+
+    public Map<String, Object> fetchUserByEmail(String email) {
+        try {
+            Map<?, ?> response = restTemplate().getForObject(
+                    userServiceUrl + "/api/admin/users?email=" + email, Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to fetch user by email {}: {}", email, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> searchUsers(String query, int limit) {
+        try {
+            String url = userServiceUrl + "/api/admin/users?search=" + (query != null ? query : "") + "&size=" + limit;
+            List<?> response = restTemplate().getForObject(url, List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to search users: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    // === Field Metadata (Task 2.5) ===
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchAvailableFieldValues(String fieldName, UUID projectId, UUID issueTypeId) {
+        try {
+            StringBuilder url = new StringBuilder(issueServiceUrl + "/api/issues/fields/" + fieldName + "/values");
+            String sep = "?";
+            if (projectId != null) { url.append(sep).append("projectId=").append(projectId); sep = "&"; }
+            if (issueTypeId != null) { url.append(sep).append("issueTypeId=").append(issueTypeId); }
+            List<?> response = restTemplate().getForObject(url.toString(), List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch available field values for {}: {}", fieldName, e.getMessage());
+            return List.of();
+        }
+    }
+
+    public Map<String, Object> fetchFieldMetadata(String fieldName) {
+        try {
+            Map<?, ?> response = restTemplate().getForObject(
+                    issueServiceUrl + "/api/issues/fields/" + fieldName + "/metadata", Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to fetch field metadata for {}: {}", fieldName, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchCustomFieldOptions(String fieldName) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    issueServiceUrl + "/api/issues/fields/" + fieldName + "/options", List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch custom field options for {}: {}", fieldName, e.getMessage());
+            return List.of();
+        }
+    }
+
+    public void addFieldOption(String fieldName, String optionValue) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, String> body = Map.of("fieldName", fieldName, "value", optionValue);
+            restTemplate().postForObject(
+                    issueServiceUrl + "/api/fields/" + fieldName + "/options",
+                    new HttpEntity<>(body, headers), Map.class);
+        } catch (Exception e) {
+            log.warn("Failed to add field option for {}: {}", fieldName, e.getMessage());
+        }
+    }
+
+    // === Project Management (Task 2.6) ===
+
+    public void archiveVersion(UUID versionId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            restTemplate().exchange(
+                    versionServiceUrl + "/api/versions/" + versionId + "/archive",
+                    HttpMethod.PATCH, new HttpEntity<>(Map.of(), headers), Map.class);
+        } catch (Exception e) {
+            log.warn("Failed to archive version {}: {}", versionId, e.getMessage());
+        }
+    }
+
+    public void deleteVersion(UUID versionId) {
+        try {
+            restTemplate().delete(versionServiceUrl + "/api/versions/" + versionId);
+        } catch (Exception e) {
+            log.warn("Failed to delete version {}: {}", versionId, e.getMessage());
+        }
+    }
+
+    public void unreleaseVersion(UUID versionId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            restTemplate().exchange(
+                    versionServiceUrl + "/api/versions/" + versionId + "/unrelease",
+                    HttpMethod.PATCH, new HttpEntity<>(Map.of(), headers), Map.class);
+        } catch (Exception e) {
+            log.warn("Failed to unrelease version {}: {}", versionId, e.getMessage());
+        }
+    }
+
+    public void deleteComponent(UUID componentId) {
+        try {
+            restTemplate().delete(componentServiceUrl + "/api/components/" + componentId);
+        } catch (Exception e) {
+            log.warn("Failed to delete component {}: {}", componentId, e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchProjectRoles(UUID projectId) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    projectServiceUrl + "/api/projects/" + projectId + "/roles", List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch roles for project {}: {}", projectId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> searchProjects(String query) {
+        try {
+            String url = projectServiceUrl + "/api/projects" + (query != null ? "?search=" + query : "");
+            List<?> response = restTemplate().getForObject(url, List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to search projects: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    public Map<String, Object> fetchProjectProperties(UUID projectId) {
+        try {
+            Map<?, ?> response = restTemplate().getForObject(
+                    projectServiceUrl + "/api/projects/" + projectId + "/properties", Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to fetch project properties: {}", e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    public void setProjectProperty(UUID projectId, String key, Object value) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, Object> body = Map.of("key", key, "value", value);
+            restTemplate().put(projectServiceUrl + "/api/projects/" + projectId + "/properties/" + key,
+                    new HttpEntity<>(body, headers));
+        } catch (Exception e) {
+            log.warn("Failed to set project property: {}", e.getMessage());
+        }
+    }
+
+    // === Workflow Functions (Task 2.7) ===
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchAvailableTransitions(UUID issueId) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    issueServiceUrl + "/api/issues/" + issueId + "/transitions", List.class);
+            if (response == null) return List.of();
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Object item : response) {
+                if (item instanceof Map<?, ?> m) result.add(castMap(m));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch available transitions for issue {}: {}", issueId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    public Map<String, Object> fetchWorkflowForIssue(UUID issueId) {
+        try {
+            Map<?, ?> response = restTemplate().getForObject(
+                    issueServiceUrl + "/api/issues/" + issueId + "/workflow", Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to fetch workflow for issue {}: {}", issueId, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    // === Issue Functions (Task 2.8) ===
+
+    public void unlinkIssues(UUID sourceId, UUID targetId) {
+        try {
+            restTemplate().delete(
+                    issueServiceUrl + "/api/issues/links?sourceIssueId=" + sourceId + "&targetIssueId=" + targetId);
+        } catch (Exception e) {
+            log.warn("Failed to unlink issues {} and {}: {}", sourceId, targetId, e.getMessage());
+        }
+    }
+
+    public void setIssueRank(UUID issueId, int rank) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            restTemplate().put(
+                    planServiceUrl + "/api/ranking/" + issueId,
+                    new HttpEntity<>(Map.of("rank", rank), headers));
+        } catch (Exception e) {
+            log.warn("Failed to set rank for issue {}: {}", issueId, e.getMessage());
+        }
+    }
+
+    // === Worklog Completion (Task 2.9) ===
+
+    public void deleteWorklog(UUID worklogId) {
+        try {
+            restTemplate().delete(issueServiceUrl + "/api/worklogs/" + worklogId);
+        } catch (Exception e) {
+            log.warn("Failed to delete worklog {}: {}", worklogId, e.getMessage());
+        }
+    }
+
+    public void updateWorklog(UUID worklogId, String timeSpent, String comment) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, Object> body = new HashMap<>();
+            body.put("timeSpent", timeSpent);
+            if (comment != null) body.put("comment", comment);
+            restTemplate().put(
+                    issueServiceUrl + "/api/worklogs/" + worklogId,
+                    new HttpEntity<>(body, headers));
+        } catch (Exception e) {
+            log.warn("Failed to update worklog {}: {}", worklogId, e.getMessage());
+        }
+    }
+
+    // === User/Group Admin (SIL parity) ===
+
+    public Map<String, Object> createUser(String username, String email, String displayName) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, Object> body = new HashMap<>();
+            body.put("username", username);
+            body.put("email", email);
+            if (displayName != null) body.put("displayName", displayName);
+            Map<?, ?> response = restTemplate().postForObject(
+                    userServiceUrl + "/api/admin/users",
+                    new HttpEntity<>(body, headers), Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to create user {}: {}", username, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    public void deactivateUser(UUID userId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            restTemplate().exchange(
+                    userServiceUrl + "/api/admin/users/" + userId + "/deactivate",
+                    HttpMethod.PATCH, new HttpEntity<>(Map.of(), headers), Map.class);
+        } catch (Exception e) {
+            log.warn("Failed to deactivate user {}: {}", userId, e.getMessage());
+        }
+    }
+
+    public void deleteUser(UUID userId) {
+        try {
+            restTemplate().delete(userServiceUrl + "/api/admin/users/" + userId);
+        } catch (Exception e) {
+            log.warn("Failed to delete user {}: {}", userId, e.getMessage());
+        }
+    }
+
+    public Map<String, Object> createGroup(String groupName) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<?, ?> response = restTemplate().postForObject(
+                    userServiceUrl + "/api/admin/groups",
+                    new HttpEntity<>(Map.of("name", groupName), headers), Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to create group {}: {}", groupName, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    public void deleteGroup(String groupName) {
+        try {
+            restTemplate().delete(userServiceUrl + "/api/admin/groups/" + groupName);
+        } catch (Exception e) {
+            log.warn("Failed to delete group {}: {}", groupName, e.getMessage());
+        }
+    }
+
+    // === Comment Visibility (SIL parity) ===
+
+    public void updateCommentVisibility(UUID commentId, Map<String, Object> restriction) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            restTemplate().exchange(
+                    commentServiceUrl + "/api/comments/" + commentId + "/visibility",
+                    HttpMethod.PATCH, new HttpEntity<>(restriction, headers), Map.class);
+        } catch (Exception e) {
+            log.warn("Failed to update comment visibility {}: {}", commentId, e.getMessage());
+        }
+    }
+
+    // === Workflow Completion (SIL parity) ===
+
+    public Map<String, Object> fetchWorkflowScheme(UUID projectId) {
+        try {
+            Map<?, ?> response = restTemplate().getForObject(
+                    projectServiceUrl + "/api/projects/" + projectId + "/workflow-scheme", Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to fetch workflow scheme for project {}: {}", projectId, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    public Map<String, Object> fetchTransitionProperties(UUID transitionId) {
+        try {
+            Map<?, ?> response = restTemplate().getForObject(
+                    issueServiceUrl + "/api/workflows/transitions/" + transitionId + "/properties", Map.class);
+            return response != null ? castMap(response) : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("Failed to fetch transition properties for {}: {}", transitionId, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    // === Security — User Permissions (SIL parity) ===
+
+    @SuppressWarnings("unchecked")
+    public List<String> fetchUserPermissions(UUID userId) {
+        try {
+            List<?> response = restTemplate().getForObject(
+                    userServiceUrl + "/api/admin/users/" + userId + "/permissions", List.class);
+            if (response == null) return List.of();
+            List<String> result = new ArrayList<>();
+            for (Object item : response) {
+                result.add(String.valueOf(item));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch permissions for user {}: {}", userId, e.getMessage());
+            return List.of();
         }
     }
 

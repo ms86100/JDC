@@ -73,3 +73,295 @@ spec:
       protocol: TCP
   selector:
     app: jira-gateway
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-auth-service
+  namespace: jira-platform
+  labels:
+    app: jira-auth-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+  selector:
+    app: jira-auth-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-user-service
+  namespace: jira-platform
+  labels:
+    app: jira-user-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
+      protocol: TCP
+  selector:
+    app: jira-user-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-issue-service
+  namespace: jira-platform
+  labels:
+    app: jira-issue-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8084
+      targetPort: 8084
+      protocol: TCP
+  selector:
+    app: jira-issue-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-comment-service
+  namespace: jira-platform
+  labels:
+    app: jira-comment-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8086
+      targetPort: 8086
+      protocol: TCP
+  selector:
+    app: jira-comment-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-notification-service
+  namespace: jira-platform
+  labels:
+    app: jira-notification-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8087
+      targetPort: 8087
+      protocol: TCP
+  selector:
+    app: jira-notification-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-search-service
+  namespace: jira-platform
+  labels:
+    app: jira-search-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8088
+      targetPort: 8088
+      protocol: TCP
+  selector:
+    app: jira-search-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-audit-service
+  namespace: jira-platform
+  labels:
+    app: jira-audit-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8089
+      targetPort: 8089
+      protocol: TCP
+  selector:
+    app: jira-audit-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-attachment-service
+  namespace: jira-platform
+  labels:
+    app: jira-attachment-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8090
+      targetPort: 8090
+      protocol: TCP
+  selector:
+    app: jira-attachment-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-sprint-service
+  namespace: jira-platform
+  labels:
+    app: jira-sprint-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8091
+      targetPort: 8091
+      protocol: TCP
+  selector:
+    app: jira-sprint-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-plan-service
+  namespace: jira-platform
+  labels:
+    app: jira-plan-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8092
+      targetPort: 8092
+      protocol: TCP
+  selector:
+    app: jira-plan-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-migration-service
+  namespace: jira-platform
+  labels:
+    app: jira-migration-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8094
+      targetPort: 8094
+      protocol: TCP
+  selector:
+    app: jira-migration-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-test-service
+  namespace: jira-platform
+  labels:
+    app: jira-test-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8095
+      targetPort: 8095
+      protocol: TCP
+  selector:
+    app: jira-test-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-version-service
+  namespace: jira-platform
+  labels:
+    app: jira-version-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8096
+      targetPort: 8096
+      protocol: TCP
+  selector:
+    app: jira-version-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-component-service
+  namespace: jira-platform
+  labels:
+    app: jira-component-service
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8097
+      targetPort: 8097
+      protocol: TCP
+  selector:
+    app: jira-component-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-redis
+  namespace: jira-platform
+  labels:
+    app: jira-redis
+    component: infrastructure
+spec:
+  type: ClusterIP
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
+  selector:
+    app: jira-redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-minio
+  namespace: jira-platform
+  labels:
+    app: jira-minio
+    component: infrastructure
+spec:
+  type: ClusterIP
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+    - name: console
+      port: 9001
+      targetPort: 9001
+      protocol: TCP
+  selector:
+    app: jira-minio

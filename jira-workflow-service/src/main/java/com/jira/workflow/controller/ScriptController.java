@@ -291,11 +291,23 @@ public class ScriptController {
         return ResponseEntity.ok(scriptListenerService.getListenersForScript(scriptId));
     }
 
+    @GetMapping("/listeners")
+    @Operation(summary = "Get all listeners across all scripts")
+    public ResponseEntity<List<com.jira.workflow.entity.ScriptListener>> getAllListeners() {
+        return ResponseEntity.ok(scriptListenerService.getAllListeners());
+    }
+
     @DeleteMapping("/listeners/{listenerId}")
     @Operation(summary = "Delete a listener")
     public ResponseEntity<Void> deleteListener(@PathVariable UUID listenerId) {
         scriptListenerService.deleteListener(listenerId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/listeners/{listenerId}/toggle")
+    @Operation(summary = "Toggle a listener's enabled state")
+    public ResponseEntity<com.jira.workflow.entity.ScriptListener> toggleListener(@PathVariable UUID listenerId) {
+        return ResponseEntity.ok(scriptListenerService.toggleListener(listenerId));
     }
 
     // === Field Behaviors ===
@@ -334,6 +346,12 @@ public class ScriptController {
     @Operation(summary = "Get field behaviors for a script")
     public ResponseEntity<List<com.jira.workflow.entity.ScriptFieldBehavior>> getFieldBehaviors(@PathVariable UUID scriptId) {
         return ResponseEntity.ok(scriptFieldBehaviorService.getBehaviorsForScript(scriptId));
+    }
+
+    @GetMapping("/field-behaviors")
+    @Operation(summary = "Get all field behaviors across all scripts")
+    public ResponseEntity<List<com.jira.workflow.entity.ScriptFieldBehavior>> getAllBehaviors() {
+        return ResponseEntity.ok(scriptFieldBehaviorService.getAllBehaviors());
     }
 
     @DeleteMapping("/field-behaviors/{behaviorId}")
@@ -386,8 +404,19 @@ public class ScriptController {
     @Operation(summary = "Execute a script by key with provided context (for automation/external integration)")
     public ResponseEntity<ScriptConsoleResponse> executeByKey(
             @PathVariable String scriptKey,
-            @RequestBody(required = false) Map<String, Object> context) {
-        Map<String, Object> ctx = context != null ? context : Map.of();
+            @RequestBody(required = false) Map<String, Object> context,
+            jakarta.servlet.http.HttpServletRequest request) {
+        Map<String, Object> ctx = context != null ? new java.util.HashMap<>(context) : new java.util.HashMap<>();
+        // Pass request headers to script context for webhook API
+        Map<String, String> headers = new java.util.LinkedHashMap<>();
+        java.util.Enumeration<String> headerNames = request.getHeaderNames();
+        while (headerNames.hasMoreElements()) {
+            String name = headerNames.nextElement();
+            if (!name.equalsIgnoreCase("cookie") && !name.equalsIgnoreCase("authorization")) {
+                headers.put(name, request.getHeader(name));
+            }
+        }
+        ctx.put("_requestHeaders", headers);
         ScriptResult result = scriptExecutionService.executeByKey(scriptKey, ctx, "API");
         return ResponseEntity.ok(ScriptConsoleResponse.builder()
                 .success(result.success())
@@ -396,5 +425,131 @@ public class ScriptController {
                 .executionMs(result.executionMs())
                 .consoleOutput(result.consoleOutput())
                 .build());
+    }
+
+    // === Script Templates ===
+
+    @GetMapping("/templates")
+    @Operation(summary = "Get bundled script templates")
+    public ResponseEntity<List<Map<String, Object>>> getTemplates() {
+        try {
+            var resource = new org.springframework.core.io.ClassPathResource("script-templates.json");
+            var objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            List<Map<String, Object>> templates = objectMapper.readValue(
+                    resource.getInputStream(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+            return ResponseEntity.ok(templates);
+        } catch (Exception e) {
+            log.warn("Failed to load script templates: {}", e.getMessage());
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    // === Script Search ===
+
+    @GetMapping("/search")
+    @Operation(summary = "Search scripts by name, key, or body content")
+    public ResponseEntity<List<ScriptResponse>> searchScripts(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) Boolean enabled) {
+        List<ScriptResponse> all = scriptDefinitionService.listScripts(type);
+        var filtered = all.stream();
+        if (query != null && !query.isBlank()) {
+            String q = query.toLowerCase();
+            filtered = filtered.filter(s ->
+                    (s.getName() != null && s.getName().toLowerCase().contains(q)) ||
+                    (s.getScriptKey() != null && s.getScriptKey().toLowerCase().contains(q)) ||
+                    (s.getDescription() != null && s.getDescription().toLowerCase().contains(q)));
+        }
+        if (category != null && !category.isBlank()) {
+            filtered = filtered.filter(s -> category.equalsIgnoreCase(s.getCategory()));
+        }
+        if (enabled != null) {
+            filtered = filtered.filter(s -> enabled.equals(s.getIsEnabled()));
+        }
+        return ResponseEntity.ok(filtered.toList());
+    }
+
+    // === Script Usage/Dependencies ===
+
+    @GetMapping("/{id}/usage")
+    @Operation(summary = "Find where a script is used (workflows, listeners, behaviors, calculated fields)")
+    public ResponseEntity<Map<String, Object>> getScriptUsage(@PathVariable UUID id) {
+        ScriptResponse script = scriptDefinitionService.getScript(id);
+        String scriptKey = script.getScriptKey();
+
+        Map<String, Object> usage = new java.util.LinkedHashMap<>();
+        usage.put("scriptKey", scriptKey);
+        usage.put("listeners", scriptListenerService.getListenersForScript(id));
+        usage.put("fieldBehaviors", scriptFieldBehaviorService.getBehaviorsForScript(id));
+        usage.put("calculatedFields", scriptCalculatedFieldService.getBindingsForScript(id));
+
+        List<ScriptResponse> allScripts = scriptDefinitionService.listScripts(null);
+        List<String> includers = allScripts.stream()
+                .filter(s -> s.getScriptBody() != null && s.getScriptBody().contains("include(\"" + scriptKey + "\")"))
+                .map(ScriptResponse::getScriptKey)
+                .toList();
+        usage.put("includedBy", includers);
+
+        return ResponseEntity.ok(usage);
+    }
+
+    // === Profiler Stats ===
+
+    @GetMapping("/profiler/stats")
+    @Operation(summary = "Get script execution profiler statistics")
+    public ResponseEntity<Map<String, Object>> getProfilerStats() {
+        var allLogs = scriptDefinitionService.getAllExecutionLogs(
+                org.springframework.data.domain.PageRequest.of(0, 1000,
+                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")));
+        Map<String, Object> stats = new java.util.LinkedHashMap<>();
+
+        var logs = allLogs.getContent();
+        stats.put("totalExecutions", logs.size());
+        stats.put("successRate", logs.isEmpty() ? 0 :
+                logs.stream().filter(com.jira.workflow.dto.ScriptExecutionLogResponse::isSuccess).count() * 100.0 / logs.size());
+
+        var byScript = logs.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        com.jira.workflow.dto.ScriptExecutionLogResponse::getScriptKey,
+                        java.util.stream.Collectors.averagingLong(com.jira.workflow.dto.ScriptExecutionLogResponse::getExecutionMs)));
+        var slowest = byScript.entrySet().stream()
+                .sorted(java.util.Map.Entry.<String, Double>comparingByValue().reversed())
+                .limit(10)
+                .map(e -> Map.of("scriptKey", (Object) e.getKey(), "avgMs", e.getValue()))
+                .toList();
+        stats.put("slowestScripts", slowest);
+
+        var byMode = logs.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        l -> l.getExecutionMode() != null ? l.getExecutionMode() : "UNKNOWN",
+                        java.util.stream.Collectors.counting()));
+        stats.put("executionsByMode", byMode);
+
+        return ResponseEntity.ok(stats);
+    }
+
+    // === Script Version Body ===
+
+    @GetMapping("/{id}/versions/{versionNumber}")
+    @Operation(summary = "Get a specific script version's body")
+    public ResponseEntity<Map<String, Object>> getVersionBody(
+            @PathVariable UUID id, @PathVariable Integer versionNumber) {
+        var versions = scriptDefinitionService.getVersionHistory(id);
+        return versions.stream()
+                .filter(v -> versionNumber.equals(v.getVersion()))
+                .findFirst()
+                .map(v -> {
+                    Map<String, Object> result = new java.util.LinkedHashMap<>();
+                    result.put("version", v.getVersion());
+                    result.put("scriptBody", v.getScriptBody());
+                    result.put("changeSummary", v.getChangeSummary());
+                    result.put("createdAt", v.getCreatedAt());
+                    result.put("createdBy", v.getCreatedBy());
+                    return ResponseEntity.ok(result);
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }

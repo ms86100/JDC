@@ -2,12 +2,16 @@ package com.jira.workflow.engine.script;
 
 import com.jira.workflow.entity.ScriptPersistentVar;
 import com.jira.workflow.repository.ScriptPersistentVarRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.graalvm.polyglot.HostAccess;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 public class JdcPersistentVarApi {
 
     private final ScriptPersistentVarRepository repository;
@@ -108,5 +112,33 @@ public class JdcPersistentVarApi {
             }
             return true;
         } catch (Exception e) { return false; }
+    }
+
+    @HostAccess.Export
+    public List<Map<String, Object>> list(String scope) {
+        try {
+            String resolvedScope = scope != null ? scope.toUpperCase() : "GLOBAL";
+            List<ScriptPersistentVar> vars;
+            if ("ISSUE".equals(resolvedScope)) {
+                String issueId = context.get("issueId") != null ? context.get("issueId").toString() : null;
+                vars = issueId != null ? repository.findByScopeAndScopeId(resolvedScope, UUID.fromString(issueId)) : List.of();
+            } else if ("PROJECT".equals(resolvedScope)) {
+                String projectId = context.get("projectId") != null ? context.get("projectId").toString() : null;
+                vars = projectId != null ? repository.findByScopeAndScopeId(resolvedScope, UUID.fromString(projectId)) : List.of();
+            } else {
+                vars = repository.findByScope("GLOBAL");
+            }
+            return vars.stream().map(v -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("key", v.getVarKey());
+                m.put("value", v.getVarValue());
+                m.put("scope", v.getScope());
+                m.put("updatedAt", v.getUpdatedAt() != null ? v.getUpdatedAt().toString() : null);
+                return m;
+            }).toList();
+        } catch (Exception e) {
+            log.warn("Failed to list persistent vars: {}", e.getMessage());
+            return List.of();
+        }
     }
 }

@@ -32,12 +32,21 @@ spring:
   flyway:
     enabled: false
 
-# File storage configuration
+# Cluster storage configuration (StorageProvider from jira-cluster-commons)
+cluster:
+  storage:
+    type: ${STORAGE_TYPE:LOCAL}
+    base-path: ${ATTACHMENT_STORAGE_PATH:/var/jira/attachments}
+    s3:
+      endpoint: ${MINIO_ENDPOINT:http://minio:9000}
+      bucket: ${MINIO_BUCKET:jira-attachments}
+      access-key: ${MINIO_ACCESS_KEY:minioadmin}
+      secret-key: ${MINIO_SECRET_KEY:minioadmin}
+      region: ${MINIO_REGION:us-east-1}
+      path-style-access: true
+
 jira:
   attachment:
-    storage:
-      type: filesystem
-      path: ${ATTACHMENT_STORAGE_PATH:/var/jira/attachments}
     allowed-types:
       - image/png
       - image/jpeg

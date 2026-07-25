@@ -109,4 +109,36 @@ public class JdcLdapApi {
             return List.of();
         }
     }
+
+    @HostAccess.Export
+    public boolean authenticate(String username, String password) {
+        try {
+            if (username == null || password == null) return false;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, String> body = Map.of("username", username, "password", password);
+            Map<?, ?> response = restTemplate.postForObject(
+                    userServiceUrl + "/api/admin/auth/verify",
+                    new HttpEntity<>(body, headers), Map.class);
+            return response != null && Boolean.TRUE.equals(response.get("authenticated"));
+        } catch (Exception e) {
+            log.warn("LDAP authenticate failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    @HostAccess.Export
+    public boolean modify(String userId, Map<String, Object> attributes) {
+        try {
+            if (userId == null || attributes == null) return false;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            restTemplate.put(userServiceUrl + "/api/admin/users/" + userId,
+                    new HttpEntity<>(attributes, headers));
+            return true;
+        } catch (Exception e) {
+            log.warn("LDAP modify failed for user {}: {}", userId, e.getMessage());
+            return false;
+        }
+    }
 }

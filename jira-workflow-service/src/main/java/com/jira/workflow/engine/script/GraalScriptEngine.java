@@ -80,7 +80,21 @@ public class GraalScriptEngine {
             }
 
             Source source = getOrCompileSource(scriptKey, scriptBody);
+
+            // Best-effort memory monitoring (GraalVM CE lacks per-context heap limits)
+            long memBefore = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+
             Value result = executeWithTimeout(context, source, timeoutMs);
+
+            long memAfter = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+            long memGrowthBytes = memAfter - memBefore;
+            long memLimitBytes = (long) properties.getMemoryLimitMb() * 1024 * 1024;
+            if (memGrowthBytes > memLimitBytes) {
+                log.warn("Script '{}' memory usage grew by {}MB (limit: {}MB) — consider optimizing",
+                        scriptKey != null ? scriptKey : "<console>",
+                        memGrowthBytes / (1024 * 1024), properties.getMemoryLimitMb());
+            }
+
             long elapsed = System.currentTimeMillis() - start;
             String consoleOutput = console != null ? console.getCapturedOutput() : null;
             return ScriptResult.success(convertResult(result, 0), elapsed, consoleOutput);

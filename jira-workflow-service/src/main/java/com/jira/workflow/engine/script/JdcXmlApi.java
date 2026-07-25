@@ -80,6 +80,39 @@ public class JdcXmlApi {
         }
     }
 
+    @HostAccess.Export
+    public String xslt(String xmlString, String xsltString) {
+        try {
+            if (xmlString == null || xsltString == null) return null;
+            javax.xml.transform.TransformerFactory factory = javax.xml.transform.TransformerFactory.newInstance();
+            factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+            javax.xml.transform.Source xsltSource = new javax.xml.transform.stream.StreamSource(new StringReader(xsltString));
+            javax.xml.transform.Transformer transformer = factory.newTransformer(xsltSource);
+            javax.xml.transform.Source xmlSource = new javax.xml.transform.stream.StreamSource(new StringReader(xmlString));
+            StringWriter writer = new StringWriter();
+            transformer.transform(xmlSource, new javax.xml.transform.stream.StreamResult(writer));
+            return writer.toString();
+        } catch (Exception e) {
+            log.warn("XSLT transform failed: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    @HostAccess.Export
+    public boolean xmlValidate(String xmlString) {
+        try {
+            if (xmlString == null) return false;
+            javax.xml.parsers.DocumentBuilderFactory factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.newDocumentBuilder().parse(new InputSource(new StringReader(xmlString)));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private Map<String, Object> elementToMap(Element element) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("_name", element.getTagName());

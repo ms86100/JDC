@@ -376,3 +376,1434 @@ spec:
         target:
           type: Utilization
           averageUtilization: 80
+---
+# =============================================================================
+# Auth Service (:8081)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-auth-service
+  namespace: jira-platform
+  labels:
+    app: jira-auth-service
+    version: v1
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-auth-service
+  template:
+    metadata:
+      labels:
+        app: jira-auth-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-auth-service
+          image: jira-platform/jira-auth-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8081
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+# =============================================================================
+# User Service (:8082)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-user-service
+  namespace: jira-platform
+  labels:
+    app: jira-user-service
+    version: v1
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-user-service
+  template:
+    metadata:
+      labels:
+        app: jira-user-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8082"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-user-service
+          image: jira-platform/jira-user-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8082
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8082
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+# =============================================================================
+# Issue Service (:8084) — with HPA, 2 replicas min
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-issue-service
+  namespace: jira-platform
+  labels:
+    app: jira-issue-service
+    version: v1
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: jira-issue-service
+  template:
+    metadata:
+      labels:
+        app: jira-issue-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8084"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-issue-service
+          image: jira-platform/jira-issue-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8084
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8084
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8084
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-issue-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-issue-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# =============================================================================
+# Comment Service (:8086)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-comment-service
+  namespace: jira-platform
+  labels:
+    app: jira-comment-service
+    version: v1
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-comment-service
+  template:
+    metadata:
+      labels:
+        app: jira-comment-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8086"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-comment-service
+          image: jira-platform/jira-comment-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8086
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8086
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8086
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+# =============================================================================
+# Notification Service (:8087) — with HPA, 2 replicas min
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-notification-service
+  namespace: jira-platform
+  labels:
+    app: jira-notification-service
+    version: v1
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: jira-notification-service
+  template:
+    metadata:
+      labels:
+        app: jira-notification-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8087"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-notification-service
+          image: jira-platform/jira-notification-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8087
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8087
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8087
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-notification-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-notification-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# =============================================================================
+# Search Service (:8088)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-search-service
+  namespace: jira-platform
+  labels:
+    app: jira-search-service
+    version: v1
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-search-service
+  template:
+    metadata:
+      labels:
+        app: jira-search-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8088"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-search-service
+          image: jira-platform/jira-search-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8088
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8088
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8088
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+# =============================================================================
+# Audit Service (:8089)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-audit-service
+  namespace: jira-platform
+  labels:
+    app: jira-audit-service
+    version: v1
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-audit-service
+  template:
+    metadata:
+      labels:
+        app: jira-audit-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8089"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-audit-service
+          image: jira-platform/jira-audit-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8089
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8089
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8089
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+# =============================================================================
+# Attachment Service (:8090)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-attachment-service
+  namespace: jira-platform
+  labels:
+    app: jira-attachment-service
+    version: v1
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-attachment-service
+  template:
+    metadata:
+      labels:
+        app: jira-attachment-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8090"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-attachment-service
+          image: jira-platform/jira-attachment-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8090
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8090
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8090
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+# =============================================================================
+# Sprint Service (:8091)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-sprint-service
+  namespace: jira-platform
+  labels:
+    app: jira-sprint-service
+    version: v1
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-sprint-service
+  template:
+    metadata:
+      labels:
+        app: jira-sprint-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8091"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-sprint-service
+          image: jira-platform/jira-sprint-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8091
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8091
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8091
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+# =============================================================================
+# Plan Service (:8092)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-plan-service
+  namespace: jira-platform
+  labels:
+    app: jira-plan-service
+    version: v1
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-plan-service
+  template:
+    metadata:
+      labels:
+        app: jira-plan-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8092"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-plan-service
+          image: jira-platform/jira-plan-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8092
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8092
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8092
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+# =============================================================================
+# Migration Service (:8094)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-migration-service
+  namespace: jira-platform
+  labels:
+    app: jira-migration-service
+    version: v1
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-migration-service
+  template:
+    metadata:
+      labels:
+        app: jira-migration-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8094"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-migration-service
+          image: jira-platform/jira-migration-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8094
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8094
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8094
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+# =============================================================================
+# Test Service (:8095)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-test-service
+  namespace: jira-platform
+  labels:
+    app: jira-test-service
+    version: v1
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-test-service
+  template:
+    metadata:
+      labels:
+        app: jira-test-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8095"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-test-service
+          image: jira-platform/jira-test-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8095
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8095
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8095
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+# =============================================================================
+# Version Service (:8096)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-version-service
+  namespace: jira-platform
+  labels:
+    app: jira-version-service
+    version: v1
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-version-service
+  template:
+    metadata:
+      labels:
+        app: jira-version-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8096"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-version-service
+          image: jira-platform/jira-version-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8096
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8096
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8096
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+# =============================================================================
+# Component Service (:8097)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-component-service
+  namespace: jira-platform
+  labels:
+    app: jira-component-service
+    version: v1
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-component-service
+  template:
+    metadata:
+      labels:
+        app: jira-component-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8097"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: jira-platform-sa
+      containers:
+        - name: jira-component-service
+          image: jira-platform/jira-component-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8097
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: JAVA_OPTS
+              value: "-Xmx256m -Xms128m -XX:+UseG1GC"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: jira-config
+                  key: DB_PORT
+            - name: REDIS_HOST
+              value: "jira-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8097
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8097
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+# =============================================================================
+# Redis (Infrastructure)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-redis
+  namespace: jira-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-redis
+  template:
+    metadata:
+      labels:
+        app: jira-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 250m
+              memory: 512Mi
+---
+# =============================================================================
+# MinIO (Infrastructure)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-minio
+  namespace: jira-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-minio
+  template:
+    metadata:
+      labels:
+        app: jira-minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          command: ["minio"]
+          args: ["server", "/data", "--console-address", ":9001"]
+          ports:
+            - name: api
+              containerPort: 9000
+            - name: console
+              containerPort: 9001
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: jira-minio-secret
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jira-minio-secret
+                  key: MINIO_ROOT_PASSWORD
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          volumeMounts:
+            - name: minio-data
+              mountPath: /data
+      volumes:
+        - name: minio-data
+          persistentVolumeClaim:
+            claimName: jira-minio-pvc
+---
+# =============================================================================
+# HPA for all remaining services
+# =============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-auth-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-auth-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-user-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-user-service
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-comment-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-comment-service
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-search-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-search-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-audit-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-audit-service
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-attachment-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-attachment-service
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-sprint-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-sprint-service
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-plan-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-plan-service
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-migration-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-migration-service
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-test-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-test-service
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-version-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-version-service
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jira-component-service-hpa
+  namespace: jira-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jira-component-service
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

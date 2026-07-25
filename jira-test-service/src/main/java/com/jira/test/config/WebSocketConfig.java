@@ -1,6 +1,7 @@
 package com.jira.test.config;
 
 import com.jira.cluster.event.ClusterEventBus;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
@@ -10,8 +11,6 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
-import jakarta.annotation.PostConstruct;
-
 @Configuration
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
@@ -19,6 +18,9 @@ import jakarta.annotation.PostConstruct;
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final ClusterEventBus clusterEventBus;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    private static final String CLUSTER_CHANNEL = "test-stomp";
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
@@ -35,8 +37,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @PostConstruct
     public void initClusterRelay() {
-        clusterEventBus.subscribe("test-stomp", message -> {
-            log.debug("Received remote STOMP message on test-stomp channel");
+        clusterEventBus.subscribe(CLUSTER_CHANNEL, message -> {
+            messagingTemplate.convertAndSend("/topic/test-events", message);
+            log.debug("Relayed remote STOMP message to local subscribers");
         });
     }
 }

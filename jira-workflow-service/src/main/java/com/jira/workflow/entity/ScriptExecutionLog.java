@@ -63,6 +63,16 @@ public class ScriptExecutionLog {
     @Column(name = "context_summary", columnDefinition = "TEXT")
     private String contextSummary;
 
+    @Column(name = "executed_by")
+    private UUID executedBy;
+
+    @Column(name = "target_issue_id")
+    private UUID targetIssueId;
+
+    @Column(name = "api_call_count")
+    @Builder.Default
+    private Integer apiCallCount = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

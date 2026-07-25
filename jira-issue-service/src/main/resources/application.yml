@@ -71,15 +71,15 @@ spring:
 
 workflow:
   service:
-    url: ${WORKFLOW_SERVICE_URL:http://jira-workflow-service:8085}
+    url: ${WORKFLOW_SERVICE_URL:http://workflow-service:8085}
 
 project:
   service:
-    url: ${PROJECT_SERVICE_URL:http://jira-project-service:8083}
+    url: ${PROJECT_SERVICE_URL:http://project-service:8083}
 
 sprint:
   service:
-    url: ${SPRINT_SERVICE_URL:http://jira-sprint-service:8091}
+    url: ${SPRINT_SERVICE_URL:http://sprint-service:8091}
 
 jira:
   permissions:

@@ -42,6 +42,10 @@ public class ScriptDefinition {
     @Column(name = "script_body", nullable = false, columnDefinition = "TEXT")
     private String scriptBody;
 
+    @Column(length = 100)
+    @Builder.Default
+    private String category = "Uncategorized";
+
     @Column(nullable = false)
     @Builder.Default
     private Integer version = 1;

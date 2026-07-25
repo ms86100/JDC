@@ -4,6 +4,7 @@ import com.jira.workflow.entity.ScriptPersistentVar;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,4 +18,8 @@ public interface ScriptPersistentVarRepository extends JpaRepository<ScriptPersi
     void deleteByVarKeyAndScopeAndScopeId(String varKey, String scope, UUID scopeId);
 
     void deleteByVarKeyAndScopeAndScopeIdIsNull(String varKey, String scope);
+
+    List<ScriptPersistentVar> findByScopeAndScopeId(String scope, UUID scopeId);
+
+    List<ScriptPersistentVar> findByScope(String scope);
 }

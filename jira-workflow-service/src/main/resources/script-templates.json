@@ -1,0 +1,82 @@
+[
+  {
+    "name": "Auto-Assign on Create",
+    "description": "Automatically assigns issues to a user based on issue type",
+    "category": "Listeners",
+    "scriptType": "LISTENER",
+    "scriptKey": "template-auto-assign",
+    "scriptBody": "// Auto-assign issues based on issue type\n// Attach as a listener for ISSUE_CREATED events\n\nvar issueData = issueData || {};\nvar issueType = issueData.issueTypeName || '';\n\nvar assignMap = {\n  'Bug': null,         // set to userId string\n  'Story': null,\n  'Task': null,\n  'Epic': null\n};\n\nvar targetUser = assignMap[issueType];\nif (targetUser && issueId) {\n  jdc.issue.setFieldValue('assigneeId', targetUser);\n  jdc.log.info('Auto-assigned ' + issueType + ' to ' + targetUser);\n}\n\ntrue;"
+  },
+  {
+    "name": "Enforce Subtask Resolution",
+    "description": "Blocks transition if any subtask is not resolved (use as condition)",
+    "category": "Conditions",
+    "scriptType": "CONDITION",
+    "scriptKey": "template-enforce-subtasks",
+    "scriptBody": "// Condition: Block transition if any subtask is unresolved\n\nvar subtasks = jdc.issue.getSubtasks();\nvar allResolved = true;\n\nfor (var i = 0; i < subtasks.length; i++) {\n  var st = subtasks[i];\n  var status = st.statusName || st.status || '';\n  if (status !== 'Done' && status !== 'Closed' && status !== 'Resolved') {\n    allResolved = false;\n    break;\n  }\n}\n\nallResolved;"
+  },
+  {
+    "name": "Required Comment Validator",
+    "description": "Requires a comment on transition (use as validator)",
+    "category": "Validators",
+    "scriptType": "VALIDATOR",
+    "scriptKey": "template-require-comment",
+    "scriptBody": "// Validator: Require a comment on transition\n\nvar transitionComment = comment || '';\nvar screenComment = screenInput ? (screenInput.comment || '') : '';\n\nif (!transitionComment && !screenComment) {\n  'A comment is required for this transition';\n} else {\n  null; // pass validation\n}"
+  },
+  {
+    "name": "Cascade Field Updates",
+    "description": "When parent issue changes priority, update all subtask priorities (post-function)",
+    "category": "Post-Functions",
+    "scriptType": "POST_FUNCTION",
+    "scriptKey": "template-cascade-priority",
+    "scriptBody": "// Post-function: Cascade priority to subtasks\n\nvar parentPriority = jdc.issue.getFieldValue('priorityId');\nvar subtasks = jdc.issue.getSubtasks();\n\nfor (var i = 0; i < subtasks.length; i++) {\n  var stId = subtasks[i].id;\n  if (stId && parentPriority) {\n    jdc.issue.setFieldValue.call({ context: { issueId: stId } }, 'priorityId', parentPriority);\n    jdc.log.info('Updated subtask ' + stId + ' priority');\n  }\n}\n\ntrue;"
+  },
+  {
+    "name": "SLA Tracker",
+    "description": "Calculates time elapsed since issue creation and warns if SLA breached (calculated field)",
+    "category": "Calculated Fields",
+    "scriptType": "CALCULATED_FIELD",
+    "scriptKey": "template-sla-tracker",
+    "scriptBody": "// Calculated field: Days since creation\n\nvar issueInfo = jdc.issue.getCurrentIssue();\nvar createdAt = issueInfo.createdAt || issueInfo.created;\n\nif (createdAt) {\n  var created = new Date(createdAt);\n  var now = new Date();\n  var diffMs = now.getTime() - created.getTime();\n  var diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));\n  diffDays + ' days';\n} else {\n  'N/A';\n}"
+  },
+  {
+    "name": "Email Notification on Transition",
+    "description": "Sends a custom email when issue transitions to a specific status (post-function)",
+    "category": "Post-Functions",
+    "scriptType": "POST_FUNCTION",
+    "scriptKey": "template-email-on-transition",
+    "scriptBody": "// Post-function: Send email on transition\n\nvar toStatus = toStatusId;\nvar issueInfo = jdc.issue.getCurrentIssue();\nvar issueKey = issueInfo.issueKey || 'Unknown';\nvar summary = issueInfo.summary || 'No summary';\n\n// Customize: target status and recipient\nvar targetStatus = 'DONE_STATUS_ID';  // replace with actual status ID\nvar recipientEmail = 'team@example.com';\n\nif (toStatus === targetStatus) {\n  var subject = issueKey + ' has been completed';\n  var body = '<h3>' + issueKey + ': ' + summary + '</h3><p>This issue was moved to Done by ' + (userData.displayName || 'a user') + '.</p>';\n  email.sendEmail(recipientEmail, subject, body);\n  jdc.log.info('Completion email sent for ' + issueKey);\n}\n\ntrue;"
+  },
+  {
+    "name": "Bulk Transition by JQL",
+    "description": "Searches for issues matching JQL and transitions them (scheduled script)",
+    "category": "Scheduled",
+    "scriptType": "SCHEDULED",
+    "scriptKey": "template-bulk-transition",
+    "scriptBody": "// Scheduled: Bulk transition stale issues\n// Run on a schedule (e.g., daily at 9am)\n\nvar staleJql = 'status = \"Open\" AND updated < -30d';\nvar transitionId = 'YOUR_TRANSITION_ID';  // replace with actual transition ID\n\nvar issues = jdc.search.jql(staleJql, 100);\njdc.log.info('Found ' + issues.length + ' stale issues');\n\nvar success = 0;\nfor (var i = 0; i < issues.length; i++) {\n  var issue = issues[i];\n  if (jdc.issue.transitionIssue(issue.id, transitionId)) {\n    success++;\n    jdc.issue.addComment.call({ context: { issueId: issue.id } }, 'Auto-closed: inactive for 30+ days');\n  }\n}\n\njdc.log.info('Transitioned ' + success + ' of ' + issues.length + ' stale issues');\nsuccess;"
+  },
+  {
+    "name": "HTTP Webhook Integration",
+    "description": "Calls an external REST API when an issue is updated (listener)",
+    "category": "Listeners",
+    "scriptType": "LISTENER",
+    "scriptKey": "template-webhook-integration",
+    "scriptBody": "// Listener: Call external webhook on issue update\n// Configure http-whitelist-domains in application.yml first\n\nvar webhookUrl = 'https://hooks.example.com/jdc';\n\nvar payload = {\n  event: eventType,\n  issueId: issueId,\n  projectId: projectId,\n  userId: userId,\n  timestamp: new Date().toISOString()\n};\n\nvar response = http.post(webhookUrl, payload, {\n  'Content-Type': 'application/json',\n  'X-JDC-Event': eventType\n});\n\nif (response && response.status === 200) {\n  jdc.log.info('Webhook delivered for ' + eventType);\n} else {\n  jdc.log.warn('Webhook failed: ' + JSON.stringify(response));\n}\n\ntrue;"
+  },
+  {
+    "name": "Field Behavior — Hide Environment for Epics",
+    "description": "Hides the Environment field when issue type is Epic (field behavior)",
+    "category": "LiveFields",
+    "scriptType": "FIELD_BEHAVIOR",
+    "scriptKey": "template-hide-env-epic",
+    "scriptBody": "// Field behavior: Hide environment for Epics\n// Returns an array of field directives\n\nvar issueType = issueData ? issueData.issueTypeName : '';\nvar directives = [];\n\nif (issueType === 'Epic') {\n  directives.push({\n    fieldName: 'environment',\n    visible: false\n  });\n  directives.push({\n    fieldName: 'storyPoints',\n    visible: false\n  });\n}\n\n// Make priority required for Bugs\nif (issueType === 'Bug') {\n  directives.push({\n    fieldName: 'priority',\n    required: true,\n    warning: 'Priority is required for bug reports'\n  });\n}\n\ndirectives;"
+  },
+  {
+    "name": "Reusable Utilities Library",
+    "description": "Common helper functions for other scripts to include (library)",
+    "category": "Includes",
+    "scriptType": "LIBRARY",
+    "scriptKey": "template-utils-library",
+    "scriptBody": "// Utility library — include in other scripts with: include('template-utils-library')\n\nfunction formatDate(date) {\n  if (!date) return 'N/A';\n  var d = new Date(date);\n  return d.getFullYear() + '-' +\n    String(d.getMonth() + 1).padStart(2, '0') + '-' +\n    String(d.getDate()).padStart(2, '0');\n}\n\nfunction daysBetween(date1, date2) {\n  var d1 = new Date(date1);\n  var d2 = new Date(date2);\n  return Math.floor(Math.abs(d2 - d1) / (1000 * 60 * 60 * 24));\n}\n\nfunction isBusinessDay(date) {\n  var d = new Date(date);\n  var day = d.getDay();\n  return day !== 0 && day !== 6;\n}\n\nfunction addBusinessDays(startDate, numDays) {\n  var current = new Date(startDate);\n  var added = 0;\n  while (added < numDays) {\n    current.setDate(current.getDate() + 1);\n    if (isBusinessDay(current)) added++;\n  }\n  return current;\n}\n\nfunction truncate(str, maxLen) {\n  if (!str) return '';\n  return str.length > maxLen ? str.substring(0, maxLen) + '...' : str;\n}"
+  }
+]

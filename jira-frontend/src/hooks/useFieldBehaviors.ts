@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import apiClient from '../api/axiosClient';
 
 export interface FieldDirective {
@@ -32,6 +32,8 @@ export function useFieldBehaviors({
 }: UseFieldBehaviorsProps) {
   const [directives, setDirectives] = useState<FieldDirective[]>([]);
   const [loading, setLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const issueDataHash = issueData ? JSON.stringify(issueData) : '';
 
   useEffect(() => {
     if (!enabled) return;
@@ -57,8 +59,14 @@ export function useFieldBehaviors({
       }
     };
 
-    evaluate();
-  }, [screenContext, projectId, issueTypeId, userId, enabled]);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(evaluate, 300);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screenContext, projectId, issueTypeId, userId, enabled, issueDataHash]);
 
   const isFieldVisible = (fieldName: string): boolean => {
     const d = directives.find((f) => f.fieldName === fieldName);

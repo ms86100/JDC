@@ -59,4 +59,4 @@ logging:
 
 issue:
   service:
-    url: ${ISSUE_SERVICE_URL:http://jira-issue-service:8084}
+    url: ${ISSUE_SERVICE_URL:http://issue-service:8084}
