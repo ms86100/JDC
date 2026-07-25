@@ -516,7 +516,7 @@ every node`
        ▼
   ┌─ Gateway ──────────────────────────────────────────┐
   │  1. TLS Termination                                │
-  │  2. CORS Check (${CORS_ALLOWED_ORIGINS})           │
+  │  2. CORS Check (configurable allowed origins)      │
   │  3. Rate Limit (Redis-backed, 100/min per user)    │
   │  4. JWT Validation (15min access token)             │
   │  5. Circuit Breaker (50% failure → open 30s)       │
@@ -721,7 +721,7 @@ function renderClusterArchitecture() {
           <span className="ads-stat-label">ArchUnit Guards</span>
         </div>
         <div className="ads-stat">
-          <span className="ads-stat-value">3</span>
+          <span className="ads-stat-value">8</span>
           <span className="ads-stat-label">Shared Infra Services</span>
         </div>
       </div>
@@ -812,7 +812,7 @@ function renderClusterArchitecture() {
 /* ── Tab 3: Enterprise Hardening ── */
 function renderEnterpriseHardening() {
   const securityItems = [
-    { area: 'CORS', before: 'Wildcard * (any origin)', after: 'Configurable ${CORS_ALLOWED_ORIGINS}', severity: 'CRITICAL' },
+    { area: 'CORS', before: 'Wildcard * (any origin)', after: 'Configurable CORS_ALLOWED_ORIGINS env var', severity: 'CRITICAL' },
     { area: 'JWT Tokens', before: '24h access, 7d refresh', after: '15min access, 8h refresh', severity: 'CRITICAL' },
     { area: 'JWT Secret', before: 'Hardcoded in YAML', after: 'Env-var only, no defaults in code', severity: 'CRITICAL' },
     { area: 'Permissions', before: 'FAILOPEN=true', after: 'FAILOPEN=false (fail-closed)', severity: 'CRITICAL' },
@@ -902,8 +902,9 @@ function renderEnterpriseHardening() {
       <div className="ads-card" style={{ marginTop: 16 }}>
         <h4 className="ads-card-title">Cluster Commons Library (jira-cluster-commons)</h4>
         <Paragraph>
-          All enterprise infrastructure is centralized in the shared library. Services get circuit breakers,
-          tracing, structured logging, idempotency, and health indicators automatically by depending on cluster-commons.
+          All enterprise infrastructure is centralized in the shared library. All 22 services depend on
+          cluster-commons and get circuit breakers, tracing, structured logging, idempotency, Redis caching,
+          and health indicators automatically. Each service also has its own spring-boot-starter-data-redis dependency.
         </Paragraph>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
           {[
@@ -3762,7 +3763,7 @@ function renderDatabaseSchema() {
 
       {/* Schema Table */}
       <div className="ads-card" style={{ marginBottom: 24 }}>
-        <h4 className="ads-card-title">All 14 Schemas -- Tables & Relationships</h4>
+        <h4 className="ads-card-title">All 21 Schemas -- Tables & Relationships</h4>
         <div className="ads-table-wrap">
           <table className="ads-table">
             <thead>
@@ -3878,7 +3879,7 @@ function renderDatabaseSchema() {
           <div style={{ textAlign: 'center', padding: 16, background: C.bg, borderRadius: 8 }}>
             <div style={{ fontSize: 32, fontWeight: 700, color: C.success }}>150+</div>
             <div style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>Total Tables</div>
-            <div style={{ fontSize: 11, color: C.subtle, marginTop: 4 }}>Across all 14 schemas</div>
+            <div style={{ fontSize: 11, color: C.subtle, marginTop: 4 }}>Across all 21 schemas</div>
           </div>
           <div style={{ textAlign: 'center', padding: 16, background: C.bg, borderRadius: 8 }}>
             <div style={{ fontSize: 32, fontWeight: 700, color: C.warning }}>150+</div>
