@@ -12,6 +12,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -53,6 +54,7 @@ public class DeadLetterQueueService {
      * Initialize memory cache from database on startup.
      */
     @Scheduled(initialDelay = 5000, fixedDelay = Long.MAX_VALUE)
+    @SchedulerLock(name = "DeadLetterQueueService_initializeFromDatabase", lockAtMostFor = "PT1M", lockAtLeastFor = "PT10S")
     public void initializeFromDatabase() {
         if (initialized) return;
 
@@ -439,6 +441,7 @@ public class DeadLetterQueueService {
      * Scheduled task to process auto-retries.
      */
     @Scheduled(fixedDelayString = "${dlq.auto-retry-check-interval-ms:60000}")
+    @SchedulerLock(name = "DeadLetterQueueService_processScheduledRetries", lockAtMostFor = "PT48S", lockAtLeastFor = "PT24S")
     @Transactional
     public void processScheduledRetries() {
         List<DlqEntry> eligible = dlqEntryRepository.findEligibleForRetry(LocalDateTime.now());
@@ -461,6 +464,7 @@ public class DeadLetterQueueService {
      * Scheduled task to clean up expired DLQ entries.
      */
     @Scheduled(cron = "${dlq.cleanup-cron:0 0 2 * * *}")
+    @SchedulerLock(name = "DeadLetterQueueService_cleanupExpiredEntries", lockAtMostFor = "PT30M", lockAtLeastFor = "PT5M")
     @Transactional
     public void cleanupExpiredEntries() {
         if (!dlqConfig.isCleanupEnabled()) {

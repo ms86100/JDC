@@ -20,6 +20,7 @@
     </parent>
 
     <modules>
+        <module>jira-cluster-commons</module>
         <module>jira-gateway</module>
         <module>jira-auth-service</module>
         <module>jira-user-service</module>

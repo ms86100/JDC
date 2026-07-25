@@ -5,6 +5,7 @@ import com.jira.migration.persister.IssuePersisterHandler;
 import com.jira.migration.repository.MigrationRetryQueueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,7 @@ public class MigrationRetryQueueProcessor {
     }
 
     @Scheduled(fixedDelayString = "${migration.retry.process-interval-ms:20000}")
+    @SchedulerLock(name = "MigrationRetryQueueProcessor_processDue", lockAtMostFor = "PT16S", lockAtLeastFor = "PT8S")
     @Transactional
     public void processDue() {
         for (MigrationRetryQueueEntry entry : retryQueueRepository.findDue(LocalDateTime.now())) {

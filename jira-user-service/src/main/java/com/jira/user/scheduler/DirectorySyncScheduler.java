@@ -5,6 +5,7 @@ import com.jira.user.repository.DirectoryRepository;
 import com.jira.user.service.LdapSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,7 @@ public class DirectorySyncScheduler {
     private final LdapSyncService ldapSyncService;
 
     @Scheduled(fixedDelayString = "${ldap.sync.check-interval-ms:60000}")
+    @SchedulerLock(name = "DirectorySyncScheduler_checkAndSyncDirectories", lockAtMostFor = "PT48S", lockAtLeastFor = "PT24S")
     public void checkAndSyncDirectories() {
         List<Directory> directories = directoryRepository.findByIsActiveTrueOrderByOrderIndexAsc();
 

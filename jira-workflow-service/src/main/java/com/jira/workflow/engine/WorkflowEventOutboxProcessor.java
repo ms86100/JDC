@@ -2,8 +2,10 @@ package com.jira.workflow.engine;
 
 import com.jira.workflow.entity.WorkflowEventOutbox;
 import com.jira.workflow.repository.WorkflowEventOutboxRepository;
+import com.jira.workflow.service.ScriptListenerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -20,11 +22,13 @@ public class WorkflowEventOutboxProcessor {
     private final WorkflowEventOutboxRepository outboxRepository;
     private final WorkflowOutboxIntegrationClient integrationClient;
     private final ProjectNotificationSchemeClient notificationSchemeClient;
+    private final ScriptListenerService scriptListenerService;
 
     @Value("${jira.workflow.outbox.batch-size:50}")
     private int batchSize;
 
     @Scheduled(fixedDelayString = "${jira.workflow.outbox.poll-interval-ms:5000}")
+    @SchedulerLock(name = "WorkflowEventOutboxProcessor_processOutbox", lockAtMostFor = "PT4S", lockAtLeastFor = "PT2S")
     @Transactional
     public void processOutbox() {
         List<WorkflowEventOutbox> pending = outboxRepository.findByPublishedFalseOrderByCreatedAtAsc();
@@ -46,10 +50,31 @@ public class WorkflowEventOutboxProcessor {
     }
 
     private void dispatch(WorkflowEventOutbox event) {
-        if (WorkflowEventOutbox.ISSUE_TRANSITIONED.equals(event.getEventType())) {
+        String eventType = event.getEventType();
+        if (WorkflowEventOutbox.ISSUE_TRANSITIONED.equals(eventType)) {
             handleIssueTransitioned(event);
-        } else if (WorkflowEventOutbox.WORKFLOW_PUBLISHED.equals(event.getEventType())) {
+        } else if (WorkflowEventOutbox.WORKFLOW_PUBLISHED.equals(eventType)) {
             log.debug("Workflow published event {} — no downstream consumer configured", event.getId());
+        }
+        fireScriptListeners(event);
+    }
+
+    private void fireScriptListeners(WorkflowEventOutbox event) {
+        try {
+            Map<String, Object> payload = event.getPayload() != null ? event.getPayload() : Map.of();
+            UUID issueId = event.getAggregateId();
+            UUID projectId = parseUuid(payload.get("projectId"));
+            UUID userId = parseUuid(payload.get("userId"));
+            UUID issueTypeId = parseUuid(payload.get("issueTypeId"));
+
+            Map<String, Object> eventData = new HashMap<>(payload);
+            eventData.put("eventId", event.getId() != null ? event.getId().toString() : null);
+            eventData.put("aggregateType", event.getAggregateType());
+
+            scriptListenerService.fireEvent(
+                    event.getEventType(), issueId, projectId, userId, issueTypeId, eventData);
+        } catch (Exception e) {
+            log.warn("Script listener dispatch failed for event {}: {}", event.getId(), e.getMessage());
         }
     }
 

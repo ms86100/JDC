@@ -4,6 +4,7 @@ import com.jira.notification.entity.IncomingMailHandler;
 import com.jira.notification.repository.IncomingMailHandlerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,7 @@ public class IncomingMailScheduler {
     private final IncomingMailService incomingMailService;
 
     @Scheduled(fixedDelay = 60000)
+    @SchedulerLock(name = "IncomingMailScheduler_pollMailboxes", lockAtMostFor = "PT48S", lockAtLeastFor = "PT24S")
     public void pollMailboxes() {
         List<IncomingMailHandler> handlers = handlerRepository.findAllEnabled();
 

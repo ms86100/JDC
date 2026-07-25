@@ -1,0 +1,57 @@
+# docker-compose.cluster.yml — Multi-node cluster testing overlay
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.cluster.yml up --build
+#
+# This scales critical services to multiple nodes to test cluster behavior:
+#   - Gateway:             2 nodes (load balancer redundancy)
+#   - Issue Service:       3 nodes (highest traffic)
+#   - Workflow Service:    2 nodes (workflow execution)
+#   - Notification Service: 2 nodes (email processing)
+#   - Auth Service:        2 nodes (authentication)
+#
+# All other services remain at 1 node (can be overridden with --scale).
+#
+# Architecture:
+#
+#         Users
+#           |
+#     Load Balancer (external, e.g. nginx/haproxy)
+#           |
+#     +-----+------+
+#     |            |
+#  Gateway-1   Gateway-2       <-- Docker DNS round-robin
+#     |            |
+#     +-----+------+
+#           |
+#  +--------+--------+---------+
+#  |        |        |         |
+# Issue-1 Issue-2 Issue-3  Auth-1 Auth-2 ...
+#  |        |        |         |
+#  +--------+--------+---------+
+#           |
+#     +-----+------+------+
+#     |            |      |
+#  PostgreSQL    Redis   MinIO
+#
+
+services:
+  gateway:
+    deploy:
+      replicas: 2
+
+  auth-service:
+    deploy:
+      replicas: 2
+
+  issue-service:
+    deploy:
+      replicas: 3
+
+  workflow-service:
+    deploy:
+      replicas: 2
+
+  notification-service:
+    deploy:
+      replicas: 2

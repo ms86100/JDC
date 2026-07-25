@@ -9,6 +9,7 @@ import com.jira.plan.repository.SprintSnapshotRepository;
 import com.jira.plan.repository.VelocityHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -249,6 +250,7 @@ public class SprintSnapshotService {
      * Runs at 1:00 AM every day.
      */
     @Scheduled(cron = "0 0 1 * * *")
+    @SchedulerLock(name = "SprintSnapshotService_captureDailySnapshots", lockAtMostFor = "PT30M", lockAtLeastFor = "PT5M")
     @Transactional
     public void captureDailySnapshotsForActiveSprints() {
         log.info("Running scheduled daily snapshot capture");

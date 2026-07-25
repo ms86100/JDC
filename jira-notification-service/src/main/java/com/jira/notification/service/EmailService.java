@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -124,25 +125,24 @@ public class EmailService {
     }
 
     @Scheduled(fixedDelay = 30000)
+    @SchedulerLock(name = "EmailService_processQueue", lockAtMostFor = "PT24S", lockAtLeastFor = "PT12S")
     @Transactional
     public void processQueue() {
-        synchronized (queueLock) {
-            OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now();
 
-            List<EmailQueue> queued = emailQueueRepository.findReadyToSend(now);
-            List<EmailQueue> retryable = emailQueueRepository.findRetryable(now);
+        List<EmailQueue> queued = emailQueueRepository.findReadyToSend(now);
+        List<EmailQueue> retryable = emailQueueRepository.findRetryable(now);
 
-            queued.addAll(retryable);
+        queued.addAll(retryable);
 
-            if (queued.isEmpty()) {
-                return;
-            }
+        if (queued.isEmpty()) {
+            return;
+        }
 
-            log.info("Processing email queue: {} entries", queued.size());
+        log.info("Processing email queue: {} entries", queued.size());
 
-            for (EmailQueue entry : queued) {
-                sendQueuedEmail(entry);
-            }
+        for (EmailQueue entry : queued) {
+            sendQueuedEmail(entry);
         }
     }
 

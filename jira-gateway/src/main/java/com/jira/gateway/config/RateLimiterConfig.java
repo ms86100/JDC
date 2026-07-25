@@ -3,39 +3,35 @@ package com.jira.gateway.config;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Refill;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Rate Limiter using Bucket4j Token Bucket algorithm.
- * Provides configurable rate limiting per client/user.
- */
 @Component
+@Slf4j
 public class RateLimiterConfig {
 
-    private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
+    private final Map<String, Bucket> localBuckets = new ConcurrentHashMap<>();
 
-    // Default limits: 100 requests per minute per user
+    @Autowired(required = false)
+    private StringRedisTemplate redisTemplate;
+
     private static final int DEFAULT_REQUESTS_PER_MINUTE = 100;
     private static final int DEFAULT_REQUESTS_PER_HOUR = 1000;
     private static final int DEFAULT_REQUESTS_PER_DAY = 10000;
+    private static final String REDIS_KEY_PREFIX = "ratelimit:";
 
-    /**
-     * Get or create a rate limit bucket for a given key.
-     * Uses user ID for authenticated requests, IP address for anonymous.
-     */
     public Bucket resolveBucket(String key) {
-        return buckets.computeIfAbsent(key, this::createNewBucket);
+        return localBuckets.computeIfAbsent(key, this::createNewBucket);
     }
 
-    /**
-     * Get bucket with custom limits (for premium users, etc.)
-     */
     public Bucket resolveBucket(String key, int requestsPerMinute) {
-        return buckets.computeIfAbsent(key, k -> createNewBucket(requestsPerMinute));
+        return localBuckets.computeIfAbsent(key, k -> createNewBucket(requestsPerMinute));
     }
 
     private Bucket createNewBucket(String key) {
@@ -65,24 +61,36 @@ public class RateLimiterConfig {
                 .build();
     }
 
-    /**
-     * Clear all buckets (for testing or reset purposes)
-     */
+    public boolean isAllowed(String key) {
+        if (redisTemplate != null) {
+            return isAllowedViaRedis(key);
+        }
+        return resolveBucket(key).tryConsume(1);
+    }
+
+    private boolean isAllowedViaRedis(String key) {
+        try {
+            String redisKey = REDIS_KEY_PREFIX + key;
+            Long count = redisTemplate.opsForValue().increment(redisKey);
+            if (count != null && count == 1L) {
+                redisTemplate.expire(redisKey, Duration.ofMinutes(1));
+            }
+            return count != null && count <= DEFAULT_REQUESTS_PER_MINUTE;
+        } catch (Exception e) {
+            log.debug("Redis rate limit check failed, falling back to local: {}", e.getMessage());
+            return resolveBucket(key).tryConsume(1);
+        }
+    }
+
     public void clearAllBuckets() {
-        buckets.clear();
+        localBuckets.clear();
     }
 
-    /**
-     * Remove a specific bucket
-     */
     public void removeBucket(String key) {
-        buckets.remove(key);
+        localBuckets.remove(key);
     }
 
-    /**
-     * Get current bucket count
-     */
     public int getBucketCount() {
-        return buckets.size();
+        return localBuckets.size();
     }
 }

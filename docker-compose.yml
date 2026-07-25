@@ -5,8 +5,13 @@ networks:
 volumes:
   postgres_data:
   attachment_data:
+  redis_data:
+  minio_data:
 
 services:
+  # =============================================================================
+  # INFRASTRUCTURE (container_name + ports allowed — these are singletons)
+  # =============================================================================
   postgres:
     image: postgres:16-alpine
     container_name: jira-postgres
@@ -28,6 +33,42 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: jira-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - jira-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: jira-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - jira-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   zipkin:
     image: openzipkin/zipkin:latest
     container_name: jira-zipkin
@@ -37,19 +78,22 @@ services:
       - jira-network
 
   # =============================================================================
-  # GATEWAY
+  # GATEWAY — Load Balancer entry point (ports allowed — user-facing)
+  # Routes use Docker DNS service names for round-robin load balancing.
+  # Scale: docker compose up --scale gateway=2
   # =============================================================================
   gateway:
     build:
       context: ./jira-gateway
       dockerfile: Dockerfile
     image: jira-gateway:latest
-    container_name: jira-gateway
     ports:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
@@ -59,15 +103,14 @@ services:
       - issue-service
 
   # =============================================================================
-  # SERVICES
+  # APPLICATION NODES — No container_name, no fixed ports (scalable)
+  # Scale any service: docker compose up --scale issue-service=3
+  # Docker DNS round-robins requests across all instances automatically.
   # =============================================================================
   auth-service:
     build:
       context: ./jira-auth-service
       dockerfile: Dockerfile
-    container_name: jira-auth-service
-    ports:
-      - "8081:8081"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -75,14 +118,18 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
       JWT_SECRET: jira-platform-super-secret-key-that-is-at-least-256-bits-long
       JWT_EXPIRATION_MS: 86400000
       JWT_REFRESH_EXPIRATION_MS: 604800000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health || exit 1"]
@@ -95,9 +142,6 @@ services:
     build:
       context: ./jira-user-service
       dockerfile: Dockerfile
-    container_name: jira-user-service
-    ports:
-      - "8082:8082"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -105,11 +149,16 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -124,9 +173,6 @@ services:
     build:
       context: ./jira-project-service
       dockerfile: Dockerfile
-    container_name: jira-project-service
-    ports:
-      - "8083:8083"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -134,11 +180,15 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -153,9 +203,6 @@ services:
     build:
       context: ./jira-issue-service
       dockerfile: Dockerfile
-    container_name: jira-issue-service
-    ports:
-      - "8084:8084"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -163,16 +210,21 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
       WORKFLOW_SERVICE_URL: http://workflow-service:8085
       PROJECT_SERVICE_URL: http://project-service:8083
       VERSION_SERVICE_URL: http://version-service:8096
       JIRA_PERMISSIONS_FAILOPEN: "true"
       JIRA_WORKFLOW_TRANSITION_FALLBACK: "true"
+      SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -187,9 +239,6 @@ services:
     build:
       context: ./jira-workflow-service
       dockerfile: Dockerfile
-    container_name: jira-workflow-service
-    ports:
-      - "8085:8085"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -197,16 +246,34 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
-      ISSUE_SERVICE_URL: http://jira-issue-service:8084
-      COMMENT_SERVICE_URL: http://jira-comment-service:8086
-      ATTACHMENT_SERVICE_URL: http://jira-attachment-service:8090
-      PROJECT_SERVICE_URL: http://jira-project-service:8083
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      ISSUE_SERVICE_URL: http://issue-service:8084
+      COMMENT_SERVICE_URL: http://comment-service:8086
+      ATTACHMENT_SERVICE_URL: http://attachment-service:8090
+      PROJECT_SERVICE_URL: http://project-service:8083
+      USER_SERVICE_URL: http://user-service:8082
+      NOTIFICATION_SERVICE_URL: http://notification-service:8087
+      SEARCH_SERVICE_URL: http://search-service:8088
+      VERSION_SERVICE_URL: http://version-service:8096
+      COMPONENT_SERVICE_URL: http://component-service:8097
+      PLAN_SERVICE_URL: http://plan-service:8092
+      SPRINT_SERVICE_URL: http://sprint-service:8091
       JIRA_PERMISSIONS_FAILOPEN: "true"
+      JIRA_SCRIPTING_ENABLED: "true"
+      JIRA_SCRIPTING_TIMEOUT_MS: "5000"
+      JIRA_SCRIPTING_MEMORY_LIMIT_MB: "64"
+      JIRA_SCRIPTING_MAX_STATEMENTS: "500000"
+      JIRA_SCRIPTING_SCHEDULED_ENABLED: "true"
+      JIRA_SCRIPTING_SQL_WRITE_ENABLED: "false"
+      JIRA_SCRIPTING_SCHEDULED_POLL_INTERVAL_MS: "30000"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -221,9 +288,6 @@ services:
     build:
       context: ./jira-comment-service
       dockerfile: Dockerfile
-    container_name: jira-comment-service
-    ports:
-      - "8086:8086"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -231,11 +295,16 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -250,9 +319,6 @@ services:
     build:
       context: ./jira-notification-service
       dockerfile: Dockerfile
-    container_name: jira-notification-service
-    ports:
-      - "8087:8087"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -260,11 +326,17 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
+      WORKFLOW_SERVICE_URL: http://workflow-service:8085
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -279,9 +351,6 @@ services:
     build:
       context: ./jira-search-service
       dockerfile: Dockerfile
-    container_name: jira-search-service
-    ports:
-      - "8088:8088"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -289,11 +358,16 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -308,9 +382,6 @@ services:
     build:
       context: ./jira-audit-service
       dockerfile: Dockerfile
-    container_name: jira-audit-service
-    ports:
-      - "8089:8089"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -318,11 +389,16 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -340,9 +416,6 @@ services:
     build:
       context: ./jira-attachment-service
       dockerfile: Dockerfile
-    container_name: jira-attachment-service
-    ports:
-      - "8090:8090"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -351,13 +424,18 @@ services:
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       ATTACHMENT_STORAGE_PATH: /var/jira/attachments
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     volumes:
       - attachment_data:/var/jira/attachments
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -375,9 +453,6 @@ services:
     build:
       context: ./jira-sprint-service
       dockerfile: Dockerfile
-    container_name: jira-sprint-service
-    ports:
-      - "8091:8091"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -385,11 +460,15 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -407,9 +486,6 @@ services:
     build:
       context: ./jira-version-service
       dockerfile: Dockerfile
-    container_name: jira-version-service
-    ports:
-      - "8096:8096"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -417,11 +493,15 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -439,9 +519,6 @@ services:
     build:
       context: ./jira-component-service
       dockerfile: Dockerfile
-    container_name: jira-component-service
-    ports:
-      - "8097:8097"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -449,11 +526,15 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -471,9 +552,6 @@ services:
     build:
       context: ./jira-plan-service
       dockerfile: Dockerfile
-    container_name: jira-plan-service
-    ports:
-      - "8092:8092"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -481,11 +559,15 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -503,9 +585,6 @@ services:
     build:
       context: ./jira-admin-service
       dockerfile: Dockerfile
-    container_name: jira-admin-service
-    ports:
-      - "8093:8093"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -513,11 +592,15 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -536,9 +619,6 @@ services:
       context: ./jira-migration-service
       dockerfile: Dockerfile
     image: jira-migration-service:latest
-    container_name: jira-migration-service
-    ports:
-      - "8094:8094"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
@@ -546,26 +626,30 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
-      GATEWAY_SERVICE_URL: http://jira-gateway:8080
-      AUTH_SERVICE_URL: http://jira-auth-service:8081
-      USER_SERVICE_URL: http://jira-user-service:8082
-      PROJECT_SERVICE_URL: http://jira-project-service:8083
-      ISSUE_SERVICE_URL: http://jira-issue-service:8084
-      WORKFLOW_SERVICE_URL: http://jira-workflow-service:8085
-      COMMENT_SERVICE_URL: http://jira-comment-service:8086
-      NOTIFICATION_SERVICE_URL: http://jira-notification-service:8087
-      SEARCH_SERVICE_URL: http://jira-search-service:8088
-      AUDIT_SERVICE_URL: http://jira-audit-service:8089
-      ATTACHMENT_SERVICE_URL: http://jira-attachment-service:8090
-      SPRINT_SERVICE_URL: http://jira-sprint-service:8091
-      PLAN_SERVICE_URL: http://jira-plan-service:8092
-      ADMIN_SERVICE_URL: http://jira-admin-service:8093
-      TEST_SERVICE_URL: http://jira-test-service:8095
+      JAVA_OPTS: -Xms32m -Xmx128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:CompressedClassSpaceSize=24m
+      GATEWAY_SERVICE_URL: http://gateway:8080
+      AUTH_SERVICE_URL: http://auth-service:8081
+      USER_SERVICE_URL: http://user-service:8082
+      PROJECT_SERVICE_URL: http://project-service:8083
+      ISSUE_SERVICE_URL: http://issue-service:8084
+      WORKFLOW_SERVICE_URL: http://workflow-service:8085
+      COMMENT_SERVICE_URL: http://comment-service:8086
+      NOTIFICATION_SERVICE_URL: http://notification-service:8087
+      SEARCH_SERVICE_URL: http://search-service:8088
+      AUDIT_SERVICE_URL: http://audit-service:8089
+      ATTACHMENT_SERVICE_URL: http://attachment-service:8090
+      SPRINT_SERVICE_URL: http://sprint-service:8091
+      PLAN_SERVICE_URL: http://plan-service:8092
+      ADMIN_SERVICE_URL: http://admin-service:8093
+      TEST_SERVICE_URL: http://test-service:8095
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - jira-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       auth-service:
         condition: service_healthy
@@ -581,7 +665,7 @@ services:
       start_period: 240s
 
   # =============================================================================
-  # FRONTEND
+  # FRONTEND (ports allowed — user-facing)
   # =============================================================================
   frontend:
     build:

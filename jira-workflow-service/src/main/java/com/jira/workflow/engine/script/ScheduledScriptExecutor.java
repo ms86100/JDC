@@ -5,6 +5,7 @@ import com.jira.workflow.entity.ScriptSchedule;
 import com.jira.workflow.repository.ScriptDefinitionRepository;
 import com.jira.workflow.repository.ScriptScheduleRepository;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.support.CronExpression;
@@ -49,6 +50,7 @@ public class ScheduledScriptExecutor {
     }
 
     @Scheduled(fixedDelayString = "${jira.scripting.scheduled-poll-interval-ms:30000}")
+    @SchedulerLock(name = "ScheduledScriptExecutor_pollAndExecute", lockAtMostFor = "PT24S", lockAtLeastFor = "PT12S")
     public void pollAndExecute() {
         List<ScriptSchedule> due = scheduleRepository
                 .findByIsEnabledTrueAndNextRunAtBefore(LocalDateTime.now());

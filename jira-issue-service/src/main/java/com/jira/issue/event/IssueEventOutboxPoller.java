@@ -3,6 +3,7 @@ package com.jira.issue.event;
 import com.jira.issue.repository.IssueEventOutboxRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -37,6 +38,7 @@ public class IssueEventOutboxPoller {
     private boolean pollingEnabled;
 
     @Scheduled(fixedDelayString = "${jira.outbox.polling.interval-ms:5000}")
+    @SchedulerLock(name = "IssueEventOutboxPoller_pollAndPublish", lockAtMostFor = "PT4S", lockAtLeastFor = "PT2S")
     @Transactional
     public void pollAndPublish() {
         if (!pollingEnabled) {

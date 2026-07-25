@@ -76,6 +76,13 @@
             <version>${springdoc.version}</version>
         </dependency>
 
+        <!-- Cluster Commons — distributed storage -->
+        <dependency>
+            <groupId>com.jira</groupId>
+            <artifactId>jira-cluster-commons</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

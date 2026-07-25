@@ -5,20 +5,19 @@ import com.jira.attachment.entity.Attachment;
 import com.jira.attachment.exception.AttachmentNotFoundException;
 import com.jira.attachment.exception.InvalidFileException;
 import com.jira.attachment.repository.AttachmentRepository;
+import com.jira.cluster.storage.StorageProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,9 +28,7 @@ import java.util.stream.Collectors;
 public class AttachmentService {
 
     private final AttachmentRepository attachmentRepository;
-
-    @Value("${jira.attachment.storage.path:/var/jira/attachments}")
-    private String storagePath;
+    private final StorageProvider storageProvider;
 
     @Value("${cdn.base-url:}")
     private String cdnBaseUrl;
@@ -45,12 +42,10 @@ public class AttachmentService {
 
         String originalFilename = file.getOriginalFilename();
         String storedFilename = UUID.randomUUID() + "_" + sanitizeFilename(originalFilename);
+        String storageKey = issueId.toString() + "/" + storedFilename;
 
         try {
-            Path storageDir = Paths.get(storagePath, issueId.toString());
-            Files.createDirectories(storageDir);
-            Path filePath = storageDir.resolve(storedFilename);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            storageProvider.store(storageKey, file.getInputStream(), file.getSize());
 
             Attachment attachment = Attachment.builder()
                     .issueId(issueId)
@@ -58,7 +53,7 @@ public class AttachmentService {
                     .originalFilename(originalFilename)
                     .mimeType(file.getContentType())
                     .fileSize(file.getSize())
-                    .storagePath(filePath.toString())
+                    .storagePath(storageKey)
                     .uploaderId(uploaderId)
                     .uploaderName(uploaderName)
                     .build();
@@ -68,6 +63,9 @@ public class AttachmentService {
 
             return toResponse(attachment);
         } catch (IOException e) {
+            log.error("Failed to store file for issue {}", issueId, e);
+            throw new InvalidFileException("Failed to store file: " + e.getMessage(), e);
+        } catch (UncheckedIOException e) {
             log.error("Failed to store file for issue {}", issueId, e);
             throw new InvalidFileException("Failed to store file: " + e.getMessage(), e);
         }
@@ -94,16 +92,10 @@ public class AttachmentService {
                 .orElseThrow(() -> new AttachmentNotFoundException("Attachment not found: " + attachmentId));
 
         try {
-            Path filePath = Paths.get(attachment.getStoragePath());
-            Resource resource = new UrlResource(filePath.toUri());
-
-            if (resource.exists() && resource.isReadable()) {
-                return resource;
-            } else {
-                throw new AttachmentNotFoundException("File not found on disk: " + attachmentId);
-            }
-        } catch (IOException e) {
-            throw new AttachmentNotFoundException("Failed to read file: " + attachmentId, e);
+            InputStream stream = storageProvider.retrieve(attachment.getStoragePath());
+            return new InputStreamResource(stream);
+        } catch (UncheckedIOException e) {
+            throw new AttachmentNotFoundException("File not found in storage: " + attachmentId, e);
         }
     }
 
@@ -113,10 +105,9 @@ public class AttachmentService {
                 .orElseThrow(() -> new AttachmentNotFoundException("Attachment not found: " + attachmentId));
 
         try {
-            Path filePath = Paths.get(attachment.getStoragePath());
-            Files.deleteIfExists(filePath);
-        } catch (IOException e) {
-            log.warn("Failed to delete file from disk: {}", attachment.getStoragePath(), e);
+            storageProvider.delete(attachment.getStoragePath());
+        } catch (UncheckedIOException e) {
+            log.warn("Failed to delete file from storage: {}", attachment.getStoragePath(), e);
         }
 
         attachmentRepository.delete(attachment);
@@ -129,10 +120,9 @@ public class AttachmentService {
 
         for (Attachment attachment : attachments) {
             try {
-                Path filePath = Paths.get(attachment.getStoragePath());
-                Files.deleteIfExists(filePath);
-            } catch (IOException e) {
-                log.warn("Failed to delete file from disk: {}", attachment.getStoragePath(), e);
+                storageProvider.delete(attachment.getStoragePath());
+            } catch (UncheckedIOException e) {
+                log.warn("Failed to delete file from storage: {}", attachment.getStoragePath(), e);
             }
         }
 

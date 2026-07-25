@@ -9,6 +9,7 @@ import com.jira.migration.entity.NodeState;
 import com.jira.migration.repository.ClusterNodeRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -354,6 +355,7 @@ public class ClusterNodeRegistry {
      * Scheduled task to send heartbeats.
      */
     @Scheduled(fixedDelayString = "${cluster.heartbeat.interval-seconds:10}000")
+    @SchedulerLock(name = "ClusterNodeRegistry_scheduledHeartbeat", lockAtMostFor = "PT8S", lockAtLeastFor = "PT3S")
     public void scheduledHeartbeat() {
         if (!clusterConfig.isEnabled()) {
             return;
@@ -365,6 +367,7 @@ public class ClusterNodeRegistry {
      * Scheduled task to clean up stale nodes.
      */
     @Scheduled(fixedDelayString = "${cluster.heartbeat.cleanup-interval-seconds:60}000")
+    @SchedulerLock(name = "ClusterNodeRegistry_cleanupStaleNodes", lockAtMostFor = "PT48S", lockAtLeastFor = "PT24S")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void cleanupStaleNodes() {
         if (!clusterConfig.isEnabled()) {

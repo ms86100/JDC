@@ -4,6 +4,7 @@ import com.jira.migration.entity.MigrationEvent;
 import com.jira.migration.repository.MigrationEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ public class MigrationEventPublisher {
     }
 
     @Scheduled(fixedDelayString = "${migration.events.publish-interval-ms:15000}")
+    @SchedulerLock(name = "MigrationEventPublisher_publishPending", lockAtMostFor = "PT12S", lockAtLeastFor = "PT6S")
     @Transactional
     public void publishPending() {
         for (MigrationEvent event : eventRepository.findTop50ByStatusOrderByCreatedAtAsc("PENDING")) {

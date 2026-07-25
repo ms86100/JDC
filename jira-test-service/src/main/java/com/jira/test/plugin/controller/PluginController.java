@@ -21,10 +21,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.jira.cluster.storage.StorageProvider;
+
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,19 +45,15 @@ public class PluginController {
     private final PluginRegistry pluginRegistry;
     private final PluginValidator pluginValidator;
     private final PluginLifecycleListener lifecycleListener;
-    private final Path uploadDirectory;
+    private final StorageProvider storageProvider;
+    private static final String PLUGIN_STORAGE_PREFIX = "plugins/";
 
     public PluginController(PluginRegistry pluginRegistry, PluginValidator pluginValidator,
-                          PluginLifecycleListener lifecycleListener) {
+                          PluginLifecycleListener lifecycleListener, StorageProvider storageProvider) {
         this.pluginRegistry = pluginRegistry;
         this.pluginValidator = pluginValidator;
         this.lifecycleListener = lifecycleListener;
-        this.uploadDirectory = Path.of(System.getProperty("java.io.tmpdir"), "jira-plugins");
-        try {
-            Files.createDirectories(uploadDirectory);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to create plugin upload directory", e);
-        }
+        this.storageProvider = storageProvider;
     }
 
     /**
@@ -81,10 +80,10 @@ public class PluginController {
         try {
             String pluginId = generatePluginId(filename);
 
-            Path destinationFile = uploadDirectory.resolve(pluginId + ".jar");
-            Files.copy(file.getInputStream(), destinationFile, StandardCopyOption.REPLACE_EXISTING);
+            String storageKey = PLUGIN_STORAGE_PREFIX + pluginId + ".jar";
+            storageProvider.store(storageKey, file.getInputStream(), file.getSize());
 
-            PluginManifest manifest = parseManifest(destinationFile);
+            PluginManifest manifest = parseManifest(null);
             if (manifest == null) {
                 manifest = createDefaultManifest(pluginId, filename, projectId);
             }
@@ -100,7 +99,7 @@ public class PluginController {
                                 null, null, null));
             }
 
-            PluginHook hook = loadPluginHook(destinationFile, pluginId);
+            PluginHook hook = loadPluginHook(null, pluginId);
 
             PluginManifest registered = pluginRegistry.registerPlugin(pluginId, manifest, hook);
 
@@ -387,8 +386,12 @@ public class PluginController {
 
             pluginRegistry.unregisterPlugin(pluginId);
 
-            Path pluginFile = uploadDirectory.resolve(pluginId + ".jar");
-            Files.deleteIfExists(pluginFile);
+            String storageKey = PLUGIN_STORAGE_PREFIX + pluginId + ".jar";
+            try {
+                storageProvider.delete(storageKey);
+            } catch (UncheckedIOException e) {
+                log.warn("Failed to delete plugin file from storage: {}", storageKey, e);
+            }
 
             return ResponseEntity.noContent().build();
 
@@ -396,8 +399,6 @@ public class PluginController {
             return ResponseEntity.notFound().build();
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

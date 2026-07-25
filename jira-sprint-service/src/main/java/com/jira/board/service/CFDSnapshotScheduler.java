@@ -8,6 +8,7 @@ import com.jira.board.repository.BoardCFDSnapshotRepository;
 import com.jira.board.repository.BoardColumnRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -37,6 +38,7 @@ public class CFDSnapshotScheduler {
     private final RestTemplate restTemplate;
 
     @Scheduled(cron = "${cfd.snapshot.cron:0 0 2 * * *}")
+    @SchedulerLock(name = "CFDSnapshotScheduler_captureSnapshots", lockAtMostFor = "PT30M", lockAtLeastFor = "PT5M")
     @Transactional
     public void captureSnapshots() {
         if (!snapshotEnabled) return;

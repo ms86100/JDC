@@ -11,6 +11,7 @@ import com.jira.migration.repository.DistributedLockRepository;
 import com.jira.migration.repository.JobClaimRepository;
 import com.jira.migration.repository.LeaderElectionRepository;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -314,6 +315,7 @@ public class ClusterHealthMonitor {
      * Scheduled health check and cleanup.
      */
     @Scheduled(fixedDelayString = "${cluster.health-check.interval-seconds:30}000")
+    @SchedulerLock(name = "ClusterHealthMonitor_scheduledHealthCheck", lockAtMostFor = "PT24S", lockAtLeastFor = "PT12S")
     public void scheduledHealthCheck() {
         ClusterHealth health = getClusterHealth();
 

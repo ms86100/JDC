@@ -1,0 +1,5 @@
+com.jira.cluster.config.ClusterAutoConfiguration
+com.jira.cluster.scheduler.ShedLockAutoConfiguration
+com.jira.cluster.storage.StorageAutoConfiguration
+com.jira.cluster.cache.CacheAutoConfiguration
+com.jira.cluster.event.EventBusAutoConfiguration

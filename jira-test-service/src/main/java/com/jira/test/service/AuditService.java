@@ -6,6 +6,7 @@ import com.jira.test.repository.AuditLogRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
@@ -443,6 +444,7 @@ public class AuditService {
     // ==================== Audit Data Archival ====================
 
     @Scheduled(cron = "0 0 2 * * ?") // Run at 2 AM daily
+    @SchedulerLock(name = "AuditService_processArchivalPolicies", lockAtMostFor = "PT30M", lockAtLeastFor = "PT5M")
     public void processArchivalPolicies() {
         log.info("Starting audit data archival process");
 

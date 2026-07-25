@@ -20,6 +20,7 @@ const C = {
 /* ─── tabs ─── */
 const TABS = [
   'System Overview',
+  'Cluster Architecture',
   'Service Map',
   'Issue & Workflow',
   'Domain Model',
@@ -375,7 +376,205 @@ function renderSystemOverview() {
   );
 }
 
-/* ── Tab 2: Service Map ── */
+/* ── Tab 2: Cluster Architecture ── */
+function renderClusterArchitecture() {
+  const clusterLayers = [
+    { layer: 'Load Balancer', desc: 'API Gateway receives all traffic, routes via Docker DNS round-robin', color: C.dark, items: ['Health checks', 'Rate limiting (Redis-backed)', 'JWT validation', 'Path-based routing'] },
+    { layer: 'Application Nodes', desc: 'Each service instance is a Node — fully capable of serving requests independently', color: C.brand, items: ['Stateless JWT auth', 'REST APIs', 'Business logic', 'ShedLock-coordinated schedulers', 'Caffeine L1 + Redis L2 caching'] },
+    { layer: 'Shared State', desc: 'Single source of truth shared by all nodes', color: C.success, items: ['PostgreSQL (21 schemas)', 'Redis (cache, pub/sub, locking)', 'MinIO (S3-compatible storage)'] },
+  ];
+
+  const guardrails = [
+    { rule: 'R1', title: 'No @Scheduled without @SchedulerLock', desc: 'Prevents duplicate execution across nodes' },
+    { rule: 'R2', title: 'No in-memory state for coordination', desc: 'ConcurrentHashMap is JVM-local, invisible to other nodes' },
+    { rule: 'R3', title: 'No direct filesystem for user data', desc: 'Use StorageProvider (MinIO/S3) for shared access' },
+    { rule: 'R4', title: 'WebSocket must use ClusterEventBus', desc: 'Redis pub/sub relays messages across all nodes' },
+    { rule: 'R5', title: 'No container_name on app services', desc: 'Prevents docker compose --scale' },
+    { rule: 'R6', title: 'No fixed host port mappings', desc: 'Only gateway (8080) and frontend (3000) expose ports' },
+    { rule: 'R7', title: 'Outbox pollers must be idempotent', desc: 'At-least-once delivery means possible re-processing' },
+    { rule: 'R8', title: 'Cache evictions must propagate', desc: 'Use ClusterCacheManager, not bare Caffeine' },
+  ];
+
+  const components = [
+    { name: 'DistributedLockService', pkg: 'com.jira.cluster.lock', desc: 'Database or Redis-backed distributed locking' },
+    { name: 'ShedLockAutoConfiguration', pkg: 'com.jira.cluster.scheduler', desc: 'JDBC-based scheduler lock provider' },
+    { name: 'StorageProvider', pkg: 'com.jira.cluster.storage', desc: 'Local / S3 (MinIO) file storage abstraction' },
+    { name: 'ClusterCacheManager', pkg: 'com.jira.cluster.cache', desc: 'Caffeine L1 + Redis L2 with cross-node invalidation' },
+    { name: 'ClusterEventBus', pkg: 'com.jira.cluster.event', desc: 'Redis pub/sub for real-time cross-node messaging' },
+  ];
+
+  return (
+    <div>
+      <SectionHeading>Cluster Architecture — Multi-Node Deployment</SectionHeading>
+      <Paragraph>
+        The platform supports Jira Data Center-style clustering: multiple identical application nodes behind a load
+        balancer, sharing a database and object storage. Each service can be independently scaled — Docker DNS
+        automatically round-robins requests across all instances. The jira-cluster-commons library provides
+        distributed locking, coordinated scheduling, tiered caching, shared storage, and a cluster event bus.
+      </Paragraph>
+
+      {/* Cluster Diagram */}
+      <div style={{ position: 'relative', padding: 20, background: C.bg, borderRadius: 8, marginBottom: 24 }}>
+        <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: C.dark, marginBottom: 12 }}>
+          Multi-Node Cluster Topology
+        </div>
+
+        {/* Users */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+          <DiagramBox label="Users / Browser" color={C.subtle} width={200} />
+        </div>
+        <DownArrow />
+
+        {/* Load Balancer */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+          <DiagramBox label="Gateway (Load Balancer)" sub="Port 8080 -- DNS round-robin" color={C.dark} width={280} />
+        </div>
+        <DownArrow />
+
+        {/* Application Nodes */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 8 }}>
+          <DiagramBox label="Issue Node 1" sub=":8084" color={C.brand} width={130} height={50} fontSize={11} />
+          <DiagramBox label="Issue Node 2" sub=":8084" color={C.brand} width={130} height={50} fontSize={11} />
+          <DiagramBox label="Issue Node 3" sub=":8084" color={C.brand} width={130} height={50} fontSize={11} />
+          <DiagramBox label="Auth Node 1" sub=":8081" color={C.purple} width={130} height={50} fontSize={11} />
+          <DiagramBox label="Auth Node 2" sub=":8081" color={C.purple} width={130} height={50} fontSize={11} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 8 }}>
+          <DiagramBox label="Workflow x2" sub=":8085" color={C.danger} width={140} height={50} fontSize={11} />
+          <DiagramBox label="Notification x2" sub=":8087" color={C.warning} width={140} height={50} fontSize={11} />
+          <DiagramBox label="Sprint x1" sub=":8091" color={C.teal} width={140} height={50} fontSize={11} />
+          <DiagramBox label="Search x1" sub=":8088" color={C.teal} width={140} height={50} fontSize={11} />
+        </div>
+        <DownArrow />
+
+        {/* Shared State */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
+          <DiagramBox label="PostgreSQL" sub="21 schemas" color={C.dbBg} width={180} />
+          <DiagramBox label="Redis" sub="Cache + Pub/Sub + Locks" color={C.danger} width={200} />
+          <DiagramBox label="MinIO" sub="S3-compatible storage" color={C.success} width={180} />
+        </div>
+      </div>
+
+      {/* Cluster Layers */}
+      <div className="ads-card" style={{ marginBottom: 16 }}>
+        <h4 className="ads-card-title">Cluster Layers</h4>
+        {clusterLayers.map((l) => (
+          <div key={l.layer} style={{ marginBottom: 16, padding: 12, background: C.bg, borderRadius: 6, borderLeft: `4px solid ${l.color}` }}>
+            <div style={{ fontWeight: 600, fontSize: 14, color: l.color }}>{l.layer}</div>
+            <div style={{ fontSize: 12, color: C.subtle, margin: '4px 0 8px' }}>{l.desc}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {l.items.map((item) => (
+                <span key={item} style={{ fontSize: 11, background: C.white, border: `1px solid ${C.border}`, borderRadius: 4, padding: '2px 8px', color: C.dark }}>{item}</span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Key stats */}
+      <div className="ads-stats">
+        <div className="ads-stat ads-stat--brand">
+          <span className="ads-stat-value">23</span>
+          <span className="ads-stat-label">Cluster-Safe Schedulers</span>
+        </div>
+        <div className="ads-stat ads-stat--success">
+          <span className="ads-stat-value">8</span>
+          <span className="ads-stat-label">No-Regression Rules</span>
+        </div>
+        <div className="ads-stat ads-stat--warning">
+          <span className="ads-stat-value">5</span>
+          <span className="ads-stat-label">ArchUnit Guards</span>
+        </div>
+        <div className="ads-stat">
+          <span className="ads-stat-value">3</span>
+          <span className="ads-stat-label">Shared Infra Services</span>
+        </div>
+      </div>
+
+      {/* Cluster Commons Library */}
+      <div className="ads-card" style={{ marginTop: 8 }}>
+        <h4 className="ads-card-title">jira-cluster-commons Library</h4>
+        <Paragraph>
+          Shared Maven module providing cluster primitives to all services. Auto-configured via Spring Boot
+          starters — services only need to add the dependency.
+        </Paragraph>
+        <table className="ads-table">
+          <thead>
+            <tr><th>Component</th><th>Package</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            {components.map((c) => (
+              <tr key={c.name}>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}>{c.name}</td>
+                <td style={{ fontFamily: 'monospace', fontSize: 11, color: C.subtle }}>{c.pkg}</td>
+                <td style={{ fontSize: 12 }}>{c.desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* No-Regression Guardrails */}
+      <div className="ads-card" style={{ marginTop: 16 }}>
+        <h4 className="ads-card-title">No-Regression Guardrails (8 Rules)</h4>
+        <Paragraph>
+          Four layers of defense prevent cluster-unsafe code: CLAUDE.md rules (AI-enforced), ArchUnit tests
+          (build fails), Docker Compose validation script (CI), and PR review checklist (human).
+        </Paragraph>
+        <table className="ads-table">
+          <thead>
+            <tr><th>Rule</th><th>Constraint</th><th>Why</th></tr>
+          </thead>
+          <tbody>
+            {guardrails.map((g) => (
+              <tr key={g.rule}>
+                <td style={{ fontWeight: 700, color: C.brand, textAlign: 'center' }}>{g.rule}</td>
+                <td style={{ fontWeight: 600, fontSize: 12 }}>{g.title}</td>
+                <td style={{ fontSize: 12, color: C.subtle }}>{g.desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Request Lifecycle */}
+      <div className="ads-card" style={{ marginTop: 16 }}>
+        <h4 className="ads-card-title">Request Lifecycle (Clustered)</h4>
+        <div style={{ background: C.bg, borderRadius: 6, padding: 16, fontFamily: 'monospace', fontSize: 12, lineHeight: 1.8 }}>
+          <div>1. User opens issue in browser</div>
+          <div style={{ color: C.subtle, paddingLeft: 16 }}>|</div>
+          <div>2. Load Balancer (Gateway) validates JWT <span style={{ color: C.success }}>(stateless -- any node works)</span></div>
+          <div style={{ color: C.subtle, paddingLeft: 16 }}>|</div>
+          <div>3. Docker DNS round-robin routes to Issue-Service-2</div>
+          <div style={{ color: C.subtle, paddingLeft: 16 }}>|</div>
+          <div>4. Permission check + business logic</div>
+          <div style={{ color: C.subtle, paddingLeft: 16 }}>|</div>
+          <div>5. Cache miss? <span style={{ color: C.brand }}>PostgreSQL -&gt; Caffeine L1 + Redis L2</span></div>
+          <div>{'   '}Cache hit? <span style={{ color: C.success }}>Return from Caffeine L1 (local, fast)</span></div>
+          <div style={{ color: C.subtle, paddingLeft: 16 }}>|</div>
+          <div>6. WebSocket update? <span style={{ color: C.danger }}>ClusterEventBus (Redis pub/sub) -&gt; all clients</span></div>
+          <div style={{ color: C.subtle, paddingLeft: 16 }}>|</div>
+          <div>7. Response back through Gateway</div>
+        </div>
+      </div>
+
+      {/* Scaling Commands */}
+      <div className="ads-card" style={{ marginTop: 16 }}>
+        <h4 className="ads-card-title">Scaling Commands</h4>
+        <div style={{ background: C.dbBg, borderRadius: 6, padding: 16, fontFamily: 'monospace', fontSize: 12, color: '#a5d6a7', lineHeight: 1.8 }}>
+          <div style={{ color: '#888' }}># Single-node (default)</div>
+          <div>docker compose up --build</div>
+          <div style={{ marginTop: 8, color: '#888' }}># Multi-node cluster test (predefined replicas)</div>
+          <div>docker compose -f docker-compose.yml -f docker-compose.cluster.yml up</div>
+          <div style={{ marginTop: 8, color: '#888' }}># Manual scaling</div>
+          <div>docker compose up --scale issue-service=3 --scale gateway=2</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Tab 3: Service Map ── */
 function renderServiceMap() {
   const services = [
     { name: 'auth-service', port: '8081', schema: 'jira_auth', entities: 4, keyModels: 'Role, UserGroup, Permission, SessionToken', dependsOn: '--', keyEndpoints: '/api/auth/login, /api/auth/register, /api/auth/token/refresh' },
@@ -2592,6 +2791,8 @@ export default function ArchitecturePage() {
     switch (activeTab) {
       case 'System Overview':
         return renderSystemOverview();
+      case 'Cluster Architecture':
+        return renderClusterArchitecture();
       case 'Service Map':
         return renderServiceMap();
       case 'Issue & Workflow':

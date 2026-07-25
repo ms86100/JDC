@@ -5,6 +5,7 @@ import com.jira.migration.config.ClusterConfig;
 import com.jira.migration.entity.JobClaim;
 import com.jira.migration.repository.JobClaimRepository;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -347,6 +348,7 @@ public class ImportJobCoordinator {
      * Scheduled task to clean up expired job claims.
      */
     @Scheduled(fixedDelayString = "${cluster.lock.cleanup-interval-seconds:60}000")
+    @SchedulerLock(name = "ImportJobCoordinator_cleanupExpiredClaims", lockAtMostFor = "PT48S", lockAtLeastFor = "PT24S")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void cleanupExpiredClaims() {
         try {

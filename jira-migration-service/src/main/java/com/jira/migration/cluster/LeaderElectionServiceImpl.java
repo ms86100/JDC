@@ -6,6 +6,7 @@ import com.jira.migration.config.ClusterConfig;
 import com.jira.migration.entity.LeaderElection;
 import com.jira.migration.repository.LeaderElectionRepository;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -263,6 +264,7 @@ public class LeaderElectionServiceImpl implements LeaderElectionService {
      * Scheduled task to renew leadership lease.
      */
     @Scheduled(fixedDelayString = "${cluster.leader.renewal-interval-seconds:30}000")
+    @SchedulerLock(name = "LeaderElectionServiceImpl_scheduledLeadershipRenewal", lockAtMostFor = "PT24S", lockAtLeastFor = "PT12S")
     public void scheduledLeadershipRenewal() {
         if (!clusterConfig.getLeader().isEnabled()) {
             return;
@@ -283,6 +285,7 @@ public class LeaderElectionServiceImpl implements LeaderElectionService {
      * Scheduled task to clean up expired elections.
      */
     @Scheduled(fixedDelayString = "${cluster.leader.cleanup-interval-seconds:60}000")
+    @SchedulerLock(name = "LeaderElectionServiceImpl_cleanupExpiredElections", lockAtMostFor = "PT48S", lockAtLeastFor = "PT24S")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void cleanupExpiredElections() {
         try {

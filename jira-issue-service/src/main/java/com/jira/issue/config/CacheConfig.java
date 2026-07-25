@@ -1,18 +1,19 @@
 package com.jira.issue.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.jira.cluster.cache.CacheInvalidationService;
+import com.jira.cluster.cache.ClusterCacheManager;
+import com.jira.cluster.config.ClusterProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 
 import java.util.concurrent.TimeUnit;
 
-/**
- * Cache configuration for jira-issue-service.
- * Uses Caffeine for in-memory caching with configurable TTLs.
- */
 @Configuration
 @EnableCaching
 public class CacheConfig {
@@ -34,25 +35,29 @@ public class CacheConfig {
     public static final String TEST_SUMMARY_CACHE = "testSummary";
     public static final String REQUIREMENT_COVERAGE_CACHE = "requirementCoverage";
 
+    @Autowired(required = false)
+    private RedisConnectionFactory redisConnectionFactory;
+
+    @Autowired(required = false)
+    private ClusterProperties clusterProperties;
+
+    @Autowired(required = false)
+    private CacheInvalidationService cacheInvalidationService;
+
     @Bean
     public CacheManager cacheManager() {
+        if (redisConnectionFactory != null && clusterProperties != null && cacheInvalidationService != null) {
+            ClusterCacheManager manager = new ClusterCacheManager(
+                    redisConnectionFactory, clusterProperties, cacheInvalidationService);
+            cacheInvalidationService.setCacheManager(manager);
+            return manager;
+        }
         CaffeineCacheManager cacheManager = new CaffeineCacheManager(
-                ISSUE_TYPE_CACHE,
-                COMPONENT_CACHE,
-                VERSION_CACHE,
-                LABEL_CACHE,
-                EPIC_CACHE,
-                TESTS_CACHE,
-                TEST_SETS_CACHE,
-                TEST_PLANS_CACHE,
-                TEST_EXECUTIONS_CACHE,
-                TEST_FOLDERS_CACHE,
-                ENVIRONMENTS_CACHE,
-                TRACEABILITY_CACHE,
-                REPORTS_CACHE,
-                PROJECT_CACHE,
-                TEST_SUMMARY_CACHE,
-                REQUIREMENT_COVERAGE_CACHE
+                ISSUE_TYPE_CACHE, COMPONENT_CACHE, VERSION_CACHE, LABEL_CACHE,
+                EPIC_CACHE, TESTS_CACHE, TEST_SETS_CACHE, TEST_PLANS_CACHE,
+                TEST_EXECUTIONS_CACHE, TEST_FOLDERS_CACHE, ENVIRONMENTS_CACHE,
+                TRACEABILITY_CACHE, REPORTS_CACHE, PROJECT_CACHE,
+                TEST_SUMMARY_CACHE, REQUIREMENT_COVERAGE_CACHE
         );
         cacheManager.setCaffeine(caffeineCacheBuilder());
         return cacheManager;

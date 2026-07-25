@@ -22,92 +22,92 @@ spring:
       routes:
         # Auth Service (frontend uses /api/auth/*)
         - id: auth-service-api
-          uri: http://jira-auth-service:8081
+          uri: http://auth-service:8081
           predicates:
             - Path=/api/auth/**
           filters:
             - StripPrefix=1
 
         - id: auth-service
-          uri: http://jira-auth-service:8081
+          uri: http://auth-service:8081
           predicates:
             - Path=/auth/**
 
         # User Service
         - id: user-service
-          uri: http://jira-user-service:8082
+          uri: http://user-service:8082
           predicates:
             - Path=/users/**
 
         # Project Service (controllers use /api/projects and /api/templates paths)
         - id: project-service
-          uri: http://jira-project-service:8083
+          uri: http://project-service:8083
           predicates:
             - Path=/api/projects/**
 
         - id: templates-api
-          uri: http://jira-project-service:8083
+          uri: http://project-service:8083
           predicates:
             - Path=/api/templates/**
 
         - id: security-levels-api
-          uri: http://jira-project-service:8083
+          uri: http://project-service:8083
           predicates:
             - Path=/api/security-levels/**
 
         - id: screen-schemes-api
-          uri: http://jira-project-service:8083
+          uri: http://project-service:8083
           predicates:
             - Path=/api/screen-schemes/**
 
         # Issue Service
         - id: issue-service
-          uri: http://jira-issue-service:8084
+          uri: http://issue-service:8084
           predicates:
             - Path=/api/issues/**
 
         # Version Service
         - id: version-service
-          uri: http://jira-version-service:8096
+          uri: http://version-service:8096
           predicates:
             - Path=/versions/**
           filters:
             - RewritePath=/versions(?<path>/?.*), /api/versions$\{path}
         - id: version-service-api
-          uri: http://jira-version-service:8096
+          uri: http://version-service:8096
           predicates:
             - Path=/api/versions/**
 
         # Component Service
         - id: component-service
-          uri: http://jira-component-service:8097
+          uri: http://component-service:8097
           predicates:
             - Path=/components/**
           filters:
             - RewritePath=/components(?<path>/?.*), /api/components$\{path}
         - id: component-service-api
-          uri: http://jira-component-service:8097
+          uri: http://component-service:8097
           predicates:
             - Path=/api/components/**
 
         # Workflow Service
         - id: workflow-service
-          uri: http://jira-workflow-service:8085
+          uri: http://workflow-service:8085
           predicates:
             - Path=/workflows/**
         - id: workflow-script-service
-          uri: http://jira-workflow-service:8085
+          uri: http://workflow-service:8085
           predicates:
             - Path=/api/workflow/scripts/**
 
         # Sprint Service
         - id: sprint-service
-          uri: http://jira-sprint-service:8091
+          uri: http://sprint-service:8091
           predicates:
             - Path=/api/sprints/**
 
         - id: sprint-service-root
-          uri: http://jira-sprint-service:8091
+          uri: http://sprint-service:8091
           predicates:
             - Path=/sprints/**
           filters:
@@ -115,12 +115,12 @@ spring:
 
         # Board Service
         - id: board-service
-          uri: http://jira-sprint-service:8091
+          uri: http://sprint-service:8091
           predicates:
             - Path=/api/boards/**
 
         - id: board-service-root
-          uri: http://jira-sprint-service:8091
+          uri: http://sprint-service:8091
           predicates:
             - Path=/boards/**
           filters:
@@ -128,12 +128,12 @@ spring:
 
         # Plan Service
         - id: plan-service
-          uri: http://jira-plan-service:8092
+          uri: http://plan-service:8092
           predicates:
             - Path=/api/plans/**
 
         - id: plan-service-root
-          uri: http://jira-plan-service:8092
+          uri: http://plan-service:8092
           predicates:
             - Path=/plans/**
           filters:
@@ -141,14 +141,14 @@ spring:
 
         # Program Service
         - id: program-service
-          uri: http://jira-plan-service:8092
+          uri: http://plan-service:8092
           predicates:
             - Path=/api/programs/**
           filters:
             - StripPrefix=1
 
         - id: program-service-root
-          uri: http://jira-plan-service:8092
+          uri: http://plan-service:8092
           predicates:
             - Path=/programs/**
           filters:
@@ -157,13 +157,13 @@ spring:
         # Migration Service
         # Migration controllers use /api/migration/* paths — do not strip prefix
         - id: migration-service
-          uri: http://jira-migration-service:8094
+          uri: http://migration-service:8094
           predicates:
             - Path=/api/migration/**
 
         # User Service - Jira CWD admin API (frontend uses /user-service/rest/admin/1.0/*)
         - id: user-service-admin
-          uri: http://jira-user-service:8082
+          uri: http://user-service:8082
           predicates:
             - Path=/user-service/**
           filters:
@@ -171,20 +171,20 @@ spring:
 
         # Admin Service
         - id: admin-service
-          uri: http://jira-admin-service:8093
+          uri: http://admin-service:8093
           predicates:
             - Path=/admin/**
           filters:
             - RewritePath=/admin(?<path>/?.*), /api/admin${path}
 
         - id: admin-api
-          uri: http://jira-admin-service:8093
+          uri: http://admin-service:8093
           predicates:
             - Path=/api/admin/**
 
         # Fields Service
         - id: fields-api
-          uri: http://jira-admin-service:8093
+          uri: http://admin-service:8093
           predicates:
             - Path=/api/fields/**
           filters:
@@ -192,19 +192,19 @@ spring:
 
         # Comment Service
         - id: comment-service
-          uri: http://jira-comment-service:8086
+          uri: http://comment-service:8086
           predicates:
             - Path=/comments/**
           filters:
             - RewritePath=/comments(?<segment>/?.*), /api/comments$\{segment}
         - id: comment-service-api
-          uri: http://jira-comment-service:8086
+          uri: http://comment-service:8086
           predicates:
             - Path=/api/comments/**
 
         # Test Service
         - id: test-service
-          uri: http://jira-test-service:8095
+          uri: http://test-service:8095
           predicates:
             - Path=/api/tests/**
           filters:
@@ -212,24 +212,24 @@ spring:
 
         # Notification Service
         - id: notification-service
-          uri: http://jira-notification-service:8087
+          uri: http://notification-service:8087
           predicates:
             - Path=/notifications/**
 
         # Search Service
         - id: search-service
-          uri: http://jira-search-service:8088
+          uri: http://search-service:8088
           predicates:
             - Path=/search/**
 
         # Audit Service
         - id: audit-service
-          uri: http://jira-audit-service:8089
+          uri: http://audit-service:8089
           predicates:
             - Path=/audit/**
 
         - id: audit-api
-          uri: http://jira-audit-service:8089
+          uri: http://audit-service:8089
           predicates:
             - Path=/api/audit/**
           filters:
@@ -237,24 +237,24 @@ spring:
 
         # Attachment Service
         - id: attachment-service
-          uri: http://jira-attachment-service:8090
+          uri: http://attachment-service:8090
           predicates:
             - Path=/attachments/**
           filters:
             - RewritePath=/attachments(?<segment>/?.*), /api/attachments$\{segment}
         - id: attachment-service-api
-          uri: http://jira-attachment-service:8090
+          uri: http://attachment-service:8090
           predicates:
             - Path=/api/attachments/**
 
         # WebSocket
         - id: issue-websocket
-          uri: ws://jira-issue-service:8084
+          uri: ws://issue-service:8084
           predicates:
             - Path=/ws/issues/**
 
         - id: websocket-passthrough
-          uri: ws://jira-issue-service:8084
+          uri: ws://issue-service:8084
           predicates:
             - Path=/ws/**
 

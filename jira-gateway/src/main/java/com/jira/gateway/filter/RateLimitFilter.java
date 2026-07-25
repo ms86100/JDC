@@ -1,6 +1,5 @@
 package com.jira.gateway.filter;
 
-import io.github.bucket4j.Bucket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -48,20 +47,12 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
         // Get client identifier (user ID from JWT or IP address)
         String clientKey = getClientKey(exchange);
 
-        Bucket bucket = rateLimiterConfig.resolveBucket(clientKey);
+        boolean allowed = rateLimiterConfig.isAllowed(clientKey);
 
-        // Try to consume a token
-        var probe = bucket.tryConsumeAndReturnRemaining(1);
-
-        if (probe.isConsumed()) {
-            // Add rate limit headers
-            exchange.getResponse().getHeaders().add("X-Rate-Limit-Remaining",
-                    String.valueOf(probe.getRemainingTokens()));
+        if (allowed) {
             exchange.getResponse().getHeaders().add("X-Rate-Limit-Limit", "100");
-
             return chain.filter(exchange);
         } else {
-            // Rate limit exceeded
             log.warn("Rate limit exceeded for client: {} on path: {}", clientKey, path);
 
             exchange.getResponse().getHeaders().add("X-Rate-Limit-Remaining", "0");

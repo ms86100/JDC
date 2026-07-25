@@ -214,6 +214,13 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- Cluster Commons — distributed locking, scheduling, caching -->
+        <dependency>
+            <groupId>com.jira</groupId>
+            <artifactId>jira-cluster-commons</artifactId>
+            <version>1.0.0</version>
+        </dependency>
     </dependencies>
 
     <build>

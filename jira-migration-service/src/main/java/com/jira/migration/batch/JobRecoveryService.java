@@ -9,6 +9,7 @@ import com.jira.migration.repository.MigrationJobRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -256,6 +257,7 @@ public class JobRecoveryService {
      * Clean up stale jobs older than the configured threshold.
      */
     @Scheduled(cron = "${job.recovery.cleanup-cron:0 0 * * * *}")
+    @SchedulerLock(name = "JobRecoveryService_cleanupStaleJobs", lockAtMostFor = "PT15M", lockAtLeastFor = "PT2M")
     @Transactional
     public void cleanupStaleJobs() {
         if (!recoveryConfig.isEnabled()) {
@@ -293,6 +295,7 @@ public class JobRecoveryService {
      * Clean up orphaned resources from interrupted jobs.
      */
     @Scheduled(fixedRateString = "${job.recovery.orphan-cleanup-interval-ms:3600000}")
+    @SchedulerLock(name = "JobRecoveryService_cleanupOrphanedResources", lockAtMostFor = "PT48M", lockAtLeastFor = "PT24M")
     @Transactional
     public void cleanupOrphanedResources() {
         if (!recoveryConfig.isEnabled() || !recoveryConfig.isCleanupOrphanedResources()) {
