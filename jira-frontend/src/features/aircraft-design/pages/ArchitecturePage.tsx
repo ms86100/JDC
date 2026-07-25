@@ -22,6 +22,7 @@ const TABS = [
   'System Overview',
   'Cluster Architecture',
   'Enterprise Hardening',
+  'Platform Capabilities',
   'Service Map',
   'Issue & Workflow',
   'Domain Model',
@@ -691,7 +692,224 @@ function renderEnterpriseHardening() {
   );
 }
 
-/* ── Tab 4: Service Map ── */
+/* ── Tab 4: Platform Capabilities ── */
+function renderPlatformCapabilities() {
+  const phases = [
+    {
+      id: 'A', title: 'Event-Driven Architecture', color: C.brand, status: 'DONE',
+      desc: 'Kafka + Zookeeper for asynchronous inter-service messaging. Eliminates synchronous coupling — a slow downstream service no longer blocks the caller.',
+      items: [
+        'Kafka + Zookeeper in Docker Compose and K8s',
+        '7 topic definitions (issue, workflow, notification, audit, search, user, project)',
+        'KafkaAutoConfiguration in cluster-commons (conditional activation)',
+        'KAFKA_BOOTSTRAP_SERVERS wired to issue, workflow, notification, search, audit services',
+      ],
+    },
+    {
+      id: 'B', title: 'CQRS + Read Replicas', color: C.success, status: 'DONE',
+      desc: 'Read-write separation doubles read capacity. Search, dashboard, and report queries no longer compete with writes on the same database.',
+      items: [
+        'ReadOnlyRoutingDataSource routes @Transactional(readOnly=true) to replica',
+        'DataSourceRoutingAutoConfiguration (conditional on cluster.datasource.read-replica.enabled)',
+        'PostgreSQL streaming replica in Docker Compose (pg_basebackup + hot_standby)',
+        'Primary for writes, replica for reads — transparent to service code',
+      ],
+    },
+    {
+      id: 'C', title: 'Multi-Tenancy', color: C.purple, status: 'DONE',
+      desc: 'Tenant isolation enables a single deployment to serve multiple organizations securely. Required for SaaS and multi-industry sales.',
+      items: [
+        'TenantContext (ThreadLocal) — propagates tenant ID across the request lifecycle',
+        'TenantFilter — extracts X-Tenant-ID header and sets context + MDC',
+        'TenantIdentifierResolver — Hibernate integration for tenant-aware queries',
+        'Conditional activation via cluster.tenant.enabled property',
+      ],
+    },
+    {
+      id: 'D', title: 'Database Partitioning + Archival', color: C.warning, status: 'DONE',
+      desc: 'Table partitioning keeps hot data fast. Issues partitioned by project, audit logs by quarter. Critical past 10M records.',
+      items: [
+        'Issues table: LIST partitioning by project_id (partition per project)',
+        'Audit logs: RANGE partitioning by created_at (quarterly partitions)',
+        'ArchivalProperties — configurable retention days, batch size, archive schema',
+        'Flyway migrations for partition table structures',
+      ],
+    },
+    {
+      id: 'E', title: 'OAuth2 / OIDC Federation', color: C.teal, status: 'DONE',
+      desc: 'Enterprise SSO via Azure AD, Okta, Keycloak. Supports both local JWT and external OIDC tokens simultaneously.',
+      items: [
+        'OAuth2Properties — trusted issuers, JWK set URI, claims mapping',
+        'spring-boot-starter-oauth2-resource-server in auth-service',
+        'Local auth fallback (works without external IdP configured)',
+        'Conditional activation via cluster.oauth2.enabled',
+      ],
+    },
+    {
+      id: 'F', title: 'Observability Platform', color: C.danger, status: 'DONE',
+      desc: 'Prometheus + Grafana with pre-built dashboards and 6 enterprise alert rules. Turns raw metrics into actionable insights.',
+      items: [
+        'Prometheus scraping all 16 services at /actuator/prometheus',
+        'Grafana with auto-provisioned dashboards (service health, HTTP rate, P99, HikariCP, JVM, circuit breakers)',
+        '6 alert rules: ServiceDown, HighErrorRate, HikariPoolExhausted, CircuitBreakerOpen, HighP99Latency, JvmMemoryHigh',
+        'Zipkin datasource for distributed trace exploration',
+      ],
+    },
+    {
+      id: 'G', title: 'CI/CD + Performance Testing', color: C.dark, status: 'DONE',
+      desc: 'Automated build pipeline with ArchUnit gates and Gatling load tests. Manual deployment is unsustainable at scale.',
+      items: [
+        'GitHub Actions CI: build all services, ArchUnit cluster safety tests, Docker Compose validation',
+        'Docker build job: package JARs, build images, verify compose startup',
+        'Gatling performance test scaffold: login, list issues, search',
+        'Load profile: ramp to 500 users, P99 < 2s, > 99% success rate',
+      ],
+    },
+  ];
+
+  const completedCapabilities = [
+    { category: 'Clustering', items: ['Load Balancer (Gateway DNS)', 'Horizontal Scaling (HPA)', 'Vertical Scaling (tuned pools)', 'Shared Storage (MinIO)', 'Distributed Cache (Caffeine + Redis)', 'WebSocket Relay (Redis pub/sub)', 'Scheduler Coordination (ShedLock)'] },
+    { category: 'Security', items: ['JWT auth (15min access)', 'CORS restriction', 'Redis authentication', 'Fail-closed permissions', 'Actuator restriction', 'Stacktrace suppression'] },
+    { category: 'Performance', items: ['HikariCP 50/30/20 pools', 'Hibernate batch (50)', 'LAZY fetch on entities', 'Bounded thread pools', 'Slow query logging', 'Missing index fixes'] },
+    { category: 'Resilience', items: ['Circuit breakers (Resilience4j)', 'Retry policies (3x, 500ms)', 'Graceful shutdown (30s)', 'Async error handler', 'Idempotency (Redis)', 'Correlation ID filter'] },
+    { category: 'Observability', items: ['Distributed tracing (Zipkin)', 'Structured logging (JSON)', 'Prometheus metrics', 'Grafana dashboards', '6 alert rules', 'Health indicators'] },
+    { category: 'Infrastructure', items: ['Kafka event bus', 'Read replicas (CQRS)', 'Multi-tenancy', 'DB partitioning', 'OAuth2/OIDC', 'CI/CD pipeline', 'Performance tests'] },
+  ];
+
+  return (
+    <div>
+      <SectionHeading>Platform Capabilities -- Complete Enterprise Architecture</SectionHeading>
+      <Paragraph>
+        Every capability required for an enterprise-grade, multi-tenant, horizontally scalable platform
+        supporting 4,000+ concurrent users across millions of records. All 7 advanced phases implemented
+        on top of the cluster architecture and enterprise hardening foundations.
+      </Paragraph>
+
+      {/* Architecture Diagram */}
+      <div style={{ position: 'relative', padding: 20, background: C.bg, borderRadius: 8, marginBottom: 24 }}>
+        <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: C.dark, marginBottom: 16 }}>
+          Complete Platform Architecture
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+          <DiagramBox label="Internet / Users" color={C.subtle} width={200} />
+        </div>
+        <DownArrow />
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+          <DiagramBox label="TLS Termination" sub="nginx / haproxy" color={C.dark} width={220} />
+        </div>
+        <DownArrow />
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+          <DiagramBox label="API Gateway" sub="Rate limit + JWT + CORS + Circuit breaker" color={C.brand} width={350} />
+        </div>
+        <DownArrow />
+        <div style={{ textAlign: 'center', fontSize: 11, color: C.subtle, margin: '4px 0' }}>Docker DNS / K8s Service (Load Balancer)</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginBottom: 8 }}>
+          {['Issue x3','Auth x2','Workflow x2','Search x2','Sprint','Notification x2'].map(n => (
+            <DiagramBox key={n} label={n} color={C.brand} width={110} height={40} fontSize={10} />
+          ))}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginBottom: 8 }}>
+          {['Project','User','Comment','Admin','Test','Plan'].map(n => (
+            <DiagramBox key={n} label={n} color={C.teal} width={110} height={40} fontSize={10} />
+          ))}
+        </div>
+        <DownArrow />
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+          <DiagramBox label="PostgreSQL" sub="Primary + Replica (CQRS)" color={C.dbBg} width={170} />
+          <DiagramBox label="Redis" sub="Cache + Pub/Sub + Locks" color={C.danger} width={170} />
+          <DiagramBox label="Kafka" sub="Event Bus (7 topics)" color={C.dark} width={170} />
+          <DiagramBox label="MinIO" sub="S3 Shared Storage" color={C.success} width={140} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 8 }}>
+          <DiagramBox label="Prometheus" sub="Metrics (16 services)" color={C.warning} width={160} />
+          <DiagramBox label="Grafana" sub="Dashboards + Alerts" color={C.purple} width={160} />
+          <DiagramBox label="Zipkin" sub="Distributed Tracing" color={C.teal} width={160} />
+        </div>
+      </div>
+
+      {/* Phase Cards */}
+      <div style={{ marginBottom: 24 }}>
+        <h4 style={{ fontSize: 15, fontWeight: 600, color: C.dark, margin: '0 0 12px' }}>Advanced Capability Phases (A-G)</h4>
+        {phases.map((p) => (
+          <div key={p.id} style={{ marginBottom: 12, padding: 14, background: C.white, borderRadius: 6, border: `1px solid ${C.border}`, borderLeft: `4px solid ${p.color}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div>
+                <span style={{ fontWeight: 700, color: p.color, fontSize: 13, marginRight: 8 }}>Phase {p.id}</span>
+                <span style={{ fontWeight: 600, fontSize: 14, color: C.dark }}>{p.title}</span>
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 700, color: C.success, background: '#e3fcef', padding: '2px 10px', borderRadius: 4 }}>{p.status}</span>
+            </div>
+            <div style={{ fontSize: 12, color: C.subtle, marginBottom: 8 }}>{p.desc}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {p.items.map((item) => (
+                <span key={item} style={{ fontSize: 11, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, padding: '3px 8px', color: C.dark }}>{item}</span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Capability Matrix */}
+      <div className="ads-card">
+        <h4 className="ads-card-title">Complete Capability Matrix</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+          {completedCapabilities.map((cat) => (
+            <div key={cat.category} style={{ padding: 12, background: C.bg, borderRadius: 6 }}>
+              <div style={{ fontWeight: 600, fontSize: 13, color: C.dark, marginBottom: 8 }}>{cat.category}</div>
+              {cat.items.map((item) => (
+                <div key={item} style={{ fontSize: 11, color: C.dark, lineHeight: 1.8, paddingLeft: 12, position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 0, color: C.success }}>{'✓'}</span>{item}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Key Stats */}
+      <div className="ads-stats" style={{ marginTop: 16 }}>
+        <div className="ads-stat ads-stat--brand">
+          <span className="ads-stat-value">22</span>
+          <span className="ads-stat-label">Microservices</span>
+        </div>
+        <div className="ads-stat ads-stat--success">
+          <span className="ads-stat-value">7</span>
+          <span className="ads-stat-label">Infrastructure Services</span>
+        </div>
+        <div className="ads-stat ads-stat--warning">
+          <span className="ads-stat-value">40+</span>
+          <span className="ads-stat-label">Enterprise Capabilities</span>
+        </div>
+        <div className="ads-stat">
+          <span className="ads-stat-value">4K+</span>
+          <span className="ads-stat-label">Concurrent Users</span>
+        </div>
+      </div>
+
+      {/* Scaling Commands */}
+      <div className="ads-card" style={{ marginTop: 16 }}>
+        <h4 className="ads-card-title">Deployment Commands</h4>
+        <div style={{ background: C.dbBg, borderRadius: 6, padding: 16, fontFamily: 'monospace', fontSize: 12, color: '#a5d6a7', lineHeight: 2 }}>
+          <div style={{ color: '#888' }}># Standard deployment</div>
+          <div>docker compose up --build</div>
+          <div style={{ marginTop: 8, color: '#888' }}># Cluster mode (multi-node)</div>
+          <div>docker compose -f docker-compose.yml -f docker-compose.cluster.yml up</div>
+          <div style={{ marginTop: 8, color: '#888' }}># Full observability stack</div>
+          <div>{'# Prometheus: http://localhost:9090  |  Grafana: http://localhost:3001  |  Zipkin: http://localhost:9411'}</div>
+          <div style={{ marginTop: 8, color: '#888' }}># Performance test</div>
+          <div>cd performance-tests {'&&'} mvn gatling:test</div>
+          <div style={{ marginTop: 8, color: '#888' }}># Enable multi-tenancy</div>
+          <div>{'# Set cluster.tenant.enabled=true in application.yml'}</div>
+          <div style={{ marginTop: 8, color: '#888' }}># Enable OAuth2/OIDC</div>
+          <div>{'# Set OAUTH2_ENABLED=true + OAUTH2_ISSUER_URI=https://your-idp'}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Tab 5: Service Map ── */
 function renderServiceMap() {
   const services = [
     { name: 'auth-service', port: '8081', schema: 'jira_auth', entities: 4, keyModels: 'Role, UserGroup, Permission, SessionToken', dependsOn: '--', keyEndpoints: '/api/auth/login, /api/auth/register, /api/auth/token/refresh' },
@@ -3022,6 +3240,8 @@ export default function ArchitecturePage() {
         return renderClusterArchitecture();
       case 'Enterprise Hardening':
         return renderEnterpriseHardening();
+      case 'Platform Capabilities':
+        return renderPlatformCapabilities();
       case 'Service Map':
         return renderServiceMap();
       case 'Issue & Workflow':
