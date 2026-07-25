@@ -77,7 +77,7 @@ ON CONFLICT (permission_key) DO NOTHING;
 -- Permission scheme grants (who gets which permission)
 CREATE TABLE IF NOT EXISTS jira_admin.permission_scheme_grants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    permission_scheme_id UUID NOT NULL REFERENCES jira_admin.permission_schemes(id) ON DELETE CASCADE,
+    permission_scheme_id UUID NOT NULL REFERENCES jira_admin.permission_schemes(id,
     permission_id UUID NOT NULL REFERENCES jira_admin.permissions(id),
     holder_type VARCHAR(50) NOT NULL,
     holder_id UUID,
@@ -106,7 +106,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Role permissions (what each role can do)
 CREATE TABLE IF NOT EXISTS jira_admin.role_permissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_role_id UUID NOT NULL REFERENCES jira_admin.project_roles(id) ON DELETE CASCADE,
+    project_role_id UUID NOT NULL REFERENCES jira_admin.project_roles(id,
     permission_id UUID NOT NULL REFERENCES jira_admin.permissions(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(project_role_id, permission_id)
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS jira_admin.groups (
 CREATE TABLE IF NOT EXISTS jira_admin.user_group_membership (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
-    group_id UUID NOT NULL REFERENCES jira_admin.groups(id) ON DELETE CASCADE,
+    group_id UUID NOT NULL REFERENCES jira_admin.groups(id,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, group_id)
 );
@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS jira_admin.issue_type_screen_schemes (
 
 CREATE TABLE IF NOT EXISTS jira_admin.issue_type_screen_scheme_mappings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    issue_type_screen_scheme_id UUID NOT NULL REFERENCES jira_admin.issue_type_screen_schemes(id) ON DELETE CASCADE,
+    issue_type_screen_scheme_id UUID NOT NULL REFERENCES jira_admin.issue_type_screen_schemes(id,
     issue_type_id VARCHAR(50),
     screen_scheme_id UUID NOT NULL REFERENCES jira_admin.screen_schemes(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -220,7 +220,7 @@ CREATE TABLE IF NOT EXISTS jira_admin.field_configurations (
 
 CREATE TABLE IF NOT EXISTS jira_admin.field_configuration_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    field_configuration_id UUID NOT NULL REFERENCES jira_admin.field_configurations(id) ON DELETE CASCADE,
+    field_configuration_id UUID NOT NULL REFERENCES jira_admin.field_configurations(id,
     field_key VARCHAR(100) NOT NULL,
     is_shown BOOLEAN DEFAULT TRUE,
     is_required BOOLEAN DEFAULT FALSE,
@@ -320,7 +320,7 @@ ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS jira_admin.notification_scheme_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    notification_scheme_id UUID NOT NULL REFERENCES jira_admin.notification_schemes(id) ON DELETE CASCADE,
+    notification_scheme_id UUID NOT NULL REFERENCES jira_admin.notification_schemes(id,
     event_id UUID NOT NULL REFERENCES jira_admin.notification_events(id),
     notification_type VARCHAR(50) NOT NULL,
     notifier_id UUID,

@@ -254,7 +254,7 @@ INSERT INTO jira_issue.issue_types (name, issue_type_key, icon, description, is_
     ('Problem Report', 'problem-report', 'problem-report', 'Formal problem report',                        false, 27, '#DE350B'),
     ('Test Request',   'test-request',   'test-request',   'Request for test execution',                    false, 28, '#00875A'),
     ('Deliverable',    'deliverable',    'deliverable',    'A deliverable artifact',                        false, 29, '#253858')
-ON CONFLICT (issue_type_key) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 -- ============================================
 -- 8. ISSUE LINK TYPES
@@ -265,4 +265,4 @@ INSERT INTO jira_issue.issue_link_types (name, inward, outward, style, sequence)
     ('contains',      'is contained by',    'contains',         'contain', 11),
     ('Change',        'changed by',         'Change',           'change',  12),
     ('Defect',        'defect of',          'Defect',           'defect',  13)
-ON CONFLICT (name) DO NOTHING;
+ON CONFLICT DO NOTHING;

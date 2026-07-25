@@ -28,7 +28,7 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================================
 DO $$
 DECLARE
-    scheme_id UUID := 'a1000000-0000-0000-0000-000000000001';
+    v_scheme_id UUID := 'a1000000-0000-0000-0000-000000000001';
 
     -- Workflow IDs from V18
     wf_vvo            UUID := 'a0000001-0000-0000-0000-000000000001';
@@ -54,7 +54,7 @@ BEGIN
     INSERT INTO jira_workflow.workflow_schemes
         (id, name, description, is_default, default_workflow_id, is_active, created_at, updated_at)
     VALUES
-        (scheme_id,
+        (v_scheme_id,
          'Aircraft Design System Scheme',
          'Workflow scheme for SYSDOPS aircraft design V&V lifecycle — maps each issue type to its specialized workflow',
          true, wf_vvo, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -63,16 +63,16 @@ BEGIN
     -- Map each issue type to its workflow
     INSERT INTO jira_workflow.workflow_scheme_mappings (id, scheme_id, issue_type_id, workflow_id, created_at)
     VALUES
-        (gen_random_uuid(), scheme_id, it_vvo,            wf_vvo,            CURRENT_TIMESTAMP),
-        (gen_random_uuid(), scheme_id, it_hlvvo,          wf_hlvvo,          CURRENT_TIMESTAMP),
-        (gen_random_uuid(), scheme_id, it_change_card,    wf_change_card,    CURRENT_TIMESTAMP),
-        (gen_random_uuid(), scheme_id, it_tech_event,     wf_tech_event,     CURRENT_TIMESTAMP),
-        (gen_random_uuid(), scheme_id, it_problem_report, wf_problem_report, CURRENT_TIMESTAMP),
-        (gen_random_uuid(), scheme_id, it_bench_defect,   wf_bench_defect,   CURRENT_TIMESTAMP),
+        (gen_random_uuid(), v_scheme_id, it_vvo,            wf_vvo,            CURRENT_TIMESTAMP),
+        (gen_random_uuid(), v_scheme_id, it_hlvvo,          wf_hlvvo,          CURRENT_TIMESTAMP),
+        (gen_random_uuid(), v_scheme_id, it_change_card,    wf_change_card,    CURRENT_TIMESTAMP),
+        (gen_random_uuid(), v_scheme_id, it_tech_event,     wf_tech_event,     CURRENT_TIMESTAMP),
+        (gen_random_uuid(), v_scheme_id, it_problem_report, wf_problem_report, CURRENT_TIMESTAMP),
+        (gen_random_uuid(), v_scheme_id, it_bench_defect,   wf_bench_defect,   CURRENT_TIMESTAMP),
         -- Secondary mappings: these issue types share workflows with related types
-        (gen_random_uuid(), scheme_id, it_design_item,    wf_change_card,    CURRENT_TIMESTAMP),
-        (gen_random_uuid(), scheme_id, it_dcl,            wf_change_card,    CURRENT_TIMESTAMP),
-        (gen_random_uuid(), scheme_id, it_deliverable,    wf_change_card,    CURRENT_TIMESTAMP),
-        (gen_random_uuid(), scheme_id, it_test_request,   wf_vvo,            CURRENT_TIMESTAMP)
-    ON CONFLICT (scheme_id, issue_type_id) DO NOTHING;
+        (gen_random_uuid(), v_scheme_id, it_design_item,    wf_change_card,    CURRENT_TIMESTAMP),
+        (gen_random_uuid(), v_scheme_id, it_dcl,            wf_change_card,    CURRENT_TIMESTAMP),
+        (gen_random_uuid(), v_scheme_id, it_deliverable,    wf_change_card,    CURRENT_TIMESTAMP),
+        (gen_random_uuid(), v_scheme_id, it_test_request,   wf_vvo,            CURRENT_TIMESTAMP)
+    ON CONFLICT DO NOTHING;
 END $$;

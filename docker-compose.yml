@@ -49,7 +49,7 @@ services:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
     networks:
       - jira-network
     depends_on:
@@ -75,7 +75,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       JWT_SECRET: jira-platform-super-secret-key-that-is-at-least-256-bits-long
       JWT_EXPIRATION_MS: 86400000
       JWT_REFRESH_EXPIRATION_MS: 604800000
@@ -105,7 +105,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
     networks:
       - jira-network
     depends_on:
@@ -134,7 +134,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
     networks:
       - jira-network
     depends_on:
@@ -163,7 +163,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       WORKFLOW_SERVICE_URL: http://workflow-service:8085
       PROJECT_SERVICE_URL: http://project-service:8083
       VERSION_SERVICE_URL: http://version-service:8096
@@ -197,7 +197,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       ISSUE_SERVICE_URL: http://jira-issue-service:8084
       COMMENT_SERVICE_URL: http://jira-comment-service:8086
       ATTACHMENT_SERVICE_URL: http://jira-attachment-service:8090
@@ -231,7 +231,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
     networks:
       - jira-network
     depends_on:
@@ -260,7 +260,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
     networks:
       - jira-network
     depends_on:
@@ -289,7 +289,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
     networks:
       - jira-network
     depends_on:
@@ -318,7 +318,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
     networks:
       - jira-network
     depends_on:
@@ -351,7 +351,7 @@ services:
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
       ATTACHMENT_STORAGE_PATH: /var/jira/attachments
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
     volumes:
       - attachment_data:/var/jira/attachments
     networks:
@@ -385,7 +385,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
     networks:
       - jira-network
     depends_on:
@@ -417,7 +417,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
     networks:
       - jira-network
     depends_on:
@@ -449,7 +449,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
     networks:
       - jira-network
     depends_on:
@@ -481,7 +481,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
     networks:
       - jira-network
     depends_on:
@@ -513,7 +513,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
     networks:
       - jira-network
     depends_on:
@@ -546,7 +546,7 @@ services:
       DB_NAME: jira_platform
       DB_USERNAME: jiraadmin
       DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      JAVA_OPTS: -Xms128m -Xmx256m
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       GATEWAY_SERVICE_URL: http://jira-gateway:8080
       AUTH_SERVICE_URL: http://jira-auth-service:8081
       USER_SERVICE_URL: http://jira-user-service:8082
