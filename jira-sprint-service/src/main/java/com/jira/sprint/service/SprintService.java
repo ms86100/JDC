@@ -12,6 +12,7 @@ import com.jira.sprint.repository.SprintIssueRepository;
 import com.jira.sprint.repository.SprintRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ public class SprintService {
     private final SprintIssueRepository sprintIssueRepository;
     private final AgileBoardRepository agileBoardRepository;
     private final org.springframework.web.client.RestTemplate restTemplate;
+    private final MessageSource messageSource;
 
     @Transactional
     public SprintResponse createSprint(CreateSprintRequest request, UUID createdBy) {
@@ -199,12 +201,12 @@ public class SprintService {
     public void addIssueToSprint(UUID sprintId, UUID issueId) {
         Sprint sprint = findSprintById(sprintId);
         if (sprint.getStatus() == Sprint.SprintStatus.COMPLETED) {
-            throw new IllegalStateException("Cannot add issues to a completed sprint");
+            throw new IllegalStateException(messageSource.getMessage("error.sprint.cannot.add.completed", null, Locale.ENGLISH));
         }
 
         // Check if already in sprint
         if (sprintIssueRepository.findBySprintIdAndIssueId(sprintId, issueId).isPresent()) {
-            throw new IllegalArgumentException("Issue already in sprint");
+            throw new IllegalArgumentException(messageSource.getMessage("error.sprint.issue.already.in.sprint", null, Locale.ENGLISH));
         }
 
         // Get max order index
@@ -255,7 +257,7 @@ public class SprintService {
 
     private Sprint findSprintById(UUID sprintId) {
         return sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found: " + sprintId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.sprint.not.found", new Object[]{sprintId}, Locale.ENGLISH)));
     }
 
     @org.springframework.beans.factory.annotation.Value("${admin.service.url:http://jira-admin-service:8093}")

@@ -1,20 +1,20 @@
 package com.jira.workflow.service;
 
-import lombok.RequiredArgsConstructor;
+import com.jira.cluster.util.StatusCategoryHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Resolves global issue status IDs to display metadata (Jira DC status catalog).
@@ -25,32 +25,32 @@ import java.util.concurrent.ConcurrentHashMap;
  * a configurable TTL and refreshed lazily.
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class WorkflowStatusCatalog {
 
-    private static final long CACHE_TTL_MS = 5L * 60L * 1000L; // 5 minutes
+    @Value("${app.workflow.status-catalog.cache-ttl-ms:300000}")
+    private long cacheTtlMs;
 
     private volatile Map<String, StatusMeta> cachedCatalog = new HashMap<>();
     private volatile long cachedAt = 0L;
 
-    private static final Map<String, String> KNOWN_STATUS_NAMES = Map.ofEntries(
-            Map.entry("00000000-0000-0000-0001-000000000001", "Backlog"),
-            Map.entry("00000000-0000-0000-0001-000000000002", "To Do"),
-            Map.entry("00000000-0000-0000-0001-000000000003", "In Progress"),
-            Map.entry("00000000-0000-0000-0001-000000000004", "In Review"),
-            Map.entry("00000000-0000-0000-0001-000000000005", "Done"),
-            Map.entry("00000000-0000-0000-0001-000000000006", "Open"),
-            Map.entry("00000000-0000-0000-0001-000000000007", "Resolved"),
-            Map.entry("00000000-0000-0000-0001-000000000008", "Closed"),
-            Map.entry("00000000-0000-0000-0001-000000000009", "Defined")
-    );
+    @Value("${app.workflow.status-catalog.known-status-names:00000000-0000-0000-0001-000000000001=Backlog,00000000-0000-0000-0001-000000000002=To Do,00000000-0000-0000-0001-000000000003=In Progress,00000000-0000-0000-0001-000000000004=In Review,00000000-0000-0000-0001-000000000005=Done,00000000-0000-0000-0001-000000000006=Open,00000000-0000-0000-0001-000000000007=Resolved,00000000-0000-0000-0001-000000000008=Closed,00000000-0000-0000-0001-000000000009=Defined}")
+    private String knownStatusNamesStr;
 
-    private static final Map<String, String> CATEGORY_COLORS = Map.of(
-            "TODO", "#6C757D",
-            "IN_PROGRESS", "#FF991F",
-            "DONE", "#00875A"
-    );
+    @Value("${app.workflow.status-catalog.color-todo:#6C757D}")
+    private String colorTodo;
+
+    @Value("${app.workflow.status-catalog.color-in-progress:#FF991F}")
+    private String colorInProgress;
+
+    @Value("${app.workflow.status-catalog.color-done:#00875A}")
+    private String colorDone;
+
+    @Value("${app.workflow.status-catalog.null-status-color:#6C757D}")
+    private String nullStatusColor;
+
+    @Value("${app.workflow.status-catalog.legacy-filter-suffix:(legacy)}")
+    private String legacyFilterSuffix;
 
     private final RestTemplate restTemplate;
 
@@ -60,19 +60,44 @@ public class WorkflowStatusCatalog {
     @Value("${jira.services.admin-url:http://localhost:8093}")
     private String adminServiceUrl;
 
+    private Map<String, String> getKnownStatusNames() {
+        Map<String, String> result = new HashMap<>();
+        if (knownStatusNamesStr != null && !knownStatusNamesStr.isBlank()) {
+            for (String entry : knownStatusNamesStr.split(",(?=[0-9a-fA-F]{8}-[0-9a-fA-F]{4})")) {
+                String[] parts = entry.split("=", 2);
+                if (parts.length == 2) {
+                    result.put(parts[0].trim(), parts[1].trim());
+                }
+            }
+        }
+        return result;
+    }
+
+    private Map<String, String> getCategoryColors() {
+        return Map.of(
+                "TODO", colorTodo,
+                "IN_PROGRESS", colorInProgress,
+                "DONE", colorDone
+        );
+    }
+
+    public WorkflowStatusCatalog(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
     public Map<String, StatusMeta> loadCatalog() {
         long now = System.currentTimeMillis();
-        if (!cachedCatalog.isEmpty() && (now - cachedAt) < CACHE_TTL_MS) {
+        if (!cachedCatalog.isEmpty() && (now - cachedAt) < cacheTtlMs) {
             return cachedCatalog;
         }
         synchronized (this) {
-            if (!cachedCatalog.isEmpty() && (System.currentTimeMillis() - cachedAt) < CACHE_TTL_MS) {
+            if (!cachedCatalog.isEmpty() && (System.currentTimeMillis() - cachedAt) < cacheTtlMs) {
                 return cachedCatalog;
             }
             Map<String, StatusMeta> catalog = new HashMap<>();
             mergeIssueStatuses(catalog);
             mergeAdminStatuses(catalog);
-            KNOWN_STATUS_NAMES.forEach((id, name) ->
+            getKnownStatusNames().forEach((id, name) ->
                     catalog.putIfAbsent(id, new StatusMeta(name, inferCategory(name), colorFor(inferCategory(name))))
             );
             cachedCatalog = catalog;
@@ -101,19 +126,19 @@ public class WorkflowStatusCatalog {
         if (meta != null) {
             return meta.name();
         }
-        return KNOWN_STATUS_NAMES.getOrDefault(key, key);
+        return getKnownStatusNames().getOrDefault(key, key);
     }
 
     public StatusMeta resolve(UUID statusId, Map<String, StatusMeta> catalog) {
         if (statusId == null) {
-            return new StatusMeta("—", "TODO", "#6C757D");
+            return new StatusMeta("—", "TODO", nullStatusColor);
         }
         String key = statusId.toString();
         StatusMeta meta = catalog.get(key);
         if (meta != null) {
             return meta;
         }
-        String name = KNOWN_STATUS_NAMES.getOrDefault(key, key);
+        String name = getKnownStatusNames().getOrDefault(key, key);
         String category = inferCategory(name);
         return new StatusMeta(name, category, colorFor(category));
     }
@@ -131,7 +156,8 @@ public class WorkflowStatusCatalog {
             }
             for (Map<String, Object> row : response.getBody()) {
                 String name = stringVal(row.get("name"));
-                if (name != null && name.contains("(legacy)")) {
+                if (name != null && legacyFilterSuffix != null
+                        && !legacyFilterSuffix.isBlank() && name.contains(legacyFilterSuffix)) {
                     continue;
                 }
                 putRow(catalog, row, "category", null);
@@ -175,21 +201,11 @@ public class WorkflowStatusCatalog {
     }
 
     static String inferCategory(String name) {
-        if (name == null) {
-            return "TODO";
-        }
-        String lower = name.toLowerCase();
-        if (lower.contains("done") || lower.contains("closed") || lower.contains("resolved")) {
-            return "DONE";
-        }
-        if (lower.contains("progress") || lower.contains("review")) {
-            return "IN_PROGRESS";
-        }
-        return "TODO";
+        return StatusCategoryHelper.getCategory(name);
     }
 
-    static String colorFor(String category) {
-        return CATEGORY_COLORS.getOrDefault(category, "#6C757D");
+    String colorFor(String category) {
+        return getCategoryColors().getOrDefault(category, nullStatusColor);
     }
 
     public record StatusMeta(String name, String category, String color) {}

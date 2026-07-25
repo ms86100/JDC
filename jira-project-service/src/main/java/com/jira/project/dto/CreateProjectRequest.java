@@ -15,15 +15,15 @@ import java.util.UUID;
 public class CreateProjectRequest {
 
     @JsonAlias("key")
-    @Size(min = 2, max = 10, message = "Project key must be between 2 and 10 characters")
-    @Pattern(regexp = "^[A-Z][A-Z0-9]{1,9}$", message = "Project key must be 2-10 uppercase alphanumeric characters, starting with a letter")
+    @Size(min = 2, max = 10, message = "{validation.project.key.size}")
+    @Pattern(regexp = "^[A-Z][A-Z0-9]{1,9}$", message = "{validation.project.key.format}")
     private String projectKey;
 
-    @NotBlank(message = "Project name is required")
-    @Size(max = 200, message = "Project name must not exceed 200 characters")
+    @NotBlank(message = "{validation.project.name.required}")
+    @Size(max = 200, message = "{validation.project.name.max}")
     private String name;
 
-    @Size(max = 1000, message = "Description must not exceed 1000 characters")
+    @Size(max = 1000, message = "{validation.project.description.max}")
     private String description;
 
     private UUID leadUserId;

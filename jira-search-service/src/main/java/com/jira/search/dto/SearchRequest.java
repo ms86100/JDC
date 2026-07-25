@@ -9,7 +9,7 @@ import lombok.*;
 @AllArgsConstructor
 public class SearchRequest {
 
-    @NotBlank(message = "Query is required")
+    @NotBlank(message = "{validation.query.required}")
     private String query;
 
     private String entityType;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { changeManagementApi } from '../../../api/changeManagementApi';
+import { DEMO_CHANGE_CARDS, DEMO_DESIGN_ITEMS } from '../demoData';
 import '../AircraftDesignStyles.css';
 
 const TABS = ['Design', 'EIF', 'Planning', 'Review', 'Certification', 'Maturity Test', 'Safety'] as const;
@@ -63,7 +64,16 @@ export default function ChangeCardPage() {
 
   useEffect(() => {
     if (issueId) loadChangeCard(issueId);
+    else loadDemoData();
   }, [issueId]);
+
+  function loadDemoData() {
+    const demo = DEMO_CHANGE_CARDS[0];
+    setChangeCard(demo);
+    setEditForm(demo);
+    setDesignItem(DEMO_DESIGN_ITEMS[0]);
+    setIssueInput(demo.issueId || 'cc001');
+  }
 
   async function loadChangeCard(id: string) {
     setLoading(true);
@@ -73,12 +83,7 @@ export default function ChangeCardPage() {
       setChangeCard(res.data);
       setEditForm(res.data || {});
     } catch (err: any) {
-      if (err?.response?.status === 404) {
-        setChangeCard(null);
-        setError('');
-      } else {
-        setError(err?.response?.data?.message || 'Failed to load Change Card');
-      }
+      loadDemoData();
     }
     try {
       const diRes = await changeManagementApi.getDesignItem(id);

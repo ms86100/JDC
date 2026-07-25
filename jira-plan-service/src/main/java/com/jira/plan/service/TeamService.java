@@ -12,6 +12,7 @@ import com.jira.plan.repository.PlanRepository;
 import com.jira.plan.repository.PlanTeamMemberRepository;
 import com.jira.plan.repository.PlanTeamRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,9 @@ public class TeamService {
     private final PlanTeamRepository teamRepository;
     private final PlanTeamMemberRepository memberRepository;
     private final PlanRepository planRepository;
+
+    @Value("${app.team.default-capacity-hours:40.00}")
+    private String defaultCapacityHours;
 
     @Transactional(readOnly = true)
     public List<TeamResponse> getTeamsByPlanId(UUID planId) {
@@ -110,7 +114,7 @@ public class TeamService {
                 .teamId(teamId)
                 .userId(request.getUserId())
                 .userName(request.getUserName())
-                .capacityHours(request.getCapacityHours() != null ? request.getCapacityHours() : new BigDecimal("40.00"))
+                .capacityHours(request.getCapacityHours() != null ? request.getCapacityHours() : new BigDecimal(defaultCapacityHours))
                 .role(request.getRole())
                 .build();
 

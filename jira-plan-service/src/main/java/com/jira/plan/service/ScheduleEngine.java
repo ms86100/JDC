@@ -9,6 +9,7 @@ import com.jira.plan.repository.WorkingDaysRepository;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -24,6 +25,18 @@ public class ScheduleEngine {
     private final IssueDependencyRepository dependencyRepository;
     private final WorkingDaysService workingDaysService;
     private final WorkingDaysRepository workingDaysRepository;
+
+    @Value("${app.schedule.default-duration-days:5}")
+    private int defaultDurationDays;
+
+    @Value("${app.schedule.target-date-duration-days:7}")
+    private int targetDateDurationDays;
+
+    @Value("${app.working-days.default-name:Default}")
+    private String defaultConfigName;
+
+    @Value("${app.working-days.default-hours-per-day:8.00}")
+    private String defaultHoursPerDayStr;
 
     public ScheduleResult calculateForwardSchedule(UUID planId, LocalDate projectStartDate) {
         log.info("Calculating forward schedule for plan: {} starting from {}", planId, projectStartDate);
@@ -270,12 +283,12 @@ public class ScheduleEngine {
 
     private int getDurationDays(PlanItem item) {
         if (item.getTargetDate() != null) {
-            return 7;
+            return targetDateDurationDays;
         }
 
         Integer storyPoints = item.getStoryPoints();
         if (storyPoints == null) {
-            return 5;
+            return defaultDurationDays;
         }
 
         if (storyPoints <= 3) return 2;
@@ -355,7 +368,7 @@ public class ScheduleEngine {
     private WorkingDays getDefaultWorkingDaysConfig() {
         return workingDaysRepository.findByIsDefaultTrue()
                 .orElseGet(() -> WorkingDays.builder()
-                        .name("Default")
+                        .name(defaultConfigName)
                         .monday(true)
                         .tuesday(true)
                         .wednesday(true)
@@ -363,7 +376,7 @@ public class ScheduleEngine {
                         .friday(true)
                         .saturday(false)
                         .sunday(false)
-                        .hoursPerDay(java.math.BigDecimal.valueOf(8))
+                        .hoursPerDay(new java.math.BigDecimal(defaultHoursPerDayStr))
                         .isDefault(true)
                         .build());
     }

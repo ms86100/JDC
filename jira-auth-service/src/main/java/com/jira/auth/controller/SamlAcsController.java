@@ -5,9 +5,11 @@ import com.jira.auth.security.SamlResponseHandler.SamlAssertionResult;
 import com.jira.auth.service.SamlConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -17,6 +19,7 @@ public class SamlAcsController {
 
     private final SamlResponseHandler samlResponseHandler;
     private final SamlConfigService samlConfigService;
+    private final MessageSource messageSource;
 
     @PostMapping("/saml2/acs/{registrationId}")
     public ResponseEntity<?> assertionConsumerService(
@@ -29,7 +32,8 @@ public class SamlAcsController {
         if (!config.getEnabled()) {
             return ResponseEntity.badRequest().body(Map.of(
                     "error", "saml_configuration_disabled",
-                    "message", "SAML configuration is disabled for registration: " + registrationId));
+                    "message", messageSource.getMessage("saml.error.config.disabled",
+                            new Object[]{registrationId}, Locale.ENGLISH)));
         }
 
         SamlAssertionResult result = samlResponseHandler.parseResponse(
@@ -76,7 +80,8 @@ public class SamlAcsController {
         try {
             var config = samlConfigService.getByRegistrationId(registrationId);
             if (!config.getEnabled()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "SAML configuration is disabled"));
+                return ResponseEntity.badRequest().body(Map.of("error",
+                        messageSource.getMessage("saml.error.config.disabled.short", null, Locale.ENGLISH)));
             }
             return ResponseEntity.ok(Map.of(
                     "idpSsoUrl", config.getIdpSsoUrl(),

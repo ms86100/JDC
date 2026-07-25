@@ -7,11 +7,14 @@ import com.jira.project.exception.ResourceNotFoundException;
 import com.jira.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -22,6 +25,9 @@ public class ArchiveService {
 
     private final ProjectRepository projectRepository;
 
+    @Autowired
+    private MessageSource messageSource;
+
     @Transactional
     public ProjectResponse archiveProject(UUID projectId) {
         log.info("Archiving project: {}", projectId);
@@ -30,7 +36,7 @@ public class ArchiveService {
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
 
         if (Boolean.TRUE.equals(project.getArchived())) {
-            throw new InvalidOperationException("Project is already archived");
+            throw new InvalidOperationException(messageSource.getMessage("error.project.already.archived", null, "Project is already archived", Locale.ENGLISH));
         }
 
         project.setArchived(true);
@@ -49,7 +55,7 @@ public class ArchiveService {
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
 
         if (Boolean.FALSE.equals(project.getArchived())) {
-            throw new InvalidOperationException("Project is not archived");
+            throw new InvalidOperationException(messageSource.getMessage("error.project.not.archived", null, "Project is not archived", Locale.ENGLISH));
         }
 
         project.setArchived(false);

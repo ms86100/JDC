@@ -10,6 +10,7 @@ import com.jira.plan.repository.VelocityHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,9 @@ public class SprintSnapshotService {
     private final SprintSnapshotRepository sprintSnapshotRepository;
     private final VelocityHistoryRepository velocityHistoryRepository;
     private final SprintIssueRepository sprintIssueRepository;
+
+    @Value("${app.sprint.completion-status.completed:COMPLETED}")
+    private String completionStatusCompleted;
 
     /**
      * Record a COMMITMENT snapshot when sprint starts.
@@ -101,7 +105,7 @@ public class SprintSnapshotService {
 
         int totalIssues = issues.size();
         int completedIssues = (int) activeIssues.stream()
-                .filter(i -> "COMPLETED".equals(i.getCompletionStatus()))
+                .filter(i -> completionStatusCompleted.equals(i.getCompletionStatus()))
                 .count();
 
         BigDecimal totalPoints = BigDecimal.ZERO;
@@ -112,7 +116,7 @@ public class SprintSnapshotService {
             BigDecimal points = getIssuePoints(issue);
             if (points != null) {
                 totalPoints = totalPoints.add(points);
-                if ("COMPLETED".equals(issue.getCompletionStatus())) {
+                if (completionStatusCompleted.equals(issue.getCompletionStatus())) {
                     completedPoints = completedPoints.add(points);
                 }
             }

@@ -11,10 +11,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateNotificationSchemeEventRequest {
 
-    @NotBlank(message = "Event type is required")
+    @NotBlank(message = "{validation.scheme.event.type.required}")
     private String eventType;
 
-    @NotBlank(message = "Recipient type is required")
+    @NotBlank(message = "{validation.scheme.event.recipientType.required}")
     private String recipientType;
 
     private UUID recipientId;

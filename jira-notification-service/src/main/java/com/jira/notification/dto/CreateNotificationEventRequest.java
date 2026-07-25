@@ -9,10 +9,10 @@ import lombok.*;
 @AllArgsConstructor
 public class CreateNotificationEventRequest {
 
-    @NotBlank(message = "Event type is required")
+    @NotBlank(message = "{validation.notification.event.type.required}")
     private String eventType;
 
-    @NotBlank(message = "Name is required")
+    @NotBlank(message = "{validation.notification.event.name.required}")
     private String name;
 
     private String description;

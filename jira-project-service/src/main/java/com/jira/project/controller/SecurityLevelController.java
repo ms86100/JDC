@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +30,9 @@ import java.util.stream.Collectors;
 public class SecurityLevelController {
 
     private final SecurityLevelRepository securityLevelRepository;
+
+    @Value("${app.defaults.security-level-type:RESTRICTED}")
+    private String defaultSecurityLevelType;
 
     @GetMapping
     @Operation(summary = "Get all security levels", description = "Returns all available security levels")
@@ -78,7 +82,7 @@ public class SecurityLevelController {
                 .schemeId(request.getSchemeId())
                 .name(request.getName())
                 .description(request.getDescription())
-                .levelType(request.getLevelType() != null ? request.getLevelType() : "RESTRICTED")
+                .levelType(request.getLevelType() != null ? request.getLevelType() : defaultSecurityLevelType)
                 .sequence(request.getSequence() != null ? request.getSequence() : 0)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -95,7 +99,7 @@ public class SecurityLevelController {
                 .schemeId(schemeId)
                 .name(request.getName())
                 .description(request.getDescription())
-                .levelType(request.getLevelType() != null ? request.getLevelType() : "RESTRICTED")
+                .levelType(request.getLevelType() != null ? request.getLevelType() : defaultSecurityLevelType)
                 .sequence(request.getSequence() != null ? request.getSequence() : 0)
                 .createdAt(LocalDateTime.now())
                 .build();

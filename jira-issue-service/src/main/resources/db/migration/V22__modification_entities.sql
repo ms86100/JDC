@@ -18,6 +18,8 @@ CREATE INDEX IF NOT EXISTS idx_modification_metadata_issue ON jira_issue.modific
 CREATE INDEX IF NOT EXISTS idx_modification_metadata_type ON jira_issue.modification_metadata(mod_type);
 
 -- Register MOD issue type (matches pattern from V3__issue_types_and_schemes.sql)
+ALTER TABLE jira_issue.issue_types ADD COLUMN IF NOT EXISTS icon_url VARCHAR(500);
+
 INSERT INTO jira_issue.issue_types (id, name, description, icon_url, is_subtask, issue_type_key, icon, sequence)
 VALUES (
     'f0000001-0000-0000-0000-000000000001',

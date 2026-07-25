@@ -14,13 +14,13 @@ public class CreateSecurityLevelRequest {
 
     private UUID schemeId;
 
-    @NotBlank(message = "Name is required")
-    @Size(max = 100, message = "Name must not exceed 100 characters")
+    @NotBlank(message = "{validation.security.name.required}")
+    @Size(max = 100, message = "{validation.security.name.max}")
     private String name;
 
     private String description;
 
-    @Size(max = 20, message = "Level type must not exceed 20 characters")
+    @Size(max = 20, message = "{validation.security.leveltype.max}")
     private String levelType;
 
     private Integer sequence;

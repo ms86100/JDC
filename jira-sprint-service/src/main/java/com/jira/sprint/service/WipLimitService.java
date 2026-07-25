@@ -4,10 +4,12 @@ import com.jira.board.dto.BoardIssueResponse;
 import com.jira.board.entity.BoardColumn;
 import com.jira.board.exception.ResourceNotFoundException;
 import com.jira.board.repository.BoardColumnRepository;
+import com.jira.cluster.util.StatusCategoryHelper;
 import com.jira.sprint.dto.UpdateWipLimitRequest;
 import com.jira.sprint.dto.WipLimitResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,7 @@ public class WipLimitService {
 
     private final BoardColumnRepository columnRepository;
     private final IssueServiceClient issueServiceClient;
+    private final MessageSource messageSource;
 
     /**
      * Get WIP limit status for all columns on a board.
@@ -45,7 +48,7 @@ public class WipLimitService {
     @Transactional(readOnly = true)
     public WipLimitResponse getColumnWipLimit(UUID columnId) {
         BoardColumn column = columnRepository.findById(columnId)
-                .orElseThrow(() -> new ResourceNotFoundException("Column not found: " + columnId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.column.not.found", new Object[]{columnId}, Locale.ENGLISH)));
 
         List<BoardIssueResponse> issues = issueServiceClient.fetchBoardIssues(column.getBoardId(), null);
         return createWipLimitResponse(column, issues);
@@ -57,10 +60,10 @@ public class WipLimitService {
     @Transactional
     public WipLimitResponse updateWipLimit(UUID boardId, UpdateWipLimitRequest request) {
         BoardColumn column = columnRepository.findById(request.getColumnId())
-                .orElseThrow(() -> new ResourceNotFoundException("Column not found: " + request.getColumnId()));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.column.not.found", new Object[]{request.getColumnId()}, Locale.ENGLISH)));
 
         if (!column.getBoardId().equals(boardId)) {
-            throw new ResourceNotFoundException("Column does not belong to this board");
+            throw new ResourceNotFoundException(messageSource.getMessage("error.column.not.on.board", null, Locale.ENGLISH));
         }
 
         if (request.getWipLimit() != null) {
@@ -84,7 +87,7 @@ public class WipLimitService {
     @Transactional(readOnly = true)
     public boolean canAddIssue(UUID columnId) {
         BoardColumn column = columnRepository.findById(columnId)
-                .orElseThrow(() -> new ResourceNotFoundException("Column not found: " + columnId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.column.not.found", new Object[]{columnId}, Locale.ENGLISH)));
 
         if (column.getMaxIssues() == null || column.getMaxIssues() <= 0) {
             return true; // No limit set
@@ -107,7 +110,7 @@ public class WipLimitService {
         }
 
         BoardColumn targetColumn = columnRepository.findById(targetColumnId)
-                .orElseThrow(() -> new ResourceNotFoundException("Target column not found: " + targetColumnId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.column.not.found", new Object[]{targetColumnId}, Locale.ENGLISH)));
 
         if (targetColumn.getMaxIssues() == null || targetColumn.getMaxIssues() <= 0) {
             return true; // No limit set
@@ -208,33 +211,29 @@ public class WipLimitService {
         String category = column.getStatusCategory();
         if (category != null) {
             if ("DONE".equals(category) || Boolean.TRUE.equals(column.getIsDone())) {
-                return issueStatus.contains("done") || issueStatus.contains("closed") ||
-                       issueStatus.contains("resolved") || issueStatus.contains("completed");
+                return StatusCategoryHelper.isCompleted(issue.getStatus());
             }
             if ("IN_PROGRESS".equals(category)) {
-                return issueStatus.contains("progress") || issueStatus.contains("review") ||
-                       issueStatus.contains("doing");
+                return StatusCategoryHelper.isInProgress(issue.getStatus());
             }
             if ("TODO".equals(category)) {
-                return issueStatus.contains("todo") || issueStatus.contains("backlog") ||
-                       issueStatus.contains("open") || issueStatus.contains("new");
+                return "TODO".equals(StatusCategoryHelper.getCategory(issue.getStatus()));
             }
         }
 
-        // Name-based matching
+        // Name-based matching using StatusCategoryHelper
+        String issueCategory = StatusCategoryHelper.getCategory(issue.getStatus());
         if (columnName.contains("done") || columnName.contains("complete")) {
-            return issueStatus.contains("done") || issueStatus.contains("closed") ||
-                   issueStatus.contains("resolved");
+            return "DONE".equals(issueCategory);
         }
         if (columnName.contains("progress") || columnName.contains("doing")) {
-            return issueStatus.contains("progress");
+            return StatusCategoryHelper.isInProgress(issue.getStatus());
         }
         if (columnName.contains("review")) {
             return issueStatus.contains("review");
         }
-        if (columnName.contains("backlog") || columnName.contains("to do") || columnName.contains("todo")) {
-            return issueStatus.contains("todo") || issueStatus.contains("backlog") ||
-                   issueStatus.contains("open") || issueStatus.contains("new");
+        if (columnName.contains("backlog") || columnName.contains("todo")) {
+            return "TODO".equals(issueCategory);
         }
 
         // Default: match by exact status name similarity

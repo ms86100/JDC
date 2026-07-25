@@ -10,6 +10,7 @@ import com.jira.plan.exception.ResourceNotFoundException;
 import com.jira.plan.repository.PlanItemRepository;
 import com.jira.plan.repository.PlanRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,9 @@ public class BacklogService {
 
     private final PlanItemRepository planItemRepository;
     private final PlanRepository planRepository;
+
+    @Value("${app.backlog.default-status:BACKLOG}")
+    private String defaultBacklogStatus;
 
     @Transactional(readOnly = true)
     public BacklogResponse getBacklog(UUID planId) {
@@ -64,7 +68,7 @@ public class BacklogService {
                 .sortOrder(sortOrder)
                 .targetDate(request.getTargetDate())
                 .targetEndDate(request.getTargetEndDate())
-                .status(request.getStatus() != null ? request.getStatus() : "BACKLOG")
+                .status(request.getStatus() != null ? request.getStatus() : defaultBacklogStatus)
                 .build();
 
         item = planItemRepository.save(item);

@@ -9,7 +9,7 @@ import lombok.*;
 @AllArgsConstructor
 public class CreateAutomationConditionRequest {
 
-    @NotBlank(message = "Condition type is required")
+    @NotBlank(message = "{validation.automation.condition.type.required}")
     private String conditionType;
 
     private String fieldName;

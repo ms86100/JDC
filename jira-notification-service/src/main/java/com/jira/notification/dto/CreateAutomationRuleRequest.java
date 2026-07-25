@@ -12,14 +12,14 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateAutomationRuleRequest {
 
-    @NotBlank(message = "Rule name is required")
+    @NotBlank(message = "{validation.automation.rule.name.required}")
     private String name;
 
     private String description;
 
     private UUID projectId;
 
-    @NotBlank(message = "Trigger type is required")
+    @NotBlank(message = "{validation.automation.rule.triggerType.required}")
     private String triggerType;
 
     @Builder.Default

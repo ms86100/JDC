@@ -87,3 +87,36 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+# ---------------------------------------------------------------------------
+# Application-level configurable defaults (previously hardcoded)
+# ---------------------------------------------------------------------------
+app:
+  defaults:
+    role-admin: ROLE_ADMIN
+    role-user: ROLE_USER
+    token-type: Bearer
+    refresh-token-type: refresh
+    auth-provider-local: LOCAL
+    auth-provider-saml: SAML
+    saml-email-domain: "@saml.local"
+    default-registration-id: default
+    role-description-prefix: "System "
+  admin:
+    username: ${ADMIN_USERNAME:ms86100}
+    email: ${ADMIN_EMAIL:admin@test.local}
+  security:
+    max-failed-login-attempts: ${MAX_FAILED_LOGIN_ATTEMPTS:5}
+    lockout-duration-minutes: ${LOCKOUT_DURATION_MINUTES:15}
+    bcrypt-strength: ${BCRYPT_STRENGTH:12}
+    suspicious-activity-threshold: ${SUSPICIOUS_ACTIVITY_THRESHOLD:3}
+  saml:
+    sp-entity-id: ${SAML_SP_ENTITY_ID:jira-platform-sp}
+    error-redirect: ${SAML_ERROR_REDIRECT:/auth/login?error=saml_failed}
+  openapi:
+    title: ${OPENAPI_TITLE:Jira Auth Service API}
+    version: ${OPENAPI_VERSION:1.0.0}
+    description: ${OPENAPI_DESCRIPTION:Microservice for user authentication, registration, and JWT token management}
+    contact-name: ${OPENAPI_CONTACT:Jira Platform Team}
+    license-name: ${OPENAPI_LICENSE:Apache 2.0}
+    license-url: ${OPENAPI_LICENSE_URL:https://www.apache.org/licenses/LICENSE-2.0}

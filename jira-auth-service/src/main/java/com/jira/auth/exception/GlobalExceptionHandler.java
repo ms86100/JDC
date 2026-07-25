@@ -1,7 +1,9 @@
 package com.jira.auth.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -11,13 +13,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 @RestControllerAdvice
 @Slf4j
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
 
     private static final String SERVICE_NAME = "jira-auth-service";
+
+    private final MessageSource messageSource;
 
     @ExceptionHandler(AuthException.class)
     public ResponseEntity<Map<String, Object>> handleAuthException(
@@ -26,7 +32,7 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Authentication Error");
+        body.put("error", messageSource.getMessage("error.label.authentication", null, Locale.ENGLISH));
         body.put("message", ex.getMessage());
         body.put("path", request.getRequestURI());
         body.put("service", SERVICE_NAME);
@@ -39,8 +45,8 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Validation Error");
-        body.put("message", "Validation failed");
+        body.put("error", messageSource.getMessage("error.label.validation", null, Locale.ENGLISH));
+        body.put("message", messageSource.getMessage("error.message.validation.failed", null, Locale.ENGLISH));
         body.put("path", request.getRequestURI());
         body.put("service", SERVICE_NAME);
 
@@ -60,7 +66,7 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        body.put("error", "Internal Server Error");
+        body.put("error", messageSource.getMessage("error.label.internal", null, Locale.ENGLISH));
         body.put("message", ex.getMessage());
         body.put("path", request.getRequestURI());
         body.put("service", SERVICE_NAME);

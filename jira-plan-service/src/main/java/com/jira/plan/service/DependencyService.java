@@ -10,6 +10,7 @@ import com.jira.plan.repository.PlanRepository;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,15 @@ public class DependencyService {
     private final PlanRepository planRepository;
     private final ScheduleEngine scheduleEngine;
     private final CriticalPathService criticalPathService;
+
+    @Value("${app.dependency.default-type:BLOCKS}")
+    private String defaultDependencyType;
+
+    @Value("${app.dependency.impact.high-threshold:60}")
+    private int impactHighThreshold;
+
+    @Value("${app.dependency.impact.medium-threshold:30}")
+    private int impactMediumThreshold;
 
     @Transactional(readOnly = true)
     public List<DependencyResponse> getDependenciesByPlanId(UUID planId) {
@@ -57,7 +67,7 @@ public class DependencyService {
                 .planId(planId)
                 .blockingIssueId(request.getBlockingIssueId())
                 .blockedIssueId(request.getBlockedIssueId())
-                .dependencyType(request.getDependencyType() != null ? request.getDependencyType() : "BLOCKS")
+                .dependencyType(request.getDependencyType() != null ? request.getDependencyType() : defaultDependencyType)
                 .build();
 
         dependency = dependencyRepository.save(dependency);
@@ -165,7 +175,7 @@ public class DependencyService {
         impactScore += Math.min(downstreamBlocked.size() * 5, 30);
         impactScore += Math.min(upstreamBlockers.size() * 5, 20);
 
-        String impactLevel = impactScore > 60 ? "HIGH" : impactScore > 30 ? "MEDIUM" : "LOW";
+        String impactLevel = impactScore > impactHighThreshold ? "HIGH" : impactScore > impactMediumThreshold ? "MEDIUM" : "LOW";
 
         return DependencyImpactAnalysis.builder()
                 .dependencyId(dependencyId)

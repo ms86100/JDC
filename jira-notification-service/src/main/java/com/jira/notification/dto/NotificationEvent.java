@@ -12,13 +12,13 @@ import java.util.UUID;
 @AllArgsConstructor
 public class NotificationEvent {
 
-    @NotNull(message = "User ID is required")
+    @NotNull(message = "{validation.notification.userId.required}")
     private UUID userId;
 
-    @NotBlank(message = "Notification type is required")
+    @NotBlank(message = "{validation.notification.type.required}")
     private String type;
 
-    @NotBlank(message = "Title is required")
+    @NotBlank(message = "{validation.notification.title.required}")
     private String title;
 
     private String message;

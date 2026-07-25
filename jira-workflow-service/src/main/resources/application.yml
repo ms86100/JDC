@@ -117,6 +117,39 @@ jira:
       poll-interval-ms: 5000
   scripting:
     enabled: true
+
+app:
+  workflow:
+    status-catalog:
+      cache-ttl-ms: 300000
+      null-status-color: "#6C757D"
+      color-todo: "#6C757D"
+      color-in-progress: "#FF991F"
+      color-done: "#00875A"
+      legacy-filter-suffix: "(legacy)"
+    status-category:
+      color-todo: "#6C757D"
+      color-in-progress: "#0066FF"
+      color-done: "#28A745"
+    post-function:
+      max-retries: 3
+      retry-delay-ms: 100
+      default-email-subject: "Issue Notification"
+      default-email-body: "Issue has been updated."
+      default-notify-message: "Issue transitioned"
+      default-automation-queue: "issue-transitioned"
+      summary-template: "Issue {issueKey} was transitioned to {toStatusName} by {userName}."
+    permission:
+      default-suffix: "_ISSUES"
+    status-resolver:
+      strip-suffixes: "(legacy),(new)"
+    fallback:
+      transition-name-prefix: "Move to "
+      transition-description: "Direct status change (workflow fallback)"
+    context:
+      project-permissions: "BROWSE_PROJECTS,CREATE_ISSUES,EDIT_ISSUES,RESOLVE_ISSUES,DELETE_ISSUES,ASSIGN_ISSUES,ASSIGNABLE_USER,LINK_ISSUES"
+    outbox:
+      default-transition-name: "Transition"
     timeout-ms: 5000
     memory-limit-mb: 64
     max-statements: 500000

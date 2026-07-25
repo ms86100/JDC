@@ -13,10 +13,10 @@ public class ProjectImportRequest {
 
     private UUID projectId;
 
-    @NotBlank(message = "Project name is required")
+    @NotBlank(message = "{validation.project.name.required}")
     private String name;
 
-    @NotBlank(message = "Project key is required")
+    @NotBlank(message = "{validation.project.key.required}")
     private String projectKey;
 
     private String description;

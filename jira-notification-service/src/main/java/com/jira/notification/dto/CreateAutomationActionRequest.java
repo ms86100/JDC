@@ -9,7 +9,7 @@ import lombok.*;
 @AllArgsConstructor
 public class CreateAutomationActionRequest {
 
-    @NotBlank(message = "Action type is required")
+    @NotBlank(message = "{validation.automation.action.type.required}")
     private String actionType;
 
     private String actionConfig;

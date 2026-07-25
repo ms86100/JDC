@@ -1,10 +1,12 @@
 package com.jira.workflow.service;
 
+import com.jira.workflow.engine.plugin.WorkflowPluginRegistry;
 import com.jira.workflow.entity.*;
 import com.jira.workflow.repository.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -29,7 +31,20 @@ public class WorkflowAdministrationService {
     private final WorkflowScreenTabRepository workflowScreenTabRepository;
     private final WorkflowScreenFieldRepository workflowScreenFieldRepository;
     private final WorkflowAuditLogRepository workflowAuditLogRepository;
+    private final WorkflowPluginRegistry pluginRegistry;
+    private final WorkflowConditionRepository workflowConditionRepository2;
+    private final WorkflowValidatorRepository workflowValidatorRepository;
+    private final WorkflowPostFunctionRepository workflowPostFunctionRepository;
     private final ObjectMapper objectMapper;
+
+    @Value("${app.workflow.status-category.color-todo:#6C757D}")
+    private String statusCategoryColorTodo;
+
+    @Value("${app.workflow.status-category.color-in-progress:#0066FF}")
+    private String statusCategoryColorInProgress;
+
+    @Value("${app.workflow.status-category.color-done:#28A745}")
+    private String statusCategoryColorDone;
 
     // ==================== WORKFLOW CRUD ====================
 
@@ -1041,31 +1056,52 @@ public class WorkflowAdministrationService {
     }
 
     public List<Map<String, Object>> getConditionDefinitions() {
-        return List.of(
-                Map.of("id", "user_in_group", "name", "User in Group", "description", "Check if user belongs to a group"),
-                Map.of("id", "user_is_assignee", "name", "User is Assignee", "description", "Check if current user is the assignee"),
-                Map.of("id", "field_has_value", "name", "Field Has Value", "description", "Check if a field has a specific value"),
-                Map.of("id", "custom_script", "name", "Custom Script", "description", "Evaluate a custom script condition")
-        );
+        List<Map<String, Object>> definitions = new ArrayList<>();
+        for (String key : pluginRegistry.listConditionKeys()) {
+            definitions.add(Map.of("id", key, "name", key, "description", "Registered condition: " + key));
+        }
+        // Also include conditions defined in the DB
+        workflowConditionRepository2.findAll().stream()
+                .map(c -> c.getConditionType())
+                .distinct()
+                .forEach(type -> {
+                    if (definitions.stream().noneMatch(d -> type.equals(d.get("id")))) {
+                        definitions.add(Map.of("id", type, "name", type, "description", "Database condition: " + type));
+                    }
+                });
+        return definitions;
     }
 
     public List<Map<String, Object>> getValidatorDefinitions() {
-        return List.of(
-                Map.of("id", "required_field", "name", "Required Field", "description", "Ensure a field has a value"),
-                Map.of("id", "field_length", "name", "Field Length", "description", "Validate field character length"),
-                Map.of("id", "regex_pattern", "name", "Regex Pattern", "description", "Validate field against regex pattern"),
-                Map.of("id", "custom_validator", "name", "Custom Validator", "description", "Run custom validation logic")
-        );
+        List<Map<String, Object>> definitions = new ArrayList<>();
+        for (String key : pluginRegistry.listValidatorKeys()) {
+            definitions.add(Map.of("id", key, "name", key, "description", "Registered validator: " + key));
+        }
+        workflowValidatorRepository.findAll().stream()
+                .map(v -> v.getValidatorType())
+                .distinct()
+                .forEach(type -> {
+                    if (definitions.stream().noneMatch(d -> type.equals(d.get("id")))) {
+                        definitions.add(Map.of("id", type, "name", type, "description", "Database validator: " + type));
+                    }
+                });
+        return definitions;
     }
 
     public List<Map<String, Object>> getPostFunctionDefinitions() {
-        return List.of(
-                Map.of("id", "update_field", "name", "Update Field", "description", "Update an issue field value"),
-                Map.of("id", "send_notification", "name", "Send Notification", "description", "Send a notification to users"),
-                Map.of("id", "create_subtask", "name", "Create Subtask", "description", "Create a subtask on transition"),
-                Map.of("id", "assign_user", "name", "Assign User", "description", "Assign issue to a specific user"),
-                Map.of("id", "trigger_automation", "name", "Trigger Automation", "description", "Trigger an automation rule")
-        );
+        List<Map<String, Object>> definitions = new ArrayList<>();
+        for (String key : pluginRegistry.listPostFunctionKeys()) {
+            definitions.add(Map.of("id", key, "name", key, "description", "Registered post-function: " + key));
+        }
+        workflowPostFunctionRepository.findAll().stream()
+                .map(pf -> pf.getFunctionType())
+                .distinct()
+                .forEach(type -> {
+                    if (definitions.stream().noneMatch(d -> type.equals(d.get("id")))) {
+                        definitions.add(Map.of("id", type, "name", type, "description", "Database post-function: " + type));
+                    }
+                });
+        return definitions;
     }
 
     @Transactional(readOnly = true)
@@ -1273,9 +1309,9 @@ public class WorkflowAdministrationService {
 
     private Map<String, String> getStatusCategoryMapping() {
         Map<String, String> mapping = new HashMap<>();
-        mapping.put("TODO", "#6C757D");
-        mapping.put("IN_PROGRESS", "#0066FF");
-        mapping.put("DONE", "#28A745");
+        mapping.put("TODO", statusCategoryColorTodo);
+        mapping.put("IN_PROGRESS", statusCategoryColorInProgress);
+        mapping.put("DONE", statusCategoryColorDone);
         return mapping;
     }
 

@@ -9,6 +9,7 @@ import com.jira.plan.exception.ResourceNotFoundException;
 import com.jira.plan.repository.PlanRepository;
 import com.jira.plan.repository.ProgramRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,9 @@ public class ProgramService {
 
     private final ProgramRepository programRepository;
     private final PlanRepository planRepository;
+
+    @Value("${app.program.default-access-type:OPEN}")
+    private String defaultAccessType;
 
     @Transactional(readOnly = true)
     public List<ProgramResponse> getAllPrograms() {
@@ -42,7 +46,7 @@ public class ProgramService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .ownerId(request.getOwnerId() != null ? request.getOwnerId() : userId)
-                .accessType(request.getAccessType() != null ? request.getAccessType() : "OPEN")
+                .accessType(request.getAccessType() != null ? request.getAccessType() : defaultAccessType)
                 .build();
         program = programRepository.save(program);
 

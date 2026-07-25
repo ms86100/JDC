@@ -12,10 +12,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreatePostFunctionRequest {
 
-    @NotNull(message = "Transition ID is required")
+    @NotNull(message = "{validation.transition.id.required}")
     private UUID transitionId;
 
-    @NotBlank(message = "Function type is required")
+    @NotBlank(message = "{validation.postfunction.type.required}")
     private String functionType;
 
     private String functionData;

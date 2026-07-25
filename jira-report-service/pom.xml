@@ -88,6 +88,19 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- Cluster Commons — resilience, tracing, caching, scheduling -->
+        <dependency>
+            <groupId>com.jira</groupId>
+            <artifactId>jira-cluster-commons</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
+        <!-- Redis for distributed cache, event bus, idempotency -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

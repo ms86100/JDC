@@ -207,8 +207,71 @@ spring:
           uri: http://test-service:8095
           predicates:
             - Path=/api/tests/**
-          filters:
-            - StripPrefix=1
+        - id: test-set-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-sets/**
+        - id: test-plan-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-plans/**
+        - id: test-execution-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-executions/**
+        - id: test-environment-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-environments/**
+        - id: test-workflow-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-workflows/**
+        - id: test-folder-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-folders/**
+        - id: test-run-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-runs/**
+        # SYSDOPS Aircraft Design - routed to test-service
+        - id: vvo-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/vvo/**
+        - id: hlvvo-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/hlvvo/**
+        - id: tech-event-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/tech-events/**
+        - id: bench-defect-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/bench-defects/**
+        - id: problem-report-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/problem-reports/**
+        - id: vv-report-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/vv-reports/**
+        - id: campaign-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/campaigns/**
+        - id: export-template-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/export-templates/**
+        - id: test-request-service
+          uri: http://test-service:8095
+          predicates:
+            - Path=/api/test-requests/**
 
         # Notification Service
         - id: notification-service

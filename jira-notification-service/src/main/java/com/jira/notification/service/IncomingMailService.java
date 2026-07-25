@@ -9,6 +9,7 @@ import jakarta.mail.*;
 import jakarta.mail.internet.InternetAddress;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -27,11 +28,36 @@ public class IncomingMailService {
     private final IncomingMailHandlerRepository handlerRepository;
     private final RestTemplate restTemplate;
 
-    @org.springframework.beans.factory.annotation.Value("${issue.service.url:http://jira-issue-service:8084}")
+    @Value("${issue.service.url:http://jira-issue-service:8084}")
     private String issueServiceUrl;
 
-    @org.springframework.beans.factory.annotation.Value("${comment.service.url:http://jira-comment-service:8086}")
+    @Value("${comment.service.url:http://jira-comment-service:8086}")
     private String commentServiceUrl;
+
+    @Value("${app.mail.defaults.server-type:IMAP}")
+    private String defaultServerType;
+
+    @Value("${app.mail.defaults.port:993}")
+    private int defaultPort;
+
+    @Value("${app.mail.defaults.use-ssl:true}")
+    private boolean defaultUseSsl;
+
+    @Value("${app.mail.defaults.folder:INBOX}")
+    private String defaultFolder;
+
+    @Value("${app.mail.defaults.handler-type:CREATE_ISSUE}")
+    private String defaultHandlerType;
+
+    @Value("${app.mail.defaults.poll-interval-minutes:5}")
+    private int defaultPollIntervalMinutes;
+
+    @Value("${app.mail.defaults.connection-timeout:10000}")
+    private String defaultConnectionTimeout;
+
+    @Value("${app.mail.defaults.read-timeout:10000}")
+    private String defaultReadTimeout;
+
     private static final Pattern ISSUE_KEY_PATTERN = Pattern.compile("\\[([A-Z][A-Z0-9]+-\\d+)]");
 
     @Transactional
@@ -40,19 +66,19 @@ public class IncomingMailService {
 
         IncomingMailHandler handler = IncomingMailHandler.builder()
                 .name(request.getName())
-                .serverType(request.getServerType() != null ? request.getServerType() : "IMAP")
+                .serverType(request.getServerType() != null ? request.getServerType() : defaultServerType)
                 .host(request.getHost())
-                .port(request.getPort() != null ? request.getPort() : 993)
-                .useSsl(request.getUseSsl() != null ? request.getUseSsl() : true)
+                .port(request.getPort() != null ? request.getPort() : defaultPort)
+                .useSsl(request.getUseSsl() != null ? request.getUseSsl() : defaultUseSsl)
                 .username(request.getUsername())
                 .encryptedPassword(request.getPassword())
-                .folder(request.getFolder() != null ? request.getFolder() : "INBOX")
-                .handlerType(request.getHandlerType() != null ? request.getHandlerType() : "CREATE_ISSUE")
+                .folder(request.getFolder() != null ? request.getFolder() : defaultFolder)
+                .handlerType(request.getHandlerType() != null ? request.getHandlerType() : defaultHandlerType)
                 .projectId(request.getProjectId())
                 .issueTypeId(request.getIssueTypeId())
                 .defaultReporterId(request.getDefaultReporterId())
                 .isEnabled(request.getIsEnabled() != null ? request.getIsEnabled() : true)
-                .pollIntervalMinutes(request.getPollIntervalMinutes() != null ? request.getPollIntervalMinutes() : 5)
+                .pollIntervalMinutes(request.getPollIntervalMinutes() != null ? request.getPollIntervalMinutes() : defaultPollIntervalMinutes)
                 .build();
 
         handler = handlerRepository.save(handler);
@@ -176,7 +202,12 @@ public class IncomingMailService {
 
                         ParsedMessage parsed = parseMessage(message);
 
-                        switch (handler.getHandlerType()) {
+                        String handlerType = handler.getHandlerType();
+                        if (handlerType == null) {
+                            handlerType = defaultHandlerType;
+                        }
+
+                        switch (handlerType) {
                             case "CREATE_ISSUE":
                                 handleCreateIssue(handler, parsed);
                                 break;
@@ -184,7 +215,7 @@ public class IncomingMailService {
                                 handleCreateOrComment(handler, parsed);
                                 break;
                             default:
-                                log.warn("Unknown handler type: {}", handler.getHandlerType());
+                                log.warn("Unknown handler type: {}", handlerType);
                         }
 
                         message.setFlag(Flags.Flag.SEEN, true);
@@ -225,8 +256,8 @@ public class IncomingMailService {
 
         props.put("mail." + protocol + ".host", handler.getHost());
         props.put("mail." + protocol + ".port", String.valueOf(handler.getPort()));
-        props.put("mail." + protocol + ".connectiontimeout", "10000");
-        props.put("mail." + protocol + ".timeout", "10000");
+        props.put("mail." + protocol + ".connectiontimeout", defaultConnectionTimeout);
+        props.put("mail." + protocol + ".timeout", defaultReadTimeout);
 
         Session session = Session.getInstance(props);
         Store store = session.getStore(protocol);

@@ -9,6 +9,8 @@ import com.jira.auth.repository.UserRepository;
 import com.jira.auth.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,16 @@ public class SamlConfigService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final JwtTokenProvider jwtTokenProvider;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.role-user:ROLE_USER}")
+    private String defaultUserRole;
+
+    @Value("${app.defaults.auth-provider-saml:SAML}")
+    private String authProviderSaml;
+
+    @Value("${app.defaults.saml-email-domain:@saml.local}")
+    private String samlEmailDomain;
 
     @Transactional(readOnly = true)
     public List<SamlConfiguration> listAll() {
@@ -38,19 +50,22 @@ public class SamlConfigService {
     @Transactional(readOnly = true)
     public SamlConfiguration getById(UUID id) {
         return configRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("SAML configuration not found: " + id));
+                .orElseThrow(() -> new RuntimeException(
+                        messageSource.getMessage("saml.error.config.not.found", new Object[]{id}, Locale.ENGLISH)));
     }
 
     @Transactional(readOnly = true)
     public SamlConfiguration getByRegistrationId(String registrationId) {
         return configRepository.findByRegistrationId(registrationId)
-                .orElseThrow(() -> new RuntimeException("SAML configuration not found: " + registrationId));
+                .orElseThrow(() -> new RuntimeException(
+                        messageSource.getMessage("saml.error.config.not.found", new Object[]{registrationId}, Locale.ENGLISH)));
     }
 
     @Transactional
     public SamlConfiguration create(SamlConfiguration config) {
         if (configRepository.existsByRegistrationId(config.getRegistrationId())) {
-            throw new IllegalArgumentException("Registration ID already exists: " + config.getRegistrationId());
+            throw new IllegalArgumentException(
+                    messageSource.getMessage("saml.error.registration.exists", new Object[]{config.getRegistrationId()}, Locale.ENGLISH));
         }
         return configRepository.save(config);
     }
@@ -81,7 +96,8 @@ public class SamlConfigService {
     @Transactional
     public void delete(UUID id) {
         if (!configRepository.existsById(id)) {
-            throw new RuntimeException("SAML configuration not found: " + id);
+            throw new RuntimeException(
+                    messageSource.getMessage("saml.error.config.not.found", new Object[]{id}, Locale.ENGLISH));
         }
         configRepository.deleteById(id);
     }
@@ -103,14 +119,16 @@ public class SamlConfigService {
         if (existingUser.isPresent()) {
             user = existingUser.get();
             if (!user.getActive()) {
-                throw new RuntimeException("User account is disabled");
+                throw new RuntimeException(
+                        messageSource.getMessage("saml.error.user.disabled", null, Locale.ENGLISH));
             }
             log.info("SAML user found: {} ({})", user.getUsername(), user.getId());
         } else if (config.getAutoCreateUsers()) {
             user = provisionUser(nameId, registrationId, username, email, config.getDefaultRole());
             log.info("SAML user provisioned: {} ({})", user.getUsername(), user.getId());
         } else {
-            throw new RuntimeException("User not found and auto-create is disabled for this IdP");
+            throw new RuntimeException(
+                    messageSource.getMessage("saml.error.auto.create.disabled", null, Locale.ENGLISH));
         }
 
         Set<String> roleNames = user.getRoles().stream()
@@ -127,7 +145,7 @@ public class SamlConfigService {
         response.put("username", user.getUsername());
         response.put("email", user.getEmail());
         response.put("roles", roleNames);
-        response.put("authProvider", "SAML");
+        response.put("authProvider", authProviderSaml);
         return response;
     }
 
@@ -140,22 +158,23 @@ public class SamlConfigService {
 
         String uniqueEmail = email;
         if (email == null || email.isBlank()) {
-            uniqueEmail = uniqueUsername + "@saml.local";
+            uniqueEmail = uniqueUsername + samlEmailDomain;
         }
         counter = 1;
         while (userRepository.existsByEmail(uniqueEmail)) {
-            uniqueEmail = username + "_" + counter++ + "@saml.local";
+            uniqueEmail = username + "_" + counter++ + samlEmailDomain;
         }
 
         Role defaultRole = roleRepository.findByRoleKey(defaultRoleKey)
-                .orElseGet(() -> roleRepository.findByRoleKey("ROLE_USER")
-                        .orElseThrow(() -> new RuntimeException("Default role not found")));
+                .orElseGet(() -> roleRepository.findByRoleKey(defaultUserRole)
+                        .orElseThrow(() -> new RuntimeException(
+                                messageSource.getMessage("saml.error.default.role.not.found", null, Locale.ENGLISH))));
 
         User user = User.builder()
                 .username(uniqueUsername)
                 .email(uniqueEmail)
                 .passwordHash(null)
-                .authProvider("SAML")
+                .authProvider(authProviderSaml)
                 .samlNameId(nameId)
                 .samlIdpId(idpId)
                 .active(true)

@@ -11,15 +11,15 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateAutomationLogRequest {
 
-    @NotBlank(message = "Rule ID is required")
+    @NotBlank(message = "{validation.automation.log.ruleId.required}")
     private UUID ruleId;
 
-    @NotBlank(message = "Trigger type is required")
+    @NotBlank(message = "{validation.automation.log.triggerType.required}")
     private String triggerType;
 
     private UUID triggerEventId;
 
-    @NotBlank(message = "Status is required")
+    @NotBlank(message = "{validation.automation.log.status.required}")
     private String status;
 
     private String message;

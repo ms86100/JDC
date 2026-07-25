@@ -1,7 +1,9 @@
 package com.jira.plan.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -11,12 +13,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@RequiredArgsConstructor
 @Slf4j
 public class GlobalExceptionHandler {
+
+    private final MessageSource messageSource;
 
     private static final String SERVICE_NAME = "jira-plan-service";
 
@@ -26,7 +32,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.NOT_FOUND.value())
-                .error("Not Found")
+                .error(messageSource.getMessage("error.not-found", null, "Not Found", Locale.ENGLISH))
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .service(SERVICE_NAME)
@@ -41,7 +47,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
+                .error(messageSource.getMessage("error.conflict", null, "Conflict", Locale.ENGLISH))
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .service(SERVICE_NAME)
@@ -53,17 +59,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleValidationErrors(
             MethodArgumentNotValidException ex, HttpServletRequest request) {
         Map<String, String> validationErrors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = (error instanceof FieldError fe) ? fe.getField() : error.getObjectName();
-            String errorMessage = error.getDefaultMessage();
+        ex.getBindingResult().getAllErrors().forEach(err -> {
+            String fieldName = (err instanceof FieldError fe) ? fe.getField() : err.getObjectName();
+            String errorMessage = err.getDefaultMessage();
             validationErrors.put(fieldName, errorMessage);
         });
 
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
-                .error("Validation Error")
-                .message("Validation failed")
+                .error(messageSource.getMessage("error.validation", null, "Validation Error", Locale.ENGLISH))
+                .message(messageSource.getMessage("error.validation.failed", null, "Validation failed", Locale.ENGLISH))
                 .path(request.getRequestURI())
                 .service(SERVICE_NAME)
                 .validationErrors(validationErrors)
@@ -77,7 +83,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
-                .error("Bad Request")
+                .error(messageSource.getMessage("error.bad-request", null, "Bad Request", Locale.ENGLISH))
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .service(SERVICE_NAME)
@@ -91,7 +97,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.FORBIDDEN.value())
-                .error("Forbidden")
+                .error(messageSource.getMessage("error.forbidden", null, "Forbidden", Locale.ENGLISH))
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .service(SERVICE_NAME)
@@ -105,7 +111,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
+                .error(messageSource.getMessage("error.conflict", null, "Conflict", Locale.ENGLISH))
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .service(SERVICE_NAME)
@@ -119,7 +125,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
+                .error(messageSource.getMessage("error.conflict", null, "Conflict", Locale.ENGLISH))
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .service(SERVICE_NAME)
@@ -134,7 +140,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error("Internal Server Error")
+                .error(messageSource.getMessage("error.internal", null, "Internal Server Error", Locale.ENGLISH))
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .service(SERVICE_NAME)

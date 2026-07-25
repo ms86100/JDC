@@ -11,21 +11,21 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateEmailTemplateRequest {
 
-    @NotBlank(message = "Template key is required")
+    @NotBlank(message = "{validation.email.template.key.required}")
     private String templateKey;
 
-    @NotBlank(message = "Name is required")
+    @NotBlank(message = "{validation.email.template.name.required}")
     private String name;
 
     private String description;
 
-    @NotBlank(message = "Subject template is required")
+    @NotBlank(message = "{validation.email.template.subject.required}")
     private String subjectTemplate;
 
-    @NotBlank(message = "Body template is required")
+    @NotBlank(message = "{validation.email.template.body.required}")
     private String bodyTemplate;
 
-    @NotBlank(message = "Event type is required")
+    @NotBlank(message = "{validation.email.template.eventType.required}")
     private String eventType;
 
     @Builder.Default

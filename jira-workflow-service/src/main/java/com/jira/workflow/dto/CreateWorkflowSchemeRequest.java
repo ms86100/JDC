@@ -10,7 +10,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateWorkflowSchemeRequest {
-    @NotBlank(message = "Scheme name is required")
+    @NotBlank(message = "{validation.scheme.name.required}")
     @Size(max = 200, message = "Scheme name must not exceed 200 characters")
     private String name;
 

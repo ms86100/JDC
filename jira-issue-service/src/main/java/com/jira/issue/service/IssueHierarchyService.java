@@ -9,6 +9,7 @@ import com.jira.issue.repository.IssueRepository;
 import com.jira.issue.repository.IssueTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +28,8 @@ public class IssueHierarchyService {
     private final IssueRepository issueRepository;
     private final IssueTypeRepository issueTypeRepository;
 
-    private static final int MAX_HIERARCHY_DEPTH = 10;
+    @Value("${app.hierarchy.max-depth:10}")
+    private int maxHierarchyDepth;
 
     /**
      * Set parent issue for an issue.
@@ -55,8 +57,8 @@ public class IssueHierarchyService {
         // Validate depth limit
         int currentDepth = getHierarchyDepth(issueId);
         int parentDepth = getHierarchyDepth(parentIssueId);
-        if (currentDepth + parentDepth + 1 > MAX_HIERARCHY_DEPTH) {
-            throw new InvalidTransitionException("Hierarchy depth limit exceeded. Maximum depth is " + MAX_HIERARCHY_DEPTH);
+        if (currentDepth + parentDepth + 1 > maxHierarchyDepth) {
+            throw new InvalidTransitionException("Hierarchy depth limit exceeded. Maximum depth is " + maxHierarchyDepth);
         }
 
         issue.setParentIssueId(parentIssueId);

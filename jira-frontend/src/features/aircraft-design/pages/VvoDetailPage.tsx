@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { vvoApi } from '../../../api/vvoApi';
+import { DEMO_VVO_DETAILS } from '../demoData';
 import '../AircraftDesignStyles.css';
 
 interface VvoDetail {
@@ -75,8 +76,10 @@ export default function VvoDetailPage() {
       const res = await vvoApi.getById(vvoId);
       setVvo(res.data);
       setEditForm(res.data);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to load VVO');
+    } catch {
+      const demo = DEMO_VVO_DETAILS[vvoId];
+      if (demo) { setVvo(demo); setEditForm(demo); }
+      else setError('VVO not found');
     } finally {
       setLoading(false);
     }

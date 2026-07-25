@@ -1,6 +1,7 @@
 package com.jira.sprint.service;
 
 import com.jira.board.dto.BoardIssueResponse;
+import com.jira.cluster.util.StatusCategoryHelper;
 import com.jira.sprint.dto.CreateSprintRequest;
 import com.jira.sprint.dto.SprintResponse;
 import com.jira.sprint.entity.Sprint;
@@ -10,6 +11,7 @@ import com.jira.sprint.repository.SprintIssueRepository;
 import com.jira.sprint.repository.SprintRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class SprintPlanningService {
     private final SprintIssueRepository sprintIssueRepository;
     private final IssueServiceClient issueServiceClient;
     private final LexoRankService lexoRankService;
+    private final MessageSource messageSource;
 
     /**
      * Create a new sprint for a board.
@@ -113,7 +116,7 @@ public class SprintPlanningService {
     @Transactional(readOnly = true)
     public List<BoardIssueResponse> getSprintIssues(UUID sprintId) {
         Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found: " + sprintId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.sprint.not.found", new Object[]{sprintId}, Locale.ENGLISH)));
 
         List<UUID> issueIds = sprintIssueRepository.findBySprintIdOrderByOrderIndex(sprintId)
                 .stream()
@@ -143,11 +146,11 @@ public class SprintPlanningService {
     @Transactional
     public SprintIssuesResponse addIssuesToSprint(UUID sprintId, List<UUID> issueIds, UUID addedBy) {
         Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found: " + sprintId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.sprint.not.found", new Object[]{sprintId}, Locale.ENGLISH)));
 
         if (sprint.getStatus() == Sprint.SprintStatus.COMPLETED ||
             sprint.getStatus() == Sprint.SprintStatus.CLOSED) {
-            throw new IllegalStateException("Cannot add issues to completed sprint");
+            throw new IllegalStateException(messageSource.getMessage("error.sprint.cannot.add.completed", null, Locale.ENGLISH));
         }
 
         int currentMaxOrder = sprintIssueRepository.findBySprintIdOrderByOrderIndex(sprintId)
@@ -233,10 +236,10 @@ public class SprintPlanningService {
     @Transactional
     public SprintResponse startSprint(UUID sprintId) {
         Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found: " + sprintId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.sprint.not.found", new Object[]{sprintId}, Locale.ENGLISH)));
 
         if (sprint.getStatus() != Sprint.SprintStatus.PLANNING) {
-            throw new IllegalStateException("Can only start sprints in PLANNING status");
+            throw new IllegalStateException(messageSource.getMessage("error.sprint.must.be.planning", null, Locale.ENGLISH));
         }
 
         // Complete any currently active sprints for this board
@@ -270,7 +273,7 @@ public class SprintPlanningService {
     @Transactional
     public SprintResponse completeSprint(UUID sprintId) {
         Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found: " + sprintId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.sprint.not.found", new Object[]{sprintId}, Locale.ENGLISH)));
 
         sprint.setStatus(Sprint.SprintStatus.COMPLETED);
         if (sprint.getEndDate() == null) {
@@ -314,7 +317,7 @@ public class SprintPlanningService {
     @Transactional(readOnly = true)
     public SprintPlanningDataResponse getSprintPlanningData(UUID boardId, UUID sprintId) {
         Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found: " + sprintId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.sprint.not.found", new Object[]{sprintId}, Locale.ENGLISH)));
 
         List<BoardIssueResponse> sprintIssues = getSprintIssues(sprintId);
         BacklogResponse backlog = getBacklog(boardId, sprint.getProjectId(), null);
@@ -382,12 +385,7 @@ public class SprintPlanningService {
     }
 
     private boolean isCompletedStatus(String status) {
-        if (status == null) return false;
-        String normalized = status.toLowerCase();
-        return normalized.contains("done") ||
-               normalized.contains("completed") ||
-               normalized.contains("closed") ||
-               normalized.equals("resolved");
+        return StatusCategoryHelper.isCompleted(status);
     }
 
     // DTO classes

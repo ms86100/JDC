@@ -12,6 +12,7 @@ import com.jira.issue.repository.IssueLinkTypeRepository;
 import com.jira.issue.repository.IssueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,12 @@ public class IssueLinkService {
     private final IssueLinkRepository issueLinkRepository;
     private final IssueLinkTypeRepository issueLinkTypeRepository;
     private final IssueRepository issueRepository;
+
+    @Value("${app.defaults.fallback-link-type:Related}")
+    private String fallbackLinkType;
+
+    @Value("${app.defaults.fallback-link-label:relates to}")
+    private String fallbackLinkLabel;
 
     // ========== Link Type Management ==========
 
@@ -356,23 +363,23 @@ public class IssueLinkService {
 
     private String resolveLinkTypeName(UUID linkTypeId) {
         if (linkTypeId == null) {
-            return "Related";
+            return fallbackLinkType;
         }
         return issueLinkTypeRepository.findById(linkTypeId)
                 .map(IssueLinkType::getName)
-                .orElse("Related");
+                .orElse(fallbackLinkType);
     }
 
     private String resolveLinkTypeLabel(UUID linkTypeId, UUID sourceIssueId) {
         if (linkTypeId == null) {
-            return "relates to";
+            return fallbackLinkLabel;
         }
         return issueLinkTypeRepository.findById(linkTypeId)
                 .map(lt -> {
                     // Determine direction based on link context (simplified)
                     return lt.getOutward();
                 })
-                .orElse("relates to");
+                .orElse(fallbackLinkLabel);
     }
 
     private UUID resolveLinkTypeId(String linkTypeName) {

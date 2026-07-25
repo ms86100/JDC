@@ -6,6 +6,7 @@ import com.jira.project.exception.ResourceNotFoundException;
 import com.jira.project.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,30 @@ public class TemplateService {
     private final TemplateIssueTypeRepository templateIssueTypeRepository;
     private final TemplateSchemeMappingRepository templateSchemeMappingRepository;
     private final StatusDefinitionRepository statusDefinitionRepository;
+
+    @Value("${app.defaults.uncategorized-key:OTHER}")
+    private String uncategorizedCategoryKey;
+
+    @Value("${app.defaults.uncategorized-name:Other}")
+    private String uncategorizedCategoryName;
+
+    @Value("${app.defaults.uncategorized-description:Additional project templates}")
+    private String uncategorizedCategoryDescription;
+
+    @Value("${app.defaults.uncategorized-icon:folder}")
+    private String uncategorizedCategoryIcon;
+
+    @Value("${app.defaults.uncategorized-icon-emoji:📁}")
+    private String uncategorizedCategoryIconEmoji;
+
+    @Value("${app.defaults.uncategorized-sort-order:99}")
+    private int uncategorizedCategorySortOrder;
+
+    @Value("${app.defaults.workflow-type-label.default:General}")
+    private String workflowTypeLabelDefault;
+
+    @Value("${app.defaults.workflow-type-labels:AGILE_SCRUM=Agile · Scrum,AGILE_KANBAN=Agile · Kanban,DEFECT_TRACKING=Defect Tracking,TASK=Task-based,PORTFOLIO=Portfolio,PROCESS=Process-based,TEAM_MANAGED=Team-managed}")
+    private String workflowTypeLabelsStr;
 
     /**
      * Full catalog for Create Project wizard (Jira DC-style two-panel UI).
@@ -84,12 +109,12 @@ public class TemplateService {
 
         if (!uncategorized.isEmpty()) {
             categoryDtos.add(TemplateCatalogResponse.TemplateCategoryCatalogDto.builder()
-                    .categoryKey("OTHER")
-                    .name("Other")
-                    .description("Additional project templates")
-                    .icon("folder")
-                    .iconEmoji("📁")
-                    .sortOrder(99)
+                    .categoryKey(uncategorizedCategoryKey)
+                    .name(uncategorizedCategoryName)
+                    .description(uncategorizedCategoryDescription)
+                    .icon(uncategorizedCategoryIcon)
+                    .iconEmoji(uncategorizedCategoryIconEmoji)
+                    .sortOrder(uncategorizedCategorySortOrder)
                     .templates(uncategorized)
                     .build());
         }
@@ -310,20 +335,23 @@ public class TemplateService {
                 .build();
     }
 
+    private Map<String, String> getWorkflowTypeLabelMap() {
+        Map<String, String> map = new LinkedHashMap<>();
+        for (String entry : workflowTypeLabelsStr.split(",")) {
+            String[] kv = entry.split("=", 2);
+            if (kv.length == 2) {
+                map.put(kv[0].trim(), kv[1].trim());
+            }
+        }
+        return map;
+    }
+
     private String formatWorkflowTypeLabel(String workflowType) {
         if (workflowType == null) {
-            return "General";
+            return workflowTypeLabelDefault;
         }
-        return switch (workflowType) {
-            case "AGILE_SCRUM" -> "Agile · Scrum";
-            case "AGILE_KANBAN" -> "Agile · Kanban";
-            case "DEFECT_TRACKING" -> "Defect Tracking";
-            case "TASK" -> "Task-based";
-            case "PORTFOLIO" -> "Portfolio";
-            case "PROCESS" -> "Process-based";
-            case "TEAM_MANAGED" -> "Team-managed";
-            default -> workflowType.replace('_', ' ');
-        };
+        Map<String, String> labelMap = getWorkflowTypeLabelMap();
+        return labelMap.getOrDefault(workflowType, workflowType.replace('_', ' '));
     }
 
     private TemplateIssueTypeDto mapToIssueTypeDto(TemplateIssueType issueType) {

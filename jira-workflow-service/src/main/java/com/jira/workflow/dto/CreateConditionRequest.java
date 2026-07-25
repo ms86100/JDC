@@ -12,10 +12,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateConditionRequest {
 
-    @NotNull(message = "Transition ID is required")
+    @NotNull(message = "{validation.transition.id.required}")
     private UUID transitionId;
 
-    @NotBlank(message = "Condition type is required")
+    @NotBlank(message = "{validation.condition.type.required}")
     private String conditionType;
 
     private String fieldName;

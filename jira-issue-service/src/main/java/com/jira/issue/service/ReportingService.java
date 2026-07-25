@@ -5,6 +5,7 @@ import com.jira.issue.entity.*;
 import com.jira.issue.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +33,21 @@ public class ReportingService {
     private final RequirementLinkRepository requirementLinkRepository;
     private final DefectLinkRepository defectLinkRepository;
     private final TestImportBatchRepository importBatchRepository;
+
+    @Value("${app.quality.pass-rate-excellent:95}")
+    private double passRateExcellent;
+
+    @Value("${app.quality.pass-rate-good:85}")
+    private double passRateGood;
+
+    @Value("${app.quality.pass-rate-needs-improvement:70}")
+    private double passRateNeedsImprovement;
+
+    @Value("${app.quality.risk-threshold-high:5}")
+    private long riskThresholdHigh;
+
+    @Value("${app.quality.risk-threshold-medium:2}")
+    private long riskThresholdMedium;
 
     // ==================== Summary Reports ====================
 
@@ -252,7 +268,7 @@ public class ReportingService {
                         .requirementKey(entry.getKey())
                         .defectCount(entry.getValue().intValue())
                         .severity("MIXED")
-                        .riskLevel(entry.getValue() > 5 ? "HIGH" : entry.getValue() > 2 ? "MEDIUM" : "LOW")
+                        .riskLevel(entry.getValue() > riskThresholdHigh ? "HIGH" : entry.getValue() > riskThresholdMedium ? "MEDIUM" : "LOW")
                         .build())
                 .sorted(Comparator.comparing(DefectDensityResponse.DefectDensityRow::getDefectCount).reversed())
                 .collect(Collectors.toList());
@@ -314,9 +330,9 @@ public class ReportingService {
 
         // Determine status
         String status;
-        if (passRate >= 95) status = "EXCELLENT";
-        else if (passRate >= 85) status = "GOOD";
-        else if (passRate >= 70) status = "NEEDS_IMPROVEMENT";
+        if (passRate >= passRateExcellent) status = "EXCELLENT";
+        else if (passRate >= passRateGood) status = "GOOD";
+        else if (passRate >= passRateNeedsImprovement) status = "NEEDS_IMPROVEMENT";
         else status = "CRITICAL";
 
         return SprintQualityResponse.builder()

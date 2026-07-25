@@ -8,6 +8,7 @@ import com.jira.issue.exception.ResourceNotFoundException;
 import com.jira.issue.repository.IssueTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,9 @@ public class IssueTypeService {
 
     private final IssueTypeRepository issueTypeRepository;
     private final com.jira.issue.repository.IssueRepository issueRepository;
+
+    @Value("${app.defaults.issue-type-icon:standard}")
+    private String defaultIssueTypeIcon;
 
     @Cacheable(value = CacheConfig.ISSUE_TYPE_CACHE, key = "'all'")
     @Transactional(readOnly = true)
@@ -73,7 +77,7 @@ public class IssueTypeService {
                 .name(request.getName())
                 .issueTypeKey(issueTypeKey)
                 .description(request.getDescription())
-                .icon(request.getIcon() != null ? request.getIcon() : "standard")
+                .icon(request.getIcon() != null ? request.getIcon() : defaultIssueTypeIcon)
                 .color(request.getColor())
                 .isSubtask(request.isSubtask())
                 .sequence(request.getSequence())

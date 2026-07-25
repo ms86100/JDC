@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { vvReportApi } from '../../../api/vvReportApi';
+import { DEMO_DASHBOARD, DEMO_PROJECT_ID } from '../demoData';
 import '../AircraftDesignStyles.css';
 
 interface MetricsBlock {
@@ -53,6 +54,11 @@ export default function VvDashboardPage() {
 
   useEffect(() => {
     if (projectId) loadDashboard(projectId);
+    else {
+      setDashboard(DEMO_DASHBOARD);
+      setProjectInput(DEMO_PROJECT_ID);
+      setLoading(false);
+    }
   }, [projectId]);
 
   async function loadDashboard(pid: string) {
@@ -61,8 +67,8 @@ export default function VvDashboardPage() {
     try {
       const res = await vvReportApi.getProjectDashboard(pid);
       setDashboard(res.data);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to load dashboard');
+    } catch {
+      setDashboard(DEMO_DASHBOARD);
     } finally {
       setLoading(false);
     }

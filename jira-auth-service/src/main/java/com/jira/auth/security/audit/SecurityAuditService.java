@@ -2,10 +2,13 @@ package com.jira.auth.security.audit;
 
 import com.jira.auth.security.audit.SecurityAuditEvent.EventType;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,10 +26,20 @@ public class SecurityAuditService {
     // In-memory audit log (in production, this would be persisted to a database)
     private final Map<UUID, List<SecurityAuditEvent>> userAuditLog = new ConcurrentHashMap<>();
     private final Map<String, FailedAttemptTracker> failedAttemptsByIp = new ConcurrentHashMap<>();
+    private final MessageSource messageSource;
 
-    // Thresholds for suspicious activity detection
-    private static final int MAX_FAILED_LOGIN_ATTEMPTS = 5;
-    private static final int LOCKOUT_DURATION_MINUTES = 15;
+    @Value("${app.security.max-failed-login-attempts:5}")
+    private int maxFailedLoginAttempts;
+
+    @Value("${app.security.lockout-duration-minutes:15}")
+    private int lockoutDurationMinutes;
+
+    @Value("${app.security.suspicious-activity-threshold:3}")
+    private int suspiciousActivityThreshold;
+
+    public SecurityAuditService(MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
 
     /**
      * Record a security event
@@ -96,7 +109,7 @@ public class SecurityAuditService {
                 .resource(resource)
                 .action(action)
                 .success(false)
-                .failureReason("Insufficient permissions")
+                .failureReason(messageSource.getMessage("audit.failure.insufficient.permissions", null, Locale.ENGLISH))
                 .build());
     }
 
@@ -107,7 +120,8 @@ public class SecurityAuditService {
         recordEvent(SecurityAuditEvent.builder()
                 .eventType(EventType.INVALID_TOKEN)
                 .ipAddress(ipAddress)
-                .additionalDetails("Token preview: " + tokenPreview + ", Reason: " + reason)
+                .additionalDetails(messageSource.getMessage("audit.token.details",
+                        new Object[]{tokenPreview, reason}, Locale.ENGLISH))
                 .success(false)
                 .failureReason(reason)
                 .build());
@@ -127,7 +141,7 @@ public class SecurityAuditService {
             return false;
         }
 
-        return tracker.getFailedAttempts() >= MAX_FAILED_LOGIN_ATTEMPTS;
+        return tracker.getFailedAttempts() >= maxFailedLoginAttempts;
     }
 
     /**
@@ -159,7 +173,7 @@ public class SecurityAuditService {
         long accessDenied = countEventsByType(EventType.ACCESS_DENIED);
         long invalidTokens = countEventsByType(EventType.INVALID_TOKEN);
         long lockedOutIps = failedAttemptsByIp.values().stream()
-                .filter(t -> t.getFailedAttempts() >= MAX_FAILED_LOGIN_ATTEMPTS)
+                .filter(t -> t.getFailedAttempts() >= maxFailedLoginAttempts)
                 .count();
 
         return new SecuritySummary(
@@ -173,7 +187,7 @@ public class SecurityAuditService {
     }
 
     private void trackFailedLogin(String ipAddress, String username) {
-        failedAttemptsByIp.computeIfAbsent(ipAddress, k -> new FailedAttemptTracker())
+        failedAttemptsByIp.computeIfAbsent(ipAddress, k -> new FailedAttemptTracker(lockoutDurationMinutes))
                 .incrementFailedAttempts();
     }
 
@@ -185,7 +199,7 @@ public class SecurityAuditService {
         // Check for rapid failed login attempts
         if (event.getEventType() == EventType.LOGIN_FAILED) {
             FailedAttemptTracker tracker = failedAttemptsByIp.get(event.getIpAddress());
-            return tracker != null && tracker.getFailedAttempts() > 3;
+            return tracker != null && tracker.getFailedAttempts() > suspiciousActivityThreshold;
         }
 
         // Check for unusual patterns (multiple failed logins for different users from same IP)
@@ -205,10 +219,11 @@ public class SecurityAuditService {
     private static class FailedAttemptTracker {
         private int failedAttempts = 0;
         private OffsetDateTime firstAttempt;
-        private static final int WINDOW_MINUTES = 15;
+        private final int windowMinutes;
 
-        public FailedAttemptTracker() {
+        public FailedAttemptTracker(int windowMinutes) {
             this.firstAttempt = OffsetDateTime.now();
+            this.windowMinutes = windowMinutes;
         }
 
         public void incrementFailedAttempts() {
@@ -224,7 +239,7 @@ public class SecurityAuditService {
         }
 
         public boolean isExpired() {
-            return firstAttempt.plusMinutes(WINDOW_MINUTES).isBefore(OffsetDateTime.now());
+            return firstAttempt.plusMinutes(windowMinutes).isBefore(OffsetDateTime.now());
         }
     }
 

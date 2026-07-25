@@ -8,6 +8,7 @@ import com.jira.plan.repository.PlanGoalRepository;
 import com.jira.plan.repository.PlanRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,15 @@ public class GoalService {
 
     private final PlanGoalRepository goalRepository;
     private final PlanRepository planRepository;
+
+    @Value("${app.goal.status.not-started:NOT_STARTED}")
+    private String goalStatusNotStarted;
+
+    @Value("${app.goal.status.in-progress:IN_PROGRESS}")
+    private String goalStatusInProgress;
+
+    @Value("${app.goal.status.completed:COMPLETED}")
+    private String goalStatusCompleted;
 
     @Transactional(readOnly = true)
     public List<GoalResponse> getGoalsByPlanId(UUID planId) {
@@ -48,7 +58,7 @@ public class GoalService {
                 .planId(planId)
                 .name(request.getName())
                 .description(request.getDescription())
-                .status(request.getStatus() != null ? request.getStatus() : "NOT_STARTED")
+                .status(request.getStatus() != null ? request.getStatus() : goalStatusNotStarted)
                 .targetDate(request.getTargetDate())
                 .parentGoalId(request.getParentGoalId())
                 .linkedEpicIds(request.getLinkedEpicIds() != null
@@ -157,9 +167,9 @@ public class GoalService {
         // Update status based on progress
         if (goal.getProgress() != null) {
             if (goal.getProgress() >= 100) {
-                goal.setStatus("COMPLETED");
+                goal.setStatus(goalStatusCompleted);
             } else if (goal.getProgress() > 0) {
-                goal.setStatus("IN_PROGRESS");
+                goal.setStatus(goalStatusInProgress);
             }
         }
 

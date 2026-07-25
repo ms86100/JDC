@@ -3,6 +3,8 @@ package com.jira.project.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,11 +16,15 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @Autowired
+    private MessageSource messageSource;
 
     @Data
     @Builder
@@ -35,7 +41,8 @@ public class GlobalExceptionHandler {
         private String service;
     }
 
-    private static final String SERVICE_NAME = "jira-project-service";
+    @org.springframework.beans.factory.annotation.Value("${spring.application.name:jira-project-service}")
+    private String serviceName;
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFoundException(
@@ -46,7 +53,7 @@ public class GlobalExceptionHandler {
                 .error(HttpStatus.NOT_FOUND.getReasonPhrase())
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
-                .service(SERVICE_NAME)
+                .service(serviceName)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
@@ -60,7 +67,7 @@ public class GlobalExceptionHandler {
                 .error(HttpStatus.CONFLICT.getReasonPhrase())
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
-                .service(SERVICE_NAME)
+                .service(serviceName)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
@@ -74,7 +81,7 @@ public class GlobalExceptionHandler {
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
-                .service(SERVICE_NAME)
+                .service(serviceName)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
@@ -86,10 +93,10 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
+                .error(HttpStatus.CONFLICT.getReasonPhrase())
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
-                .service(SERVICE_NAME)
+                .service(serviceName)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
@@ -97,14 +104,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(
             MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
-        String message = "Invalid value for parameter '" + ex.getName() + "'";
+        String template = messageSource.getMessage("error.invalid.parameter", null, "Invalid value for parameter ''{0}''", Locale.ENGLISH);
+        String message = template.replace("{0}", ex.getName());
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
                 .message(message)
                 .path(request.getRequestURI())
-                .service(SERVICE_NAME)
+                .service(serviceName)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
@@ -123,10 +131,10 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message("Validation failed")
+                .message(messageSource.getMessage("error.validation.failed", null, "Validation failed", Locale.ENGLISH))
                 .path(request.getRequestURI())
                 .validationErrors(validationErrors)
-                .service(SERVICE_NAME)
+                .service(serviceName)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
@@ -135,17 +143,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
             DataIntegrityViolationException ex, HttpServletRequest request) {
         log.error("Data integrity violation at {}: {}", request.getRequestURI(), ex.getMessage());
-        String message = "Database constraint violation";
+        String message = messageSource.getMessage("error.database.constraint", null, "Database constraint violation", Locale.ENGLISH);
         if (ex.getMessage() != null && ex.getMessage().contains("project_schemes_project_id_key")) {
-            message = "Project scheme already exists";
+            message = messageSource.getMessage("error.project.scheme.exists", null, "Project scheme already exists", Locale.ENGLISH);
         }
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
+                .error(HttpStatus.CONFLICT.getReasonPhrase())
                 .message(message)
                 .path(request.getRequestURI())
-                .service(SERVICE_NAME)
+                .service(serviceName)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
@@ -160,7 +168,7 @@ public class GlobalExceptionHandler {
                 .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
-                .service(SERVICE_NAME)
+                .service(serviceName)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }

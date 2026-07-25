@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +25,21 @@ import java.util.*;
 public class EnhancedSearchController {
 
     private final EnhancedSearchService enhancedSearchService;
+
+    @Value("${app.search.default-result-fields:id,entityType,title,content,createdAt}")
+    private String defaultResultFieldsStr;
+
+    @Value("${app.search.suggestion-suffixes:issue,bug,feature,task}")
+    private String suggestionSuffixesStr;
+
+    @Value("${app.search.default-anonymous-label:anonymous}")
+    private String defaultAnonymousLabel;
+
+    @Value("${app.search.facet-entity-types:issue,project,document}")
+    private String facetEntityTypesStr;
+
+    @Value("${app.search.export-ready-message:Export functionality ready. Results can be downloaded as}")
+    private String exportReadyMessage;
 
     @GetMapping("/enhanced")
     @Operation(summary = "Enhanced search", description = "Perform enhanced search with facets, filters, and sorting")
@@ -81,7 +97,7 @@ public class EnhancedSearchController {
 
         // Default fields if not specified
         if (fields == null || fields.isEmpty()) {
-            fields = List.of("id", "entityType", "title", "content", "createdAt");
+            fields = Arrays.asList(defaultResultFieldsStr.split(","));
         }
 
         EnhancedSearchService.SearchResultsView view = enhancedSearchService.getSearchResultsView(
@@ -97,16 +113,20 @@ public class EnhancedSearchController {
 
         log.info("GET /search/facets - entityType={}", entityType);
 
+        List<Map<String, Object>> entityTypeValues = Arrays.stream(facetEntityTypesStr.split(","))
+                .map(String::trim)
+                .map(v -> Map.<String, Object>of(
+                        "value", v,
+                        "label", v.substring(0, 1).toUpperCase() + v.substring(1),
+                        "count", 0))
+                .toList();
+
         List<Map<String, Object>> facets = List.of(
                 Map.of(
                         "field", "entityType",
                         "label", "Entity Type",
                         "type", "TERMS",
-                        "values", List.of(
-                                Map.of("value", "issue", "label", "Issue", "count", 0),
-                                Map.of("value", "project", "label", "Project", "count", 0),
-                                Map.of("value", "document", "label", "Document", "count", 0)
-                        )
+                        "values", entityTypeValues
                 ),
                 Map.of(
                         "field", "createdAt",
@@ -138,10 +158,9 @@ public class EnhancedSearchController {
         if (q != null && !q.isBlank()) {
             String lowerQuery = q.toLowerCase();
             // Simulated suggestions - in production, these would come from search index
-            suggestions.add(lowerQuery + " issue");
-            suggestions.add(lowerQuery + " bug");
-            suggestions.add(lowerQuery + " feature");
-            suggestions.add(lowerQuery + " task");
+            for (String suffix : suggestionSuffixesStr.split(",")) {
+                suggestions.add(lowerQuery + " " + suffix.trim());
+            }
             if (lowerQuery.length() > 2) {
                 suggestions.add(lowerQuery.substring(0, 1).toUpperCase() + lowerQuery.substring(1));
             }
@@ -166,7 +185,7 @@ public class EnhancedSearchController {
         List<Map<String, Object>> history = new ArrayList<>();
 
         return ResponseEntity.ok(Map.of(
-                "userId", userId != null ? userId.toString() : "anonymous",
+                "userId", userId != null ? userId.toString() : defaultAnonymousLabel,
                 "history", history,
                 "count", 0
         ));
@@ -185,7 +204,7 @@ public class EnhancedSearchController {
                 "query", q,
                 "format", format,
                 "status", "ready",
-                "message", "Export functionality ready. Results can be downloaded as " + format.toUpperCase()
+                "message", exportReadyMessage + " " + format.toUpperCase()
         ));
     }
 }

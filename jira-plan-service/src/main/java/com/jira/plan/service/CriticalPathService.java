@@ -7,6 +7,7 @@ import com.jira.plan.repository.PlanItemRepository;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -21,6 +22,30 @@ public class CriticalPathService {
     private final PlanItemRepository planItemRepository;
     private final IssueDependencyRepository dependencyRepository;
     private final WorkingDaysService workingDaysService;
+
+    @Value("${app.critical-path.default-duration-days:5}")
+    private int defaultDurationDays;
+
+    @Value("${app.critical-path.risk.high-threshold:0.7}")
+    private double riskHighThreshold;
+
+    @Value("${app.critical-path.risk.medium-threshold:0.3}")
+    private double riskMediumThreshold;
+
+    @Value("${app.critical-path.risk.large-delay-days:5}")
+    private int largeDelayDays;
+
+    @Value("${app.critical-path.risk.recommendation.buffer:Consider adding buffer time to downstream critical path items}")
+    private String recommendationBuffer;
+
+    @Value("${app.critical-path.risk.recommendation.scope:Evaluate whether scope reduction is possible}")
+    private String recommendationScope;
+
+    @Value("${app.critical-path.risk.recommendation.notify:Large delay detected - notify stakeholders}")
+    private String recommendationNotify;
+
+    @Value("${app.critical-path.risk.recommendation.contained:Change does not affect critical path - impact is contained}")
+    private String recommendationContained;
 
     public CriticalPathResult calculateCriticalPath(UUID planId) {
         log.info("Calculating critical path for plan: {}", planId);
@@ -98,18 +123,18 @@ public class CriticalPathService {
             }
         }
 
-        String riskLevel = riskScore > 0.7 ? "HIGH" : riskScore > 0.3 ? "MEDIUM" : "LOW";
+        String riskLevel = riskScore > riskHighThreshold ? "HIGH" : riskScore > riskMediumThreshold ? "MEDIUM" : "LOW";
 
         List<String> recommendations = new ArrayList<>();
         if (affectsCriticalPath && riskScore > 0.5) {
-            recommendations.add("Consider adding buffer time to downstream critical path items");
-            recommendations.add("Evaluate whether scope reduction is possible");
+            recommendations.add(recommendationBuffer);
+            recommendations.add(recommendationScope);
         }
-        if (changeDays > 5) {
-            recommendations.add("Large delay detected - notify stakeholders");
+        if (changeDays > largeDelayDays) {
+            recommendations.add(recommendationNotify);
         }
         if (!affectsCriticalPath) {
-            recommendations.add("Change does not affect critical path - impact is contained");
+            recommendations.add(recommendationContained);
         }
 
         return RiskAnalysis.builder()
@@ -174,7 +199,7 @@ public class CriticalPathService {
     private int getDurationDays(PlanItem item) {
         Integer storyPoints = item.getStoryPoints();
         if (storyPoints == null) {
-            return 5;
+            return defaultDurationDays;
         }
         if (storyPoints <= 3) return 2;
         if (storyPoints <= 8) return 5;

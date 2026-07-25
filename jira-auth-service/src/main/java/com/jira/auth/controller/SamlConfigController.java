@@ -4,12 +4,15 @@ import com.jira.auth.entity.SamlConfiguration;
 import com.jira.auth.service.SamlConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -21,6 +24,10 @@ import java.util.UUID;
 public class SamlConfigController {
 
     private final SamlConfigService samlConfigService;
+    private final MessageSource messageSource;
+
+    @Value("${app.saml.sp-entity-id:jira-platform-sp}")
+    private String spEntityId;
 
     @GetMapping
     public ResponseEntity<List<SamlConfiguration>> listAll() {
@@ -57,11 +64,11 @@ public class SamlConfigController {
     @GetMapping("/sp-metadata")
     public ResponseEntity<Map<String, Object>> getSpMetadata() {
         Map<String, Object> metadata = Map.of(
-                "entityId", "jira-platform-sp",
+                "entityId", spEntityId,
                 "acsUrl", "/login/saml2/sso",
                 "sloUrl", "/logout/saml2/slo",
                 "nameIdFormat", "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
-                "note", "Full XML metadata available when spring-security-saml2-service-provider is on classpath"
+                "note", messageSource.getMessage("saml.metadata.note", null, Locale.ENGLISH)
         );
         return ResponseEntity.ok(metadata);
     }

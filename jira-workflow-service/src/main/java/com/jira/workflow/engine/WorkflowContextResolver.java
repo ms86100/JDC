@@ -5,9 +5,11 @@ import com.jira.workflow.exception.ResourceNotFoundException;
 import com.jira.workflow.repository.*;
 import com.jira.workflow.service.WorkflowSchemeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,9 +25,8 @@ public class WorkflowContextResolver {
     private final WorkflowTransitionRepository workflowTransitionRepository;
     private final ProjectPermissionClient projectPermissionClient;
 
-    private static final List<String> PROJECT_PERMISSIONS = List.of(
-            "BROWSE_PROJECTS", "CREATE_ISSUES", "EDIT_ISSUES", "RESOLVE_ISSUES",
-            "DELETE_ISSUES", "ASSIGN_ISSUES", "ASSIGNABLE_USER", "LINK_ISSUES");
+    @Value("${app.workflow.context.project-permissions:BROWSE_PROJECTS,CREATE_ISSUES,EDIT_ISSUES,RESOLVE_ISSUES,DELETE_ISSUES,ASSIGN_ISSUES,ASSIGNABLE_USER,LINK_ISSUES}")
+    private String projectPermissionsStr;
 
     public WorkflowContext resolveForIssue(UUID issueId, UUID projectId, UUID userId) {
         Map<String, Object> issueData = integrationClient.fetchIssue(issueId);
@@ -79,8 +80,9 @@ public class WorkflowContextResolver {
         if (userId == null || projectId == null) {
             return userData;
         }
+        List<String> projectPermissions = Arrays.asList(projectPermissionsStr.split(","));
         List<String> granted = new ArrayList<>();
-        for (String perm : PROJECT_PERMISSIONS) {
+        for (String perm : projectPermissions) {
             if (projectPermissionClient.hasPermission(userId, projectId, perm)) {
                 granted.add(perm);
             }

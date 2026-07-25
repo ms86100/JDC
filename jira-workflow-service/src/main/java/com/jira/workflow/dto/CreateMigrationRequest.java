@@ -6,13 +6,13 @@ import java.util.UUID;
 
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class CreateMigrationRequest {
-    @NotNull(message = "Workflow ID is required")
+    @NotNull(message = "{validation.migration.workflow.required}")
     private UUID workflowId;
 
-    @NotNull(message = "Old status ID is required")
+    @NotNull(message = "{validation.migration.old.status.required}")
     private UUID oldStatusId;
 
-    @NotNull(message = "New status ID is required")
+    @NotNull(message = "{validation.migration.new.status.required}")
     private UUID newStatusId;
 
     private String migrationType;

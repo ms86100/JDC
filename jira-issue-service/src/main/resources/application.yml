@@ -110,6 +110,55 @@ jira:
     transition-fallback: true
     validation-lenient: true
 
+# Configurable defaults (Pattern B) — override per environment as needed
+app:
+  defaults:
+    status-id: "00000000-0000-0000-0001-000000000002"
+    type-id: "a0000000-0000-0000-0000-000000000001"
+    priority-id: "b0000000-0000-0000-0000-000000000003"
+    clone-title-prefix: "CLONE - "
+    clone-title-suffix: " (Copy)"
+    fallback-link-type: Related
+    fallback-link-label: relates to
+    issue-type-icon: standard
+    epic-color: "#0052CC"
+    epic-status: OPEN
+    test-type: MANUAL
+    test-status: DRAFT
+    test-plan-status: OPEN
+    test-set-status: DRAFT
+    execution-status: RUNNING
+    coverage-status: COVERED
+    defect-status: OPEN
+    pr-default-status: OPEN
+    branch-default-status: ACTIVE
+    import-test-type-bdd: BDD
+    import-test-type-automated: AUTOMATED
+    import-test-status: DRAFT
+    import-ci-source-manual: MANUAL
+    import-default-env: CI
+    import-test-set-active-status: ACTIVE
+  quality:
+    pass-rate-excellent: 95
+    pass-rate-good: 85
+    pass-rate-needs-improvement: 70
+    risk-threshold-high: 5
+    risk-threshold-medium: 2
+  ai:
+    duplicate-similarity-threshold: 0.8
+    risk-threshold-high: 0.7
+    risk-threshold-medium: 0.4
+    stability-warning-threshold: 0.7
+    coverage-warning-threshold: 0.5
+  export:
+    max-rows: 10000
+  hierarchy:
+    max-depth: 10
+  change-management:
+    standard-review-types: COMMON_KOM,PLANS_REVIEW,FCR,PDR,DDR,CDR,LAR,FAR,FFR,CR
+    default-review-status: BACKLOG
+    follow-up-trigger-status: PASSED_RED
+
 management:
   endpoints:
     web:

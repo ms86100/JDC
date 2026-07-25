@@ -3,6 +3,8 @@ package com.jira.issue.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -13,6 +15,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -20,6 +23,14 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     private static final String SERVICE_NAME = "jira-issue-service";
+
+    @Autowired(required = false)
+    private MessageSource messageSource;
+
+    private String msg(String key, String fallback) {
+        if (messageSource == null) return fallback;
+        return messageSource.getMessage(key, null, fallback, Locale.ENGLISH);
+    }
 
     @Data
     @Builder
@@ -70,7 +81,7 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message("Invalid value for parameter '" + ex.getName() + "': " + ex.getValue())
+                .message(msg("error.type.mismatch", "Invalid value for parameter") + " '" + ex.getName() + "': " + ex.getValue())
                 .path(request.getRequestURI())
                 .service(SERVICE_NAME)
                 .build();
@@ -112,7 +123,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
-                .error("Concurrent Modification")
+                .error(msg("error.concurrent.modification", "Concurrent Modification"))
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .service(SERVICE_NAME)
@@ -134,7 +145,7 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message("Validation failed")
+                .message(msg("error.validation.failed", "Validation failed"))
                 .path(request.getRequestURI())
                 .service(SERVICE_NAME)
                 .validationErrors(validationErrors)

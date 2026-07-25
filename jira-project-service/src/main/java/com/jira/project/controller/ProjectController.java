@@ -1,6 +1,7 @@
 package com.jira.project.controller;
 
 import com.jira.project.dto.*;
+import com.jira.project.entity.Permission;
 import com.jira.project.service.ProjectService;
 import com.jira.project.service.ProjectTypeService;
 import com.jira.project.service.ProjectSchemeService;
@@ -162,7 +163,7 @@ public class ProjectController {
 
         // Check ADMINISTER_PROJECTS permission before allowing update
         if (userId != null && !permissionCheckService.canAdministerProject(userId, id)) {
-            throw new PermissionDeniedException("ADMINISTER_PROJECTS", "project " + id);
+            throw new PermissionDeniedException(Permission.ADMINISTER_PROJECTS, "project " + id);
         }
 
         ProjectResponse response = projectService.updateProject(id, request);
@@ -177,7 +178,7 @@ public class ProjectController {
 
         // Check ADMINISTER_PROJECTS permission before allowing delete
         if (userId != null && !permissionCheckService.canAdministerProject(userId, id)) {
-            throw new PermissionDeniedException("ADMINISTER_PROJECTS", "project " + id);
+            throw new PermissionDeniedException(Permission.ADMINISTER_PROJECTS, "project " + id);
         }
 
         projectService.deleteProject(id);
@@ -205,7 +206,7 @@ public class ProjectController {
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
 
         if (userId != null && !permissionCheckService.canAdministerProject(userId, id)) {
-            throw new PermissionDeniedException("ADMINISTER_PROJECTS", "project " + id);
+            throw new PermissionDeniedException(Permission.ADMINISTER_PROJECTS, "project " + id);
         }
 
         ProjectResponse response = archiveService.archiveProject(id);
@@ -219,7 +220,7 @@ public class ProjectController {
             @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
 
         if (userId != null && !permissionCheckService.canAdministerProject(userId, id)) {
-            throw new PermissionDeniedException("ADMINISTER_PROJECTS", "project " + id);
+            throw new PermissionDeniedException(Permission.ADMINISTER_PROJECTS, "project " + id);
         }
 
         ProjectResponse response = archiveService.restoreProject(id);
@@ -264,7 +265,7 @@ public class ProjectController {
 
         // Check ADMINISTER_PROJECTS permission before allowing member addition
         if (userId != null && !permissionCheckService.canAdministerProject(userId, id)) {
-            throw new PermissionDeniedException("ADMINISTER_PROJECTS", "project " + id);
+            throw new PermissionDeniedException(Permission.ADMINISTER_PROJECTS, "project " + id);
         }
 
         ProjectMemberResponse response = projectService.addMember(id, request);

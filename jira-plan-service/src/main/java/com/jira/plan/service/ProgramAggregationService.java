@@ -1,5 +1,6 @@
 package com.jira.plan.service;
 
+import com.jira.cluster.util.StatusCategoryHelper;
 import com.jira.plan.dto.response.ProgramResponse;
 import com.jira.plan.entity.Plan;
 import com.jira.plan.entity.PlanItem;
@@ -80,7 +81,7 @@ public class ProgramAggregationService {
         metrics.subtaskCount = issuesByType.getOrDefault("SUBTASK", List.of()).size();
 
         long completedCount = issues.stream()
-                .filter(i -> "DONE".equalsIgnoreCase(i.getStatusCategory()))
+                .filter(i -> StatusCategoryHelper.isCompleted(i.getStatusCategory()))
                 .count();
         metrics.completionPercentage = metrics.totalIssues > 0
                 ? (completedCount * 100.0) / metrics.totalIssues
@@ -199,7 +200,7 @@ public class ProgramAggregationService {
                     AggregatedRelease release = releaseMap.get(releaseName);
                     release.setIssueCount(release.getIssueCount() + 1);
 
-                    if ("DONE".equals(issue.getStatusCategory())) {
+                    if (StatusCategoryHelper.isCompleted(issue.getStatusCategory())) {
                         release.setProgress(release.getProgress() + 1);
                     }
                 }

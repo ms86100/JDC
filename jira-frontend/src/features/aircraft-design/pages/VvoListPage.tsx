@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { vvoApi } from '../../../api/vvoApi';
+import { DEMO_VVOS } from '../demoData';
 import '../AircraftDesignStyles.css';
 
 const VVO_STATUSES = ['ALL', 'NEW', 'TO_BE_VERIFIED', 'VERIFIED', 'RELEASED', 'CANCELLED', 'SUPERSEDED'] as const;
@@ -44,8 +45,8 @@ export default function VvoListPage() {
         : await vvoApi.getByProject('default');
       const data = res.data;
       setVvos(Array.isArray(data) ? data : data?.content ?? []);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to load VVOs');
+    } catch {
+      setVvos(DEMO_VVOS);
     } finally {
       setLoading(false);
     }

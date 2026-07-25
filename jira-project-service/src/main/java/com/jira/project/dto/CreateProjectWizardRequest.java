@@ -17,20 +17,20 @@ import java.util.UUID;
 public class CreateProjectWizardRequest {
 
     // Step 1: Project Type
-    @NotBlank(message = "Project type is required")
+    @NotBlank(message = "{validation.project.type.required}")
     private String projectType; // COMPANY_MANAGED or TEAM_MANAGED
 
     // Step 2: Template
     private UUID templateId;
 
     // Step 3: Project Details
-    @NotBlank(message = "Project name is required")
-    @Size(min = 1, max = 200, message = "Project name must be between 1 and 200 characters")
+    @NotBlank(message = "{validation.project.name.required}")
+    @Size(min = 1, max = 200, message = "{validation.project.name.size}")
     private String name;
 
-    @NotBlank(message = "Project key is required")
-    @Pattern(regexp = "^[A-Z][A-Z0-9]{1,9}$", message = "Project key must be 2-10 uppercase alphanumeric characters, starting with a letter")
-    @Size(min = 2, max = 10, message = "Project key must be between 2 and 10 characters")
+    @NotBlank(message = "{validation.project.key.required}")
+    @Pattern(regexp = "^[A-Z][A-Z0-9]{1,9}$", message = "{validation.project.key.format}")
+    @Size(min = 2, max = 10, message = "{validation.project.key.size}")
     private String projectKey;
 
     private UUID leadUserId;

@@ -5,8 +5,10 @@ import com.jira.workflow.repository.WorkflowStatusRepository;
 import com.jira.workflow.repository.WorkflowTransitionRepository;
 import com.jira.workflow.service.WorkflowStatusCatalog;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -21,6 +23,9 @@ public class WorkflowStatusResolver {
     private final WorkflowStatusRepository workflowStatusRepository;
     private final WorkflowTransitionRepository workflowTransitionRepository;
     private final WorkflowStatusCatalog workflowStatusCatalog;
+
+    @Value("${app.workflow.status-resolver.strip-suffixes:(legacy),(new)}")
+    private String stripSuffixesStr;
 
     public UUID resolveForTransitions(UUID workflowId, UUID issueStatusId, Map<String, Object> issueData) {
         if (issueStatusId == null || workflowId == null) {
@@ -103,9 +108,12 @@ public class WorkflowStatusResolver {
         if (name == null) {
             return "";
         }
-        return name.toLowerCase()
-                .replace("(legacy)", "")
-                .replace("(new)", "")
-                .replaceAll("[\\s_\\-()]+", "");
+        String result = name.toLowerCase();
+        if (stripSuffixesStr != null && !stripSuffixesStr.isBlank()) {
+            for (String suffix : stripSuffixesStr.split(",")) {
+                result = result.replace(suffix.trim().toLowerCase(), "");
+            }
+        }
+        return result.replaceAll("[\\s_\\-()]+", "");
     }
 }

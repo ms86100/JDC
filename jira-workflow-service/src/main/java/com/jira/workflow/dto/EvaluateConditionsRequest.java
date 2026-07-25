@@ -23,7 +23,7 @@ public class EvaluateConditionsRequest {
     /**
      * The transition ID to evaluate conditions for
      */
-    @NotNull(message = "Transition ID is required")
+    @NotNull(message = "{validation.transition.id.required}")
     private UUID transitionId;
 
     /**

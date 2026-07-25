@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -30,6 +31,21 @@ import java.util.*;
 @Slf4j
 public class AiTestService {
 
+    @Value("${app.ai.duplicate-similarity-threshold:0.8}")
+    private double duplicateSimilarityThreshold;
+
+    @Value("${app.ai.risk-threshold-high:0.7}")
+    private double riskThresholdHigh;
+
+    @Value("${app.ai.risk-threshold-medium:0.4}")
+    private double riskThresholdMedium;
+
+    @Value("${app.ai.stability-warning-threshold:0.7}")
+    private double stabilityWarningThreshold;
+
+    @Value("${app.ai.coverage-warning-threshold:0.5}")
+    private double coverageWarningThreshold;
+
     /**
      * Analyze test suite for potential duplicates
      */
@@ -47,7 +63,7 @@ public class AiTestService {
                 if (processedIds.contains(tests.get(j).getId())) continue;
 
                 double similarity = calculateSimilarity(tests.get(i), tests.get(j));
-                if (similarity > 0.8) { // 80% threshold
+                if (similarity > duplicateSimilarityThreshold) {
                     similarTests.add(tests.get(j));
                     processedIds.add(tests.get(j).getId());
                 }
@@ -203,8 +219,8 @@ public class AiTestService {
         double overallRisk = (1 - stabilityScore) * 0.5 + (1 - coverageScore) * 0.3 + changeScore * 0.2;
 
         String riskLevel;
-        if (overallRisk > 0.7) riskLevel = "HIGH";
-        else if (overallRisk > 0.4) riskLevel = "MEDIUM";
+        if (overallRisk > riskThresholdHigh) riskLevel = "HIGH";
+        else if (overallRisk > riskThresholdMedium) riskLevel = "MEDIUM";
         else riskLevel = "LOW";
 
         return RiskAssessment.builder()
@@ -298,10 +314,10 @@ public class AiTestService {
 
     private List<String> generateRiskRecommendations(String riskLevel, double stability, double coverage) {
         List<String> recommendations = new ArrayList<>();
-        if (stability < 0.7) {
+        if (stability < stabilityWarningThreshold) {
             recommendations.add("This test is unstable. Review recent changes and fix flakiness.");
         }
-        if (coverage < 0.5) {
+        if (coverage < coverageWarningThreshold) {
             recommendations.add("This test has low code coverage. Consider increasing assertions.");
         }
         if ("HIGH".equals(riskLevel)) {

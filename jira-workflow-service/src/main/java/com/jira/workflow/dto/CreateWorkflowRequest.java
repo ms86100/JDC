@@ -14,7 +14,7 @@ public class CreateWorkflowRequest {
 
     private UUID projectId;
 
-    @NotBlank(message = "Workflow name is required")
+    @NotBlank(message = "{validation.workflow.name.required}")
     private String name;
 
     private String description;

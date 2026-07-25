@@ -9,10 +9,10 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class WorkflowSchemeMappingRequest {
-    @NotNull(message = "Issue type ID is required")
+    @NotNull(message = "{validation.issuetype.required}")
     private UUID issueTypeId;
 
-    @NotNull(message = "Workflow ID is required")
+    @NotNull(message = "{validation.workflow.id.required}")
     private UUID workflowId;
 }
 

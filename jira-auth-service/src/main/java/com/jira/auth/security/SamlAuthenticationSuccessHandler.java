@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -19,6 +20,12 @@ import java.util.Map;
 public class SamlAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
     private final SamlConfigService samlConfigService;
+
+    @Value("${app.defaults.default-registration-id:default}")
+    private String defaultRegistrationId;
+
+    @Value("${app.saml.error-redirect:/auth/login?error=saml_failed}")
+    private String samlErrorRedirect;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -46,14 +53,14 @@ public class SamlAuthenticationSuccessHandler implements AuthenticationSuccessHa
                 }
             } else {
                 nameId = authentication.getName();
-                registrationId = "default";
+                registrationId = defaultRegistrationId;
             }
         } catch (ClassNotFoundException e) {
             nameId = authentication.getName();
-            registrationId = "default";
+            registrationId = defaultRegistrationId;
         } catch (Exception e) {
             log.error("Failed to extract SAML principal: {}", e.getMessage());
-            response.sendRedirect("/auth/login?error=saml_failed");
+            response.sendRedirect(samlErrorRedirect);
             return;
         }
 
@@ -67,7 +74,7 @@ public class SamlAuthenticationSuccessHandler implements AuthenticationSuccessHa
             response.sendRedirect(frontendUrl);
         } catch (Exception e) {
             log.error("SAML user provisioning failed for nameId={}: {}", nameId, e.getMessage());
-            response.sendRedirect("/auth/login?error=saml_failed");
+            response.sendRedirect(samlErrorRedirect);
         }
     }
 

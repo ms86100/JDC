@@ -27,6 +27,9 @@ public class WorkflowEventOutboxProcessor {
     @Value("${jira.workflow.outbox.batch-size:50}")
     private int batchSize;
 
+    @Value("${app.workflow.outbox.default-transition-name:Transition}")
+    private String defaultTransitionName;
+
     @Scheduled(fixedDelayString = "${jira.workflow.outbox.poll-interval-ms:5000}")
     @SchedulerLock(name = "WorkflowEventOutboxProcessor_processOutbox", lockAtMostFor = "PT4S", lockAtLeastFor = "PT2S")
     @Transactional
@@ -85,7 +88,7 @@ public class WorkflowEventOutboxProcessor {
 
         String issueKey = stringVal(payload.get("issueKey"), issueId.toString());
         String summary = stringVal(payload.get("summary"), "");
-        String transitionName = stringVal(payload.get("transitionName"), "Transition");
+        String transitionName = stringVal(payload.get("transitionName"), defaultTransitionName);
         UUID actorId = parseUuid(payload.get("userId"));
 
         String title = issueKey + " transitioned";

@@ -15,10 +15,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class WorkflowPostFunctionRequest {
 
-    @NotNull(message = "Transition ID is required")
+    @NotNull(message = "{validation.postfunction.transition.required}")
     private UUID transitionId;
 
-    @NotBlank(message = "Post-function type is required")
+    @NotBlank(message = "{validation.postfunction.type.required}")
     private String postFunctionType;
 
     private String functionData;

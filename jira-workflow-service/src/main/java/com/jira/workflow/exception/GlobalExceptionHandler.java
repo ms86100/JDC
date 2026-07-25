@@ -3,6 +3,8 @@ package com.jira.workflow.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -12,13 +14,21 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
-    private static final String SERVICE_NAME = "jira-workflow-service";
+    @Value("${spring.application.name:jira-workflow-service}")
+    private String serviceName;
+
+    private final MessageSource messageSource;
+
+    public GlobalExceptionHandler(MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
 
     @Data
     @Builder
@@ -43,7 +53,7 @@ public class GlobalExceptionHandler {
                 .error(HttpStatus.NOT_FOUND.getReasonPhrase())
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
-                .service(SERVICE_NAME)
+                .service(serviceName)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
@@ -57,7 +67,7 @@ public class GlobalExceptionHandler {
                 .error(HttpStatus.CONFLICT.getReasonPhrase())
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
-                .service(SERVICE_NAME)
+                .service(serviceName)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
@@ -71,7 +81,7 @@ public class GlobalExceptionHandler {
                 .error(HttpStatus.CONFLICT.getReasonPhrase())
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
-                .service(SERVICE_NAME)
+                .service(serviceName)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
@@ -90,9 +100,9 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message("Validation failed")
+                .message(messageSource.getMessage("error.validation.failed", null, "Validation failed", Locale.ENGLISH))
                 .path(request.getRequestURI())
-                .service(SERVICE_NAME)
+                .service(serviceName)
                 .validationErrors(validationErrors)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
@@ -108,7 +118,7 @@ public class GlobalExceptionHandler {
                 .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
-                .service(SERVICE_NAME)
+                .service(serviceName)
                 .build();
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }

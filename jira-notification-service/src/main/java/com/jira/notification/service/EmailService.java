@@ -46,35 +46,56 @@ public class EmailService {
     @Value("${notification.email.from:noreply@jira.local}")
     private String fromAddress;
 
+    @Value("${app.email.status.queued:QUEUED}")
+    private String statusQueued;
+
+    @Value("${app.email.status.sent:SENT}")
+    private String statusSent;
+
+    @Value("${app.email.status.failed:FAILED}")
+    private String statusFailed;
+
+    @Value("${app.email.default-subject:Jira Notification}")
+    private String defaultSubject;
+
+    @Value("${app.email.max-retries:3}")
+    private int defaultMaxRetries;
+
+    @Value("${app.email.retry-backoff-base-seconds:30}")
+    private long retryBackoffBaseSeconds;
+
+    @Value("${app.email.fallback-label:Unknown}")
+    private String fallbackLabel;
+
     @Async
     public void sendIssueAssignedEmail(UUID userId, Map<String, Object> issueData) {
         sendTemplatedEmail(userId, "issue-assigned", Map.of(
-            "subject", "Issue assigned: " + issueData.getOrDefault("issueKey", "Unknown"),
-            "issueKey", issueData.getOrDefault("issueKey", "Unknown").toString(),
+            "subject", "Issue assigned: " + issueData.getOrDefault("issueKey", fallbackLabel),
+            "issueKey", issueData.getOrDefault("issueKey", fallbackLabel).toString(),
             "title", issueData.getOrDefault("title", "No title").toString(),
-            "reporter", issueData.getOrDefault("reporter", "Unknown").toString(),
-            "projectKey", issueData.getOrDefault("projectKey", "Unknown").toString()
+            "reporter", issueData.getOrDefault("reporter", fallbackLabel).toString(),
+            "projectKey", issueData.getOrDefault("projectKey", fallbackLabel).toString()
         ));
     }
 
     @Async
     public void sendIssueCommentedEmail(UUID userId, Map<String, Object> commentData) {
         sendTemplatedEmail(userId, "issue-commented", Map.of(
-            "subject", "New comment on: " + commentData.getOrDefault("issueKey", "Unknown"),
-            "issueKey", commentData.getOrDefault("issueKey", "Unknown").toString(),
-            "commenter", commentData.getOrDefault("commenter", "Unknown").toString(),
+            "subject", "New comment on: " + commentData.getOrDefault("issueKey", fallbackLabel),
+            "issueKey", commentData.getOrDefault("issueKey", fallbackLabel).toString(),
+            "commenter", commentData.getOrDefault("commenter", fallbackLabel).toString(),
             "commentPreview", truncate(commentData.getOrDefault("comment", "").toString(), 200),
-            "projectKey", commentData.getOrDefault("projectKey", "Unknown").toString()
+            "projectKey", commentData.getOrDefault("projectKey", fallbackLabel).toString()
         ));
     }
 
     @Async
     public void sendSprintStartedEmail(UUID userId, Map<String, Object> sprintData) {
         sendTemplatedEmail(userId, "sprint-started", Map.of(
-            "subject", "Sprint started: " + sprintData.getOrDefault("sprintName", "Unknown"),
-            "sprintName", sprintData.getOrDefault("sprintName", "Unknown").toString(),
-            "startDate", sprintData.getOrDefault("startDate", "Unknown").toString(),
-            "endDate", sprintData.getOrDefault("endDate", "Unknown").toString(),
+            "subject", "Sprint started: " + sprintData.getOrDefault("sprintName", fallbackLabel),
+            "sprintName", sprintData.getOrDefault("sprintName", fallbackLabel).toString(),
+            "startDate", sprintData.getOrDefault("startDate", fallbackLabel).toString(),
+            "endDate", sprintData.getOrDefault("endDate", fallbackLabel).toString(),
             "goal", sprintData.getOrDefault("goal", "").toString()
         ));
     }
@@ -82,8 +103,8 @@ public class EmailService {
     @Async
     public void sendSprintCompletedEmail(UUID userId, Map<String, Object> sprintData) {
         sendTemplatedEmail(userId, "sprint-completed", Map.of(
-            "subject", "Sprint completed: " + sprintData.getOrDefault("sprintName", "Unknown"),
-            "sprintName", sprintData.getOrDefault("sprintName", "Unknown").toString(),
+            "subject", "Sprint completed: " + sprintData.getOrDefault("sprintName", fallbackLabel),
+            "sprintName", sprintData.getOrDefault("sprintName", fallbackLabel).toString(),
             "completedIssues", sprintData.getOrDefault("completedIssues", 0).toString(),
             "totalPoints", sprintData.getOrDefault("totalPoints", 0).toString(),
             "velocity", sprintData.getOrDefault("velocity", 0).toString()
@@ -114,9 +135,9 @@ public class EmailService {
                 .recipientEmail(recipientEmail)
                 .subject(subject)
                 .bodyHtml(bodyHtml)
-                .status("QUEUED")
+                .status(statusQueued)
                 .retryCount(0)
-                .maxRetries(3)
+                .maxRetries(defaultMaxRetries)
                 .nextRetryAt(OffsetDateTime.now())
                 .build();
 
@@ -202,7 +223,7 @@ public class EmailService {
             Context context = new Context();
             variables.forEach(context::setVariable);
             String htmlContent = templateEngine.process("email/" + templateName, context);
-            String subject = (String) variables.getOrDefault("subject", "Jira Notification");
+            String subject = (String) variables.getOrDefault("subject", defaultSubject);
 
             queueEmail(email, subject, htmlContent);
 
@@ -222,7 +243,7 @@ public class EmailService {
 
             mailSender.send(message);
 
-            entry.setStatus("SENT");
+            entry.setStatus(statusSent);
             entry.setSentAt(OffsetDateTime.now());
             emailQueueRepository.save(entry);
 
@@ -240,11 +261,11 @@ public class EmailService {
         entry.setErrorMessage(errorMessage);
 
         if (entry.getRetryCount() >= entry.getMaxRetries()) {
-            entry.setStatus("FAILED");
+            entry.setStatus(statusFailed);
             log.error("Email to {} permanently failed after {} retries: {}",
                     entry.getRecipientEmail(), entry.getRetryCount(), errorMessage);
         } else {
-            long backoffSeconds = (long) Math.pow(2, entry.getRetryCount()) * 30;
+            long backoffSeconds = (long) Math.pow(2, entry.getRetryCount()) * retryBackoffBaseSeconds;
             entry.setNextRetryAt(OffsetDateTime.now().plusSeconds(backoffSeconds));
             log.warn("Email to {} failed (attempt {}/{}), next retry in {}s: {}",
                     entry.getRecipientEmail(), entry.getRetryCount(), entry.getMaxRetries(),

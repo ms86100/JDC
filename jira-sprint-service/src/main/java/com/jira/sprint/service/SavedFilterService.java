@@ -8,6 +8,8 @@ import com.jira.sprint.repository.SavedFilterRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,16 +22,24 @@ import java.util.*;
 public class SavedFilterService {
 
     private final SavedFilterRepository savedFilterRepository;
+    private final MessageSource messageSource;
     private final Map<UUID, FilterSubscriptionResponse> subscriptions = new java.util.concurrent.ConcurrentHashMap<>();
+
+    @Value("${app.filter.system-filter-names:All Issues,My Issues,Reported by Me,Recently Updated,Open Issues}")
+    private String systemFilterNamesStr;
+
+    @Value("${app.filter.system-filter-jqls:,assignee = currentUser(),reporter = currentUser(),ORDER BY updated DESC,status NOT IN (Done\\, Closed)}")
+    private String systemFilterJqlsStr;
 
     @PostConstruct
     void seedSystemFilters() {
         if (savedFilterRepository.count() > 0) return;
-        seed("All Issues", "", true);
-        seed("My Issues", "assignee = currentUser()", true);
-        seed("Reported by Me", "reporter = currentUser()", true);
-        seed("Recently Updated", "ORDER BY updated DESC", true);
-        seed("Open Issues", "status NOT IN (Done, Closed)", true);
+        String[] names = systemFilterNamesStr.split(",");
+        String[] jqls = systemFilterJqlsStr.split(",");
+        for (int i = 0; i < names.length; i++) {
+            String jql = i < jqls.length ? jqls[i].trim() : "";
+            seed(names[i].trim(), jql, true);
+        }
     }
 
     private void seed(String name, String jql, boolean system) {
@@ -69,7 +79,7 @@ public class SavedFilterService {
     @Transactional
     public SavedFilterResponse createFilter(UUID userId, String name, String jql, boolean isShared) {
         if (userId == null) {
-            throw new IllegalArgumentException("Authentication required to save filters");
+            throw new IllegalArgumentException(messageSource.getMessage("error.filter.auth.required", null, Locale.ENGLISH));
         }
         SavedFilterEntity entity = SavedFilterEntity.builder()
                 .name(name)
@@ -87,12 +97,12 @@ public class SavedFilterService {
     @Transactional
     public void deleteFilter(UUID filterId, UUID userId) {
         SavedFilterEntity f = savedFilterRepository.findById(filterId)
-                .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
+                .orElseThrow(() -> new IllegalArgumentException(messageSource.getMessage("error.filter.not.found", null, Locale.ENGLISH)));
         if (Boolean.TRUE.equals(f.getIsSystem())) {
-            throw new IllegalArgumentException("Cannot delete system filter");
+            throw new IllegalArgumentException(messageSource.getMessage("error.filter.cannot.delete.system", null, Locale.ENGLISH));
         }
         if (userId == null || !userId.equals(f.getOwnerId())) {
-            throw new IllegalArgumentException("Only the filter owner can delete this filter");
+            throw new IllegalArgumentException(messageSource.getMessage("error.filter.only.owner.can.delete", null, Locale.ENGLISH));
         }
         savedFilterRepository.delete(f);
     }
@@ -100,9 +110,9 @@ public class SavedFilterService {
     @Transactional
     public SavedFilterResponse toggleFavorite(UUID filterId, UUID userId) {
         SavedFilterEntity entity = savedFilterRepository.findById(filterId)
-                .orElseThrow(() -> new IllegalArgumentException("Filter not found"));
+                .orElseThrow(() -> new IllegalArgumentException(messageSource.getMessage("error.filter.not.found", null, Locale.ENGLISH)));
         if (!canAccessFilter(userId, filterId)) {
-            throw new IllegalArgumentException("Not allowed to modify this filter");
+            throw new IllegalArgumentException(messageSource.getMessage("error.filter.not.allowed.to.modify", null, Locale.ENGLISH));
         }
         entity.setFavorite(!Boolean.TRUE.equals(entity.getFavorite()));
         return toResponse(savedFilterRepository.save(entity));

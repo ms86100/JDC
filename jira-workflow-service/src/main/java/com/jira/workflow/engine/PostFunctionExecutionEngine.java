@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jira.workflow.entity.WorkflowPostFunction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
@@ -34,8 +35,26 @@ public class PostFunctionExecutionEngine {
     private final WorkflowEventPublisher eventPublisher;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private static final int MAX_RETRIES = 3;
-    private static final long RETRY_DELAY_MS = 100;
+    @Value("${app.workflow.post-function.max-retries:3}")
+    private int maxRetries;
+
+    @Value("${app.workflow.post-function.retry-delay-ms:100}")
+    private long retryDelayMs;
+
+    @Value("${app.workflow.post-function.default-email-subject:Issue Notification}")
+    private String defaultEmailSubject;
+
+    @Value("${app.workflow.post-function.default-email-body:Issue has been updated.}")
+    private String defaultEmailBody;
+
+    @Value("${app.workflow.post-function.default-notify-message:Issue transitioned}")
+    private String defaultNotifyMessage;
+
+    @Value("${app.workflow.post-function.default-automation-queue:issue-transitioned}")
+    private String defaultAutomationQueue;
+
+    @Value("${app.workflow.post-function.summary-template:Issue {issueKey} was transitioned to {toStatusName} by {userName}.}")
+    private String defaultSummaryTemplate;
 
     /**
      * Execute a single post-function with the given context.
@@ -137,21 +156,21 @@ public class PostFunctionExecutionEngine {
      */
     private void executeWithRetry(WorkflowPostFunction postFunction, Map<String, Object> context) {
         int attempt = 0;
-        while (attempt < MAX_RETRIES) {
+        while (attempt < maxRetries) {
             try {
                 executePostFunction(postFunction, context);
                 return;
             } catch (Exception e) {
                 attempt++;
-                if (attempt >= MAX_RETRIES) {
+                if (attempt >= maxRetries) {
                     log.error("Post-function {} failed after {} attempts: {}",
-                            postFunction.getId(), MAX_RETRIES, e.getMessage());
+                            postFunction.getId(), maxRetries, e.getMessage());
                     throw e;
                 }
                 log.warn("Post-function {} attempt {} failed, retrying in {}ms...",
-                        postFunction.getId(), attempt, RETRY_DELAY_MS);
+                        postFunction.getId(), attempt, retryDelayMs);
                 try {
-                    Thread.sleep(RETRY_DELAY_MS * attempt);
+                    Thread.sleep(retryDelayMs * attempt);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     throw new RuntimeException("Retry interrupted", ie);
@@ -270,7 +289,7 @@ public class PostFunctionExecutionEngine {
 
     private void executeNotifyFunction(WorkflowPostFunction pf, Map<String, Object> ctx) {
         Map<String, Object> config = parseConfig(pf.getFunctionData());
-        String message = stringVal(config.get("message"), "Issue transitioned");
+        String message = stringVal(config.get("message"), defaultNotifyMessage);
         UUID recipientId = parseUuid(config.get("recipientId"));
         if (recipientId == null) {
             recipientId = parseUuid(ctx.get("userId"));
@@ -290,8 +309,8 @@ public class PostFunctionExecutionEngine {
 
     private void sendEmail(Map<String, Object> ctx, Map<String, Object> config) {
         String to = stringVal(config.get("to"), stringVal(config.get("email"), null));
-        String subject = stringVal(config.get("subject"), "Issue Notification");
-        String body = stringVal(config.get("body"), "Issue has been updated.");
+        String subject = stringVal(config.get("subject"), defaultEmailSubject);
+        String body = stringVal(config.get("body"), defaultEmailBody);
 
         log.info("Email notification would be sent to: {} with subject: {}", to, subject);
         // Email sending is handled by notification service
@@ -491,7 +510,7 @@ public class PostFunctionExecutionEngine {
 
     private void executeAutomationFunction(WorkflowPostFunction pf, Map<String, Object> ctx) {
         Map<String, Object> config = parseConfig(pf.getFunctionData());
-        String queue = stringVal(config.get("automationQueue"), stringVal(config.get("queue"), "issue-transitioned"));
+        String queue = stringVal(config.get("automationQueue"), stringVal(config.get("queue"), defaultAutomationQueue));
 
         log.info("Automation rule triggered: queue={}, issueId={}", queue, ctx.get("issueId"));
         eventPublisher.publishIssueTransitioned(buildContextFromMap(ctx));
@@ -503,8 +522,7 @@ public class PostFunctionExecutionEngine {
 
     private void generateAutomaticSummary(Map<String, Object> ctx, Map<String, Object> config) {
         UUID issueId = parseUuid(ctx.get("issueId"));
-        String template = stringVal(config.get("template"),
-                "Issue {issueKey} was transitioned to {toStatusName} by {userName}.");
+        String template = stringVal(config.get("template"), defaultSummaryTemplate);
 
         if (issueId != null) {
             Map<String, Object> fields = getFields(ctx);

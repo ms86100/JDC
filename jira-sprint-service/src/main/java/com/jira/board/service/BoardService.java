@@ -7,15 +7,17 @@ import com.jira.board.repository.AgileBoardRepository;
 import com.jira.board.repository.BoardColumnRepository;
 import com.jira.board.repository.BoardConfigRepository;
 import com.jira.board.repository.BoardSprintRepository;
+import com.jira.cluster.util.StatusCategoryHelper;
 import com.jira.sprint.entity.Sprint;
 import com.jira.sprint.repository.SprintIssueRepository;
 import com.jira.sprint.repository.SprintRepository;
 import com.jira.sprint.service.IssueServiceClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -34,20 +36,61 @@ public class BoardService {
     private final IssueServiceClient issueServiceClient;
     private final BoardConfigRepository boardConfigRepository;
     private final BoardConfigurationService boardConfigurationService;
+    private final MessageSource messageSource;
 
-    // Default quick filters
-    private static final List<BoardConfigResponse.QuickFilterConfig> DEFAULT_QUICK_FILTERS = Arrays.asList(
-            BoardConfigResponse.QuickFilterConfig.builder()
-                    .id("qf-assigned-me").name("Assigned to Me").jql("assignee = currentUser()").build(),
-            BoardConfigResponse.QuickFilterConfig.builder()
-                    .id("qf-reporter-me").name("Reported by Me").jql("reporter = currentUser()").build(),
-            BoardConfigResponse.QuickFilterConfig.builder()
-                    .id("qf-recently-updated").name("Recently Updated").jql("updated >= -1d").build(),
-            BoardConfigResponse.QuickFilterConfig.builder()
-                    .id("qf-no-assignee").name("Unassigned").jql("assignee is empty").build(),
-            BoardConfigResponse.QuickFilterConfig.builder()
-                    .id("qf-has-due-date").name("Has Due Date").jql("duedate is not empty").build()
-    );
+    @Value("${app.defaults.board-type:SCRUM}")
+    private String defaultBoardType;
+
+    @Value("${app.defaults.card-layout:FULL}")
+    private String defaultCardLayout;
+
+    @Value("${app.defaults.days-on-board:5}")
+    private int defaultDaysOnBoard;
+
+    @Value("${app.board.kanban-columns:Backlog,Selected for Development,In Progress,Done}")
+    private String kanbanColumnsStr;
+
+    @Value("${app.board.kanban-column-categories:TODO,TODO,IN_PROGRESS,DONE}")
+    private String kanbanColumnCategoriesStr;
+
+    @Value("${app.board.kanban-column-colors:#6b778c,#0052cc,#ff8b00,#36b37e}")
+    private String kanbanColumnColorsStr;
+
+    @Value("${app.board.kanban-column-wip-limits:0,0,5,0}")
+    private String kanbanColumnWipLimitsStr;
+
+    @Value("${app.board.scrum-columns:Backlog,To Do,In Progress,In Review,Done}")
+    private String scrumColumnsStr;
+
+    @Value("${app.board.scrum-column-categories:TODO,TODO,IN_PROGRESS,IN_REVIEW,DONE}")
+    private String scrumColumnCategoriesStr;
+
+    @Value("${app.board.scrum-column-colors:#6c757d,#6c757d,#0066ff,#ff9200,#28a745}")
+    private String scrumColumnColorsStr;
+
+    @Value("${app.board.scrum-column-wip-limits:0,0,5,3,0}")
+    private String scrumColumnWipLimitsStr;
+
+    @Value("${app.board.quick-filter-ids:qf-assigned-me,qf-reporter-me,qf-recently-updated,qf-no-assignee,qf-has-due-date}")
+    private String quickFilterIdsStr;
+
+    @Value("${app.board.quick-filter-names:Assigned to Me,Reported by Me,Recently Updated,Unassigned,Has Due Date}")
+    private String quickFilterNamesStr;
+
+    @Value("${app.board.quick-filter-jqls:assignee = currentUser(),reporter = currentUser(),updated >= -1d,assignee is empty,duedate is not empty}")
+    private String quickFilterJqlsStr;
+
+    private List<BoardConfigResponse.QuickFilterConfig> getDefaultQuickFilters() {
+        String[] ids = quickFilterIdsStr.split(",");
+        String[] names = quickFilterNamesStr.split(",");
+        String[] jqls = quickFilterJqlsStr.split(",");
+        List<BoardConfigResponse.QuickFilterConfig> filters = new ArrayList<>();
+        for (int i = 0; i < ids.length && i < names.length && i < jqls.length; i++) {
+            filters.add(BoardConfigResponse.QuickFilterConfig.builder()
+                    .id(ids[i].trim()).name(names[i].trim()).jql(jqls[i].trim()).build());
+        }
+        return filters;
+    }
 
     @Transactional(readOnly = true)
     public List<AgileBoardResponse> getBoardsByProject(UUID projectId) {
@@ -68,14 +111,14 @@ public class BoardService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .projectId(request.getProjectId())
-                .boardType(request.getBoardType() != null ? request.getBoardType() : "SCRUM")
+                .boardType(request.getBoardType() != null ? request.getBoardType() : defaultBoardType)
                 .filterId(request.getFilterId())
                 .jqlQuery(request.getJqlQuery())
                 .isDefault(request.isDefault())
                 .allowAllIssues(request.isAllowAllIssues())
-                .cardLayout(request.getCardLayout() != null ? request.getCardLayout() : "FULL")
+                .cardLayout(request.getCardLayout() != null ? request.getCardLayout() : defaultCardLayout)
                 .estimationStatistic(request.getEstimationStatistic())
-                .daysOnBoard(request.getDaysOnBoard() != null ? request.getDaysOnBoard() : 5)
+                .daysOnBoard(request.getDaysOnBoard() != null ? request.getDaysOnBoard() : defaultDaysOnBoard)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -281,15 +324,14 @@ public class BoardService {
     public List<BoardIssueResponse> applyQuickFilter(UUID boardId, String filterId) {
         AgileBoard board = findBoardById(boardId);
 
-        // Map filter ID to JQL
-        String jql = switch (filterId) {
-            case "qf-assigned-me" -> "assignee = currentUser()";
-            case "qf-reporter-me" -> "reporter = currentUser()";
-            case "qf-recently-updated" -> "updated >= -1d";
-            case "qf-no-assignee" -> "assignee is empty";
-            case "qf-has-due-date" -> "duedate is not empty";
-            default -> null;
-        };
+        // Map filter ID to JQL using configurable quick filters
+        String jql = null;
+        for (BoardConfigResponse.QuickFilterConfig qf : getDefaultQuickFilters()) {
+            if (qf.getId().equals(filterId)) {
+                jql = qf.getJql();
+                break;
+            }
+        }
 
         if (jql == null) {
             return getBoardIssues(boardId, null);
@@ -440,12 +482,7 @@ public class BoardService {
     }
 
     private boolean isCompletedStatus(String status) {
-        if (status == null) return false;
-        String normalized = status.toLowerCase();
-        return normalized.contains("done") ||
-               normalized.contains("completed") ||
-               normalized.contains("closed") ||
-               normalized.equals("resolved");
+        return StatusCategoryHelper.isCompleted(status);
     }
 
     private List<UUID> getSprintIssueIds(UUID sprintId) {
@@ -472,7 +509,7 @@ public class BoardService {
                 int points = issue.getStoryPoints() != null ? issue.getStoryPoints() : 0;
                 committed += points;
                 String status = issue.getStatusName();
-                if (status != null && (status.contains("Done") || status.contains("Completed") || status.contains("Closed"))) {
+                if (StatusCategoryHelper.isCompleted(status)) {
                     completed += points;
                 }
             } catch (Exception e) {
@@ -499,7 +536,7 @@ public class BoardService {
 
         return BoardConfigResponse.builder()
                 .boardId(boardId)
-                .quickFilters(DEFAULT_QUICK_FILTERS)
+                .quickFilters(getDefaultQuickFilters())
                 .swimlane(BoardConfigResponse.SwimlaneConfigResponse.builder()
                         .enabled(config != null && !"none".equals(config.getSwimlaneField()))
                         .field(config != null ? config.getSwimlaneField() : "none")
@@ -547,9 +584,9 @@ public class BoardService {
     public BoardColumnResponse updateColumn(UUID boardId, UUID columnId, BoardColumnResponse updates) {
         findBoardById(boardId);
         BoardColumn column = columnRepository.findById(columnId)
-                .orElseThrow(() -> new ResourceNotFoundException("Column not found: " + columnId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.column.not.found", new Object[]{columnId}, Locale.ENGLISH)));
         if (!column.getBoardId().equals(boardId)) {
-            throw new ResourceNotFoundException("Column does not belong to board");
+            throw new ResourceNotFoundException(messageSource.getMessage("error.column.not.on.board", null, Locale.ENGLISH));
         }
         if (updates.getName() != null) column.setName(updates.getName());
         if (updates.getMaxIssues() != null) column.setMaxIssues(updates.getMaxIssues());
@@ -563,24 +600,33 @@ public class BoardService {
         List<BoardColumn> defaultColumns;
 
         if ("KANBAN".equals(board.getBoardType())) {
-            defaultColumns = Arrays.asList(
-                    createColumn(board.getId(), "Backlog", 0, "TODO", "#6b778c"),
-                    createColumn(board.getId(), "Selected for Development", 1, "TODO", "#0052cc"),
-                    createColumn(board.getId(), "In Progress", 2, "IN_PROGRESS", "#ff8b00", 5),
-                    createColumn(board.getId(), "Done", 3, "DONE", "#36b37e")
-            );
+            defaultColumns = buildColumnsFromConfig(board.getId(),
+                    kanbanColumnsStr, kanbanColumnCategoriesStr, kanbanColumnColorsStr, kanbanColumnWipLimitsStr);
         } else {
             // SCRUM default columns
-            defaultColumns = Arrays.asList(
-                    createColumn(board.getId(), "Backlog", 0, "TODO", "#6c757d"),
-                    createColumn(board.getId(), "To Do", 1, "TODO", "#6c757d"),
-                    createColumn(board.getId(), "In Progress", 2, "IN_PROGRESS", "#0066ff", 5),
-                    createColumn(board.getId(), "In Review", 3, "IN_REVIEW", "#ff9200", 3),
-                    createColumn(board.getId(), "Done", 4, "DONE", "#28a745")
-            );
+            defaultColumns = buildColumnsFromConfig(board.getId(),
+                    scrumColumnsStr, scrumColumnCategoriesStr, scrumColumnColorsStr, scrumColumnWipLimitsStr);
         }
 
         columnRepository.saveAll(defaultColumns);
+    }
+
+    private List<BoardColumn> buildColumnsFromConfig(UUID boardId, String namesStr, String categoriesStr, String colorsStr, String wipLimitsStr) {
+        String[] names = namesStr.split(",");
+        String[] categories = categoriesStr.split(",");
+        String[] colors = colorsStr.split(",");
+        String[] wipLimits = wipLimitsStr.split(",");
+        List<BoardColumn> columns = new ArrayList<>();
+        for (int i = 0; i < names.length; i++) {
+            String cat = i < categories.length ? categories[i].trim() : "TODO";
+            String color = i < colors.length ? colors[i].trim() : "#6c757d";
+            int wip = 0;
+            if (i < wipLimits.length) {
+                try { wip = Integer.parseInt(wipLimits[i].trim()); } catch (NumberFormatException ignored) {}
+            }
+            columns.add(createColumn(boardId, names[i].trim(), i, cat, color, wip > 0 ? wip : null));
+        }
+        return columns;
     }
 
     private BoardColumn createColumn(UUID boardId, String name, int sequence, String category, String color) {
@@ -603,7 +649,7 @@ public class BoardService {
 
     private AgileBoard findBoardById(UUID boardId) {
         return boardRepository.findById(boardId)
-                .orElseThrow(() -> new ResourceNotFoundException("Board not found: " + boardId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.board.not.found", new Object[]{boardId}, Locale.ENGLISH)));
     }
 
     private AgileBoardResponse mapToResponse(AgileBoard board) {
@@ -662,10 +708,10 @@ public class BoardService {
         String status = normalize(issue.getStatus());
         String name = normalize(column.getName());
         if ("DONE".equals(column.getStatusCategory()) || Boolean.TRUE.equals(column.getIsDone())) {
-            return status.contains("done") || status.contains("closed") || status.contains("resolved");
+            return StatusCategoryHelper.isCompleted(issue.getStatus());
         }
         if ("IN_PROGRESS".equals(column.getStatusCategory())) {
-            return status.contains("progress") || status.contains("review");
+            return StatusCategoryHelper.isInProgress(issue.getStatus());
         }
         if (name.contains("backlog")) return status.contains("backlog") || status.equals("open") || status.equals("new");
         if (name.contains("selected")) return status.contains("todo") || status.contains("selected");

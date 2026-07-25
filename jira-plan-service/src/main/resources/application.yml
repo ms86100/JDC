@@ -97,6 +97,69 @@ springdoc:
     path: /swagger-ui.html
     operations-sorter: method
 
+app:
+  sprint:
+    state:
+      future: FUTURE
+      active: ACTIVE
+      closed: CLOSED
+      abandoned: ABANDONED
+    completion-status:
+      uncompleted: UNCOMPLETED
+      completed: COMPLETED
+      incomplete: INCOMPLETE
+      dropped: DROPPED
+      in-progress: IN_PROGRESS
+    default-rank: "0|hzzzzz:"
+  release:
+    status:
+      draft: DRAFT
+      approved: APPROVED
+      released: RELEASED
+  goal:
+    status:
+      not-started: NOT_STARTED
+      in-progress: IN_PROGRESS
+      completed: COMPLETED
+  backlog:
+    default-status: BACKLOG
+  board:
+    default-type: SCRUM
+    default-column-config-mode: DEFAULT
+    default-card-layout-mode: COMPACT
+    default-swimlane: NONE
+    default-field-type: STANDARD
+    column:
+      default-min-width: 100
+      default-max-width: 600
+  critical-path:
+    default-duration-days: 5
+    risk:
+      high-threshold: 0.7
+      medium-threshold: 0.3
+      large-delay-days: 5
+      recommendation:
+        buffer: "Consider adding buffer time to downstream critical path items"
+        scope: "Evaluate whether scope reduction is possible"
+        notify: "Large delay detected - notify stakeholders"
+        contained: "Change does not affect critical path - impact is contained"
+  schedule:
+    default-duration-days: 5
+    target-date-duration-days: 7
+  working-days:
+    default-name: Default
+    default-hours-per-day: "8.00"
+    default-working-days: MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY
+  dependency:
+    default-type: BLOCKS
+    impact:
+      high-threshold: 60
+      medium-threshold: 30
+  program:
+    default-access-type: OPEN
+  team:
+    default-capacity-hours: "40.00"
+
 logging:
   level:
     com.jira.plan: DEBUG

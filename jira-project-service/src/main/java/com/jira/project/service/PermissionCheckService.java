@@ -1,5 +1,6 @@
 package com.jira.project.service;
 
+import com.jira.project.entity.Permission;
 import com.jira.project.entity.PermissionScheme;
 import com.jira.project.entity.Project;
 import com.jira.project.repository.PermissionSchemeRepository;
@@ -8,6 +9,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,12 @@ public class PermissionCheckService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    @Value("${app.defaults.system-admin-role:ROLE_ADMIN}")
+    private String systemAdminRole;
+
+    @Value("${app.defaults.administer-projects-permission:ADMINISTER_PROJECTS}")
+    private String administerProjectsPermission;
+
     /**
      * Check if user has a specific permission in a project
      *
@@ -49,7 +57,7 @@ public class PermissionCheckService {
         }
 
         // Project admins have all project permissions
-        if (permissionKey.equals("ADMINISTER_PROJECTS") || hasPermission(userId, projectId, "ADMINISTER_PROJECTS")) {
+        if (permissionKey.equals(administerProjectsPermission) || hasPermission(userId, projectId, administerProjectsPermission)) {
             return true;
         }
 
@@ -68,8 +76,9 @@ public class PermissionCheckService {
                 "SELECT EXISTS(SELECT 1 FROM jira_auth.users u " +
                 "JOIN jira_auth.user_roles ur ON u.id = ur.user_id " +
                 "JOIN jira_auth.roles r ON ur.role_id = r.id " +
-                "WHERE u.id = :userId AND r.name = 'ROLE_ADMIN')"
+                "WHERE u.id = :userId AND r.name = :roleName)"
             ).setParameter("userId", userId)
+             .setParameter("roleName", systemAdminRole)
              .getSingleResult();
             return Boolean.TRUE.equals(result);
         } catch (Exception e) {
@@ -153,69 +162,69 @@ public class PermissionCheckService {
      * Can the user browse (view) this project?
      */
     public boolean canBrowseProject(UUID userId, UUID projectId) {
-        return hasPermission(userId, projectId, "BROWSE_PROJECTS");
+        return hasPermission(userId, projectId, Permission.BROWSE_PROJECTS);
     }
 
     /**
      * Can the user create issues in this project?
      */
     public boolean canCreateIssues(UUID userId, UUID projectId) {
-        return hasPermission(userId, projectId, "CREATE_ISSUES");
+        return hasPermission(userId, projectId, Permission.CREATE_ISSUES);
     }
 
     /**
      * Can the user edit issues in this project?
      */
     public boolean canEditIssues(UUID userId, UUID projectId) {
-        return hasPermission(userId, projectId, "EDIT_ISSUES");
+        return hasPermission(userId, projectId, Permission.EDIT_ISSUES);
     }
 
     /**
      * Can the user delete issues in this project?
      */
     public boolean canDeleteIssues(UUID userId, UUID projectId) {
-        return hasPermission(userId, projectId, "DELETE_ISSUES");
+        return hasPermission(userId, projectId, Permission.DELETE_ISSUES);
     }
 
     /**
      * Can the user assign issues in this project?
      */
     public boolean canAssignIssues(UUID userId, UUID projectId) {
-        return hasPermission(userId, projectId, "ASSIGN_ISSUES");
+        return hasPermission(userId, projectId, Permission.ASSIGN_ISSUES);
     }
 
     /**
      * Can the user resolve/close issues in this project?
      */
     public boolean canResolveIssues(UUID userId, UUID projectId) {
-        return hasPermission(userId, projectId, "RESOLVE_ISSUES");
+        return hasPermission(userId, projectId, Permission.RESOLVE_ISSUES);
     }
 
     /**
      * Can the user administer this project?
      */
     public boolean canAdministerProject(UUID userId, UUID projectId) {
-        return hasPermission(userId, projectId, "ADMINISTER_PROJECTS");
+        return hasPermission(userId, projectId, administerProjectsPermission);
     }
 
     /**
      * Can the user comment on issues in this project?
      */
     public boolean canComment(UUID userId, UUID projectId) {
-        return hasPermission(userId, projectId, "CREATE_COMMENTS");
+        return hasPermission(userId, projectId, Permission.CREATE_COMMENTS);
     }
 
     /**
      * Can the user attach files in this project?
      */
     public boolean canAttach(UUID userId, UUID projectId) {
-        return hasPermission(userId, projectId, "CREATE_ATTACHMENTS");
+        return hasPermission(userId, projectId, Permission.CREATE_ATTACHMENTS);
     }
 
     /**
      * Can the user work on issues (log work) in this project?
      */
     public boolean canWorkOnIssues(UUID userId, UUID projectId) {
-        return hasPermission(userId, projectId, "WORK_ON_ISSUES");
+        return hasPermission(userId, projectId, Permission.WORK_ON_ISSUES);
     }
 }

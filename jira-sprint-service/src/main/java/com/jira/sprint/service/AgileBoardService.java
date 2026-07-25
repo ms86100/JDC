@@ -6,6 +6,8 @@ import com.jira.sprint.exception.ResourceNotFoundException;
 import com.jira.sprint.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,28 @@ public class AgileBoardService {
     private final BoardColumnRepository boardColumnRepository;
     private final SprintRepository sprintRepository;
     private final SprintIssueRepository sprintIssueRepository;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.days-on-board:5}")
+    private int defaultDaysOnBoard;
+
+    @Value("${app.board.kanban-default-columns:To Do,In Progress,Done}")
+    private String kanbanDefaultColumnsStr;
+
+    @Value("${app.board.kanban-default-categories:TODO,IN_PROGRESS,DONE}")
+    private String kanbanDefaultCategoriesStr;
+
+    @Value("${app.board.scrum-default-columns:To Do,In Progress,In Review,Done}")
+    private String scrumDefaultColumnsStr;
+
+    @Value("${app.board.scrum-default-categories:TODO,IN_PROGRESS,IN_PROGRESS,DONE}")
+    private String scrumDefaultCategoriesStr;
+
+    @Value("${app.board.badge-default-columns:Backlog,Active,Complete}")
+    private String badgeDefaultColumnsStr;
+
+    @Value("${app.board.badge-default-categories:TODO,IN_PROGRESS,DONE}")
+    private String badgeDefaultCategoriesStr;
 
     @Transactional
     public AgileBoardResponse createBoard(CreateBoardRequest request, UUID createdBy) {
@@ -50,7 +74,7 @@ public class AgileBoardService {
                 .rankingConfig(request.getRankingConfig())
                 .cardLayout(request.getCardLayout() != null ? request.getCardLayout() : AgileBoard.LAYOUT_FULL)
                 .estimationStatistic(request.getEstimationStatistic())
-                .daysOnBoard(request.getDaysOnBoard() != null ? request.getDaysOnBoard() : 5)
+                .daysOnBoard(request.getDaysOnBoard() != null ? request.getDaysOnBoard() : defaultDaysOnBoard)
                 .backlogColumn(request.getBacklogColumn())
                 .createdBy(createdBy)
                 .build();
@@ -65,28 +89,27 @@ public class AgileBoardService {
     }
 
     private void createDefaultColumns(UUID boardId, String boardType) {
-        List<BoardColumn> defaultColumns;
+        String columnsStr;
+        String categoriesStr;
 
         if (AgileBoard.TYPE_KANBAN.equals(boardType)) {
-            defaultColumns = List.of(
-                    createColumn(boardId, "To Do", 0, "TODO", false),
-                    createColumn(boardId, "In Progress", 1, "IN_PROGRESS", false),
-                    createColumn(boardId, "Done", 2, "DONE", true)
-            );
+            columnsStr = kanbanDefaultColumnsStr;
+            categoriesStr = kanbanDefaultCategoriesStr;
         } else if (AgileBoard.TYPE_SCRUM.equals(boardType)) {
-            defaultColumns = List.of(
-                    createColumn(boardId, "To Do", 0, "TODO", false),
-                    createColumn(boardId, "In Progress", 1, "IN_PROGRESS", false),
-                    createColumn(boardId, "In Review", 2, "IN_PROGRESS", false),
-                    createColumn(boardId, "Done", 3, "DONE", true)
-            );
+            columnsStr = scrumDefaultColumnsStr;
+            categoriesStr = scrumDefaultCategoriesStr;
         } else {
-            // Default for BADGE or other types
-            defaultColumns = List.of(
-                    createColumn(boardId, "Backlog", 0, "TODO", false),
-                    createColumn(boardId, "Active", 1, "IN_PROGRESS", false),
-                    createColumn(boardId, "Complete", 2, "DONE", true)
-            );
+            columnsStr = badgeDefaultColumnsStr;
+            categoriesStr = badgeDefaultCategoriesStr;
+        }
+
+        String[] names = columnsStr.split(",");
+        String[] categories = categoriesStr.split(",");
+        List<BoardColumn> defaultColumns = new ArrayList<>();
+        for (int i = 0; i < names.length; i++) {
+            String cat = i < categories.length ? categories[i].trim() : "TODO";
+            boolean isDone = "DONE".equals(cat);
+            defaultColumns.add(createColumn(boardId, names[i].trim(), i, cat, isDone));
         }
 
         boardColumnRepository.saveAll(defaultColumns);
@@ -172,7 +195,7 @@ public class AgileBoardService {
     @Transactional
     public BoardSprintResponse updateSprintState(UUID boardId, UUID sprintId, String newState) {
         BoardSprint boardSprint = boardSprintRepository.findByBoardIdAndSprintId(boardId, sprintId)
-                .orElseThrow(() -> new ResourceNotFoundException("BoardSprint not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.board.sprint.not.found", null, Locale.ENGLISH)));
 
         boardSprint.setState(newState);
 
@@ -215,7 +238,7 @@ public class AgileBoardService {
     @Transactional
     public BoardColumnResponse updateColumn(UUID columnId, UpdateColumnRequest request) {
         BoardColumn column = boardColumnRepository.findById(columnId)
-                .orElseThrow(() -> new ResourceNotFoundException("Column not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.column.not.found", new Object[]{columnId}, Locale.ENGLISH)));
 
         if (request.getName() != null) column.setName(request.getName());
         if (request.getStatusIds() != null) column.setStatusIds(request.getStatusIds());
@@ -305,7 +328,7 @@ public class AgileBoardService {
     // Helper methods
     private AgileBoard findBoardById(UUID boardId) {
         return agileBoardRepository.findById(boardId)
-                .orElseThrow(() -> new ResourceNotFoundException("AgileBoard not found: " + boardId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.board.not.found", new Object[]{boardId}, Locale.ENGLISH)));
     }
 
     private AgileBoardResponse mapToAgileBoardResponse(AgileBoard board) {

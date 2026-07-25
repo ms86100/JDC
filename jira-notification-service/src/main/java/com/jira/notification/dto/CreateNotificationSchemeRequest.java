@@ -11,7 +11,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateNotificationSchemeRequest {
 
-    @NotBlank(message = "Scheme name is required")
+    @NotBlank(message = "{validation.scheme.name.required}")
     private String name;
 
     private String description;

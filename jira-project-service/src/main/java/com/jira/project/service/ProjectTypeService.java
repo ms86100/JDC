@@ -7,10 +7,10 @@ import com.jira.project.entity.*;
 import com.jira.project.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,6 +29,9 @@ public class ProjectTypeService {
     private final PermissionSchemeRepository permissionSchemeRepository;
     private final NotificationSchemeRepository notificationSchemeRepository;
     private final ScreenSchemeRepository screenSchemeRepository;
+
+    @Value("${app.defaults.role-names:PROJECT_ADMIN,DEVELOPER,VIEWER}")
+    private String defaultRoleNamesStr;
 
     public List<ProjectTypeResponse> getAllActiveTypes() {
         return projectTypeRepository.findByIsActiveTrueOrderBySortOrderAsc()
@@ -90,7 +93,7 @@ public class ProjectTypeService {
                         ? schemeDefaults.getScreenScheme().getId() : null)
                 .screenSchemeName(schemeDefaults != null && schemeDefaults.getScreenScheme() != null
                         ? schemeDefaults.getScreenScheme().getName() : null)
-                .defaultRoles(new String[]{"PROJECT_ADMIN", "DEVELOPER", "VIEWER"})
+                .defaultRoles(defaultRoleNamesStr.split(","))
                 .build();
     }
 

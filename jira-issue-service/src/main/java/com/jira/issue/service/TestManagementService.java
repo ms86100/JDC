@@ -8,6 +8,7 @@ import com.jira.issue.exception.*;
 import com.jira.issue.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +46,27 @@ public class TestManagementService {
     private final TestVersionRepository versionRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${app.defaults.test-type:MANUAL}")
+    private String defaultTestType;
+
+    @Value("${app.defaults.test-status:DRAFT}")
+    private String defaultTestStatus;
+
+    @Value("${app.defaults.test-plan-status:OPEN}")
+    private String defaultTestPlanStatus;
+
+    @Value("${app.defaults.test-set-status:DRAFT}")
+    private String defaultTestSetStatus;
+
+    @Value("${app.defaults.execution-status:RUNNING}")
+    private String defaultExecutionStatus;
+
+    @Value("${app.defaults.coverage-status:COVERED}")
+    private String defaultCoverageStatus;
+
+    @Value("${app.defaults.defect-status:OPEN}")
+    private String defaultDefectStatus;
 
     // Helper methods to get project key and default status
     private String getProjectKey(UUID projectId) {
@@ -93,8 +115,8 @@ public class TestManagementService {
                 .description(request.getDescription())
                 .issueType(testType)
                 .status(getDefaultStatus())
-                .testType(request.getTestType() != null ? request.getTestType() : "MANUAL")
-                .testStatus(request.getTestStatus() != null ? request.getTestStatus() : "DRAFT")
+                .testType(request.getTestType() != null ? request.getTestType() : defaultTestType)
+                .testStatus(request.getTestStatus() != null ? request.getTestStatus() : defaultTestStatus)
                 .testPriority(request.getPriority())
                 .testOwnerId(request.getOwnerId())
                 .testSteps(testStepsJson)
@@ -225,10 +247,10 @@ public class TestManagementService {
                 .folderId(request.getFolderId())
                 .name(request.getName())
                 .description(request.getDescription())
-                .testType(request.getTestType() != null ? request.getTestType() : "MANUAL")
+                .testType(request.getTestType() != null ? request.getTestType() : defaultTestType)
                 .labels(request.getLabels() != null ? request.getLabels().toArray(new String[0]) : new String[]{})
                 .requirementKeys(request.getRequirementKeys() != null ? request.getRequirementKeys().toArray(new String[0]) : new String[]{})
-                .status("DRAFT")
+                .status(defaultTestSetStatus)
                 .ownerId(request.getOwnerId())
                 .createdBy(userId)
                 .build();
@@ -278,9 +300,9 @@ public class TestManagementService {
                 .projectId(projectId)
                 .name(request.getName())
                 .description(request.getDescription())
-                .testType(request.getTestType() != null ? request.getTestType() : "MANUAL")
+                .testType(request.getTestType() != null ? request.getTestType() : defaultTestType)
                 .labels(request.getLabels() != null ? request.getLabels().toArray(new String[0]) : new String[]{})
-                .status("OPEN")
+                .status(defaultTestPlanStatus)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .targetVersion(request.getTargetVersion())
@@ -364,7 +386,7 @@ public class TestManagementService {
                 .testId(request.getTestId())
                 .name(request.getName())
                 .description(request.getDescription())
-                .status("RUNNING")
+                .status(defaultExecutionStatus)
                 .testEnv(request.getTestEnv())
                 .testerId(userId)
                 .testCycle(request.getTestCycle())
@@ -459,7 +481,7 @@ public class TestManagementService {
                 .requirementSummary(request.getRequirementSummary())
                 .requirementType(request.getRequirementType())
                 .testIssueId(request.getTestIssueId())
-                .coverageStatus(request.getCoverageStatus() != null ? request.getCoverageStatus() : "COVERED")
+                .coverageStatus(request.getCoverageStatus() != null ? request.getCoverageStatus() : defaultCoverageStatus)
                 .createdBy(userId)
                 .build();
 
@@ -487,7 +509,7 @@ public class TestManagementService {
                 .stepResultId(request.getStepResultId())
                 .testIssueId(request.getTestIssueId())
                 .severity(request.getSeverity())
-                .status("OPEN")
+                .status(defaultDefectStatus)
                 .priority(request.getPriority())
                 .linkedBy(userId)
                 .build();

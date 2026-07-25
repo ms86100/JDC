@@ -16,10 +16,12 @@ import com.jira.issue.repository.ReviewSubTaskMetadataRepository;
 import com.jira.issue.repository.SystemStandardMetadataRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,10 +44,18 @@ public class ChangeManagementService {
      * Order follows M1659.2 milestone sequence (excluding INTERNAL_KOM which is
      * handled at project level).
      */
-    private static final List<String> STANDARD_REVIEW_TYPES = List.of(
-            "COMMON_KOM", "PLANS_REVIEW", "FCR", "PDR", "DDR",
-            "CDR", "LAR", "FAR", "FFR", "CR"
-    );
+    @Value("${app.change-management.standard-review-types:COMMON_KOM,PLANS_REVIEW,FCR,PDR,DDR,CDR,LAR,FAR,FFR,CR}")
+    private String standardReviewTypesStr;
+
+    @Value("${app.change-management.default-review-status:BACKLOG}")
+    private String defaultReviewStatus;
+
+    @Value("${app.change-management.follow-up-trigger-status:PASSED_RED}")
+    private String followUpTriggerStatus;
+
+    private List<String> getStandardReviewTypes() {
+        return Arrays.asList(standardReviewTypesStr.split(","));
+    }
 
     // ========== Change Card CRUD ==========
 
@@ -480,13 +490,13 @@ public class ChangeManagementService {
         }
 
         // Auto-clone on PASSED_RED
-        if ("PASSED_RED".equals(newStatus) && review.getFollowUpReviewId() == null) {
+        if (followUpTriggerStatus.equals(newStatus) && review.getFollowUpReviewId() == null) {
             UUID followUpIssueId = UUID.randomUUID();
             ReviewSubTaskMetadata followUp = ReviewSubTaskMetadata.builder()
                     .issueId(followUpIssueId)
                     .parentSystemStandardId(review.getParentSystemStandardId())
                     .reviewType(review.getReviewType())
-                    .reviewStatus("BACKLOG")
+                    .reviewStatus(defaultReviewStatus)
                     .build();
             ReviewSubTaskMetadata savedFollowUp = reviewSubTaskRepo.save(followUp);
             review.setFollowUpReviewId(savedFollowUp.getIssueId());
@@ -508,14 +518,14 @@ public class ChangeManagementService {
         SystemStandardMetadata parent = systemStandardRepo.findById(systemStandardId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "No system standard found with id " + systemStandardId));
-        List<ReviewSubTaskMetadata> reviews = STANDARD_REVIEW_TYPES.stream()
+        List<ReviewSubTaskMetadata> reviews = getStandardReviewTypes().stream()
                 .map(type -> {
                     UUID reviewIssueId = UUID.randomUUID();
                     return ReviewSubTaskMetadata.builder()
                             .issueId(reviewIssueId)
                             .parentSystemStandardId(parent.getId())
                             .reviewType(type)
-                            .reviewStatus("BACKLOG")
+                            .reviewStatus(defaultReviewStatus)
                             .build();
                 })
                 .toList();

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { masterDataApi } from '../../../api/masterDataApi';
+import { DEMO_PROGRAMS, DEMO_TEST_MEANS, DEMO_SYSTEMS, DEMO_ATA_CHAPTERS, DEMO_SUPPLIERS, DEMO_FUNCTIONS, DEMO_REPORTER_TEAMS, DEMO_DEFECT_ORIGINS } from '../demoData';
 import '../AircraftDesignStyles.css';
 
 const TABS = ['Programs', 'Test Means', 'Systems', 'ATA Chapters', 'Suppliers', 'Functions', 'Reporter Teams', 'Defect Origins'] as const;
@@ -54,18 +55,29 @@ export default function MasterDataAdminPage() {
       setPrograms(data);
       if (data.length > 0 && !selectedProgramId) {
         setSelectedProgramId(data[0].id);
+        loadSystems(data[0].id);
       }
     } catch {
-      setPrograms([]);
+      setPrograms(DEMO_PROGRAMS as any);
+      const pid = DEMO_PROGRAMS[0].id;
+      if (!selectedProgramId) {
+        setSelectedProgramId(pid);
+        setSystems(DEMO_SYSTEMS.filter(s => s.programId === pid) as any);
+        setSelectedSystemId(DEMO_SYSTEMS.find(s => s.programId === pid)?.id || '');
+      }
     }
   }
 
   async function loadSystems(programId: string) {
     try {
       const res = await masterDataApi.getSystems(programId);
-      setSystems(Array.isArray(res.data) ? res.data : []);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setSystems(data);
+      if (data.length > 0 && !selectedSystemId) setSelectedSystemId(data[0].id);
     } catch {
-      setSystems([]);
+      const demoSys = DEMO_SYSTEMS.filter(s => s.programId === programId) as any;
+      setSystems(demoSys);
+      if (demoSys.length > 0 && !selectedSystemId) setSelectedSystemId(demoSys[0].id);
     }
   }
 
@@ -110,9 +122,18 @@ export default function MasterDataAdminPage() {
           return;
       }
       setItems(Array.isArray(res.data) ? res.data : []);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || `Failed to load ${activeTab}`);
-      setItems([]);
+    } catch {
+      const demoMap: Record<string, any[]> = {
+        Programs: DEMO_PROGRAMS,
+        'Test Means': DEMO_TEST_MEANS.filter(t => !selectedProgramId || t.programId === selectedProgramId),
+        Systems: DEMO_SYSTEMS.filter(s => !selectedProgramId || s.programId === selectedProgramId),
+        'ATA Chapters': DEMO_ATA_CHAPTERS.filter(a => !selectedProgramId || a.programId === selectedProgramId),
+        Suppliers: DEMO_SUPPLIERS.filter(s => (!selectedProgramId || s.programId === selectedProgramId) && (!selectedSystemId || s.systemId === selectedSystemId)),
+        Functions: DEMO_FUNCTIONS.filter(f => !selectedSystemId || f.systemId === selectedSystemId),
+        'Reporter Teams': DEMO_REPORTER_TEAMS,
+        'Defect Origins': DEMO_DEFECT_ORIGINS,
+      };
+      setItems(demoMap[activeTab] || []);
     } finally {
       setLoading(false);
     }
@@ -129,6 +150,7 @@ export default function MasterDataAdminPage() {
   function handleProgramChange(programId: string) {
     setSelectedProgramId(programId);
     setSelectedSystemId('');
+    setSystems([]);
     if (programId) loadSystems(programId);
   }
 

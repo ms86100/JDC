@@ -3,6 +3,7 @@ package com.jira.workflow.engine;
 import com.jira.workflow.entity.WorkflowTransition;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -20,12 +21,21 @@ public class TransitionPermissionEvaluator {
 
     private final ProjectPermissionClient projectPermissionClient;
 
+    @Value("${app.workflow.permission.default-suffix:_ISSUES}")
+    private String permissionDefaultSuffix;
+
+    @Value("${app.workflow.permission.bypass-edit:EDIT_ISSUES}")
+    private String bypassEditPermission;
+
+    @Value("${app.workflow.permission.bypass-resolve:RESOLVE_ISSUES}")
+    private String bypassResolvePermission;
+
     public boolean canPerformTransition(WorkflowTransition transition, WorkflowContext ctx) {
         if (ctx.getUserId() == null || ctx.getProjectId() == null) {
             return true;
         }
 
-        if (hasGrantedPermission(ctx, "EDIT_ISSUES") || hasGrantedPermission(ctx, "RESOLVE_ISSUES")) {
+        if (hasGrantedPermission(ctx, bypassEditPermission) || hasGrantedPermission(ctx, bypassResolvePermission)) {
             return true;
         }
 
@@ -72,7 +82,7 @@ public class TransitionPermissionEvaluator {
         if (key.contains("_")) {
             return key;
         }
-        return key + "_ISSUES";
+        return key + permissionDefaultSuffix;
     }
 
     @SuppressWarnings("unchecked")

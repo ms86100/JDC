@@ -9,7 +9,7 @@ import lombok.*;
 @AllArgsConstructor
 public class CreateAutomationTriggerRequest {
 
-    @NotBlank(message = "Trigger type is required")
+    @NotBlank(message = "{validation.automation.trigger.type.required}")
     private String triggerType;
 
     private String triggerConfig;

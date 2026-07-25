@@ -6,6 +6,7 @@ import com.jira.issue.exception.*;
 import com.jira.issue.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,6 +36,27 @@ public class ImportService {
     private final TestExecutionRepository executionRepository;
     private final RequirementLinkRepository requirementLinkRepository;
 
+    @Value("${app.defaults.import-test-type-bdd:BDD}")
+    private String importTestTypeBdd;
+
+    @Value("${app.defaults.import-test-type-automated:AUTOMATED}")
+    private String importTestTypeAutomated;
+
+    @Value("${app.defaults.import-test-status:DRAFT}")
+    private String importTestStatus;
+
+    @Value("${app.defaults.import-ci-source-manual:MANUAL}")
+    private String importCiSourceManual;
+
+    @Value("${app.defaults.import-default-env:CI}")
+    private String importDefaultEnv;
+
+    @Value("${app.defaults.import-test-set-active-status:ACTIVE}")
+    private String importTestSetActiveStatus;
+
+    @Value("${app.defaults.execution-status:RUNNING}")
+    private String defaultExecutionStatus;
+
     // ==================== Cucumber/Gherkin Import ====================
 
     @Transactional
@@ -44,7 +66,7 @@ public class ImportService {
         // Create import batch
         TestImportBatch batch = TestImportBatch.builder()
                 .importType("CUCUMBER")
-                .ciSource("MANUAL")
+                .ciSource(importCiSourceManual)
                 .status("PROCESSING")
                 .build();
         batch = importBatchRepository.save(batch);
@@ -222,8 +244,8 @@ public class ImportService {
                 .description(generateScenarioDescription(scenario))
                 .issueType(testType)
                 .status(status)
-                .testType("BDD")
-                .testStatus("DRAFT")
+                .testType(importTestTypeBdd)
+                .testStatus(importTestStatus)
                 .testSteps(generateStepsFromScenario(scenario))
                 .gherkinFeatureKey(scenario.getFeatureKey())
                 .gherkinScenarioId(scenario.getScenarioKey())
@@ -299,8 +321,8 @@ public class ImportService {
                     TestSet newSet = TestSet.builder()
                             .projectId(projectId)
                             .name(suiteName)
-                            .testType("AUTOMATED")
-                            .status("ACTIVE")
+                            .testType(importTestTypeAutomated)
+                            .status(importTestSetActiveStatus)
                             .createdBy(userId)
                             .build();
                     return testSetRepository.save(newSet);
@@ -311,8 +333,8 @@ public class ImportService {
                 .projectId(projectId)
                 .testSetId(testSetId)
                 .name(suiteName + " - " + java.time.LocalDateTime.now())
-                .status("RUNNING")
-                .testEnv("CI")
+                .status(defaultExecutionStatus)
+                .testEnv(importDefaultEnv)
                 .testerId(userId)
                 .ciBuildUrl((String) xml.get("buildUrl"))
                 .createdBy(userId)
@@ -358,7 +380,7 @@ public class ImportService {
                 .description("Automated test from " + className)
                 .issueType(testType)
                 .status(status)
-                .testType("AUTOMATED")
+                .testType(importTestTypeAutomated)
                 .testSetId(testSetId)
                 .gherkinScenarioId(gherkinKey)
                 .reporterId(userId)

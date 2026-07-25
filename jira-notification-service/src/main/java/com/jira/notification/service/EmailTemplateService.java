@@ -7,6 +7,7 @@ import com.jira.notification.exception.ResourceNotFoundException;
 import com.jira.notification.repository.EmailTemplateRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,9 @@ import java.util.stream.Collectors;
 public class EmailTemplateService {
 
     private final EmailTemplateRepository templateRepository;
+
+    @Value("${app.email.template.default-type:THYMELEAF}")
+    private String defaultTemplateType;
 
     @Transactional
     public EmailTemplateResponse createTemplate(CreateEmailTemplateRequest request) {
@@ -47,7 +51,7 @@ public class EmailTemplateService {
                 .eventType(request.getEventType())
                 .isDefault(request.getIsDefault() != null ? request.getIsDefault() : false)
                 .enabled(request.getEnabled() != null ? request.getEnabled() : true)
-                .templateType(request.getTemplateType() != null ? request.getTemplateType() : "THYMELEAF")
+                .templateType(request.getTemplateType() != null ? request.getTemplateType() : defaultTemplateType)
                 .createdBy(request.getCreatedBy())
                 .build();
 

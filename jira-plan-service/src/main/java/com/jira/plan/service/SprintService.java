@@ -1,5 +1,6 @@
 package com.jira.plan.service;
 
+import com.jira.cluster.util.StatusCategoryHelper;
 import com.jira.plan.dto.request.*;
 import com.jira.plan.dto.response.*;
 import com.jira.plan.entity.*;
@@ -8,6 +9,7 @@ import com.jira.plan.repository.*;
 import com.jira.plan.specification.SprintIssueSpecification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -37,6 +39,36 @@ public class SprintService {
     private final SprintPropertyRepository sprintPropertyRepository;
     private final SprintEventRepository sprintEventRepository;
     private final CumulativeFlowSnapshotRepository cumulativeFlowSnapshotRepository;
+
+    @Value("${app.sprint.state.future:FUTURE}")
+    private String sprintStateFuture;
+
+    @Value("${app.sprint.state.active:ACTIVE}")
+    private String sprintStateActive;
+
+    @Value("${app.sprint.state.closed:CLOSED}")
+    private String sprintStateClosed;
+
+    @Value("${app.sprint.state.abandoned:ABANDONED}")
+    private String sprintStateAbandoned;
+
+    @Value("${app.sprint.completion-status.uncompleted:UNCOMPLETED}")
+    private String completionStatusUncompleted;
+
+    @Value("${app.sprint.completion-status.completed:COMPLETED}")
+    private String completionStatusCompleted;
+
+    @Value("${app.sprint.completion-status.incomplete:INCOMPLETE}")
+    private String completionStatusIncomplete;
+
+    @Value("${app.sprint.completion-status.dropped:DROPPED}")
+    private String completionStatusDropped;
+
+    @Value("${app.sprint.completion-status.in-progress:IN_PROGRESS}")
+    private String completionStatusInProgress;
+
+    @Value("${app.sprint.default-rank:0|hzzzzz:}")
+    private String defaultRankValue;
 
     // ==================== SPRINT CRUD ====================
 
@@ -102,7 +134,7 @@ public class SprintService {
         Sprint sprint = Sprint.builder()
             .boardConfig(board).name(request.getName()).goal(request.getGoal())
             .startDate(request.getStartDate()).endDate(request.getEndDate())
-            .state("FUTURE").sequence(nextSeq).wipLimit(request.getWipLimit()).build();
+            .state(sprintStateFuture).sequence(nextSeq).wipLimit(request.getWipLimit()).build();
 
         sprint = sprintRepository.save(sprint);
         createAuditLog(sprint.getId(), "CREATED", null, null);
@@ -146,7 +178,7 @@ public class SprintService {
         Sprint sprint = sprintRepository.findById(sprintId)
             .orElseThrow(() -> new ResourceNotFoundException("Sprint", "id", sprintId));
 
-        if ("ACTIVE".equals(sprint.getState())) {
+        if (sprintStateActive.equals(sprint.getState())) {
             throw new IllegalStateException("Cannot delete an active sprint. Close or abandon it first.");
         }
 
@@ -167,14 +199,14 @@ public class SprintService {
         Sprint sprint = sprintRepository.findById(sprintId)
             .orElseThrow(() -> new ResourceNotFoundException("Sprint", "id", sprintId));
 
-        if (!"FUTURE".equals(sprint.getState())) {
+        if (!sprintStateFuture.equals(sprint.getState())) {
             throw new IllegalStateException("Can only start a FUTURE sprint");
         }
 
         // Gap 21: Only auto-close if parallel sprints NOT enabled
         BoardConfig board = sprint.getBoardConfig();
         if (!Boolean.TRUE.equals(board.getFeatureParallelSprints())) {
-            sprintRepository.findByBoardConfigIdAndState(board.getId(), "ACTIVE")
+            sprintRepository.findByBoardConfigIdAndState(board.getId(), sprintStateActive)
                 .ifPresent(this::closeSprintInternal);
         }
 
@@ -213,7 +245,7 @@ public class SprintService {
                 .orElseThrow(() -> new ResourceNotFoundException("Sprint", "id", targetSprintId));
 
             List<SprintIssue> incompleteIssues = sprintIssueRepository.findActiveBySprintId(sprintId).stream()
-                .filter(i -> !"COMPLETED".equals(i.getCompletionStatus()))
+                .filter(i -> !completionStatusCompleted.equals(i.getCompletionStatus()))
                 .collect(Collectors.toList());
 
             for (SprintIssue issue : incompleteIssues) {
@@ -223,7 +255,7 @@ public class SprintService {
                 SprintIssue newLink = SprintIssue.builder()
                     .sprint(targetSprint).planItem(issue.getPlanItem())
                     .issueId(issue.getIssueId()).rankValue(issue.getRankValue())
-                    .addedBy(userId).completionStatus("UNCOMPLETED").build();
+                    .addedBy(userId).completionStatus(completionStatusUncompleted).build();
                 sprintIssueRepository.save(newLink);
             }
 
@@ -240,8 +272,8 @@ public class SprintService {
 
         List<SprintIssue> activeIssues = sprintIssueRepository.findActiveBySprintId(sprint.getId());
         for (SprintIssue issue : activeIssues) {
-            if (!"COMPLETED".equals(issue.getCompletionStatus())) {
-                issue.setCompletionStatus("INCOMPLETE");
+            if (!completionStatusCompleted.equals(issue.getCompletionStatus())) {
+                issue.setCompletionStatus(completionStatusIncomplete);
                 sprintIssueRepository.save(issue);
             }
         }
@@ -332,7 +364,7 @@ public class SprintService {
         Sprint sprint = sprintRepository.findById(sprintId)
             .orElseThrow(() -> new ResourceNotFoundException("Sprint", "id", sprintId));
 
-        if (!"ACTIVE".equals(sprint.getState()) && !"FUTURE".equals(sprint.getState())) {
+        if (!sprintStateActive.equals(sprint.getState()) && !sprintStateFuture.equals(sprint.getState())) {
             throw new IllegalStateException("Can only add issues to ACTIVE or FUTURE sprints");
         }
 
@@ -353,7 +385,7 @@ public class SprintService {
         SprintIssue sprintIssue = SprintIssue.builder()
             .sprint(sprint).planItem(planItem).issueId(planItem.getIssueId())
             .rankValue(planItem.getSortOrder()).addedBy(userId)
-            .completionStatus("UNCOMPLETED").build();
+            .completionStatus(completionStatusUncompleted).build();
 
         sprintIssue = sprintIssueRepository.save(sprintIssue);
 
@@ -401,13 +433,12 @@ public class SprintService {
         SprintIssue sprintIssue = sprintIssueRepository.findBySprintIdAndPlanItemId(sprintId, planItemId)
             .orElseThrow(() -> new ResourceNotFoundException("SprintIssue not found"));
 
-        String lowerColumnName = columnName.toLowerCase();
-        if (lowerColumnName.contains("done") || lowerColumnName.contains("complete") || lowerColumnName.contains("closed")) {
+        if (StatusCategoryHelper.isCompleted(columnName)) {
             sprintIssue.complete();
-        } else if (lowerColumnName.contains("progress")) {
-            sprintIssue.setCompletionStatus("IN_PROGRESS");
+        } else if (StatusCategoryHelper.isInProgress(columnName)) {
+            sprintIssue.setCompletionStatus(completionStatusInProgress);
         } else {
-            sprintIssue.setCompletionStatus("UNCOMPLETED");
+            sprintIssue.setCompletionStatus(completionStatusUncompleted);
         }
 
         sprintIssue = sprintIssueRepository.save(sprintIssue);
@@ -441,7 +472,7 @@ public class SprintService {
             SprintIssue sprintIssue = SprintIssue.builder()
                 .sprint(targetSprint).planItem(planItem).issueId(planItem.getIssueId())
                 .rankValue(planItem.getSortOrder()).addedBy(userId)
-                .completionStatus("UNCOMPLETED").build();
+                .completionStatus(completionStatusUncompleted).build();
             sprintIssue = sprintIssueRepository.save(sprintIssue);
             results.add(toSprintIssueResponse(sprintIssue));
         }
@@ -506,7 +537,7 @@ public class SprintService {
     public List<SprintResponse> getClosedSprintsForIssue(UUID planItemId) {
         return sprintIssueRepository.findByPlanItemIdAndRemovedAtIsNull(planItemId).stream()
             .map(si -> si.getSprint())
-            .filter(s -> "CLOSED".equals(s.getState()))
+            .filter(s -> sprintStateClosed.equals(s.getState()))
             .distinct()
             .map(this::toResponse)
             .collect(Collectors.toList());
@@ -644,7 +675,7 @@ public class SprintService {
         List<SprintIssue> activeIssues = sprintIssueRepository.findActiveBySprintId(sprintId);
         int totalIssues = activeIssues.size();
         int completedIssues = (int) activeIssues.stream()
-            .filter(i -> "COMPLETED".equals(i.getCompletionStatus())).count();
+            .filter(i -> completionStatusCompleted.equals(i.getCompletionStatus())).count();
 
         Integer totalPoints = sprintIssueRepository.sumTotalPoints(sprintId);
         Integer completedPoints = sprintIssueRepository.sumCompletedPoints(sprintId);
@@ -687,7 +718,7 @@ public class SprintService {
     // Gap 12: Velocity chart with committed vs completed per sprint
     @Transactional(readOnly = true)
     public VelocityChartResponse getVelocityChart(UUID boardId) {
-        List<Sprint> closedSprints = sprintRepository.findByBoardConfigIdAndStateOrderBySequence(boardId, "CLOSED");
+        List<Sprint> closedSprints = sprintRepository.findByBoardConfigIdAndStateOrderBySequence(boardId, sprintStateClosed);
 
         List<VelocityChartResponse.SprintVelocityEntry> entries = closedSprints.stream()
             .map(s -> VelocityChartResponse.SprintVelocityEntry.builder()
@@ -715,16 +746,16 @@ public class SprintService {
         List<SprintIssue> allIssues = sprintIssueRepository.findBySprintId(sprintId);
 
         List<SprintIssueResponse> completed = allIssues.stream()
-            .filter(i -> "COMPLETED".equals(i.getCompletionStatus()))
+            .filter(i -> completionStatusCompleted.equals(i.getCompletionStatus()))
             .map(this::toSprintIssueResponse).collect(Collectors.toList());
 
         List<SprintIssueResponse> notCompleted = allIssues.stream()
-            .filter(i -> !"COMPLETED".equals(i.getCompletionStatus()) && !"DROPPED".equals(i.getCompletionStatus()))
+            .filter(i -> !completionStatusCompleted.equals(i.getCompletionStatus()) && !completionStatusDropped.equals(i.getCompletionStatus()))
             .filter(i -> i.getRemovedAt() == null)
             .map(this::toSprintIssueResponse).collect(Collectors.toList());
 
         List<SprintIssueResponse> punted = allIssues.stream()
-            .filter(i -> i.getRemovedAt() != null || "DROPPED".equals(i.getCompletionStatus()))
+            .filter(i -> i.getRemovedAt() != null || completionStatusDropped.equals(i.getCompletionStatus()))
             .map(this::toSprintIssueResponse).collect(Collectors.toList());
 
         List<String> addedDuringSprint = allIssues.stream()
@@ -733,7 +764,7 @@ public class SprintService {
             .map(i -> i.getIssueId().toString()).collect(Collectors.toList());
 
         int inProgress = (int) notCompleted.stream()
-            .filter(i -> "IN_PROGRESS".equals(i.getCompletionStatus())).count();
+            .filter(i -> completionStatusInProgress.equals(i.getCompletionStatus())).count();
         int todo = notCompleted.size() - inProgress;
 
         int committedPts = sprint.getCommittedPoints() != null ? sprint.getCommittedPoints() : 0;
@@ -795,10 +826,9 @@ public class SprintService {
                 .filter(si -> {
                     if (si.getPlanItem() == null) return false;
                     String status = si.getCompletionStatus();
-                    String colLower = colName.toLowerCase();
-                    if (colLower.contains("done") || colLower.contains("complete")) return "COMPLETED".equals(status);
-                    if (colLower.contains("progress")) return "IN_PROGRESS".equals(status);
-                    return "UNCOMPLETED".equals(status);
+                    if (StatusCategoryHelper.isCompleted(colName)) return completionStatusCompleted.equals(status);
+                    if (StatusCategoryHelper.isInProgress(colName)) return completionStatusInProgress.equals(status);
+                    return completionStatusUncompleted.equals(status);
                 }).count();
 
             cumulativeFlowSnapshotRepository.save(CumulativeFlowSnapshot.builder()
@@ -810,12 +840,12 @@ public class SprintService {
     // Gap 14: Control chart
     @Transactional(readOnly = true)
     public ControlChartResponse getControlChart(UUID boardId) {
-        List<Sprint> closedSprints = sprintRepository.findByBoardConfigIdAndStateOrderBySequence(boardId, "CLOSED");
+        List<Sprint> closedSprints = sprintRepository.findByBoardConfigIdAndStateOrderBySequence(boardId, sprintStateClosed);
         List<UUID> sprintIds = closedSprints.stream().map(Sprint::getId).collect(Collectors.toList());
 
         List<SprintIssue> completedIssues = sprintIds.isEmpty() ? List.of() :
             sprintIssueRepository.findBySprintIds(sprintIds).stream()
-                .filter(i -> "COMPLETED".equals(i.getCompletionStatus()) && i.getCompletedAt() != null && i.getAddedAt() != null)
+                .filter(i -> completionStatusCompleted.equals(i.getCompletionStatus()) && i.getCompletedAt() != null && i.getAddedAt() != null)
                 .collect(Collectors.toList());
 
         List<ControlChartResponse.IssueTimingEntry> entries = completedIssues.stream().map(si -> {
@@ -864,7 +894,7 @@ public class SprintService {
                     .mapToInt(si -> si.getPlanItem() != null && si.getPlanItem().getStoryPoints() != null ? si.getPlanItem().getStoryPoints() : 0)
                     .sum();
                 int completed = e.getValue().stream()
-                    .filter(si -> "COMPLETED".equals(si.getCompletionStatus()))
+                    .filter(si -> completionStatusCompleted.equals(si.getCompletionStatus()))
                     .mapToInt(si -> si.getPlanItem() != null && si.getPlanItem().getStoryPoints() != null ? si.getPlanItem().getStoryPoints() : 0)
                     .sum();
                 return EpicBurndownResponse.EpicSprintEntry.builder()
@@ -916,7 +946,7 @@ public class SprintService {
         List<Sprint> sprints = sprintRepository.findByBoardConfigIdOrderBySequenceAsc(boardId);
 
         List<BacklogPlanningResponse.SprintBacklogSection> sections = sprints.stream()
-            .filter(s -> !"ABANDONED".equals(s.getState()))
+            .filter(s -> !sprintStateAbandoned.equals(s.getState()))
             .map(sprint -> {
                 List<SprintIssue> issues = sprintIssueRepository.findActiveBySprintId(sprint.getId());
                 int totalPoints = issues.stream()
@@ -971,7 +1001,7 @@ public class SprintService {
     }
 
     private String calculateRankBetween(String after, String before) {
-        if (after == null && before == null) return "0|hzzzzz:";
+        if (after == null && before == null) return defaultRankValue;
         if (after == null) return before + "0";
         if (before == null) return after + "z";
 
@@ -1009,7 +1039,7 @@ public class SprintService {
     private SprintResponse toResponseWithIssues(Sprint sprint, List<SprintIssue> issues) {
         int totalIssues = issues.size();
         int completedIssues = (int) issues.stream()
-            .filter(i -> "COMPLETED".equals(i.getCompletionStatus())).count();
+            .filter(i -> completionStatusCompleted.equals(i.getCompletionStatus())).count();
 
         return SprintResponse.builder()
             .id(sprint.getId())

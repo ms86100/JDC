@@ -12,10 +12,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateValidatorRequest {
 
-    @NotNull(message = "Transition ID is required")
+    @NotNull(message = "{validation.transition.id.required}")
     private UUID transitionId;
 
-    @NotBlank(message = "Validator type is required")
+    @NotBlank(message = "{validation.validator.type.required}")
     private String validatorType;
 
     private String fieldName;

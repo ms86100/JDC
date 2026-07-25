@@ -1,5 +1,6 @@
 package com.jira.sprint.service;
 
+import com.jira.cluster.util.StatusCategoryHelper;
 import com.jira.sprint.dto.*;
 import com.jira.sprint.entity.Sprint;
 import com.jira.sprint.entity.SprintIssue;
@@ -8,6 +9,8 @@ import com.jira.sprint.repository.SprintIssueRepository;
 import com.jira.sprint.repository.SprintRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,11 +27,24 @@ public class SprintReportService {
     private final SprintRepository sprintRepository;
     private final SprintIssueRepository sprintIssueRepository;
     private final IssueServiceClient issueServiceClient;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.status-fallback:To Do}")
+    private String defaultStatusFallback;
+
+    @Value("${app.report.priority-categories:Highest,High,Medium,Low,Lowest}")
+    private String priorityCategoriesStr;
+
+    @Value("${app.report.type-categories:Bug,Story,Task,Epic,Other}")
+    private String typeCategoriesStr;
+
+    @Value("${app.report.default-priority-fallback:Medium}")
+    private String defaultPriorityFallback;
 
     @Transactional(readOnly = true)
     public SprintReportResponse getSprintReport(UUID sprintId) {
         Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found: " + sprintId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.sprint.not.found", new Object[]{sprintId}, java.util.Locale.ENGLISH)));
 
         List<SprintIssue> sprintIssues = sprintIssueRepository.findBySprintId(sprintId);
 
@@ -45,9 +61,9 @@ public class SprintReportService {
 
         for (SprintIssue issue : sprintIssues) {
             String status = getIssueStatus(issue.getIssueId());
-            if ("Done".equalsIgnoreCase(status) || "Completed".equalsIgnoreCase(status)) {
+            if (StatusCategoryHelper.isCompleted(status)) {
                 completedIssues++;
-            } else if ("In Progress".equalsIgnoreCase(status)) {
+            } else if (StatusCategoryHelper.isInProgress(status)) {
                 inProgressIssues++;
             } else {
                 todoIssues++;
@@ -55,7 +71,7 @@ public class SprintReportService {
         }
 
         totalPoints = pointsByStatus.values().stream().mapToInt(Integer::intValue).sum();
-        completedPoints = pointsByStatus.getOrDefault("Done", 0);
+        completedPoints = pointsByStatus.getOrDefault("DONE", 0);
 
         // Calculate remaining points
         int remainingPoints = totalPoints - completedPoints;
@@ -83,9 +99,9 @@ public class SprintReportService {
 
         // Work distribution
         Map<String, Integer> issuesByStatus = new HashMap<>();
-        issuesByStatus.put("To Do", todoIssues);
-        issuesByStatus.put("In Progress", inProgressIssues);
-        issuesByStatus.put("Done", completedIssues);
+        issuesByStatus.put("TODO", todoIssues);
+        issuesByStatus.put("IN_PROGRESS", inProgressIssues);
+        issuesByStatus.put("DONE", completedIssues);
 
         // Get real priority distribution from issue service
         Map<String, Integer> issuesByPriority = calculateIssueCountByPriority(sprintIssues);
@@ -138,14 +154,14 @@ public class SprintReportService {
     @Transactional(readOnly = true)
     public BurndownResponse getBurndown(UUID sprintId) {
         Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found: " + sprintId));
+                .orElseThrow(() -> new ResourceNotFoundException(messageSource.getMessage("error.sprint.not.found", new Object[]{sprintId}, java.util.Locale.ENGLISH)));
 
         List<SprintIssue> sprintIssues = sprintIssueRepository.findBySprintId(sprintId);
 
         // Get real story points from issue service
         Map<String, Integer> pointsByStatus = calculateIssuePointsByStatus(sprintIssues);
         int totalPoints = pointsByStatus.values().stream().mapToInt(Integer::intValue).sum();
-        int completedPoints = pointsByStatus.getOrDefault("Done", 0);
+        int completedPoints = pointsByStatus.getOrDefault("DONE", 0);
 
         return generateBurndownData(sprint, sprintIssues, totalPoints, completedPoints);
     }
@@ -242,7 +258,7 @@ public class SprintReportService {
             for (SprintIssue si : issues) {
                 int points = getIssueStoryPoints(si.getIssueId());
                 committed += points;
-                if ("Done".equalsIgnoreCase(getIssueStatus(si.getIssueId()))) {
+                if (StatusCategoryHelper.isCompleted(getIssueStatus(si.getIssueId()))) {
                     completed += points;
                 }
             }
@@ -303,10 +319,10 @@ public class SprintReportService {
     private String getIssueStatus(UUID issueId) {
         try {
             IssueServiceClient.IssueData issue = issueServiceClient.getIssue(issueId);
-            return issue.getStatusName() != null ? issue.getStatusName() : "To Do";
+            return issue.getStatusName() != null ? issue.getStatusName() : defaultStatusFallback;
         } catch (Exception e) {
             log.warn("Failed to get issue status for {}: {}", issueId, e.getMessage());
-            return "To Do";
+            return defaultStatusFallback;
         }
     }
 
@@ -333,23 +349,16 @@ public class SprintReportService {
 
     private Map<String, Integer> calculateIssuePointsByStatus(List<SprintIssue> sprintIssues) {
         Map<String, Integer> pointsByStatus = new HashMap<>();
-        pointsByStatus.put("To Do", 0);
-        pointsByStatus.put("In Progress", 0);
-        pointsByStatus.put("Done", 0);
+        pointsByStatus.put("TODO", 0);
+        pointsByStatus.put("IN_PROGRESS", 0);
+        pointsByStatus.put("DONE", 0);
 
         for (SprintIssue si : sprintIssues) {
             int points = getIssueStoryPoints(si.getIssueId());
             String status = getIssueStatus(si.getIssueId());
 
-            if (status == null) {
-                pointsByStatus.merge("To Do", points, Integer::sum);
-            } else if (status.contains("Done") || status.contains("Completed") || status.equalsIgnoreCase("Closed")) {
-                pointsByStatus.merge("Done", points, Integer::sum);
-            } else if (status.contains("Progress")) {
-                pointsByStatus.merge("In Progress", points, Integer::sum);
-            } else {
-                pointsByStatus.merge("To Do", points, Integer::sum);
-            }
+            String category = StatusCategoryHelper.getCategory(status);
+            pointsByStatus.merge(category, points, Integer::sum);
         }
         return pointsByStatus;
     }
@@ -359,11 +368,9 @@ public class SprintReportService {
      */
     private Map<String, Integer> calculateIssueCountByPriority(List<SprintIssue> sprintIssues) {
         Map<String, Integer> priorityCounts = new LinkedHashMap<>();
-        priorityCounts.put("Highest", 0);
-        priorityCounts.put("High", 0);
-        priorityCounts.put("Medium", 0);
-        priorityCounts.put("Low", 0);
-        priorityCounts.put("Lowest", 0);
+        for (String p : priorityCategoriesStr.split(",")) {
+            priorityCounts.put(p.trim(), 0);
+        }
 
         for (SprintIssue si : sprintIssues) {
             try {
@@ -372,7 +379,7 @@ public class SprintReportService {
                 if (priority != null && priorityCounts.containsKey(priority)) {
                     priorityCounts.merge(priority, 1, Integer::sum);
                 } else if (priority != null) {
-                    priorityCounts.merge("Medium", 1, Integer::sum); // Default unknown to Medium
+                    priorityCounts.merge(defaultPriorityFallback, 1, Integer::sum);
                 }
             } catch (Exception e) {
                 log.debug("Failed to get priority for issue {}: {}", si.getIssueId(), e.getMessage());
@@ -387,11 +394,11 @@ public class SprintReportService {
      */
     private Map<String, Integer> calculateIssueCountByType(List<SprintIssue> sprintIssues) {
         Map<String, Integer> typeCounts = new LinkedHashMap<>();
-        typeCounts.put("Bug", 0);
-        typeCounts.put("Story", 0);
-        typeCounts.put("Task", 0);
-        typeCounts.put("Epic", 0);
-        typeCounts.put("Other", 0);
+        String[] types = typeCategoriesStr.split(",");
+        for (String t : types) {
+            typeCounts.put(t.trim(), 0);
+        }
+        String fallbackType = types[types.length - 1].trim();
 
         for (SprintIssue si : sprintIssues) {
             try {
@@ -400,7 +407,7 @@ public class SprintReportService {
                 if (type != null && typeCounts.containsKey(type)) {
                     typeCounts.merge(type, 1, Integer::sum);
                 } else if (type != null) {
-                    typeCounts.merge("Other", 1, Integer::sum);
+                    typeCounts.merge(fallbackType, 1, Integer::sum);
                 }
             } catch (Exception e) {
                 log.debug("Failed to get type for issue {}: {}", si.getIssueId(), e.getMessage());
@@ -528,7 +535,7 @@ public class SprintReportService {
                 .filter(si -> si.getRemovedAt() == null)
                 .filter(si -> {
                     String status = getIssueStatus(si.getIssueId());
-                    return !"Done".equalsIgnoreCase(status) && !"Completed".equalsIgnoreCase(status) && !"Closed".equalsIgnoreCase(status);
+                    return !StatusCategoryHelper.isCompleted(status);
                 })
                 .map(si -> {
                     try {

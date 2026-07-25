@@ -33,6 +33,9 @@ public class SecurityConfig {
     @Value("${saml.enabled:false}")
     private boolean samlEnabled;
 
+    @Value("${app.security.bcrypt-strength:12}")
+    private int bcryptStrength;
+
     @Bean
     @Order(1)
     public SecurityFilterChain samlFilterChain(HttpSecurity http) throws Exception {
@@ -78,7 +81,7 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
+        return new BCryptPasswordEncoder(bcryptStrength);
     }
 
     @Bean

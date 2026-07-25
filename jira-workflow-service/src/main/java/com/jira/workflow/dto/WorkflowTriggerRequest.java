@@ -19,14 +19,14 @@ import java.util.UUID;
 @AllArgsConstructor
 public class WorkflowTriggerRequest {
 
-    @NotNull(message = "Transition ID is required")
+    @NotNull(message = "{validation.transition.id.required}")
     private UUID transitionId;
 
     private String name;
 
     private String description;
 
-    @NotBlank(message = "Trigger type is required")
+    @NotBlank(message = "{validation.trigger.type.required}")
     private String triggerType;
 
     /**

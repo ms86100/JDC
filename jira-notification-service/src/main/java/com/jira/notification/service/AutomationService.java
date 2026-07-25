@@ -6,6 +6,7 @@ import com.jira.notification.exception.ResourceNotFoundException;
 import com.jira.notification.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,18 @@ public class AutomationService {
     private final AutomationConditionRepository conditionRepository;
     private final AutomationActionRepository actionRepository;
     private final AutomationLogRepository logRepository;
+
+    @Value("${app.automation.defaults.logical-group:ALL}")
+    private String defaultLogicalGroup;
+
+    @Value("${app.automation.defaults.failure-handling:CONTINUE}")
+    private String defaultFailureHandling;
+
+    @Value("${app.automation.status.success:SUCCESS}")
+    private String statusSuccess;
+
+    @Value("${app.automation.status.failed:FAILED}")
+    private String statusFailed;
 
     @Transactional
     public AutomationRuleResponse createRule(CreateAutomationRuleRequest request, UUID createdBy) {
@@ -199,7 +212,7 @@ public class AutomationService {
                 .conditionValue(request.getConditionValue())
                 .conditionConfig(request.getConditionConfig())
                 .enabled(request.getEnabled() != null ? request.getEnabled() : true)
-                .logicalGroup(request.getLogicalGroup() != null ? request.getLogicalGroup() : "ALL")
+                .logicalGroup(request.getLogicalGroup() != null ? request.getLogicalGroup() : defaultLogicalGroup)
                 .orderIndex(request.getOrderIndex() != null ? request.getOrderIndex() : 0)
                 .build();
 
@@ -247,7 +260,7 @@ public class AutomationService {
                 .actionConfig(request.getActionConfig())
                 .enabled(request.getEnabled() != null ? request.getEnabled() : true)
                 .orderIndex(request.getOrderIndex() != null ? request.getOrderIndex() : 0)
-                .failureHandling(request.getFailureHandling() != null ? request.getFailureHandling() : "CONTINUE")
+                .failureHandling(request.getFailureHandling() != null ? request.getFailureHandling() : defaultFailureHandling)
                 .build();
 
         action = actionRepository.save(action);
@@ -329,12 +342,12 @@ public class AutomationService {
 
     @Transactional(readOnly = true)
     public long getRuleSuccessCount(UUID ruleId) {
-        return logRepository.countByRuleIdAndStatus(ruleId, "SUCCESS");
+        return logRepository.countByRuleIdAndStatus(ruleId, statusSuccess);
     }
 
     @Transactional(readOnly = true)
     public long getRuleFailureCount(UUID ruleId) {
-        return logRepository.countByRuleIdAndStatus(ruleId, "FAILED");
+        return logRepository.countByRuleIdAndStatus(ruleId, statusFailed);
     }
 
     @Transactional

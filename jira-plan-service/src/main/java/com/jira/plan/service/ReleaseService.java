@@ -8,6 +8,7 @@ import com.jira.plan.exception.ResourceNotFoundException;
 import com.jira.plan.repository.PlanReleaseRepository;
 import com.jira.plan.repository.PlanRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,15 @@ public class ReleaseService {
 
     private final PlanReleaseRepository releaseRepository;
     private final PlanRepository planRepository;
+
+    @Value("${app.release.status.draft:DRAFT}")
+    private String releaseStatusDraft;
+
+    @Value("${app.release.status.approved:APPROVED}")
+    private String releaseStatusApproved;
+
+    @Value("${app.release.status.released:RELEASED}")
+    private String releaseStatusReleased;
 
     @Transactional(readOnly = true)
     public List<ReleaseResponse> getReleasesByPlanId(UUID planId) {
@@ -50,7 +60,7 @@ public class ReleaseService {
                 .version(request.getVersion())
                 .description(request.getDescription())
                 .releaseDate(request.getReleaseDate())
-                .status("DRAFT")
+                .status(releaseStatusDraft)
                 .build();
 
         release = releaseRepository.save(release);
@@ -89,7 +99,7 @@ public class ReleaseService {
         if (!release.getPlanId().equals(planId)) {
             throw new ResourceNotFoundException("Release", "id", releaseId);
         }
-        release.setStatus("APPROVED");
+        release.setStatus(releaseStatusApproved);
         release.setApprovedBy(approvedBy);
         release.setApprovedAt(LocalDateTime.now());
         release = releaseRepository.save(release);
@@ -103,7 +113,7 @@ public class ReleaseService {
         if (!release.getPlanId().equals(planId)) {
             throw new ResourceNotFoundException("Release", "id", releaseId);
         }
-        release.setStatus("RELEASED");
+        release.setStatus(releaseStatusReleased);
         release = releaseRepository.save(release);
         return toResponse(release);
     }

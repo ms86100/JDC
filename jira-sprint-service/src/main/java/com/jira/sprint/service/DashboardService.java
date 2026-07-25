@@ -1,8 +1,9 @@
 package com.jira.sprint.service;
 
 import com.jira.sprint.dto.*;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -13,8 +14,22 @@ import java.util.*;
 public class DashboardService {
 
     private final Map<UUID, DashboardResponse> dashboards = new java.util.concurrent.ConcurrentHashMap<>();
+    private final MessageSource messageSource;
 
-    public DashboardService() {
+    @Value("${app.dashboard.default-gadget-types:STATS_GRAPH,ISSUES_ASSIGNED,DISTRIBUTION,CREATED_vs_RESOLVED,QUICK_LINKS}")
+    private String defaultGadgetTypesStr;
+
+    @Value("${app.dashboard.default-gadget-titles:Project Statistics,My Assigned Issues,Issue Distribution,Created vs Resolved,Quick Links}")
+    private String defaultGadgetTitlesStr;
+
+    @Value("${app.dashboard.distribution-labels:Bug,Story,Task,Epic}")
+    private String distributionLabelsStr;
+
+    @Value("${app.dashboard.distribution-colors:#dc3545,#28a745,#007bff,#6c757d}")
+    private String distributionColorsStr;
+
+    public DashboardService(MessageSource messageSource) {
+        this.messageSource = messageSource;
         // Initialize with default dashboard
         DashboardResponse defaultDashboard = DashboardResponse.builder()
                 .id(UUID.fromString("00000000-0000-0001-0000-000000000001"))
@@ -128,7 +143,7 @@ public class DashboardService {
     public DashboardResponse updateDashboard(UUID dashboardId, CreateDashboardRequest request) {
         DashboardResponse dashboard = dashboards.get(dashboardId);
         if (dashboard == null) {
-            throw new IllegalArgumentException("Dashboard not found: " + dashboardId);
+            throw new IllegalArgumentException(messageSource.getMessage("error.dashboard.not.found", new Object[]{dashboardId}, Locale.ENGLISH));
         }
 
         if (request.getName() != null) {
@@ -151,7 +166,7 @@ public class DashboardService {
     public DashboardResponse addGadget(UUID dashboardId, GadgetResponse gadget) {
         DashboardResponse dashboard = dashboards.get(dashboardId);
         if (dashboard == null) {
-            throw new IllegalArgumentException("Dashboard not found: " + dashboardId);
+            throw new IllegalArgumentException(messageSource.getMessage("error.dashboard.not.found", new Object[]{dashboardId}, Locale.ENGLISH));
         }
 
         if (dashboard.getGadgets() == null) {
@@ -169,7 +184,7 @@ public class DashboardService {
     public DashboardResponse updateGadget(UUID dashboardId, UUID gadgetId, GadgetResponse gadget) {
         DashboardResponse dashboard = dashboards.get(dashboardId);
         if (dashboard == null) {
-            throw new IllegalArgumentException("Dashboard not found: " + dashboardId);
+            throw new IllegalArgumentException(messageSource.getMessage("error.dashboard.not.found", new Object[]{dashboardId}, Locale.ENGLISH));
         }
 
         List<GadgetResponse> gadgets = dashboard.getGadgets();
@@ -183,13 +198,13 @@ public class DashboardService {
             }
         }
 
-        throw new IllegalArgumentException("Gadget not found: " + gadgetId);
+        throw new IllegalArgumentException(messageSource.getMessage("error.gadget.not.found", new Object[]{gadgetId}, Locale.ENGLISH));
     }
 
     public DashboardResponse removeGadget(UUID dashboardId, UUID gadgetId) {
         DashboardResponse dashboard = dashboards.get(dashboardId);
         if (dashboard == null) {
-            throw new IllegalArgumentException("Dashboard not found: " + dashboardId);
+            throw new IllegalArgumentException(messageSource.getMessage("error.dashboard.not.found", new Object[]{dashboardId}, Locale.ENGLISH));
         }
 
         dashboard.getGadgets().removeIf(g -> g.getId().equals(gadgetId));
@@ -219,9 +234,9 @@ public class DashboardService {
                 break;
 
             case "DISTRIBUTION":
-                data.put("labels", Arrays.asList("Bug", "Story", "Task", "Epic"));
+                data.put("labels", Arrays.asList(distributionLabelsStr.split(",")));
                 data.put("values", Arrays.asList(25, 40, 30, 5));
-                data.put("colors", Arrays.asList("#dc3545", "#28a745", "#007bff", "#6c757d"));
+                data.put("colors", Arrays.asList(distributionColorsStr.split(",")));
                 break;
 
             case "CREATED_vs_RESOLVED":

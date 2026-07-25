@@ -14,6 +14,7 @@ import com.jira.project.repository.ProjectRoleRepository;
 import com.jira.project.repository.ProjectSchemeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,36 @@ public class ExportImportService {
     private final ProjectRoleRepository projectRoleRepository;
     private final ProjectSchemeRepository projectSchemeRepository;
     private final ProjectSchemeService projectSchemeService;
+
+    @Value("${app.defaults.assignee-type:PROJECT_LEAD}")
+    private String defaultAssigneeType;
+
+    @Value("${app.defaults.project-type:COMPANY_MANAGED}")
+    private String defaultProjectType;
+
+    @Value("${app.defaults.role-names:PROJECT_ADMIN,DEVELOPER,VIEWER}")
+    private String defaultRoleNamesStr;
+
+    @Value("${app.defaults.role-admin-name:PROJECT_ADMIN}")
+    private String defaultAdminRoleName;
+
+    @Value("${app.defaults.role-admin-description:Project Administrator with full access}")
+    private String defaultAdminRoleDescription;
+
+    @Value("${app.defaults.role-developer-description:Developer with edit and create permissions}")
+    private String defaultDeveloperRoleDescription;
+
+    @Value("${app.defaults.role-viewer-description:Read-only access}")
+    private String defaultViewerRoleDescription;
+
+    @Value("${app.defaults.permissions.admin:*}")
+    private String defaultAdminPermissions;
+
+    @Value("${app.defaults.permissions.developer:read,edit,create,comment,transition}")
+    private String defaultDeveloperPermissions;
+
+    @Value("${app.defaults.permissions.viewer:read,comment}")
+    private String defaultViewerPermissions;
 
     @Transactional(readOnly = true)
     public ProjectExportDto exportProject(UUID projectId) {
@@ -104,11 +135,11 @@ public class ExportImportService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .leadUserId(request.getLeadUserId())
-                .projectType(request.getProjectType() != null ? request.getProjectType() : "COMPANY_MANAGED")
+                .projectType(request.getProjectType() != null ? request.getProjectType() : defaultProjectType)
                 .templateId(request.getTemplateId())
                 .category(request.getCategory())
                 .avatarUrl(request.getAvatarUrl())
-                .defaultAssigneeType(request.getDefaultAssigneeType() != null ? request.getDefaultAssigneeType() : "PROJECT_LEAD")
+                .defaultAssigneeType(request.getDefaultAssigneeType() != null ? request.getDefaultAssigneeType() : defaultAssigneeType)
                 .allowIssueCreation(request.getAllowIssueCreation() != null ? request.getAllowIssueCreation() : true)
                 .archived(false)
                 .build();
@@ -195,7 +226,7 @@ public class ExportImportService {
         ProjectResponse cloned = importProject(importRequest);
 
         // Add current user as admin
-        UUID adminRoleId = projectRoleRepository.findByProjectIdAndName(cloned.getId(), "PROJECT_ADMIN")
+        UUID adminRoleId = projectRoleRepository.findByProjectIdAndName(cloned.getId(), defaultAdminRoleName)
                 .map(ProjectRole::getId)
                 .orElse(null);
 
@@ -213,14 +244,21 @@ public class ExportImportService {
     }
 
     private void createDefaultRoles(UUID projectId, Map<String, UUID> roleIdMap) {
+        String[] roleNames = defaultRoleNamesStr.split(",");
+        String adminName = roleNames.length > 0 ? roleNames[0].trim() : defaultAdminRoleName;
+        String developerName = roleNames.length > 1 ? roleNames[1].trim() : "DEVELOPER";
+        String viewerName = roleNames.length > 2 ? roleNames[2].trim() : "VIEWER";
+
         List<ProjectRole> defaultRoles = Arrays.asList(
-                ProjectRole.builder().projectId(projectId).name("PROJECT_ADMIN")
-                        .description("Project Administrator with full access").permissions(List.of("*")).build(),
-                ProjectRole.builder().projectId(projectId).name("DEVELOPER")
-                        .description("Developer with edit and create permissions")
-                        .permissions(List.of("read", "edit", "create", "comment", "transition")).build(),
-                ProjectRole.builder().projectId(projectId).name("VIEWER")
-                        .description("Read-only access").permissions(List.of("read", "comment")).build()
+                ProjectRole.builder().projectId(projectId).name(adminName)
+                        .description(defaultAdminRoleDescription)
+                        .permissions(Arrays.asList(defaultAdminPermissions.split(","))).build(),
+                ProjectRole.builder().projectId(projectId).name(developerName)
+                        .description(defaultDeveloperRoleDescription)
+                        .permissions(Arrays.asList(defaultDeveloperPermissions.split(","))).build(),
+                ProjectRole.builder().projectId(projectId).name(viewerName)
+                        .description(defaultViewerRoleDescription)
+                        .permissions(Arrays.asList(defaultViewerPermissions.split(","))).build()
         );
 
         for (ProjectRole role : defaultRoles) {

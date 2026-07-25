@@ -11,7 +11,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class NotificationDispatchRequest {
 
-    @NotBlank(message = "Event type is required")
+    @NotBlank(message = "{validation.dispatch.eventType.required}")
     private String eventType;
 
     private UUID issueId;

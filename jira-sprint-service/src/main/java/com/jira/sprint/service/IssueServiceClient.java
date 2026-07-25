@@ -2,10 +2,12 @@ package com.jira.sprint.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jira.board.dto.BoardIssueResponse;
+import com.jira.cluster.util.StatusCategoryHelper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
@@ -26,6 +28,7 @@ public class IssueServiceClient {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final MessageSource messageSource;
 
     @Value("${jira.issue-service-url:http://localhost:8084}")
     private String issueServiceUrl;
@@ -116,7 +119,7 @@ public class IssueServiceClient {
             restTemplate.exchange(url, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
             log.info("Deleted issue {} via issue-service", issueId);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to delete issue " + issueId + ": " + e.getMessage(), e);
+            throw new RuntimeException(messageSource.getMessage("error.issue.delete.failed", new Object[]{issueId, e.getMessage()}, java.util.Locale.ENGLISH), e);
         }
     }
 
@@ -132,7 +135,7 @@ public class IssueServiceClient {
             restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(fields, headers), Map.class);
             log.info("Updated fields on issue {}: {}", issueId, fields.keySet());
         } catch (Exception e) {
-            throw new RuntimeException("Failed to update issue " + issueId + ": " + e.getMessage(), e);
+            throw new RuntimeException(messageSource.getMessage("error.issue.update.failed", new Object[]{issueId, e.getMessage()}, java.util.Locale.ENGLISH), e);
         }
     }
 
@@ -142,7 +145,7 @@ public class IssueServiceClient {
     public void updateIssueStatus(UUID issueId, UUID projectId, String statusName) {
         UUID statusId = resolveStatusIdByName(statusName);
         if (statusId == null) {
-            throw new RuntimeException("Could not resolve status name: " + statusName);
+            throw new RuntimeException(messageSource.getMessage("error.issue.status.resolve.failed", new Object[]{statusName}, java.util.Locale.ENGLISH));
         }
         patchStatus(issueId, projectId, statusId);
         log.info("Updated status on issue {} to {}", issueId, statusName);
@@ -180,7 +183,7 @@ public class IssueServiceClient {
             }
             return "cloned";
         } catch (Exception e) {
-            throw new RuntimeException("Failed to clone issue " + issueId + ": " + e.getMessage(), e);
+            throw new RuntimeException(messageSource.getMessage("error.issue.clone.failed", new Object[]{issueId, e.getMessage()}, java.util.Locale.ENGLISH), e);
         }
     }
 
@@ -380,9 +383,7 @@ public class IssueServiceClient {
     }
 
     private boolean isCompletedStatus(String status) {
-        if (status == null) return false;
-        String n = status.toLowerCase();
-        return n.contains("done") || n.contains("completed") || n.contains("closed") || n.equals("resolved");
+        return StatusCategoryHelper.isCompleted(status);
     }
 
     @Data

@@ -127,3 +127,55 @@ notification:
   email:
     enabled: ${EMAIL_ENABLED:false}
     from: ${EMAIL_FROM:noreply@jira.local}
+
+# --- Configurable business defaults (Pattern B / D) ---
+app:
+  notification:
+    default-reference-type: ISSUE
+    title:
+      issue-created: "has been created"
+      issue-updated: "has been updated"
+      issue-assigned: "has been assigned"
+      issue-commented: "has a new comment"
+      issue-resolved: "has been resolved"
+      issue-closed: "has been closed"
+      issue-reopened: "has been reopened"
+      issue-deleted: "has been deleted"
+      issue-moved: "has been moved"
+    event-categories:
+      issue: Issue
+      comment: Comment
+      status: Status
+      sprint: Sprint
+      project: Project
+  automation:
+    default-trigger-type: AUTOMATION
+    status:
+      success: SUCCESS
+      failed: FAILED
+    failure-handling:
+      stop: STOP
+    defaults:
+      logical-group: ALL
+      failure-handling: CONTINUE
+  mail:
+    defaults:
+      server-type: IMAP
+      port: 993
+      use-ssl: true
+      folder: INBOX
+      handler-type: CREATE_ISSUE
+      poll-interval-minutes: 5
+      connection-timeout: "10000"
+      read-timeout: "10000"
+  email:
+    status:
+      queued: QUEUED
+      sent: SENT
+      failed: FAILED
+    default-subject: Jira Notification
+    max-retries: 3
+    retry-backoff-base-seconds: 30
+    fallback-label: Unknown
+    template:
+      default-type: THYMELEAF

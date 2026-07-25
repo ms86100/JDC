@@ -1,8 +1,10 @@
 package com.jira.sprint.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,13 +13,16 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final String SERVICE_NAME = "jira-sprint-service";
+    private final MessageSource messageSource;
 
     @ExceptionHandler({ResourceNotFoundException.class, com.jira.board.exception.ResourceNotFoundException.class})
     public ResponseEntity<Map<String, Object>> handleNotFound(
@@ -25,7 +30,7 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.NOT_FOUND.value());
-        body.put("error", "Not Found");
+        body.put("error", messageSource.getMessage("error.label.not.found", null, Locale.ENGLISH));
         body.put("message", ex.getMessage());
         body.put("path", request.getRequestURI());
         body.put("service", SERVICE_NAME);
@@ -38,7 +43,7 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Bad Request");
+        body.put("error", messageSource.getMessage("error.label.bad.request", null, Locale.ENGLISH));
         body.put("message", ex.getMessage());
         body.put("path", request.getRequestURI());
         body.put("service", SERVICE_NAME);
@@ -51,7 +56,7 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.CONFLICT.value());
-        body.put("error", "Conflict");
+        body.put("error", messageSource.getMessage("error.label.conflict", null, Locale.ENGLISH));
         body.put("message", ex.getMessage());
         body.put("path", request.getRequestURI());
         body.put("service", SERVICE_NAME);
@@ -64,7 +69,7 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.NOT_FOUND.value());
-        body.put("error", "Not Found");
+        body.put("error", messageSource.getMessage("error.label.not.found", null, Locale.ENGLISH));
         body.put("message", ex.getMessage());
         body.put("path", request.getRequestURI());
         body.put("service", SERVICE_NAME);
@@ -78,8 +83,8 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        body.put("error", "Internal Server Error");
-        body.put("message", "An unexpected error occurred");
+        body.put("error", messageSource.getMessage("error.label.internal", null, Locale.ENGLISH));
+        body.put("message", messageSource.getMessage("error.unexpected", null, Locale.ENGLISH));
         body.put("path", request.getRequestURI());
         body.put("service", SERVICE_NAME);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);

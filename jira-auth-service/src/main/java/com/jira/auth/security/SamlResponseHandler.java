@@ -2,6 +2,7 @@ package com.jira.auth.security;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -23,6 +24,8 @@ import java.util.*;
 @Slf4j
 public class SamlResponseHandler {
 
+    private final MessageSource messageSource;
+
     /**
      * Parses and verifies a Base64-encoded SAML response.
      *
@@ -40,7 +43,8 @@ public class SamlResponseHandler {
             return SamlAssertionResult.failure(e.getMessage());
         } catch (Exception e) {
             log.error("Failed to parse SAML response: {}", e.getMessage());
-            return SamlAssertionResult.failure("Failed to parse SAML response: " + e.getMessage());
+            return SamlAssertionResult.failure(
+                    messageSource.getMessage("saml.error.parse.failed", new Object[]{e.getMessage()}, Locale.ENGLISH));
         }
     }
 
@@ -59,12 +63,14 @@ public class SamlResponseHandler {
 
         String status = extractStatus(doc);
         if (!"urn:oasis:names:tc:SAML:2.0:status:Success".equals(status)) {
-            return SamlAssertionResult.failure("SAML authentication failed with status: " + status);
+            return SamlAssertionResult.failure(
+                    messageSource.getMessage("saml.error.auth.failed", new Object[]{status}, Locale.ENGLISH));
         }
 
         String nameId = extractNameId(doc);
         if (nameId == null || nameId.isBlank()) {
-            return SamlAssertionResult.failure("No NameID found in SAML assertion");
+            return SamlAssertionResult.failure(
+                    messageSource.getMessage("saml.error.no.nameid", null, Locale.ENGLISH));
         }
 
         Map<String, String> attributes = extractAttributes(doc);
@@ -86,7 +92,8 @@ public class SamlResponseHandler {
         // Find the Signature element in the SAML response
         NodeList signatureNodes = doc.getElementsByTagNameNS(XMLSignature.XMLNS, "Signature");
         if (signatureNodes.getLength() == 0) {
-            throw new SecurityException("SAML response is not signed");
+            throw new SecurityException(
+                    messageSource.getMessage("saml.error.not.signed", null, Locale.ENGLISH));
         }
 
         // Parse the IdP X.509 certificate from PEM format
@@ -112,7 +119,8 @@ public class SamlResponseHandler {
             // Log details to aid debugging without leaking sensitive data
             boolean coreValid = signature.getSignatureValue().validate(valContext);
             log.warn("SAML signature core validity: {}", coreValid);
-            throw new SecurityException("SAML response signature verification failed");
+            throw new SecurityException(
+                    messageSource.getMessage("saml.error.signature.failed", null, Locale.ENGLISH));
         }
 
         log.debug("SAML response signature verified successfully");

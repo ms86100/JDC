@@ -28,6 +28,18 @@ public class AutomationExecutionService {
     @Value("${jira.services.workflow-url:http://jira-workflow-service:8085}")
     private String workflowServiceUrl;
 
+    @Value("${app.automation.default-trigger-type:AUTOMATION}")
+    private String defaultTriggerType;
+
+    @Value("${app.automation.status.success:SUCCESS}")
+    private String statusSuccess;
+
+    @Value("${app.automation.status.failed:FAILED}")
+    private String statusFailed;
+
+    @Value("${app.automation.failure-handling.stop:STOP}")
+    private String failureHandlingStop;
+
     @Async
     public void processEvent(String eventType, UUID issueId, UUID projectId, UUID userId,
                               Map<String, Object> eventData) {
@@ -45,17 +57,17 @@ public class AutomationExecutionService {
 
                 try {
                     executeAction(action, issueId, projectId, userId, eventData);
-                    logExecution(rule.getId(), "SUCCESS", null);
+                    logExecution(rule.getId(), statusSuccess, null);
                 } catch (Exception e) {
                     log.error("Automation action failed for rule '{}': {}", rule.getName(), e.getMessage());
-                    logExecution(rule.getId(), "FAILED", e.getMessage());
-                    if ("STOP".equals(action.getFailureHandling())) break;
+                    logExecution(rule.getId(), statusFailed, e.getMessage());
+                    if (failureHandlingStop.equals(action.getFailureHandling())) break;
                 }
             }
 
             rule.setExecutionCount(rule.getExecutionCount() != null ? rule.getExecutionCount() + 1 : 1);
             rule.setLastExecutedAt(OffsetDateTime.now());
-            rule.setLastStatus("SUCCESS");
+            rule.setLastStatus(statusSuccess);
             ruleRepository.save(rule);
         }
     }
@@ -132,11 +144,11 @@ public class AutomationExecutionService {
         try {
             AutomationLog logEntry = AutomationLog.builder()
                     .ruleId(ruleId)
-                    .triggerType("AUTOMATION")
+                    .triggerType(defaultTriggerType)
                     .status(status)
                     .errorDetails(errorMessage)
                     .actionsExecuted(1)
-                    .actionsFailed("FAILED".equals(status) ? 1 : 0)
+                    .actionsFailed(statusFailed.equals(status) ? 1 : 0)
                     .build();
             logRepository.save(logEntry);
         } catch (Exception e) {

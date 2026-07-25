@@ -6,12 +6,15 @@ import com.jira.project.exception.ResourceNotFoundException;
 import com.jira.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -23,6 +26,9 @@ public class BulkProjectService {
     private final ProjectRepository projectRepository;
     private final ArchiveService archiveService;
     private final ProjectService projectService;
+
+    @Autowired
+    private MessageSource messageSource;
 
     @Transactional
     public BulkProjectResponse bulkArchive(List<UUID> projectIds) {
@@ -38,7 +44,7 @@ public class BulkProjectService {
                 results.add(BulkProjectResponse.BulkOperationResult.builder()
                         .projectId(projectId.toString())
                         .success(true)
-                        .message("Project archived successfully")
+                        .message(messageSource.getMessage("bulk.project.archived.success", null, "Project archived successfully", Locale.ENGLISH))
                         .build());
                 successCount++;
             } catch (Exception e) {
@@ -74,7 +80,7 @@ public class BulkProjectService {
                 results.add(BulkProjectResponse.BulkOperationResult.builder()
                         .projectId(projectId.toString())
                         .success(true)
-                        .message("Project restored successfully")
+                        .message(messageSource.getMessage("bulk.project.restored.success", null, "Project restored successfully", Locale.ENGLISH))
                         .build());
                 successCount++;
             } catch (Exception e) {
@@ -110,7 +116,7 @@ public class BulkProjectService {
                 results.add(BulkProjectResponse.BulkOperationResult.builder()
                         .projectId(projectId.toString())
                         .success(true)
-                        .message("Project deleted successfully")
+                        .message(messageSource.getMessage("bulk.project.deleted.success", null, "Project deleted successfully", Locale.ENGLISH))
                         .build());
                 successCount++;
             } catch (Exception e) {

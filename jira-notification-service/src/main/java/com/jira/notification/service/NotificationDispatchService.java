@@ -9,6 +9,7 @@ import com.jira.notification.repository.NotificationSchemeEventRepository;
 import com.jira.notification.repository.NotificationSchemeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -27,14 +28,44 @@ public class NotificationDispatchService {
     private final NotificationService notificationService;
     private final RestTemplate restTemplate;
 
-    @org.springframework.beans.factory.annotation.Value("${issue.service.url:http://jira-issue-service:8084}")
+    @Value("${issue.service.url:http://jira-issue-service:8084}")
     private String issueServiceUrl;
 
-    @org.springframework.beans.factory.annotation.Value("${user.service.url:http://jira-user-service:8082}")
+    @Value("${user.service.url:http://jira-user-service:8082}")
     private String userServiceUrl;
 
-    @org.springframework.beans.factory.annotation.Value("${project.service.url:http://jira-project-service:8083}")
+    @Value("${project.service.url:http://jira-project-service:8083}")
     private String projectServiceUrl;
+
+    @Value("${app.notification.default-reference-type:ISSUE}")
+    private String defaultReferenceType;
+
+    @Value("${app.notification.title.issue-created:has been created}")
+    private String titleSuffixIssueCreated;
+
+    @Value("${app.notification.title.issue-updated:has been updated}")
+    private String titleSuffixIssueUpdated;
+
+    @Value("${app.notification.title.issue-assigned:has been assigned}")
+    private String titleSuffixIssueAssigned;
+
+    @Value("${app.notification.title.issue-commented:has a new comment}")
+    private String titleSuffixIssueCommented;
+
+    @Value("${app.notification.title.issue-resolved:has been resolved}")
+    private String titleSuffixIssueResolved;
+
+    @Value("${app.notification.title.issue-closed:has been closed}")
+    private String titleSuffixIssueClosed;
+
+    @Value("${app.notification.title.issue-reopened:has been reopened}")
+    private String titleSuffixIssueReopened;
+
+    @Value("${app.notification.title.issue-deleted:has been deleted}")
+    private String titleSuffixIssueDeleted;
+
+    @Value("${app.notification.title.issue-moved:has been moved}")
+    private String titleSuffixIssueMoved;
 
     @Transactional
     public void dispatchIssueEvent(String eventType, UUID issueId, UUID projectId,
@@ -86,7 +117,7 @@ public class NotificationDispatchService {
                         .type(eventType)
                         .title(resolvedTitle)
                         .message(resolvedMessage)
-                        .referenceType("ISSUE")
+                        .referenceType(defaultReferenceType)
                         .referenceId(issueId)
                         .build();
                 notificationService.createNotification(event);
@@ -166,6 +197,7 @@ public class NotificationDispatchService {
                     }
                     break;
                 default:
+                    log.debug("Unrecognized recipient type '{}', falling back to recipientId", recipientType);
                     if (schemeEvent.getRecipientId() != null) {
                         recipients.add(schemeEvent.getRecipientId());
                     }
@@ -242,15 +274,15 @@ public class NotificationDispatchService {
     private String formatTitle(String eventType, Map<String, Object> context) {
         String issueKey = context.getOrDefault("issueKey", "").toString();
         return switch (eventType) {
-            case "ISSUE_CREATED" -> issueKey + " has been created";
-            case "ISSUE_UPDATED" -> issueKey + " has been updated";
-            case "ISSUE_ASSIGNED" -> issueKey + " has been assigned";
-            case "ISSUE_COMMENTED" -> issueKey + " has a new comment";
-            case "ISSUE_RESOLVED" -> issueKey + " has been resolved";
-            case "ISSUE_CLOSED" -> issueKey + " has been closed";
-            case "ISSUE_REOPENED" -> issueKey + " has been reopened";
-            case "ISSUE_DELETED" -> issueKey + " has been deleted";
-            case "ISSUE_MOVED" -> issueKey + " has been moved";
+            case "ISSUE_CREATED" -> issueKey + " " + titleSuffixIssueCreated;
+            case "ISSUE_UPDATED" -> issueKey + " " + titleSuffixIssueUpdated;
+            case "ISSUE_ASSIGNED" -> issueKey + " " + titleSuffixIssueAssigned;
+            case "ISSUE_COMMENTED" -> issueKey + " " + titleSuffixIssueCommented;
+            case "ISSUE_RESOLVED" -> issueKey + " " + titleSuffixIssueResolved;
+            case "ISSUE_CLOSED" -> issueKey + " " + titleSuffixIssueClosed;
+            case "ISSUE_REOPENED" -> issueKey + " " + titleSuffixIssueReopened;
+            case "ISSUE_DELETED" -> issueKey + " " + titleSuffixIssueDeleted;
+            case "ISSUE_MOVED" -> issueKey + " " + titleSuffixIssueMoved;
             default -> issueKey + " — " + eventType;
         };
     }

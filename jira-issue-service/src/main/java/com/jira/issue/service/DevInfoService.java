@@ -4,6 +4,7 @@ import com.jira.issue.entity.*;
 import com.jira.issue.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,12 @@ public class DevInfoService {
 
     private static final Pattern ISSUE_KEY_PATTERN = Pattern.compile("([A-Z][A-Z0-9]+-\\d+)");
 
+    @Value("${app.defaults.pr-default-status:OPEN}")
+    private String prDefaultStatus;
+
+    @Value("${app.defaults.branch-default-status:ACTIVE}")
+    private String branchDefaultStatus;
+
     @Transactional(readOnly = true)
     public Map<String, Object> getDevInfoForIssue(UUID issueId) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -36,7 +43,7 @@ public class DevInfoService {
         result.put("branches", branchRepository.findByIssueIdOrderByCreatedAtDesc(issueId));
         result.put("pullRequests", pullRequestRepository.findByIssueIdOrderByCreatedAtDesc(issueId));
         result.put("builds", buildRepository.findByIssueIdOrderByCreatedAtDesc(issueId));
-        result.put("openPullRequests", pullRequestRepository.findByIssueIdAndStatus(issueId, "OPEN"));
+        result.put("openPullRequests", pullRequestRepository.findByIssueIdAndStatus(issueId, prDefaultStatus));
         return result;
     }
 
@@ -99,7 +106,7 @@ public class DevInfoService {
                             .prNumber(payload.get("prNumber") instanceof Number ?
                                     ((Number) payload.get("prNumber")).intValue() : null)
                             .title(title)
-                            .status((String) payload.getOrDefault("status", "OPEN"))
+                            .status((String) payload.getOrDefault("status", prDefaultStatus))
                             .sourceBranch(sourceBranch)
                             .targetBranch((String) payload.get("targetBranch"))
                             .repository((String) payload.get("repository"))
@@ -123,7 +130,7 @@ public class DevInfoService {
                 .repository(repository)
                 .url(url)
                 .createdFromIssue(true)
-                .status("ACTIVE")
+                .status(branchDefaultStatus)
                 .build();
         return branchRepository.save(branch);
     }

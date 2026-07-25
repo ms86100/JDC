@@ -416,7 +416,7 @@ public class VvoService {
         VvoTestRequestLink link = VvoTestRequestLink.builder()
                 .vvoId(vvoId)
                 .testRequestId(testRequestId)
-                .linkType("CONTAINS")
+                .linkType("CONTAIN")
                 .build();
         linkRepo.save(link);
         log.info("Linked VVO {} to Test Request {}", vvoId, testRequestId);

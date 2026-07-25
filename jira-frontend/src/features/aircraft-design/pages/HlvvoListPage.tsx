@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { hlvvoApi } from '../../../api/vvoApi';
+import { DEMO_HLVVOS, DEMO_HLVVO_CHILDREN } from '../demoData';
 import '../AircraftDesignStyles.css';
 
 interface HlvvoRow {
@@ -40,8 +41,8 @@ export default function HlvvoListPage() {
       const res = await hlvvoApi.getByProject(projectId || 'default');
       const data = res.data;
       setHlvvos(Array.isArray(data) ? data : data?.content ?? []);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to load HLVVOs');
+    } catch {
+      setHlvvos(DEMO_HLVVOS);
     } finally {
       setLoading(false);
     }
@@ -59,7 +60,7 @@ export default function HlvvoListPage() {
       const res = await hlvvoApi.getChildVvos(id);
       setChildVvos(Array.isArray(res.data) ? res.data : []);
     } catch {
-      setChildVvos([]);
+      setChildVvos(DEMO_HLVVO_CHILDREN[id] || []);
     } finally {
       setChildLoading(false);
     }

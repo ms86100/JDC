@@ -8,6 +8,7 @@ import com.jira.search.exception.ResourceNotFoundException;
 import com.jira.search.repository.SearchIndexRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,9 @@ import java.util.stream.Collectors;
 public class SearchService {
 
     private final SearchIndexRepository searchIndexRepository;
+
+    @Value("${app.messages.entity-indexed:Entity indexed successfully}")
+    private String entityIndexedMessage;
 
     @Transactional
     public IndexResponse indexEntity(IndexRequest request) {
@@ -57,7 +61,7 @@ public class SearchService {
                 .id(searchIndex.getId())
                 .entityType(searchIndex.getEntityType())
                 .entityId(searchIndex.getEntityId())
-                .message("Entity indexed successfully")
+                .message(entityIndexedMessage)
                 .build();
     }
 

@@ -8,6 +8,7 @@ import com.jira.workflow.exception.ResourceNotFoundException;
 import com.jira.workflow.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -34,8 +35,11 @@ public class WorkflowService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private static final String ISSUE_SERVICE_URL = "http://jira-issue-service:8084";
-    private static final String USER_SERVICE_URL = "http://jira-user-service:8082";
+    @Value("${jira.services.issue-url:http://jira-issue-service:8084}")
+    private String issueServiceUrl;
+
+    @Value("${jira.services.user-url:http://jira-user-service:8082}")
+    private String userServiceUrl;
 
     @Transactional
     public WorkflowResponse createWorkflow(CreateWorkflowRequest request) {
@@ -640,7 +644,7 @@ public class WorkflowService {
 
     private Map<String, Object> fetchIssueData(UUID issueId) {
         try {
-            String url = ISSUE_SERVICE_URL + "/api/issues/" + issueId;
+            String url = issueServiceUrl + "/api/issues/" + issueId;
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
             return response != null ? response : new HashMap<>();
         } catch (Exception e) {
@@ -651,7 +655,7 @@ public class WorkflowService {
 
     private Map<String, Object> fetchUserData(UUID userId) {
         try {
-            String url = USER_SERVICE_URL + "/api/users/" + userId;
+            String url = userServiceUrl + "/api/users/" + userId;
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
             return response != null ? response : new HashMap<>();
         } catch (Exception e) {
@@ -790,7 +794,7 @@ public class WorkflowService {
                         String fieldName = (String) data.get("field");
                         Object fieldValue = data.get("value");
 
-                        String url = ISSUE_SERVICE_URL + "/api/issues/" + issueId;
+                        String url = issueServiceUrl + "/api/issues/" + issueId;
                         restTemplate.put(url, Map.of(fieldName, fieldValue));
                     }
                     break;
@@ -800,7 +804,7 @@ public class WorkflowService {
                     Map<String, Object> issueData = fetchIssueData(issueId);
                     if (issueData.containsKey("reporterId")) {
                         String assigneeId = issueData.get("reporterId").toString();
-                        restTemplate.put(ISSUE_SERVICE_URL + "/api/issues/" + issueId,
+                        restTemplate.put(issueServiceUrl + "/api/issues/" + issueId,
                                        Map.of("assigneeId", assigneeId));
                     }
                     break;
@@ -811,7 +815,7 @@ public class WorkflowService {
                         Map<String, Object> data = objectMapper.readValue(userData, Map.class);
                         String assigneeId = (String) data.get("userId");
                         if (assigneeId != null) {
-                            restTemplate.put(ISSUE_SERVICE_URL + "/api/issues/" + issueId,
+                            restTemplate.put(issueServiceUrl + "/api/issues/" + issueId,
                                            Map.of("assigneeId", assigneeId));
                         }
                     }

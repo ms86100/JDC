@@ -7,7 +7,9 @@ import com.jira.project.entity.ProjectScheme;
 import com.jira.project.repository.FieldConfigurationEntryRepository;
 import com.jira.project.repository.FieldConfigurationSchemeRepository;
 import com.jira.project.repository.ProjectSchemeRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,24 @@ public class FieldConfigurationService {
     private final ProjectSchemeRepository projectSchemeRepository;
     private final FieldConfigurationSchemeRepository fieldConfigurationSchemeRepository;
     private final FieldConfigurationEntryRepository fieldConfigurationEntryRepository;
+
+    @Value("${app.defaults.field-aliases:summary=title|summary,issuetype=issueTypeId|issuetype,priority=priorityId|priority,assignee=assigneeId|assignee,duedate=dueDate|duedate,components=componentIds|components,labels=labels,fixversions=fixVersions,affectsversions=affectsVersions,description=description}")
+    private String fieldAliasesStr;
+
+    private Map<String, List<String>> fieldAliasMap;
+
+    @PostConstruct
+    void initFieldAliases() {
+        fieldAliasMap = new LinkedHashMap<>();
+        for (String entry : fieldAliasesStr.split(",(?=[a-z])")) {
+            String[] kv = entry.split("=", 2);
+            if (kv.length == 2) {
+                String key = kv[0].trim();
+                List<String> aliases = Arrays.asList(kv[1].trim().split("\\|"));
+                fieldAliasMap.put(key, aliases);
+            }
+        }
+    }
 
     public List<FieldConfigurationRuleResponse> resolveForProject(UUID projectId, UUID issueTypeId) {
         UUID schemeId = projectSchemeRepository.findByProjectId(projectId)
@@ -77,19 +97,11 @@ public class FieldConfigurationService {
         if (fields.containsKey(key) && hasValue(fields.get(key))) {
             return true;
         }
-        return switch (key) {
-            case "summary" -> hasValue(fields.get("title")) || hasValue(fields.get("summary"));
-            case "issuetype" -> hasValue(fields.get("issueTypeId")) || hasValue(fields.get("issuetype"));
-            case "priority" -> hasValue(fields.get("priorityId")) || hasValue(fields.get("priority"));
-            case "assignee" -> hasValue(fields.get("assigneeId")) || hasValue(fields.get("assignee"));
-            case "duedate" -> hasValue(fields.get("dueDate")) || hasValue(fields.get("duedate"));
-            case "components" -> hasValue(fields.get("componentIds")) || hasValue(fields.get("components"));
-            case "labels" -> hasValue(fields.get("labels"));
-            case "fixversions" -> hasValue(fields.get("fixVersions"));
-            case "affectsversions" -> hasValue(fields.get("affectsVersions"));
-            case "description" -> hasValue(fields.get("description"));
-            default -> false;
-        };
+        List<String> aliases = fieldAliasMap.get(key);
+        if (aliases != null) {
+            return aliases.stream().anyMatch(alias -> hasValue(fields.get(alias)));
+        }
+        return false;
     }
 
     private boolean hasValue(Object value) {

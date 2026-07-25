@@ -29,6 +29,15 @@ public class ReindexService {
     @Value("${services.project.url:http://localhost:8083}")
     private String projectServiceUrl;
 
+    @Value("${app.reindex.entity-types:ISSUE,PROJECT,COMMENT}")
+    private String reindexEntityTypesStr;
+
+    @Value("${app.defaults.entity-type:ISSUE}")
+    private String defaultEntityType;
+
+    @Value("${app.defaults.unknown-label:unknown}")
+    private String defaultUnknownLabel;
+
     public ReindexStatusResponse reindexEntityType(JsonNode body) {
         String entityType = parseEntityType(body);
         LocalDateTime start = LocalDateTime.now();
@@ -86,9 +95,9 @@ public class ReindexService {
         long indexed = 0;
         long failed = 0;
         long total = 0;
-        for (String type : List.of("ISSUE", "PROJECT", "COMMENT")) {
+        for (String type : reindexEntityTypesStr.split(",")) {
             ReindexStatusResponse row = reindexEntityType(
-                    com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.textNode(type));
+                    com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.textNode(type.trim()));
             indexed += row.getIndexedDocuments();
             failed += row.getFailedDocuments();
             total += row.getTotalDocuments();
@@ -108,15 +117,15 @@ public class ReindexService {
 
     private String parseEntityType(JsonNode body) {
         if (body == null || body.isNull()) {
-            return "ISSUE";
+            return defaultEntityType;
         }
         if (body.isTextual()) {
             return body.asText().trim().toUpperCase(Locale.ROOT);
         }
         if (body.has("entityType")) {
-            return body.get("entityType").asText("ISSUE").trim().toUpperCase(Locale.ROOT);
+            return body.get("entityType").asText(defaultEntityType).trim().toUpperCase(Locale.ROOT);
         }
-        return "ISSUE";
+        return defaultEntityType;
     }
 
     private ReindexCounts reindexIssues() {
@@ -237,7 +246,7 @@ public class ReindexService {
                 }
             }
         }
-        return "unknown";
+        return defaultUnknownLabel;
     }
 
     private record ReindexCounts(long indexed, long failed, long total) {}

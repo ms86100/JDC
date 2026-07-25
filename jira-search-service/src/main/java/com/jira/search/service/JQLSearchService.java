@@ -6,6 +6,7 @@ import com.jira.search.dto.JQLSearchResponse.IssueSummary;
 import com.jira.search.entity.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -25,7 +26,38 @@ public class JQLSearchService {
     private final JQLParser jqlParser;
     private final RestTemplate restTemplate;
 
-    private static final String ISSUE_SERVICE_URL = "http://jira-issue-service:8084";
+    @Value("${services.issue.url:http://jira-issue-service:8084}")
+    private String issueServiceUrl;
+
+    @Value("${services.project.url:http://jira-project-service:8083}")
+    private String projectServiceUrl;
+
+    @Value("${app.defaults.status-name:Unknown}")
+    private String defaultStatusName;
+
+    @Value("${app.defaults.issue-type-name:Task}")
+    private String defaultIssueTypeName;
+
+    @Value("${app.defaults.priority-name:Medium}")
+    private String defaultPriorityName;
+
+    @Value("${app.search.fallback-project-keys:DEMO,PROJ,TEST,PROD,DEV}")
+    private String fallbackProjectKeysStr;
+
+    @Value("${app.search.fallback-statuses:To Do,In Progress,In Review,Done,Closed,Open,Reopened,Blocked}")
+    private String fallbackStatusesStr;
+
+    @Value("${app.search.fallback-issue-types:Bug,Story,Task,Subtask,Epic,Feature,Improvement,Spike,Test}")
+    private String fallbackIssueTypesStr;
+
+    @Value("${app.search.fallback-priorities:Highest,High,Medium,Low,Lowest,Blocker,Critical,Major,Minor,Trivial}")
+    private String fallbackPrioritiesStr;
+
+    @Value("${app.search.fallback-resolutions:Fixed,Won't Fix,Duplicate,Incomplete,Cannot Reproduce,Done,Cancelled}")
+    private String fallbackResolutionsStr;
+
+    @Value("${app.search.fallback-labels:bug,feature,enhancement,documentation,question,wontfix,blocked,ready-for-review,in-testing,tech-debt}")
+    private String fallbackLabelsStr;
 
     /**
      * Parse and validate JQL query
@@ -60,7 +92,7 @@ public class JQLSearchService {
             searchParams.put("pageSize", request.getPageSize());
 
             // Build the search URL with query parameters
-            String searchUrl = ISSUE_SERVICE_URL + "/api/issues/search?jql=" +
+            String searchUrl = issueServiceUrl + "/api/issues/search?jql=" +
                     java.net.URLEncoder.encode(request.getJql(), java.nio.charset.StandardCharsets.UTF_8) +
                     "&page=" + request.getPage() +
                     "&pageSize=" + request.getPageSize();
@@ -131,27 +163,27 @@ public class JQLSearchService {
         Object status = fields.get("status");
         if (status instanceof Map) {
             Object name = ((Map<?, ?>) status).get("name");
-            return name != null ? name.toString() : "Unknown";
+            return name != null ? name.toString() : defaultStatusName;
         }
-        return status != null ? status.toString() : "Unknown";
+        return status != null ? status.toString() : defaultStatusName;
     }
 
     private String extractIssueTypeName(Map<String, Object> fields) {
         Object issueType = fields.get("issuetype");
         if (issueType instanceof Map) {
             Object name = ((Map<?, ?>) issueType).get("name");
-            return name != null ? name.toString() : "Task";
+            return name != null ? name.toString() : defaultIssueTypeName;
         }
-        return issueType != null ? issueType.toString() : "Task";
+        return issueType != null ? issueType.toString() : defaultIssueTypeName;
     }
 
     private String extractPriorityName(Map<String, Object> fields) {
         Object priority = fields.get("priority");
         if (priority instanceof Map) {
             Object name = ((Map<?, ?>) priority).get("name");
-            return name != null ? name.toString() : "Medium";
+            return name != null ? name.toString() : defaultPriorityName;
         }
-        return priority != null ? priority.toString() : "Medium";
+        return priority != null ? priority.toString() : defaultPriorityName;
     }
 
     private String extractUserName(Object user) {
@@ -231,7 +263,7 @@ public class JQLSearchService {
 
     private List<String> fetchFromService(String endpoint, String prefix) {
         try {
-            String url = ISSUE_SERVICE_URL + endpoint;
+            String url = issueServiceUrl + endpoint;
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
             if (response != null && response.containsKey("data")) {
                 List<Map<String, Object>> data = (List<Map<String, Object>>) response.get("data");
@@ -248,7 +280,7 @@ public class JQLSearchService {
 
     private List<String> fetchProjectsFromService(String prefix) {
         try {
-            String url = "http://jira-project-service:8083/api/projects";
+            String url = projectServiceUrl + "/api/projects";
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
             if (response != null && response.containsKey("projects")) {
                 List<Map<String, Object>> projects = (List<Map<String, Object>>) response.get("projects");
@@ -261,7 +293,9 @@ public class JQLSearchService {
         } catch (Exception e) {
             log.debug("Project service call failed, using fallback: {}", e.getMessage());
         }
-        return List.of("DEMO", "PROJ", "TEST", "PROD", "DEV");
+        return Arrays.stream(fallbackProjectKeysStr.split(","))
+                .map(String::trim)
+                .collect(Collectors.toList());
     }
 
     private List<String> getFallbackSuggestions(String fieldName, String prefix) {
@@ -276,37 +310,36 @@ public class JQLSearchService {
     }
 
     private List<String> getStatusSuggestions(String prefix) {
-        return List.of("To Do", "In Progress", "In Review", "Done", "Closed", "Open", "Reopened", "Blocked")
-                .stream()
+        return Arrays.stream(fallbackStatusesStr.split(","))
+                .map(String::trim)
                 .filter(s -> s.toLowerCase().startsWith(prefix.toLowerCase()))
                 .collect(Collectors.toList());
     }
 
     private List<String> getIssueTypeSuggestions(String prefix) {
-        return List.of("Bug", "Story", "Task", "Subtask", "Epic", "Feature", "Improvement", "Spike", "Test")
-                .stream()
+        return Arrays.stream(fallbackIssueTypesStr.split(","))
+                .map(String::trim)
                 .filter(s -> s.toLowerCase().startsWith(prefix.toLowerCase()))
                 .collect(Collectors.toList());
     }
 
     private List<String> getPrioritySuggestions(String prefix) {
-        return List.of("Highest", "High", "Medium", "Low", "Lowest", "Blocker", "Critical", "Major", "Minor", "Trivial")
-                .stream()
+        return Arrays.stream(fallbackPrioritiesStr.split(","))
+                .map(String::trim)
                 .filter(s -> s.toLowerCase().startsWith(prefix.toLowerCase()))
                 .collect(Collectors.toList());
     }
 
     private List<String> getResolutionSuggestions(String prefix) {
-        return List.of("Fixed", "Won't Fix", "Duplicate", "Incomplete", "Cannot Reproduce", "Done", "Cancelled")
-                .stream()
+        return Arrays.stream(fallbackResolutionsStr.split(","))
+                .map(String::trim)
                 .filter(s -> s.toLowerCase().startsWith(prefix.toLowerCase()))
                 .collect(Collectors.toList());
     }
 
     private List<String> getLabelSuggestions(String prefix) {
-        return List.of("bug", "feature", "enhancement", "documentation", "question", "wontfix",
-                       "blocked", "ready-for-review", "in-testing", "tech-debt")
-                .stream()
+        return Arrays.stream(fallbackLabelsStr.split(","))
+                .map(String::trim)
                 .filter(s -> s.toLowerCase().startsWith(prefix.toLowerCase()))
                 .collect(Collectors.toList());
     }

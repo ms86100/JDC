@@ -1,11 +1,13 @@
 package com.jira.issue.service;
 
+import com.jira.cluster.util.StatusCategoryHelper;
 import com.jira.issue.dto.*;
 import com.jira.issue.entity.*;
 import com.jira.issue.exception.ResourceNotFoundException;
 import com.jira.issue.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,16 +32,22 @@ public class EpicService {
     private final EpicProgressHistoryRepository epicProgressHistoryRepository;
     private final IssueRepository issueRepository;
 
+    @Value("${app.defaults.epic-color:#0052CC}")
+    private String defaultEpicColor;
+
+    @Value("${app.defaults.epic-status:OPEN}")
+    private String defaultEpicStatus;
+
     @Transactional
     public EpicResponse createEpic(CreateEpicRequest request) {
         Epic epic = Epic.builder()
                 .name(request.getName())
                 .summary(request.getSummary())
                 .description(request.getDescription())
-                .color(request.getColor() != null ? request.getColor() : "#0052CC")
+                .color(request.getColor() != null ? request.getColor() : defaultEpicColor)
                 .leadId(request.getLeadId())
                 .leadName(request.getLeadName())
-                .status(request.getStatus() != null ? request.getStatus() : "OPEN")
+                .status(request.getStatus() != null ? request.getStatus() : defaultEpicStatus)
                 .linkedIssueId(request.getLinkedIssueId())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
@@ -175,13 +183,13 @@ public class EpicService {
             }
         }
 
-        // Count completed issues (status containing "done", "closed", "complete")
+        // Count completed issues using StatusCategoryHelper
         for (String issueId : issueIds) {
             try {
                 UUID issueUuid = UUID.fromString(issueId);
                 issueRepository.findById(issueUuid).ifPresent(issue -> {
-                    String statusName = issue.getStatus() != null ? issue.getStatus().getName().toLowerCase() : "";
-                    if (statusName.contains("done") || statusName.contains("closed") || statusName.contains("complete")) {
+                    String statusName = issue.getStatus() != null ? issue.getStatus().getName() : "";
+                    if (StatusCategoryHelper.isCompleted(statusName)) {
                         completedIssues.updateAndGet(v -> v + 1);
                         if (issue.getStoryPoints() != null) {
                             completedPoints.updateAndGet(v -> v.add(BigDecimal.valueOf(issue.getStoryPoints())));

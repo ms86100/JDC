@@ -6,7 +6,6 @@ import com.jira.issue.exception.InvalidTransitionException;
 import com.jira.issue.exception.OptimisticLockException;
 import com.jira.issue.exception.ResourceNotFoundException;
 import com.jira.issue.repository.*;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -23,7 +22,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class IssueService {
 
@@ -43,6 +41,7 @@ public class IssueService {
     private final SecurityLevelService securityLevelService;
     private final ChangeHistoryService changeHistoryService;
     private final com.jira.issue.event.IssueEventOutboxPublisher eventOutboxPublisher;
+    private final RestTemplate restTemplate;
 
     @Value("${workflow.service.url}")
     private String workflowServiceUrl;
@@ -60,11 +59,60 @@ public class IssueService {
     @Value("${version.service.url:${project.service.url}}")
     private String versionServiceUrl;
 
-    private final RestTemplate restTemplate;
+    @Value("${app.defaults.status-id:00000000-0000-0000-0001-000000000002}")
+    private String defaultStatusIdStr;
 
-    private static final UUID DEFAULT_STATUS_ID = UUID.fromString("00000000-0000-0000-0001-000000000002");
-    private static final UUID DEFAULT_TYPE_ID = UUID.fromString("a0000000-0000-0000-0000-000000000001");
-    private static final UUID DEFAULT_PRIORITY_ID = UUID.fromString("b0000000-0000-0000-0000-000000000003");
+    @Value("${app.defaults.type-id:a0000000-0000-0000-0000-000000000001}")
+    private String defaultTypeIdStr;
+
+    @Value("${app.defaults.priority-id:b0000000-0000-0000-0000-000000000003}")
+    private String defaultPriorityIdStr;
+
+    @Value("${app.defaults.clone-title-prefix:CLONE - }")
+    private String cloneTitlePrefix;
+
+    @Value("${app.defaults.fallback-link-type:Related}")
+    private String fallbackLinkType;
+
+    public IssueService(IssueRepository issueRepository,
+                        IssueTypeRepository issueTypeRepository,
+                        IssuePriorityRepository issuePriorityRepository,
+                        IssueStatusRepository issueStatusRepository,
+                        ProjectVersionRepository versionRepository,
+                        ProjectComponentRepository componentRepository,
+                        VoteRepository voteRepository,
+                        WatcherRepository watcherRepository,
+                        IssueLinkRepository issueLinkRepository,
+                        IssueLinkTypeRepository issueLinkTypeRepository,
+                        WorkflowTransitionClient workflowTransitionClient,
+                        LabelService labelService,
+                        LabelRepository labelRepository,
+                        SecurityLevelService securityLevelService,
+                        ChangeHistoryService changeHistoryService,
+                        com.jira.issue.event.IssueEventOutboxPublisher eventOutboxPublisher,
+                        RestTemplate restTemplate) {
+        this.issueRepository = issueRepository;
+        this.issueTypeRepository = issueTypeRepository;
+        this.issuePriorityRepository = issuePriorityRepository;
+        this.issueStatusRepository = issueStatusRepository;
+        this.versionRepository = versionRepository;
+        this.componentRepository = componentRepository;
+        this.voteRepository = voteRepository;
+        this.watcherRepository = watcherRepository;
+        this.issueLinkRepository = issueLinkRepository;
+        this.issueLinkTypeRepository = issueLinkTypeRepository;
+        this.workflowTransitionClient = workflowTransitionClient;
+        this.labelService = labelService;
+        this.labelRepository = labelRepository;
+        this.securityLevelService = securityLevelService;
+        this.changeHistoryService = changeHistoryService;
+        this.eventOutboxPublisher = eventOutboxPublisher;
+        this.restTemplate = restTemplate;
+    }
+
+    private UUID getDefaultStatusId() { return UUID.fromString(defaultStatusIdStr); }
+    private UUID getDefaultTypeId() { return UUID.fromString(defaultTypeIdStr); }
+    private UUID getDefaultPriorityId() { return UUID.fromString(defaultPriorityIdStr); }
 
     @Transactional
     public IssueResponse createIssue(CreateIssueRequest request, UUID currentUserId) {
@@ -79,18 +127,17 @@ public class IssueService {
             throw new ResourceNotFoundException("Project", "id", request.getProjectId());
         }
 
-        IssueType issueType = issueTypeRepository.findById(
-                request.getIssueTypeId() != null ? request.getIssueTypeId() : DEFAULT_TYPE_ID)
-                .orElseThrow(() -> new ResourceNotFoundException("IssueType", "id",
-                        request.getIssueTypeId() != null ? request.getIssueTypeId() : DEFAULT_TYPE_ID));
+        UUID resolvedTypeId = request.getIssueTypeId() != null ? request.getIssueTypeId() : getDefaultTypeId();
+        IssueType issueType = issueTypeRepository.findById(resolvedTypeId)
+                .orElseThrow(() -> new ResourceNotFoundException("IssueType", "id", resolvedTypeId));
 
-        IssueStatus status = issueStatusRepository.findById(DEFAULT_STATUS_ID)
-                .orElseThrow(() -> new ResourceNotFoundException("IssueStatus", "id", DEFAULT_STATUS_ID));
+        UUID resolvedStatusId = getDefaultStatusId();
+        IssueStatus status = issueStatusRepository.findById(resolvedStatusId)
+                .orElseThrow(() -> new ResourceNotFoundException("IssueStatus", "id", resolvedStatusId));
 
-        IssuePriority priority = issuePriorityRepository.findById(
-                request.getPriorityId() != null ? request.getPriorityId() : DEFAULT_PRIORITY_ID)
-                .orElseThrow(() -> new ResourceNotFoundException("IssuePriority", "id",
-                        request.getPriorityId() != null ? request.getPriorityId() : DEFAULT_PRIORITY_ID));
+        UUID resolvedPriorityId = request.getPriorityId() != null ? request.getPriorityId() : getDefaultPriorityId();
+        IssuePriority priority = issuePriorityRepository.findById(resolvedPriorityId)
+                .orElseThrow(() -> new ResourceNotFoundException("IssuePriority", "id", resolvedPriorityId));
 
         String issueKey;
         if (request.getIssueKey() != null && !request.getIssueKey().isBlank()) {
@@ -761,7 +808,7 @@ public class IssueService {
 
         CreateIssueRequest request = CreateIssueRequest.builder()
                 .projectId(projectId)
-                .title("CLONE - " + source.getTitle())
+                .title(cloneTitlePrefix + source.getTitle())
                 .description(source.getDescription())
                 .issueTypeId(source.getIssueType() != null ? source.getIssueType().getId() : null)
                 .priorityId(source.getPriority() != null ? source.getPriority().getId() : null)
@@ -1009,7 +1056,7 @@ public class IssueService {
                     .map(link -> {
                         Issue linkedIssue = issuesById.get(link.getTargetIssueId());
                         if (linkedIssue == null) return null;
-                        String linkTypeName = linkTypeNames.getOrDefault(link.getLinkTypeId(), "Related");
+                        String linkTypeName = linkTypeNames.getOrDefault(link.getLinkTypeId(), fallbackLinkType);
                         return IssueResponse.LinkedIssueInfo.builder()
                                 .linkType(linkTypeName)
                                 .issueId(linkedIssue.getId())

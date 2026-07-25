@@ -7,6 +7,7 @@ import com.jira.workflow.engine.plugin.WorkflowPluginRegistry;
 import com.jira.workflow.entity.WorkflowPostFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,12 @@ public class PostFunctionExecutor {
     private final WorkflowPluginRegistry pluginRegistry;
     private final WorkflowExecutionEngine executionEngine;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${app.workflow.post-function.default-automation-queue:issue-transitioned}")
+    private String defaultAutomationQueue;
+
+    @Value("${app.workflow.post-function.default-email-subject:Workflow Notification}")
+    private String defaultEmailSubject;
 
     @Autowired
     public PostFunctionExecutor(
@@ -248,7 +255,7 @@ public class PostFunctionExecutor {
     }
 
     private void triggerAutomation(WorkflowContext ctx, Map<String, Object> config) {
-        String queue = stringVal(config.get("automationQueue"), stringVal(config.get("queue"), "issue-transitioned"));
+        String queue = stringVal(config.get("automationQueue"), stringVal(config.get("queue"), defaultAutomationQueue));
         log.info("Automation hook queued: {} for issue {}", queue, ctx.getIssueId());
         eventPublisher.publishIssueTransitioned(ctx);
     }
@@ -283,7 +290,7 @@ public class PostFunctionExecutor {
 
     private void sendEmail(WorkflowContext ctx, Map<String, Object> config) {
         String to = stringVal(config.get("to"), stringVal(config.get("email"), null));
-        String subject = stringVal(config.get("subject"), "Workflow Notification");
+        String subject = stringVal(config.get("subject"), defaultEmailSubject);
         String body = stringVal(config.get("body"), stringVal(config.get("message"), ""));
         if (to == null || to.isBlank()) {
             log.debug("SEND_EMAIL skipped: no recipient specified");

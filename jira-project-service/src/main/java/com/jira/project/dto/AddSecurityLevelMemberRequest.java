@@ -11,13 +11,13 @@ import lombok.*;
 @AllArgsConstructor
 public class AddSecurityLevelMemberRequest {
 
-    @NotBlank(message = "Member type is required")
-    @Size(max = 20, message = "Member type must not exceed 20 characters")
+    @NotBlank(message = "{validation.member.type.required}")
+    @Size(max = 20, message = "{validation.member.type.max}")
     private String memberType; // "USER", "GROUP", "PROJECT_ROLE"
 
-    @NotNull(message = "Member ID is required")
+    @NotNull(message = "{validation.member.id.required}")
     private String memberId; // UUID as string for deserialization
 
-    @Size(max = 100, message = "Group name must not exceed 100 characters")
+    @Size(max = 100, message = "{validation.group.name.max}")
     private String groupName; // Only for GROUP type
 }

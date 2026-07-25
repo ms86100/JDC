@@ -12,13 +12,13 @@ import java.util.UUID;
 @AllArgsConstructor
 public class IndexRequest {
 
-    @NotBlank(message = "Entity type is required")
+    @NotBlank(message = "{validation.entity-type.required}")
     private String entityType;
 
-    @NotNull(message = "Entity ID is required")
+    @NotNull(message = "{validation.entity-id.required}")
     private UUID entityId;
 
-    @NotBlank(message = "Title is required")
+    @NotBlank(message = "{validation.title.required}")
     private String title;
 
     private String content;

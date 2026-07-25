@@ -14,10 +14,10 @@ import java.util.Map;
 @AllArgsConstructor
 public class ScriptConsoleRequest {
 
-    @NotBlank(message = "Script body is required")
+    @NotBlank(message = "{validation.script.body.required}")
     private String scriptBody;
 
-    @NotBlank(message = "Script type is required")
+    @NotBlank(message = "{validation.script.type.required}")
     private String scriptType;
 
     private Map<String, Object> context;

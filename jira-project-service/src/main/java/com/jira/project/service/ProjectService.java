@@ -8,6 +8,7 @@ import com.jira.project.entity.ProjectTemplate;
 import com.jira.project.exception.DuplicateResourceException;
 import com.jira.project.exception.InvalidOperationException;
 import com.jira.project.exception.ResourceNotFoundException;
+import com.jira.project.exception.OptimisticLockException;
 import com.jira.project.repository.ProjectMemberRepository;
 import com.jira.project.repository.ProjectRepository;
 import com.jira.project.repository.ProjectRoleRepository;
@@ -16,7 +17,6 @@ import com.jira.project.repository.TemplateSchemeDefaultRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import com.jira.project.exception.OptimisticLockException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -42,6 +42,45 @@ public class ProjectService {
     @Value("${issue.service.url}")
     private String issueServiceUrl;
 
+    @Value("${app.defaults.assignee-type:PROJECT_LEAD}")
+    private String defaultAssigneeType;
+
+    @Value("${app.defaults.project-type:COMPANY_MANAGED}")
+    private String defaultProjectType;
+
+    @Value("${app.defaults.role-names:PROJECT_ADMIN,DEVELOPER,VIEWER}")
+    private String defaultRoleNamesStr;
+
+    @Value("${app.defaults.role-admin-name:PROJECT_ADMIN}")
+    private String defaultAdminRoleName;
+
+    @Value("${app.defaults.role-admin-description:Project Administrator with full access}")
+    private String defaultAdminRoleDescription;
+
+    @Value("${app.defaults.role-developer-description:Developer with edit and create permissions}")
+    private String defaultDeveloperRoleDescription;
+
+    @Value("${app.defaults.role-viewer-description:Read-only access}")
+    private String defaultViewerRoleDescription;
+
+    @Value("${app.defaults.permissions.admin:*}")
+    private String defaultAdminPermissions;
+
+    @Value("${app.defaults.permissions.developer:read,edit,create,comment,transition}")
+    private String defaultDeveloperPermissions;
+
+    @Value("${app.defaults.permissions.viewer:read,comment}")
+    private String defaultViewerPermissions;
+
+    @Value("${app.defaults.permissions.default:read}")
+    private String defaultPermissions;
+
+    @Value("${app.defaults.project-key-fallback:PRJ}")
+    private String defaultProjectKeyFallback;
+
+    @Value("${app.defaults.project-key-pattern:^[A-Z][A-Z0-9]{1,9}$}")
+    private String projectKeyPattern;
+
     @Transactional
     public ProjectResponse createProjectViaWizard(CreateProjectWizardRequest request, UUID currentUserId) {
         log.info("Creating project via wizard: {} by user: {}", request.getName(), currentUserId);
@@ -55,7 +94,7 @@ public class ProjectService {
             // Get template if provided
             ProjectTemplate template = null;
             String category = null;
-            String defaultAssigneeType = "PROJECT_LEAD";
+            String assigneeType = defaultAssigneeType;
             Boolean allowIssueCreation = true;
 
             if (request.getTemplateId() != null) {
@@ -63,14 +102,14 @@ public class ProjectService {
                         .orElse(null);
                 if (template != null) {
                     category = template.getName().toLowerCase();
-                    defaultAssigneeType = template.getDefaultAssigneeType();
+                    assigneeType = template.getDefaultAssigneeType();
                     allowIssueCreation = template.getAllowIssueCreation();
                 }
             }
 
         // Override with explicit values from request if provided
         if (request.getDefaultAssigneeType() != null) {
-            defaultAssigneeType = request.getDefaultAssigneeType();
+            assigneeType = request.getDefaultAssigneeType();
         }
         if (request.getAllowIssueCreation() != null) {
             allowIssueCreation = request.getAllowIssueCreation();
@@ -86,7 +125,7 @@ public class ProjectService {
                 .templateId(request.getTemplateId())
                 .category(category)
                 .avatarUrl(request.getAvatarUrl())
-                .defaultAssigneeType(defaultAssigneeType)
+                .defaultAssigneeType(assigneeType)
                 .allowIssueCreation(allowIssueCreation)
                 .archived(false)
                 .build();
@@ -143,7 +182,7 @@ public class ProjectService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .leadUserId(request.getLeadUserId() != null ? request.getLeadUserId() : currentUserId)
-                .projectType("COMPANY_MANAGED")
+                .projectType(defaultProjectType)
                 .build();
 
         project = projectRepository.save(project);
@@ -329,12 +368,19 @@ public class ProjectService {
     }
 
     private List<String> getDefaultPermissionsForRole(String roleName) {
-        return switch (roleName) {
-            case "PROJECT_ADMIN" -> List.of("*");
-            case "DEVELOPER" -> List.of("read", "edit", "create", "comment", "transition");
-            case "VIEWER" -> List.of("read", "comment");
-            default -> List.of("read");
-        };
+        String[] roleNames = defaultRoleNamesStr.split(",");
+        String adminName = roleNames.length > 0 ? roleNames[0].trim() : defaultAdminRoleName;
+        String developerName = roleNames.length > 1 ? roleNames[1].trim() : "DEVELOPER";
+        String viewerName = roleNames.length > 2 ? roleNames[2].trim() : "VIEWER";
+
+        if (adminName.equals(roleName)) {
+            return Arrays.asList(defaultAdminPermissions.split(","));
+        } else if (developerName.equals(roleName)) {
+            return Arrays.asList(defaultDeveloperPermissions.split(","));
+        } else if (viewerName.equals(roleName)) {
+            return Arrays.asList(defaultViewerPermissions.split(","));
+        }
+        return Arrays.asList(defaultPermissions.split(","));
     }
 
     @Transactional(readOnly = true)
@@ -363,30 +409,35 @@ public class ProjectService {
     }
 
     private ProjectRole createProjectRolesAndGetAdmin(UUID projectId) {
+        String[] roleNames = defaultRoleNamesStr.split(",");
+        String adminName = roleNames.length > 0 ? roleNames[0].trim() : defaultAdminRoleName;
+        String developerName = roleNames.length > 1 ? roleNames[1].trim() : "DEVELOPER";
+        String viewerName = roleNames.length > 2 ? roleNames[2].trim() : "VIEWER";
+
         List<ProjectRole> roles = Arrays.asList(
                 ProjectRole.builder()
                         .projectId(projectId)
-                        .name("PROJECT_ADMIN")
-                        .description("Project Administrator with full access")
-                        .permissions(List.of("*"))
+                        .name(adminName)
+                        .description(defaultAdminRoleDescription)
+                        .permissions(Arrays.asList(defaultAdminPermissions.split(",")))
                         .build(),
                 ProjectRole.builder()
                         .projectId(projectId)
-                        .name("DEVELOPER")
-                        .description("Developer with edit and create permissions")
-                        .permissions(List.of("read", "edit", "create", "comment", "transition"))
+                        .name(developerName)
+                        .description(defaultDeveloperRoleDescription)
+                        .permissions(Arrays.asList(defaultDeveloperPermissions.split(",")))
                         .build(),
                 ProjectRole.builder()
                         .projectId(projectId)
-                        .name("VIEWER")
-                        .description("Read-only access")
-                        .permissions(List.of("read", "comment"))
+                        .name(viewerName)
+                        .description(defaultViewerRoleDescription)
+                        .permissions(Arrays.asList(defaultViewerPermissions.split(",")))
                         .build()
         );
 
         List<ProjectRole> savedRoles = projectRoleRepository.saveAll(roles);
         return savedRoles.stream()
-                .filter(r -> "PROJECT_ADMIN".equals(r.getName()))
+                .filter(r -> adminName.equals(r.getName()))
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Admin role not created"));
     }
@@ -409,7 +460,7 @@ public class ProjectService {
         }
 
         if (key.isEmpty()) {
-            key.append("PRJ");
+            key.append(defaultProjectKeyFallback);
         }
 
         while (key.length() < 3) {
@@ -423,7 +474,7 @@ public class ProjectService {
         if (key == null || key.isBlank()) {
             return false;
         }
-        return key.matches("^[A-Z][A-Z0-9]{1,9}$");
+        return key.matches(projectKeyPattern);
     }
 
     public boolean isProjectKeyAvailable(String key) {

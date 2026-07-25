@@ -6,6 +6,7 @@ import com.jira.issue.exception.*;
 import com.jira.issue.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,9 @@ public class CiCdIntegrationService {
     private final ProjectRepository projectRepository;
 
     private final RestTemplate restTemplate;
+
+    @Value("${app.defaults.execution-status:RUNNING}")
+    private String defaultExecutionStatus;
 
     // ==================== Webhook Endpoints ====================
 
@@ -243,7 +247,7 @@ public class CiCdIntegrationService {
                 .testPlanId(request.getTestPlanId())
                 .name(request.getName())
                 .description(request.getDescription())
-                .status("RUNNING")
+                .status(defaultExecutionStatus)
                 .testEnv(request.getTestEnv())
                 .testerId(userId)
                 .testCycle(request.getTestCycle())

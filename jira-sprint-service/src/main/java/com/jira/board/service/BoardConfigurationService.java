@@ -4,10 +4,13 @@ import com.jira.board.entity.*;
 import com.jira.board.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -22,6 +25,16 @@ public class BoardConfigurationService {
     private final BoardIssueDetailFieldRepository issueDetailFieldRepository;
     private final BoardCFDSnapshotRepository cfdSnapshotRepository;
     private final FilterSubscriptionRepository filterSubscriptionRepository;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.holder-type:USER}")
+    private String defaultHolderType;
+
+    @Value("${app.defaults.subscription-frequency:DAILY}")
+    private String defaultSubscriptionFrequency;
+
+    @Value("${app.board.max-card-fields:3}")
+    private int maxCardFields;
 
     // === Board Administrators ===
 
@@ -33,11 +46,11 @@ public class BoardConfigurationService {
     @Transactional
     public BoardAdministrator addAdministrator(UUID boardId, UUID holderId, String holderType) {
         if (adminRepository.existsByBoardIdAndHolderId(boardId, holderId)) {
-            throw new IllegalArgumentException("User/group is already a board administrator");
+            throw new IllegalArgumentException(messageSource.getMessage("error.board.admin.already.exists", null, Locale.ENGLISH));
         }
         return adminRepository.save(BoardAdministrator.builder()
                 .boardId(boardId).holderId(holderId)
-                .holderType(holderType != null ? holderType : "USER")
+                .holderType(holderType != null ? holderType : defaultHolderType)
                 .build());
     }
 
@@ -67,7 +80,7 @@ public class BoardConfigurationService {
     @Transactional
     public BoardSwimlane updateSwimlane(UUID swimlaneId, BoardSwimlane update) {
         BoardSwimlane existing = swimlaneRepository.findById(swimlaneId)
-                .orElseThrow(() -> new RuntimeException("Swimlane not found: " + swimlaneId));
+                .orElseThrow(() -> new RuntimeException(messageSource.getMessage("error.swimlane.not.found", new Object[]{swimlaneId}, Locale.ENGLISH)));
         if (update.getName() != null) existing.setName(update.getName());
         if (update.getJqlQuery() != null) existing.setJqlQuery(update.getJqlQuery());
         if (update.getDescription() != null) existing.setDescription(update.getDescription());
@@ -101,7 +114,7 @@ public class BoardConfigurationService {
     @Transactional
     public BoardCardColorRule updateCardColorRule(UUID ruleId, BoardCardColorRule update) {
         BoardCardColorRule existing = cardColorRuleRepository.findById(ruleId)
-                .orElseThrow(() -> new RuntimeException("Card color rule not found: " + ruleId));
+                .orElseThrow(() -> new RuntimeException(messageSource.getMessage("error.card.color.rule.not.found", new Object[]{ruleId}, Locale.ENGLISH)));
         if (update.getColorMethod() != null) existing.setColorMethod(update.getColorMethod());
         if (update.getMatchValue() != null) existing.setMatchValue(update.getMatchValue());
         if (update.getColor() != null) existing.setColor(update.getColor());
@@ -129,8 +142,8 @@ public class BoardConfigurationService {
     @Transactional
     public BoardCardField addCardField(UUID boardId, BoardCardField field) {
         long count = cardFieldRepository.countByBoardId(boardId);
-        if (count >= 3) {
-            throw new IllegalArgumentException("Maximum 3 card fields per board");
+        if (count >= maxCardFields) {
+            throw new IllegalArgumentException(messageSource.getMessage("error.board.max.card.fields", new Object[]{maxCardFields}, Locale.ENGLISH));
         }
         field.setBoardId(boardId);
         if (field.getPosition() == null) {
@@ -146,8 +159,8 @@ public class BoardConfigurationService {
 
     @Transactional
     public void replaceCardFields(UUID boardId, List<BoardCardField> fields) {
-        if (fields.size() > 3) {
-            throw new IllegalArgumentException("Maximum 3 card fields per board");
+        if (fields.size() > maxCardFields) {
+            throw new IllegalArgumentException(messageSource.getMessage("error.board.max.card.fields", new Object[]{maxCardFields}, Locale.ENGLISH));
         }
         cardFieldRepository.deleteAllByBoardId(boardId);
         for (int i = 0; i < fields.size(); i++) {
@@ -214,7 +227,7 @@ public class BoardConfigurationService {
         FilterSubscription sub = FilterSubscription.builder()
                 .filterId(filterId)
                 .userId(userId)
-                .frequency(frequency != null ? frequency : "DAILY")
+                .frequency(frequency != null ? frequency : defaultSubscriptionFrequency)
                 .emailAddress(emailAddress)
                 .isEnabled(true)
                 .nextRunAt(calculateNextRunAt(frequency))
@@ -230,7 +243,7 @@ public class BoardConfigurationService {
     @Transactional
     public FilterSubscription toggleSubscription(UUID subscriptionId, boolean enabled) {
         FilterSubscription sub = filterSubscriptionRepository.findById(subscriptionId)
-                .orElseThrow(() -> new RuntimeException("Subscription not found: " + subscriptionId));
+                .orElseThrow(() -> new RuntimeException(messageSource.getMessage("error.subscription.not.found", new Object[]{subscriptionId}, Locale.ENGLISH)));
         sub.setIsEnabled(enabled);
         if (enabled) {
             sub.setNextRunAt(calculateNextRunAt(sub.getFrequency()));
@@ -245,7 +258,7 @@ public class BoardConfigurationService {
 
     private java.time.LocalDateTime calculateNextRunAt(String frequency) {
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        return switch (frequency != null ? frequency.toUpperCase() : "DAILY") {
+        return switch (frequency != null ? frequency.toUpperCase() : defaultSubscriptionFrequency) {
             case "HOURLY" -> now.plusHours(1);
             case "DAILY" -> now.plusDays(1).withHour(8).withMinute(0);
             case "WEEKLY" -> now.plusWeeks(1).withHour(8).withMinute(0);

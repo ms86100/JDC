@@ -12,9 +12,9 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ProjectMemberRequest {
 
-    @NotNull(message = "User ID is required")
+    @NotNull(message = "{validation.user.id.required}")
     private UUID userId;
 
-    @NotBlank(message = "Project role name is required")
+    @NotBlank(message = "{validation.role.name.required}")
     private String projectRoleName;
 }

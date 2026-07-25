@@ -5,6 +5,7 @@ import com.jira.workflow.entity.Workflow;
 import com.jira.workflow.service.WorkflowStatusCatalog;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -24,6 +25,12 @@ public class AvailableTransitionFallbackService {
 
     private final WorkflowIntegrationClient integrationClient;
     private final WorkflowStatusCatalog workflowStatusCatalog;
+
+    @Value("${app.workflow.fallback.transition-name-prefix:Move to }")
+    private String fallbackTransitionNamePrefix;
+
+    @Value("${app.workflow.fallback.transition-description:Direct status change (workflow fallback)}")
+    private String fallbackTransitionDescription;
 
     public List<AvailableTransitionResponse.AvailableTransitionItem> buildFallbackItems(
             WorkflowContext ctx,
@@ -51,8 +58,8 @@ public class AvailableTransitionFallbackService {
 
             items.add(AvailableTransitionResponse.AvailableTransitionItem.builder()
                     .id(syntheticId)
-                    .name("Move to " + name)
-                    .description("Direct status change (workflow fallback)")
+                    .name(fallbackTransitionNamePrefix + name)
+                    .description(fallbackTransitionDescription)
                     .toStatusId(statusId)
                     .toStatusName(name)
                     .hasScreen(false)

@@ -90,6 +90,10 @@ public class WorkflowExecutionEngine {
 
     private boolean transitionFallbackEnabled;
 
+    @Value("${app.workflow.permission.bypass-edit:EDIT_ISSUES}")
+
+    private String bypassEditPermission;
+
 
 
     @Transactional
@@ -294,13 +298,13 @@ public class WorkflowExecutionEngine {
 
         if (userId != null && ctx.getProjectId() != null
 
-                && !projectPermissionClient.hasPermission(userId, ctx.getProjectId(), "EDIT_ISSUES")) {
+                && !projectPermissionClient.hasPermission(userId, ctx.getProjectId(), bypassEditPermission)) {
 
             @SuppressWarnings("unchecked")
 
             List<String> granted = (List<String>) ctx.getUserData().get("permissions");
 
-            boolean hasEdit = granted != null && granted.contains("EDIT_ISSUES");
+            boolean hasEdit = granted != null && granted.contains(bypassEditPermission);
 
             if (!hasEdit && !projectPermissionClient.isFailOpen()) {
 
@@ -452,9 +456,9 @@ public class WorkflowExecutionEngine {
 
                 || ctx.getProjectId() == null
 
-                || projectPermissionClient.hasPermission(userId, ctx.getProjectId(), "EDIT_ISSUES")
+                || projectPermissionClient.hasPermission(userId, ctx.getProjectId(), bypassEditPermission)
 
-                || hasGrantedPermission(ctx, "EDIT_ISSUES")
+                || hasGrantedPermission(ctx, bypassEditPermission)
 
                 || projectPermissionClient.isFailOpen();
 

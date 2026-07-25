@@ -1,5 +1,6 @@
 package com.jira.workflow.engine;
 
+import com.jira.cluster.util.StatusCategoryHelper;
 import com.jira.workflow.engine.plugin.WorkflowPluginRegistry;
 import com.jira.workflow.entity.WorkflowValidator;
 import com.jira.workflow.repository.WorkflowValidatorRepository;
@@ -154,8 +155,7 @@ public class ValidatorExecutor {
                         Object res = m.get("resolutionId");
                         Object status = m.containsKey("statusName") ? m.get("statusName") : m.get("status");
                         if ((res == null || res.toString().isBlank()) &&
-                                !"Done".equalsIgnoreCase(String.valueOf(status)) &&
-                                !"Closed".equalsIgnoreCase(String.valueOf(status))) {
+                                !StatusCategoryHelper.isCompleted(String.valueOf(status))) {
                             return customMessage != null ? customMessage : "All subtasks must be resolved before this transition";
                         }
                     }
@@ -167,9 +167,7 @@ public class ValidatorExecutor {
             List<Map<String, Object>> links = integrationClient.fetchLinkedIssuesForWorkflow(ctx.getIssueId());
             for (Map<String, Object> link : links) {
                 Object status = link.get("statusName");
-                if (status != null && !"Done".equalsIgnoreCase(status.toString()) &&
-                        !"Closed".equalsIgnoreCase(status.toString()) &&
-                        !"Resolved".equalsIgnoreCase(status.toString())) {
+                if (status != null && !StatusCategoryHelper.isCompleted(status.toString())) {
                     return customMessage != null ? customMessage : "All linked issues must be resolved";
                 }
             }

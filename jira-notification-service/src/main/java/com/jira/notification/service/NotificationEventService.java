@@ -7,6 +7,7 @@ import com.jira.notification.exception.ResourceNotFoundException;
 import com.jira.notification.repository.NotificationEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,21 @@ import java.util.stream.Collectors;
 public class NotificationEventService {
 
     private final NotificationEventRepository eventRepository;
+
+    @Value("${app.notification.event-categories.issue:Issue}")
+    private String categoryIssue;
+
+    @Value("${app.notification.event-categories.comment:Comment}")
+    private String categoryComment;
+
+    @Value("${app.notification.event-categories.status:Status}")
+    private String categoryStatus;
+
+    @Value("${app.notification.event-categories.sprint:Sprint}")
+    private String categorySprint;
+
+    @Value("${app.notification.event-categories.project:Project}")
+    private String categoryProject;
 
     @Transactional
     public NotificationEventResponse createEvent(CreateNotificationEventRequest request) {
@@ -161,84 +177,84 @@ public class NotificationEventService {
                         .eventType("ISSUE_CREATED")
                         .name("Issue Created")
                         .description("Triggered when a new issue is created")
-                        .category("Issue")
+                        .category(categoryIssue)
                         .isSystemEvent(true)
                         .build(),
                 NotificationEventEntity.builder()
                         .eventType("ISSUE_UPDATED")
                         .name("Issue Updated")
                         .description("Triggered when an issue is updated")
-                        .category("Issue")
+                        .category(categoryIssue)
                         .isSystemEvent(true)
                         .build(),
                 NotificationEventEntity.builder()
                         .eventType("ISSUE_DELETED")
                         .name("Issue Deleted")
                         .description("Triggered when an issue is deleted")
-                        .category("Issue")
+                        .category(categoryIssue)
                         .isSystemEvent(true)
                         .build(),
                 NotificationEventEntity.builder()
                         .eventType("ISSUE_ASSIGNED")
                         .name("Issue Assigned")
                         .description("Triggered when an issue is assigned to a user")
-                        .category("Issue")
+                        .category(categoryIssue)
                         .isSystemEvent(true)
                         .build(),
                 NotificationEventEntity.builder()
                         .eventType("ISSUE_COMMENTED")
                         .name("Issue Commented")
                         .description("Triggered when a comment is added to an issue")
-                        .category("Comment")
+                        .category(categoryComment)
                         .isSystemEvent(true)
                         .build(),
                 NotificationEventEntity.builder()
                         .eventType("ISSUE_RESOLVED")
                         .name("Issue Resolved")
                         .description("Triggered when an issue is resolved")
-                        .category("Status")
+                        .category(categoryStatus)
                         .isSystemEvent(true)
                         .build(),
                 NotificationEventEntity.builder()
                         .eventType("ISSUE_CLOSED")
                         .name("Issue Closed")
                         .description("Triggered when an issue is closed")
-                        .category("Status")
+                        .category(categoryStatus)
                         .isSystemEvent(true)
                         .build(),
                 NotificationEventEntity.builder()
                         .eventType("ISSUE_REOPENED")
                         .name("Issue Reopened")
                         .description("Triggered when an issue is reopened")
-                        .category("Status")
+                        .category(categoryStatus)
                         .isSystemEvent(true)
                         .build(),
                 NotificationEventEntity.builder()
                         .eventType("SPRINT_STARTED")
                         .name("Sprint Started")
                         .description("Triggered when a sprint begins")
-                        .category("Sprint")
+                        .category(categorySprint)
                         .isSystemEvent(true)
                         .build(),
                 NotificationEventEntity.builder()
                         .eventType("SPRINT_COMPLETED")
                         .name("Sprint Completed")
                         .description("Triggered when a sprint ends")
-                        .category("Sprint")
+                        .category(categorySprint)
                         .isSystemEvent(true)
                         .build(),
                 NotificationEventEntity.builder()
                         .eventType("SPRINT_CANCELLED")
                         .name("Sprint Cancelled")
                         .description("Triggered when a sprint is cancelled")
-                        .category("Sprint")
+                        .category(categorySprint)
                         .isSystemEvent(true)
                         .build(),
                 NotificationEventEntity.builder()
                         .eventType("PROJECT_CREATED")
                         .name("Project Created")
                         .description("Triggered when a new project is created")
-                        .category("Project")
+                        .category(categoryProject)
                         .isSystemEvent(true)
                         .build()
         );

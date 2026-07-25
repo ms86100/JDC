@@ -12,6 +12,7 @@ import com.jira.plan.exception.ResourceNotFoundException;
 import com.jira.plan.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,10 +36,14 @@ public class WorkingDaysService {
     private final PlanTeamRepository planTeamRepository;
     private final PlanTeamMemberRepository planTeamMemberRepository;
 
-    // Default working days config
-    private static final List<String> DEFAULT_WORKING_DAYS = List.of(
-        "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"
-    );
+    @Value("${app.working-days.default-name:Default}")
+    private String defaultConfigName;
+
+    @Value("${app.working-days.default-hours-per-day:8.00}")
+    private String defaultHoursPerDay;
+
+    @Value("${app.working-days.default-working-days:MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY}")
+    private String defaultWorkingDaysStr;
 
     @Transactional(readOnly = true)
     public List<WorkingDaysResponse> getAllWorkingDaysConfigs() {
@@ -81,7 +86,7 @@ public class WorkingDaysService {
             .friday(request.getFriday() != null ? request.getFriday() : true)
             .saturday(request.getSaturday() != null ? request.getSaturday() : false)
             .sunday(request.getSunday() != null ? request.getSunday() : false)
-            .hoursPerDay(request.getHoursPerDay() != null ? request.getHoursPerDay() : new BigDecimal("8.00"))
+            .hoursPerDay(request.getHoursPerDay() != null ? request.getHoursPerDay() : new BigDecimal(defaultHoursPerDay))
             .isDefault(request.getIsDefault() != null ? request.getIsDefault() : false)
             .build();
 
@@ -303,16 +308,17 @@ public class WorkingDaysService {
     }
 
     private WorkingDays createDefaultConfig() {
+        List<String> workingDaysList = List.of(defaultWorkingDaysStr.split(","));
         WorkingDays config = workingDaysRepository.save(WorkingDays.builder()
-            .name("Default")
-            .monday(true)
-            .tuesday(true)
-            .wednesday(true)
-            .thursday(true)
-            .friday(true)
-            .saturday(false)
-            .sunday(false)
-            .hoursPerDay(new BigDecimal("8.00"))
+            .name(defaultConfigName)
+            .monday(workingDaysList.contains("MONDAY"))
+            .tuesday(workingDaysList.contains("TUESDAY"))
+            .wednesday(workingDaysList.contains("WEDNESDAY"))
+            .thursday(workingDaysList.contains("THURSDAY"))
+            .friday(workingDaysList.contains("FRIDAY"))
+            .saturday(workingDaysList.contains("SATURDAY"))
+            .sunday(workingDaysList.contains("SUNDAY"))
+            .hoursPerDay(new BigDecimal(defaultHoursPerDay))
             .isDefault(true)
             .build());
         return config;

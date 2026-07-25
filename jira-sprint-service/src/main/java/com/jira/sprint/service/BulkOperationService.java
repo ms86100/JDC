@@ -8,6 +8,7 @@ import com.jira.sprint.entity.SprintIssue;
 import com.jira.sprint.repository.SprintIssueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ public class BulkOperationService {
     private final SprintService sprintService;
     private final SprintIssueRepository sprintIssueRepository;
     private final IssueServiceClient issueServiceClient;
+    private final MessageSource messageSource;
 
     private final Map<String, BulkOperationResponse> operations = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -80,11 +82,11 @@ public class BulkOperationService {
                 // Fetch the issue to get its projectId (required for status transition)
                 IssueServiceClient.IssueData issueData = issueServiceClient.getIssue(issueId);
                 if (issueData.getId() == null) {
-                    throw new RuntimeException("Issue not found: " + issueId);
+                    throw new RuntimeException(messageSource.getMessage("error.bulk.issue.not.found", new Object[]{issueId}, Locale.ENGLISH));
                 }
                 UUID projectId = issueData.getProjectId();
                 if (projectId == null) {
-                    throw new RuntimeException("Could not determine project for issue " + issueId);
+                    throw new RuntimeException(messageSource.getMessage("error.bulk.project.unknown", new Object[]{issueId}, Locale.ENGLISH));
                 }
                 issueServiceClient.updateIssueStatus(issueId, projectId, request.getNewStatus());
 

@@ -8,6 +8,7 @@ import com.jira.plan.repository.PlanPermissionRepository;
 import com.jira.plan.repository.PlanRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,9 @@ public class PlanPermissionService {
 
     private final PlanPermissionRepository permissionRepository;
     private final PlanRepository planRepository;
+
+    @Value("${app.program.default-access-type:OPEN}")
+    private String openAccessType;
 
     @Transactional
     public PlanPermission grantPermission(UUID planId, PlanPermission.PermissionType permissionType,
@@ -77,7 +81,7 @@ public class PlanPermissionService {
 
     private boolean isPublicPlan(Plan plan) {
         Object accessType = plan.getSettings().get("accessType");
-        return accessType != null && accessType.toString().equalsIgnoreCase("OPEN");
+        return accessType != null && accessType.toString().equalsIgnoreCase(openAccessType);
     }
 
     private boolean hasExplicitPermission(UUID planId, PlanPermission.PermissionType permissionType,

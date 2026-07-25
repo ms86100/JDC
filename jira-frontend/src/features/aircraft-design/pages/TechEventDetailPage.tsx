@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { techEventApi } from '../../../api/defectApi';
 import { masterDataApi } from '../../../api/masterDataApi';
+import { DEMO_TECH_EVENT_DETAILS, DEMO_PROGRAMS } from '../demoData';
 import '../AircraftDesignStyles.css';
 
 const PIPELINE_STEPS = ['Open', 'Analysis', 'Resolver', 'Classified', 'Assessed', 'Resolved', 'Closed'];
@@ -73,8 +74,10 @@ export default function TechEventDetailPage() {
       const res = await techEventApi.getById(eventId);
       setEvent(res.data);
       setEditForm(res.data);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to load Tech Event');
+    } catch {
+      const demo = DEMO_TECH_EVENT_DETAILS[eventId];
+      if (demo) { setEvent(demo); setEditForm(demo); }
+      else setError('Tech Event not found');
     } finally {
       setLoading(false);
     }
@@ -94,7 +97,7 @@ export default function TechEventDetailPage() {
       const res = await masterDataApi.getPrograms();
       setPrograms(Array.isArray(res.data) ? res.data : []);
     } catch {
-      setPrograms([]);
+      setPrograms(DEMO_PROGRAMS as any);
     }
   }
 

@@ -1,5 +1,6 @@
 package com.jira.plan.service;
 
+import com.jira.cluster.util.StatusCategoryHelper;
 import com.jira.plan.entity.PlanItem;
 import com.jira.plan.repository.PlanItemRepository;
 import lombok.RequiredArgsConstructor;
@@ -52,9 +53,9 @@ public class HierarchyRollupService {
             if (item.getParentId() == null && !parentIds.contains(item.getId())) {
                 if (item.getStoryPoints() != null) {
                     totalPoints += item.getStoryPoints();
-                    if ("DONE".equals(item.getStatusCategory())) {
+                    if (StatusCategoryHelper.isCompleted(item.getStatusCategory())) {
                         completedPoints += item.getStoryPoints();
-                    } else if ("IN_PROGRESS".equals(item.getStatusCategory())) {
+                    } else if (StatusCategoryHelper.isInProgress(item.getStatusCategory())) {
                         inProgressPoints += item.getStoryPoints();
                     } else {
                         todoPoints += item.getStoryPoints();
@@ -93,9 +94,9 @@ public class HierarchyRollupService {
             } else {
                 if (child.getStoryPoints() != null) {
                     totalPoints += child.getStoryPoints();
-                    if ("DONE".equals(child.getStatusCategory())) {
+                    if (StatusCategoryHelper.isCompleted(child.getStatusCategory())) {
                         completedPoints += child.getStoryPoints();
-                    } else if ("IN_PROGRESS".equals(child.getStatusCategory())) {
+                    } else if (StatusCategoryHelper.isInProgress(child.getStatusCategory())) {
                         inProgressPoints += child.getStoryPoints();
                     } else {
                         todoPoints += child.getStoryPoints();
@@ -190,7 +191,7 @@ public class HierarchyRollupService {
         List<PlanItem> children = childrenByParent.get(item.getId());
 
         int completed = 0;
-        if ("DONE".equals(item.getStatusCategory()) && item.getStoryPoints() != null) {
+        if (StatusCategoryHelper.isCompleted(item.getStatusCategory()) && item.getStoryPoints() != null) {
             completed = item.getStoryPoints();
         }
 

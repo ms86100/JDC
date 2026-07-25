@@ -12,26 +12,26 @@ import java.util.UUID;
 @AllArgsConstructor
 public class IncomingMailHandlerRequest {
 
-    @NotBlank(message = "Name is required")
+    @NotBlank(message = "{validation.mail.handler.name.required}")
     private String name;
 
     @Builder.Default
     private String serverType = "IMAP";
 
-    @NotBlank(message = "Host is required")
+    @NotBlank(message = "{validation.mail.handler.host.required}")
     private String host;
 
-    @NotNull(message = "Port is required")
+    @NotNull(message = "{validation.mail.handler.port.required}")
     @Builder.Default
     private Integer port = 993;
 
     @Builder.Default
     private Boolean useSsl = true;
 
-    @NotBlank(message = "Username is required")
+    @NotBlank(message = "{validation.mail.handler.username.required}")
     private String username;
 
-    @NotBlank(message = "Password is required")
+    @NotBlank(message = "{validation.mail.handler.password.required}")
     private String password;
 
     @Builder.Default

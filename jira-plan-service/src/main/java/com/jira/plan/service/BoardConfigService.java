@@ -19,6 +19,7 @@ import com.jira.plan.exception.ResourceNotFoundException;
 import com.jira.plan.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +43,27 @@ public class BoardConfigService {
     private final BoardCardLayoutFieldRepository boardCardLayoutFieldRepository;
     private final PlanRepository planRepository;
     private final BoardConfigAuditLogRepository boardAuditLogRepository;
+
+    @Value("${app.board.default-type:SCRUM}")
+    private String defaultBoardType;
+
+    @Value("${app.board.default-column-config-mode:DEFAULT}")
+    private String defaultColumnConfigMode;
+
+    @Value("${app.board.default-card-layout-mode:COMPACT}")
+    private String defaultCardLayoutMode;
+
+    @Value("${app.board.default-swimlane:NONE}")
+    private String defaultSwimlane;
+
+    @Value("${app.board.default-field-type:STANDARD}")
+    private String defaultFieldType;
+
+    @Value("${app.board.column.default-min-width:100}")
+    private int defaultColumnMinWidth;
+
+    @Value("${app.board.column.default-max-width:600}")
+    private int defaultColumnMaxWidth;
 
     // Audit event types
     private static final String EVENT_BOARD_CREATED = "BOARD_CREATED";
@@ -82,12 +104,12 @@ public class BoardConfigService {
         BoardConfig board = BoardConfig.builder()
             .plan(plan)
             .name(request.getName())
-            .boardType(request.getBoardType() != null ? request.getBoardType() : "SCRUM")
-            .columnConfigMode(request.getColumnConfigMode() != null ? request.getColumnConfigMode() : "DEFAULT")
+            .boardType(request.getBoardType() != null ? request.getBoardType() : defaultBoardType)
+            .columnConfigMode(request.getColumnConfigMode() != null ? request.getColumnConfigMode() : defaultColumnConfigMode)
             .constraintSource(request.getConstraintSource())
             .isEnabled(true)
-            .cardLayoutMode(request.getCardLayoutMode() != null ? request.getCardLayoutMode() : "COMPACT")
-            .defaultSwimlane(request.getDefaultSwimlane() != null ? request.getDefaultSwimlane() : "NONE")
+            .cardLayoutMode(request.getCardLayoutMode() != null ? request.getCardLayoutMode() : defaultCardLayoutMode)
+            .defaultSwimlane(request.getDefaultSwimlane() != null ? request.getDefaultSwimlane() : defaultSwimlane)
             .build();
 
         board = boardConfigRepository.save(board);
@@ -170,8 +192,8 @@ public class BoardConfigService {
             .sequence(request.getSequence() != null ? request.getSequence() : maxSequence + 1)
             .statusMapping(request.getStatusMapping() != null ? request.getStatusMapping() : new ArrayList<>())
             .labelValues(request.getLabelValues() != null ? request.getLabelValues() : new ArrayList<>())
-            .minWidth(request.getMinWidth() != null ? request.getMinWidth() : 100)
-            .maxWidth(request.getMaxWidth() != null ? request.getMaxWidth() : 600)
+            .minWidth(request.getMinWidth() != null ? request.getMinWidth() : defaultColumnMinWidth)
+            .maxWidth(request.getMaxWidth() != null ? request.getMaxWidth() : defaultColumnMaxWidth)
             .color(request.getColor())
             .maxIssues(request.getMaxIssues())
             .constraintStatus(request.getConstraintStatus())
@@ -401,7 +423,7 @@ public class BoardConfigService {
             .fieldLabel(request.getFieldLabel())
             .sequence(request.getSequence() != null ? request.getSequence() : maxSequence + 1)
             .isVisible(true)
-            .fieldType(request.getFieldType() != null ? request.getFieldType() : "STANDARD")
+            .fieldType(request.getFieldType() != null ? request.getFieldType() : defaultFieldType)
             .build();
 
         field = boardDetailFieldRepository.save(field);
@@ -482,8 +504,8 @@ public class BoardConfigService {
             .sequence(sequence)
             .statusMapping(new ArrayList<>(statuses))
             .labelValues(new ArrayList<>())
-            .minWidth(100)
-            .maxWidth(600)
+            .minWidth(defaultColumnMinWidth)
+            .maxWidth(defaultColumnMaxWidth)
             .build();
     }
 

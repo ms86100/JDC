@@ -12,16 +12,16 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateTransitionRequest {
 
-    @NotNull(message = "Workflow ID is required")
+    @NotNull(message = "{validation.workflow.id.required}")
     private UUID workflowId;
 
-    @NotBlank(message = "Transition name is required")
+    @NotBlank(message = "{validation.transition.name.required}")
     private String name;
 
-    @NotNull(message = "From status ID is required")
+    @NotNull(message = "{validation.transition.from.status.required}")
     private UUID fromStatusId;
 
-    @NotNull(message = "To status ID is required")
+    @NotNull(message = "{validation.transition.to.status.required}")
     private UUID toStatusId;
 
     @Builder.Default

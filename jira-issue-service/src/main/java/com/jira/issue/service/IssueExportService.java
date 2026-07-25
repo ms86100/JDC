@@ -2,6 +2,7 @@ package com.jira.issue.service;
 
 import com.jira.issue.entity.Issue;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -17,7 +18,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class IssueExportService {
 
-    private static final int EXPORT_CAP = 10_000;
+    @Value("${app.export.max-rows:10000}")
+    private int exportCap;
 
     private final JqlSpecificationBuilder jqlSpecificationBuilder;
     private final com.jira.issue.repository.IssueRepository issueRepository;
@@ -25,7 +27,7 @@ public class IssueExportService {
     @Transactional(readOnly = true)
     public byte[] exportJqlCsv(String jql, UUID userId) {
         JqlSpecificationBuilder.JqlParseResult parsed = jqlSpecificationBuilder.parse(jql, userId);
-        Pageable pageable = PageRequest.of(0, EXPORT_CAP, parsed.sort());
+        Pageable pageable = PageRequest.of(0, exportCap, parsed.sort());
         Specification<Issue> spec = parsed.spec();
         Page<Issue> page = issueRepository.findAll(spec, pageable);
         List<Issue> issues = page.getContent();

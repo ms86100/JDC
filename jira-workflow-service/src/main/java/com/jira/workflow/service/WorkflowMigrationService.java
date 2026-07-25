@@ -6,6 +6,7 @@ import com.jira.workflow.exception.ResourceNotFoundException;
 import com.jira.workflow.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,8 @@ public class WorkflowMigrationService {
     private final WorkflowAuditLogRepository workflowAuditLogRepository;
     private final RestTemplate restTemplate;
 
-    private static final String ISSUE_SERVICE_URL = "http://jira-issue-service:8084";
+    @Value("${jira.services.issue-url:http://jira-issue-service:8084}")
+    private String issueServiceUrl;
 
     @Transactional
     public WorkflowMigrationResponse createMigration(UUID workflowId, UUID oldStatusId,
@@ -230,7 +232,7 @@ public class WorkflowMigrationService {
 
     private int countIssuesInStatus(UUID workflowId, UUID statusId) {
         try {
-            String url = ISSUE_SERVICE_URL + "/api/issues/count?workflowId=" + workflowId + "&statusId=" + statusId;
+            String url = issueServiceUrl + "/api/issues/count?workflowId=" + workflowId + "&statusId=" + statusId;
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
             if (response != null && response.containsKey("count")) {
                 return ((Number) response.get("count")).intValue();
@@ -243,7 +245,7 @@ public class WorkflowMigrationService {
 
     private List<UUID> getIssuesInStatus(UUID workflowId, UUID statusId) {
         try {
-            String url = ISSUE_SERVICE_URL + "/api/issues?workflowId=" + workflowId + "&statusId=" + statusId;
+            String url = issueServiceUrl + "/api/issues?workflowId=" + workflowId + "&statusId=" + statusId;
             List<Map<String, Object>> response = restTemplate.getForObject(url, List.class);
             if (response != null) {
                 return response.stream()
@@ -258,7 +260,7 @@ public class WorkflowMigrationService {
 
     private Map<String, Object> fetchIssueData(UUID issueId) {
         try {
-            String url = ISSUE_SERVICE_URL + "/api/issues/" + issueId;
+            String url = issueServiceUrl + "/api/issues/" + issueId;
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
             return response != null ? response : new HashMap<>();
         } catch (Exception e) {
@@ -269,7 +271,7 @@ public class WorkflowMigrationService {
 
     private boolean migrateIssue(UUID issueId, UUID oldStatusId, UUID newStatusId) {
         try {
-            String url = ISSUE_SERVICE_URL + "/api/issues/" + issueId + "/status";
+            String url = issueServiceUrl + "/api/issues/" + issueId + "/status";
             Map<String, Object> update = new HashMap<>();
             update.put("statusId", newStatusId.toString());
             restTemplate.put(url, update);

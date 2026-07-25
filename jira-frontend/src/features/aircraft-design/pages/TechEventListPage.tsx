@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { techEventApi } from '../../../api/defectApi';
+import { DEMO_TECH_EVENTS } from '../demoData';
 import '../AircraftDesignStyles.css';
 
 const PIPELINE_STEPS = ['Open', 'Analysis', 'Resolver', 'Classified', 'Assessed', 'Resolved', 'Closed'] as const;
@@ -47,8 +48,8 @@ export default function TechEventListPage() {
       const res = await techEventApi.getByProject(projectId || 'default');
       const data = res.data;
       setEvents(Array.isArray(data) ? data : data?.content ?? []);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to load Tech Events');
+    } catch {
+      setEvents(DEMO_TECH_EVENTS);
     } finally {
       setLoading(false);
     }

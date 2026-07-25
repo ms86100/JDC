@@ -7,9 +7,13 @@ import com.jira.auth.exception.AuthException;
 import com.jira.auth.repository.RoleRepository;
 import com.jira.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -21,26 +25,40 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.jira.auth.security.JwtTokenProvider tokenProvider;
+    private final MessageSource messageSource;
+
+    @Value("${app.defaults.role-user:ROLE_USER}")
+    private String defaultUserRole;
+
+    @Value("${app.defaults.token-type:Bearer}")
+    private String tokenType;
+
+    @Value("${app.defaults.auth-provider-local:LOCAL}")
+    private String authProviderLocal;
+
+    @Value("${app.defaults.refresh-token-type:refresh}")
+    private String refreshTokenType;
 
     @Transactional
     public UserDto register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new AuthException("Username already exists");
+            throw new AuthException(messageSource.getMessage("auth.error.username.exists", null, Locale.ENGLISH));
         }
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new AuthException("Email already exists");
+            throw new AuthException(messageSource.getMessage("auth.error.email.exists", null, Locale.ENGLISH));
         }
 
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .authProvider("LOCAL")
+                .authProvider(authProviderLocal)
                 .active(true)
                 .build();
 
-        Role userRole = roleRepository.findByName("ROLE_USER")
-                .orElseThrow(() -> new AuthException("ROLE_USER not found"));
+        Role userRole = roleRepository.findByName(defaultUserRole)
+                .orElseThrow(() -> new AuthException(
+                        messageSource.getMessage("auth.error.role.not.found", new Object[]{defaultUserRole}, Locale.ENGLISH)));
         user.getRoles().add(userRole);
 
         user = userRepository.save(user);
@@ -50,14 +68,15 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new AuthException("Invalid credentials"));
+                .orElseThrow(() -> new AuthException(
+                        messageSource.getMessage("auth.error.invalid.credentials", null, Locale.ENGLISH)));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new AuthException("Invalid credentials");
+            throw new AuthException(messageSource.getMessage("auth.error.invalid.credentials", null, Locale.ENGLISH));
         }
 
         if (!user.getActive()) {
-            throw new AuthException("Account is disabled");
+            throw new AuthException(messageSource.getMessage("auth.error.account.disabled", null, Locale.ENGLISH));
         }
 
         Set<String> roles = user.getRoles().stream()
@@ -70,7 +89,7 @@ public class AuthService {
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
-                .tokenType("Bearer")
+                .tokenType(tokenType)
                 .expiresIn(tokenProvider.getExpirationMs() / 1000)
                 .userId(user.getId())
                 .username(user.getUsername())
@@ -81,17 +100,18 @@ public class AuthService {
 
     public AuthResponse refreshToken(String refreshToken) {
         if (!tokenProvider.validateToken(refreshToken)) {
-            throw new AuthException("Invalid refresh token");
+            throw new AuthException(messageSource.getMessage("auth.error.invalid.refresh.token", null, Locale.ENGLISH));
         }
 
-        String tokenType = tokenProvider.getTokenType(refreshToken);
-        if (!"refresh".equals(tokenType)) {
-            throw new AuthException("Token is not a refresh token");
+        String tokenTypeValue = tokenProvider.getTokenType(refreshToken);
+        if (!refreshTokenType.equals(tokenTypeValue)) {
+            throw new AuthException(messageSource.getMessage("auth.error.not.refresh.token", null, Locale.ENGLISH));
         }
 
         UUID userId = tokenProvider.getUserIdFromToken(refreshToken);
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AuthException("User not found"));
+                .orElseThrow(() -> new AuthException(
+                        messageSource.getMessage("auth.error.user.not.found", null, Locale.ENGLISH)));
 
         Set<String> roles = user.getRoles().stream()
                 .map(Role::getName)
@@ -103,7 +123,7 @@ public class AuthService {
         return AuthResponse.builder()
                 .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)
-                .tokenType("Bearer")
+                .tokenType(tokenType)
                 .expiresIn(tokenProvider.getExpirationMs() / 1000)
                 .userId(user.getId())
                 .username(user.getUsername())
@@ -114,7 +134,8 @@ public class AuthService {
 
     public UserDto getUserById(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AuthException("User not found"));
+                .orElseThrow(() -> new AuthException(
+                        messageSource.getMessage("auth.error.user.not.found", null, Locale.ENGLISH)));
         return toDto(user);
     }
 
