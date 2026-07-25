@@ -259,12 +259,62 @@ function EndpointRow({ method, path, desc }: { method: string; path: string; des
 function renderSystemOverview() {
   return (
     <div>
+      <SectionHeading>What is SYSDOPS?</SectionHeading>
+      <Paragraph>
+        SYSDOPS (System DevOps) is the Jira Data Center platform for managing the full Airbus V&V
+        (Verification &amp; Validation) lifecycle of aircraft system design. It replaces legacy tools
+        (TrackDev, LTM, FADEC database) with a unified product and project management system covering
+        Change, Defect, Test, and V&V management per ARP4754A (V-model) and EASA Part 21 compliance.
+      </Paragraph>
+
+      <SectionHeading>Four Fundamental Object Categories</SectionHeading>
+      <div className="ads-card" style={{ marginBottom: 16 }}>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead>
+              <tr><th>Category</th><th>Purpose</th><th>Issue Types</th><th>Project</th></tr>
+            </thead>
+            <tbody>
+              {[
+                ['Requirement', 'Input points to be covered by test', 'VVO, HLVVO, IVV', 'DO / LAB'],
+                ['Test', 'Procedures to cover a requirement', 'Test, Test Plan, Test Execution, Pre-Condition', 'LAB'],
+                ['Change', 'Design update requests', 'Design Item (DI), Change Card (CC)', 'DO'],
+                ['Defect', 'Problems/bugs detected during testing', 'TechEvent, Bench Defect, Problem Report', 'DEFECT'],
+              ].map(([cat, purpose, types, proj], i) => (
+                <tr key={i}>
+                  <td style={{ fontWeight: 600 }}>{cat}</td>
+                  <td>{purpose}</td>
+                  <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{types}</td>
+                  <td>{proj}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <SectionHeading>Multi-Project Architecture</SectionHeading>
+      <div style={{ padding: 20, background: C.bg, borderRadius: 8, marginBottom: 24, overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: 16, minWidth: 700, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <DiagramBox label="DO Project" sub="Design Office: VVO, HLVVO, DI, CC, DCL, Deliverable" color={C.brand} width={220} height={70} />
+          <ArrowRight label="VVO Transfer (ID Doors)" width={80} />
+          <DiagramBox label="LAB Project" sub="Laboratory: VVO (read-only), Test, Test Plan, Test Execution" color={C.success} width={220} height={70} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '12px 0' }}>
+          <ArrowDown label="Defects from both" />
+        </div>
+        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <DiagramBox label="DEFECT Project" sub="Shared: TechEvent, Bench Defect, Problem Report" color={C.danger} width={280} height={60} />
+          <ArrowRight label="Supplier sync" width={70} />
+          <DiagramBox label="SUPPLIER Project" sub="DI (shared), DCL (sync), TechEvent (sync)" color={C.purple} width={220} height={60} />
+        </div>
+      </div>
+
       <SectionHeading>Platform Architecture</SectionHeading>
       <Paragraph>
-        SYSDOPS runs as a Jira Data Center clone purpose-built for aircraft design verification and validation.
-        The platform comprises 12+ Spring Boot microservices, a single PostgreSQL 16 database with 14 isolated
-        schemas, and a React 18 frontend served through an API gateway. Inter-service communication uses
-        synchronous REST over HTTP (WebClient). Each service owns its schema and exposes a versioned REST API.
+        The platform comprises 12+ Spring Boot microservices, a single PostgreSQL 16 database with 14
+        isolated schemas, and a React 18 frontend served through an API gateway. Each service owns its
+        schema and exposes a versioned REST API.
       </Paragraph>
 
       {/* Architecture Diagram */}
@@ -1219,10 +1269,49 @@ function renderDomainModel() {
     <div>
       <SectionHeading>SYSDOPS Domain Entity Relationships</SectionHeading>
       <Paragraph>
-        The SYSDOPS domain model maps aircraft verification and validation processes onto a Jira-style
-        issue hierarchy. The core entities -- HLVVO, VVO, TestIssue, TechEvent, BenchDefect, ProblemReport,
-        ChangeCard and DesignItem -- form a directed acyclic graph of traceability links.
+        The SYSDOPS domain model maps the Airbus V&V lifecycle onto a Jira-style issue hierarchy. Four object
+        categories (Requirement, Test, Change, Defect) are linked via typed Jira issue links to form a
+        complete traceability graph from requirements through verification to certification.
       </Paragraph>
+
+      {/* Master Data Cascading */}
+      <div className="ads-card" style={{ marginBottom: 16 }}>
+        <h4 className="ads-card-title">Master Data Cascading (admin-service)</h4>
+        <Paragraph>
+          All reference data comes from the Data Hub via admin master data CRUD -- never hardcoded.
+          Cascading resolution: selecting a Program filters available Systems, Test Means, and ATA Chapters;
+          selecting a System filters Suppliers and Functions.
+        </Paragraph>
+        <div style={{ padding: 16, background: C.bg, borderRadius: 8, overflowX: 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 500 }}>
+            <DiagramBox label="Aircraft Program" sub="5 seeded (A320, A330, A350, A380, NAx)" color={C.brand} width={250} />
+            <div style={{ display: 'flex', gap: 40 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <ArrowDown label="1:N" />
+                <DiagramBox label="Test Mean" sub="SIB, FIB, SIMULATOR, etc." color={C.success} width={160} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <ArrowDown label="1:N" />
+                <DiagramBox label="Aircraft System" sub="37 per program (FMS, AP, FADEC...)" color={C.success} width={200} />
+                <div style={{ display: 'flex', gap: 24 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <ArrowDown label="1:N" />
+                    <DiagramBox label="Supplier" sub="Honeywell, Thales..." color={C.teal} width={130} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <ArrowDown label="1:N" />
+                    <DiagramBox label="Function" sub="26 avionics functions" color={C.teal} width={130} />
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <ArrowDown label="1:N" />
+                <DiagramBox label="ATA Chapter" sub="Standard numbering" color={C.success} width={140} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* ER Diagram */}
       <div style={{ padding: 24, background: C.bg, borderRadius: 8, marginBottom: 24, overflowX: 'auto' }}>
@@ -1468,11 +1557,19 @@ function renderDataFlow() {
 function renderVvoLifecycle() {
   return (
     <div>
-      <SectionHeading>VVO State Machine</SectionHeading>
+      <SectionHeading>VVO (Verification &amp; Validation Objective)</SectionHeading>
       <Paragraph>
-        Each VVO (Verification and Validation Objective) progresses through 6 states. Transitions
-        are governed by the workflow engine with conditions (e.g. all tests passed) and validators
-        (e.g. required fields filled).
+        A VVO defines the functionality to be covered by testing. Written by the Design Office (DO), it becomes
+        a requirement for the LAB team. Each VVO maps to one or more DOORS requirements. Key fields include
+        Execution Responsible, VVO Usage (Maturity/Formal/Non Regression), VVO Scope (Interface/Functional),
+        Test Mean Type Requested, Applicability, Supplier Applicability, ID Doors, and Version (auto-incremented
+        on clone). VVO edition is impossible once in Verified/Released status.
+      </Paragraph>
+
+      <SectionHeading>VVO State Machine (Design Office)</SectionHeading>
+      <Paragraph>
+        VVOs progress through 6 states. Only project administrators can perform transitions and change
+        Fix Version. On transition to Verified/Released, all linked cloned issues auto-transition to Superseded.
       </Paragraph>
 
       {/* State Machine Diagram */}
@@ -1544,19 +1641,21 @@ function renderVvoLifecycle() {
 
       {/* 4-step Baselining */}
       <div className="ads-card" style={{ marginBottom: 24 }}>
-        <h4 className="ads-card-title">4-Step Baselining Process</h4>
+        <h4 className="ads-card-title">4-Step Baselining Process (per Airbus V&V Template)</h4>
         <Paragraph>
-          Baselining captures a frozen snapshot of VVO definitions at a point in time, allowing
-          traceability comparison between versions. The process is irreversible once finalised.
+          A baseline is a snapshot of official VVOs at a point in time, using Jira Fix Version as the
+          baseline identifier. A VVO can belong to several baselines. Only project administrators
+          can do transitions and change Fix Version. The process follows 6 documented use cases:
+          VVO updated, VVO unchanged, VVO removed, new VVO created, VVO updated but not ready, new VVO not ready.
         </Paragraph>
         <div className="ads-pipeline">
-          <span className="ads-pipeline-step ads-pipeline-step--done">1. Select VVOs</span>
+          <span className="ads-pipeline-step ads-pipeline-step--done">1. Tag Fix Version</span>
           <span className="ads-pipeline-arrow">&rarr;</span>
-          <span className="ads-pipeline-step ads-pipeline-step--done">2. Name Baseline</span>
+          <span className="ads-pipeline-step ads-pipeline-step--done">2. Bulk Transition</span>
           <span className="ads-pipeline-arrow">&rarr;</span>
-          <span className="ads-pipeline-step ads-pipeline-step--active">3. Snapshot Fields</span>
+          <span className="ads-pipeline-step ads-pipeline-step--active">3. Publish Baseline</span>
           <span className="ads-pipeline-arrow">&rarr;</span>
-          <span className="ads-pipeline-step">4. Finalise (lock)</span>
+          <span className="ads-pipeline-step">4. DOORS Export</span>
         </div>
         <div className="ads-table-wrap" style={{ marginTop: 12 }}>
           <table className="ads-table">
@@ -1564,22 +1663,41 @@ function renderVvoLifecycle() {
               <tr><th>Step</th><th>API Endpoint</th><th>Description</th></tr>
             </thead>
             <tbody>
-              <tr><td>1</td><td style={{ fontFamily: 'monospace', fontSize: 12 }}>POST /api/vvo/baseline</td><td>Create baseline with name and selected VVO IDs</td></tr>
-              <tr><td>2</td><td style={{ fontFamily: 'monospace', fontSize: 12 }}>POST /api/vvo/baseline/{'{id}'}/snapshot</td><td>Snapshot all field values for selected VVOs</td></tr>
-              <tr><td>3</td><td style={{ fontFamily: 'monospace', fontSize: 12 }}>GET /api/vvo/baseline/{'{id}'}/compare/{'{otherId}'}</td><td>Compare two baselines for delta report</td></tr>
-              <tr><td>4</td><td style={{ fontFamily: 'monospace', fontSize: 12 }}>PUT /api/vvo/baseline/{'{id}'}/finalise</td><td>Lock baseline (irreversible)</td></tr>
+              <tr><td>1</td><td style={{ fontFamily: 'monospace', fontSize: 12 }}>POST /api/vvo/baseline/tag</td><td>Tag selected VVOs with Fix Version (baseline identifier)</td></tr>
+              <tr><td>2</td><td style={{ fontFamily: 'monospace', fontSize: 12 }}>POST /api/vvo/baseline/publish</td><td>Bulk transition Verified VVOs to Released</td></tr>
+              <tr><td>3</td><td style={{ fontFamily: 'monospace', fontSize: 12 }}>POST /api/vvo/baseline/clone-with-supersede/{'{id}'}</td><td>Clone VVO with auto-increment, clear Fix Version/HLVVO, supersede old</td></tr>
+              <tr><td>4</td><td style={{ fontFamily: 'monospace', fontSize: 12 }}>POST /api/vvo/baseline/doors/export</td><td>Export Released/Cancelled VVOs to CSV for DOORS import</td></tr>
             </tbody>
           </table>
+        </div>
+
+        <h4 className="ads-card-title" style={{ marginTop: 16 }}>VVO Transfer (DO to LAB)</h4>
+        <Paragraph>
+          VVOs transfer from DO to LAB project using ID Doors as the identifier. The transfer gadget
+          creates read-only copies in the LAB project. When a VVO is updated via transfer, the LAB VVO
+          auto-transitions to Update status, which cascades to all linked Tests (also set to Update).
+        </Paragraph>
+        <div style={{ padding: 16, background: C.bg, borderRadius: 8, overflowX: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 600 }}>
+            <DiagramBox label="VVO (DO)" sub="Released baseline" color={C.brand} width={130} height={50} />
+            <ArrowRight label="transfer via ID Doors" width={90} />
+            <DiagramBox label="VVO (LAB)" sub="Read-only copy" color={C.success} width={130} height={50} />
+            <ArrowRight label="write tests" width={60} />
+            <DiagramBox label="Test" sub="Linked procedure" color={C.success} width={120} height={50} />
+            <ArrowRight label="campaign" width={50} />
+            <DiagramBox label="Test Execution" sub="Run instance" color={C.teal} width={120} height={50} />
+          </div>
         </div>
       </div>
 
       {/* DOORS Integration */}
       <div className="ads-card">
-        <h4 className="ads-card-title">DOORS Integration Flow</h4>
+        <h4 className="ads-card-title">DOORS Integration (Regulatory Compliance)</h4>
         <Paragraph>
-          VVO definitions can be exported to IBM DOORS format using configurable export templates.
-          Templates support field mapping, section ordering, and conditional inclusion. Export
-          produces DOCX, XLSX, or structured XML output.
+          All VVOs must be referenced in IBM DOORS for Airbus process compliance. The integration is
+          bidirectional via CSV: export Released/Cancelled VVOs using XPorter template "VVO export for
+          Doors", then import DOORS IDs back using an Activity issue type with 6 validation rules
+          (empty ID check, duplicate check, mismatch check, project check, existence check, header check).
         </Paragraph>
         <div style={{ padding: 16, background: C.bg, borderRadius: 8, overflowX: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 600 }}>
@@ -1601,12 +1719,33 @@ function renderVvoLifecycle() {
 function renderDefectManagement() {
   return (
     <div>
-      <SectionHeading>Defect Management Workflows</SectionHeading>
+      <SectionHeading>Defect Management (DEFECT Project)</SectionHeading>
       <Paragraph>
-        SYSDOPS models three interconnected defect types: TechEvent (the M1668 form, 14 states),
-        BenchDefect (test-means issues, 6 states), and ProblemReport (escalated issues, 4 states).
-        Each has its own workflow but they are linked by traceability relations.
+        All defects live in a single shared DEFECT project (DEF) to avoid copying issues between projects,
+        avoid sharing projects with too many people, and easily follow defects from multiple systems.
+        Three interconnected defect types form a severity cascade: TechEvent (system anomaly per Airbus
+        Method M1668), BenchDefect (test means anomaly with severity/criticality), and ProblemReport
+        (certification-facing -- only open PRs are transmitted to EASA/FAA authorities).
       </Paragraph>
+
+      {/* Defect cascade diagram */}
+      <div style={{ padding: 16, background: C.bg, borderRadius: 8, marginBottom: 16, overflowX: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 700, justifyContent: 'center' }}>
+          <DiagramBox label="Test Execution" sub="Fails during test run" color={C.teal} width={140} height={50} />
+          <ArrowRight label="creates" width={50} />
+          <DiagramBox label="TechEvent" sub="System anomaly (M1668)" color={C.danger} width={160} height={50} />
+          <ArrowRight label="may create" width={60} />
+          <DiagramBox label="Bench Defect" sub="Test means issue" color={C.warning} width={140} height={50} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 12, color: C.subtle }}>TechEvent also creates:</span>
+            <DiagramBox label="Problem Report" sub="Certification (EASA/FAA)" color={C.danger} width={170} height={45} fontSize={11} />
+            <span style={{ fontSize: 12, color: C.subtle }}>and</span>
+            <DiagramBox label="Change Card" sub="Design change" color={C.purple} width={140} height={45} fontSize={11} />
+          </div>
+        </div>
+      </div>
 
       {/* TechEvent M1668 */}
       <div className="ads-card" style={{ marginBottom: 16 }}>
@@ -2152,7 +2291,7 @@ http.post("https://hooks.slack.com/...",
       </div>
 
       {/* When to use Scripts vs Built-in */}
-      <div className="ads-card">
+      <div className="ads-card" style={{ marginBottom: 24 }}>
         <div className="ads-card-title">When to Use Scripts vs Built-in Features</div>
         <div className="ads-table-wrap">
           <table className="ads-table">
@@ -2171,6 +2310,363 @@ http.post("https://hooks.slack.com/...",
               <tr><td>Computed custom field values</td><td><span className="ads-badge ads-badge--new">Script: CALCULATED_FIELD</span></td><td>Days-since-created, risk scores, SLA tracking</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* ── NEW SECTION: Database Schema ── */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <div className="ads-card-title">Database Schema (8 Tables across 5 Flyway Migrations)</div>
+        <div style={{ padding: 16, background: C.bg, borderRadius: 8, overflowX: 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, minWidth: 700 }}>
+            {[
+              { name: 'script_definitions', ver: 'V15', cols: 'name, description, script_type, script_key, script_body, version, is_enabled, category, created_by, created_at', color: C.brand },
+              { name: 'script_versions', ver: 'V15', cols: 'script_id (FK), version, script_body, change_summary, created_by, created_at', color: C.brand },
+              { name: 'script_execution_log', ver: 'V15+V26', cols: 'script_key, script_type, execution_mode, issue_id, success, execution_ms, api_call_count, executed_by, error_message', color: C.teal },
+              { name: 'script_schedules', ver: 'V16', cols: 'script_id (FK), cron_expression, next_run_at, last_run_at, last_success, run_count, is_enabled', color: C.warning },
+              { name: 'script_listeners', ver: 'V18', cols: 'script_id (FK), event_type, project_filter, issue_type_filter, execution_order, is_enabled', color: C.success },
+              { name: 'script_field_behaviors', ver: 'V18', cols: 'script_id (FK), screen_context (CREATE/EDIT/TRANSITION/VIEW), project_id, issue_type_id, execution_order', color: C.purple },
+              { name: 'script_calculated_fields', ver: 'V18', cols: 'script_id (FK), custom_field_id, cache_ttl_ms', color: C.purple },
+              { name: 'script_persistent_vars', ver: 'V19', cols: 'var_key (UNIQUE), var_value, scope (GLOBAL/PROJECT/ISSUE), scope_id, updated_at', color: C.danger },
+            ].map((t, i) => (
+              <div key={i} style={{ background: C.white, border: `2px solid ${t.color}`, borderRadius: 8, padding: 10, fontSize: 11 }}>
+                <div style={{ fontWeight: 700, color: t.color, marginBottom: 4 }}>{t.name}</div>
+                <div style={{ fontSize: 10, color: C.subtle, marginBottom: 6 }}>Migration: {t.ver}</div>
+                <div style={{ fontSize: 10, fontFamily: 'monospace', color: C.dark, lineHeight: 1.5 }}>{t.cols}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── NEW SECTION: Event Listener Architecture ── */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <div className="ads-card-title">Event Listener Architecture</div>
+        <div style={{ padding: 16, background: C.bg, borderRadius: 8, overflowX: 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, minWidth: 600 }}>
+            <DiagramBox label="Issue/Comment/Worklog Event" sub="Service writes to workflow_event_outbox table" color={C.brand} width={360} />
+            <ArrowDown label="polled every 5s" />
+            <DiagramBox label="WorkflowEventOutboxProcessor" sub="dispatch() routes by eventType string" color={C.teal} width={360} />
+            <ArrowDown label="fireScriptListeners()" />
+            <DiagramBox label="ScriptListenerService" sub="@Async — filters by project, issueType, executionOrder" color={C.success} width={360} />
+            <ArrowDown label="executeByKey()" />
+            <DiagramBox label="ScriptExecutionService" sub="DSL transpile -> resolve includes -> GraalVM execute" color={C.purple} width={360} />
+          </div>
+        </div>
+        <div className="ads-table-wrap" style={{ marginTop: 12 }}>
+          <table className="ads-table">
+            <thead><tr><th>Event Type</th><th>Trigger</th><th>Context Data</th></tr></thead>
+            <tbody>
+              {[
+                ['ISSUE_CREATED', 'New issue created', 'issueId, projectId, userId, issueTypeId, issueData'],
+                ['ISSUE_UPDATED', 'Issue fields changed', 'issueId, projectId, userId, changedFields'],
+                ['ISSUE_TRANSITIONED', 'Workflow transition', 'issueId, fromStatusId, toStatusId, transitionName'],
+                ['ISSUE_DELETED', 'Issue deleted', 'issueId, projectId, userId'],
+                ['COMMENT_ADDED', 'Comment posted', 'issueId, commentId, userId, commentText'],
+                ['COMMENT_UPDATED', 'Comment edited', 'issueId, commentId, userId'],
+                ['COMMENT_DELETED', 'Comment removed', 'issueId, commentId, userId'],
+                ['WORKLOG_ADDED', 'Work logged', 'issueId, worklogId, timeSpent'],
+                ['ATTACHMENT_ADDED', 'File attached', 'issueId, attachmentId, filename'],
+                ['ATTACHMENT_DELETED', 'File removed', 'issueId, attachmentId'],
+                ['VERSION_RELEASED', 'Version released', 'projectId, versionId, versionName'],
+                ['SPRINT_STARTED', 'Sprint started', 'sprintId, boardId'],
+                ['SPRINT_COMPLETED', 'Sprint closed', 'sprintId, boardId'],
+              ].map(([type, trigger, ctx], i) => (
+                <tr key={i}><td style={{fontFamily:'monospace', fontSize:11, fontWeight:600}}>{type}</td><td style={{fontSize:12}}>{trigger}</td><td style={{fontSize:11, fontFamily:'monospace', color:C.subtle}}>{ctx}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── NEW SECTION: Field Behavior & Live Fields Flow ── */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <div className="ads-card-title">Field Behavior & Live Fields Architecture</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: 16 }}>
+          <div style={{ background: '#e3fcef', borderRadius: 8, padding: 16, border: `2px solid ${C.success}` }}>
+            <div style={{ fontWeight: 700, color: C.success, marginBottom: 8 }}>Server-Side (useFieldBehaviors hook)</div>
+            <div style={{ fontSize: 11, lineHeight: 1.8 }}>
+              <div>1. CreateIssueModal calls <code style={{fontSize:10}}>useFieldBehaviors(screenContext, projectId, issueTypeId, issueData)</code></div>
+              <div>2. Hook POSTs to <code style={{fontSize:10}}>/api/workflow/scripts/field-behaviors/evaluate</code> (debounced 300ms)</div>
+              <div>3. ScriptFieldBehaviorService queries behaviors by screenContext + project + issueType</div>
+              <div>4. Each behavior script executes in GraalVM, returns directive array</div>
+              <div>5. Directives merged: <code style={{fontSize:10}}>visible, required, readOnly, defaultValue, options, warning, label, helpText</code></div>
+              <div>6. Hook returns accessor functions: <code style={{fontSize:10}}>isFieldVisible(), isFieldRequired(), getFieldWarning()</code></div>
+            </div>
+          </div>
+          <div style={{ background: '#eef2ff', borderRadius: 8, padding: 16, border: `2px solid ${C.purple}` }}>
+            <div style={{ fontWeight: 700, color: C.purple, marginBottom: 8 }}>Client-Side (useLiveFields hook)</div>
+            <div style={{ fontSize: 11, lineHeight: 1.8 }}>
+              <div>1. Provides 12 SIL-equivalent imperative functions:</div>
+              <div style={{fontFamily:'monospace', fontSize:10, marginLeft:8}}>makeRequired(), makeOptional(), makeReadOnly(), makeEditable()</div>
+              <div style={{fontFamily:'monospace', fontSize:10, marginLeft:8}}>hideField(), showField(), setFieldOptions(), setFieldDescription()</div>
+              <div style={{fontFamily:'monospace', fontSize:10, marginLeft:8}}>setMessage(), setFieldCssClass(), setFieldDefault(), setFieldLabel()</div>
+              <div>2. Stores directives in React state Map</div>
+              <div>3. <code style={{fontSize:10}}>applyServerDirectives()</code> merges server responses</div>
+              <div>4. CreateIssueModal merges both: field visible only if BOTH hooks agree</div>
+              <div>5. All 16 form fields respect merged directives</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── NEW SECTION: DSL Transpiler Reference ── */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <div className="ads-card-title">DSL Transpiler — Field & Function Mappings (JdcDslTranspiler.java)</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: '0 16px' }}>
+          <div>
+            <h4 style={{ fontSize: 13, fontWeight: 600, color: C.dark, marginBottom: 8 }}>21 Field Mappings (SIL-style assignment to API call)</h4>
+            <div className="ads-table-wrap">
+              <table className="ads-table">
+                <thead><tr><th>SIL Syntax</th><th>Transpiles To</th></tr></thead>
+                <tbody>
+                  {[
+                    ['assignee = "john"', 'jdc.issue.setFieldValue("assigneeId", "john")'],
+                    ['reporter = userId', 'jdc.issue.setFieldValue("reporterId", userId)'],
+                    ['priority = "High"', 'jdc.issue.setFieldValue("priorityId", "High")'],
+                    ['status = "Done"', 'jdc.issue.setFieldValue("statusId", "Done")'],
+                    ['summary = "title"', 'jdc.issue.setFieldValue("summary", "title")'],
+                    ['description = text', 'jdc.issue.setFieldValue("description", text)'],
+                    ['dueDate = "2026-12-31"', 'jdc.issue.setFieldValue("dueDate", "2026-12-31")'],
+                    ['storyPoints = 8', 'jdc.issue.setFieldValue("storyPoints", 8)'],
+                    ['environment = "prod"', 'jdc.issue.setFieldValue("environment", "prod")'],
+                  ].map(([sil, js], i) => (
+                    <tr key={i}><td style={{fontFamily:'monospace', fontSize:10, background:'#fff3e0'}}>{sil}</td><td style={{fontFamily:'monospace', fontSize:10, background:'#e3fcef'}}>{js}</td></tr>
+                  ))}
+                  <tr><td colSpan={2} style={{fontSize:10, color:C.subtle, textAlign:'center'}}>+ 12 more: resolution, issueType, labels, components, fixVersions, affectsVersions, epicLink, parentIssue, securityLevel, originalEstimate, remainingEstimate, timeSpent</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <h4 style={{ fontSize: 13, fontWeight: 600, color: C.dark, marginBottom: 8 }}>54 Function Aliases (SIL name to JDC API)</h4>
+            <div className="ads-table-wrap">
+              <table className="ads-table">
+                <thead><tr><th>SIL Function</th><th>Transpiles To</th></tr></thead>
+                <tbody>
+                  {[
+                    ['createIssue(...)', 'jdc.issue.createIssue(...)'],
+                    ['cloneIssue(key)', 'jdc.issue.cloneIssue(key)'],
+                    ['transitionIssue(key, action)', 'jdc.issue.transitionIssue(key, action)'],
+                    ['addComment(text)', 'jdc.issue.addComment(text)'],
+                    ['getSubTasks()', 'jdc.issue.getSubtasks()'],
+                    ['isUserInGroup(group)', 'jdc.user.isInGroup(group)'],
+                    ['jqlSearch(query, max)', 'jdc.search.jql(query, max)'],
+                    ['httpGet(url)', 'http.get(url)'],
+                    ['httpPost(url, body)', 'http.post(url, body)'],
+                    ['sqlQuery(ds, sql)', 'sql.query(ds, sql)'],
+                    ['sendEmail(to, subj, body)', 'email.sendEmail(to, subj, body)'],
+                    ['setPersistentVar(k, v)', 'vars.set(k, v)'],
+                    ['logInfo(msg)', 'jdc.log.info(msg)'],
+                    ['getSprint(id)', 'sprint.getSprint(id)'],
+                    ['moveToSprint(issue, sprint)', 'sprint.moveToSprint(issue, sprint)'],
+                  ].map(([sil, js], i) => (
+                    <tr key={i}><td style={{fontFamily:'monospace', fontSize:10, background:'#fff3e0'}}>{sil}</td><td style={{fontFamily:'monospace', fontSize:10, background:'#e3fcef'}}>{js}</td></tr>
+                  ))}
+                  <tr><td colSpan={2} style={{fontSize:10, color:C.subtle, textAlign:'center'}}>+ 39 more aliases across issue, project, user, workflow, email, HTTP, SQL, vars, logging, sprint categories</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── NEW SECTION: Debugger & Profiler ── */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <div className="ads-card-title">Script Debugger & Profiler Architecture</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: 16 }}>
+          <div>
+            <h4 style={{ fontSize: 13, fontWeight: 600, color: C.dark, marginBottom: 8 }}>ScriptDebugger (breakpoints + step-through)</h4>
+            <div className="ads-table-wrap">
+              <table className="ads-table">
+                <thead><tr><th>Script-Side API</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td style={{fontFamily:'monospace', fontSize:11}}>debugger.breakpoint("label")</td><td style={{fontSize:11}}>Pause execution until resumed (60s timeout)</td></tr>
+                  <tr><td style={{fontFamily:'monospace', fontSize:11}}>debugger.inspect("name", val)</td><td style={{fontSize:11}}>Capture variable snapshot at this point</td></tr>
+                  <tr><td style={{fontFamily:'monospace', fontSize:11}}>debugger.step()</td><td style={{fontSize:11}}>Pause at next statement</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="ads-table-wrap" style={{ marginTop: 8 }}>
+              <table className="ads-table">
+                <thead><tr><th>REST Endpoint</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td style={{fontFamily:'monospace', fontSize:10}}>GET /debug/sessions</td><td style={{fontSize:11}}>List active debug sessions</td></tr>
+                  <tr><td style={{fontFamily:'monospace', fontSize:10}}>GET /debug/state/{'{'}<i>id</i>{'}'}</td><td style={{fontSize:11}}>Get breakpoints + variable snapshots</td></tr>
+                  <tr><td style={{fontFamily:'monospace', fontSize:10}}>POST /debug/resume/{'{'}<i>id</i>{'}'}</td><td style={{fontSize:11}}>Resume paused session</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <h4 style={{ fontSize: 13, fontWeight: 600, color: C.dark, marginBottom: 8 }}>ScriptTracer (execution profiling)</h4>
+            <div className="ads-table-wrap">
+              <table className="ads-table">
+                <thead><tr><th>Method</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td style={{fontFamily:'monospace', fontSize:11}}>traceApiCall(api, method, startMs)</td><td style={{fontSize:11}}>Record API call with timing</td></tr>
+                  <tr><td style={{fontFamily:'monospace', fontSize:11}}>getApiCallCount()</td><td style={{fontSize:11}}>Total API calls in execution</td></tr>
+                  <tr><td style={{fontFamily:'monospace', fontSize:11}}>getTotalApiTime()</td><td style={{fontSize:11}}>Sum of all API call durations</td></tr>
+                  <tr><td style={{fontFamily:'monospace', fontSize:11}}>getSummary()</td><td style={{fontSize:11}}>callsByApi breakdown, failedCalls</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style={{ marginTop: 8, fontSize: 11, color: C.subtle }}>
+              <strong>12 instrumented methods:</strong> getFieldValue, setFieldValue, addComment, getComments, getWatchers, getLinkedIssues, createIssue, cloneIssue, moveIssue, deleteIssue, transitionIssue, getSubtasks.
+              Profiler UI at <code style={{fontSize:10}}>/workflows/admin/scripts</code> (Profiler tab) shows slowest scripts, success rates, executions by mode.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── NEW SECTION: Template Library Catalog ── */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <div className="ads-card-title">Bundled Script Template Library (10 Templates)</div>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead><tr><th>#</th><th>Template Name</th><th>Type</th><th>Category</th><th>Description</th></tr></thead>
+            <tbody>
+              {[
+                ['1', 'Auto-Assign on Create', 'LISTENER', 'Listeners', 'Automatically assigns issues to a user based on issue type when created'],
+                ['2', 'Enforce Subtask Resolution', 'CONDITION', 'Conditions', 'Blocks transition if any subtask is not resolved (Done/Closed/Resolved)'],
+                ['3', 'Required Comment Validator', 'VALIDATOR', 'Validators', 'Requires a comment on transition — validates both transition comment and screen input'],
+                ['4', 'Cascade Field Updates', 'POST_FUNCTION', 'Post-Functions', 'When parent issue changes priority, cascades to all subtask priorities'],
+                ['5', 'SLA Tracker', 'CALCULATED_FIELD', 'Calculated Fields', 'Computes "Days Since Created" from issue creation timestamp for custom field display'],
+                ['6', 'Email Notification on Transition', 'POST_FUNCTION', 'Post-Functions', 'Sends custom HTML email when issue transitions to a specific status (configurable)'],
+                ['7', 'Bulk Transition by JQL', 'SCHEDULED', 'Scheduled', 'Searches for stale issues matching JQL, auto-transitions them, adds explanatory comments'],
+                ['8', 'HTTP Webhook Integration', 'LISTENER', 'Listeners', 'Calls external REST API when issue events occur — configurable webhook URL with payload'],
+                ['9', 'Hide Environment for Epics', 'FIELD_BEHAVIOR', 'LiveFields', 'Hides environment and story points when issue type is Epic; makes priority required for Bugs'],
+                ['10', 'Reusable Utilities Library', 'LIBRARY', 'Includes', 'Helper functions: formatDate, daysBetween, isBusinessDay, addBusinessDays, truncate'],
+              ].map(([num, name, type, cat, desc], i) => (
+                <tr key={i}>
+                  <td style={{fontWeight:600, textAlign:'center'}}>{num}</td>
+                  <td style={{fontWeight:600, fontSize:12}}>{name}</td>
+                  <td><span className="ads-badge ads-badge--new" style={{fontSize:10}}>{type}</span></td>
+                  <td style={{fontSize:11, color:C.subtle}}>{cat}</td>
+                  <td style={{fontSize:11}}>{desc}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── NEW SECTION: Configuration Reference ── */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <div className="ads-card-title">Configuration Reference (application.yml)</div>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead><tr><th>Property</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              {[
+                ['jira.scripting.enabled', 'true', 'Master switch — disables all script execution when false'],
+                ['jira.scripting.timeout-ms', '5000', 'Max execution time for workflow scripts (ms)'],
+                ['jira.scripting.console-timeout-ms', '10000', 'Max execution time for console/REPL scripts (ms)'],
+                ['jira.scripting.memory-limit-mb', '64', 'Memory monitoring threshold — logs warning if exceeded'],
+                ['jira.scripting.max-statements', '500000', 'GraalVM statement limit — prevents infinite loops'],
+                ['jira.scripting.log-retention-days', '30', 'Days to keep execution logs before ScriptLogCleanupJob deletes (runs daily at 2 AM)'],
+                ['jira.scripting.http-whitelist-domains', '[]', 'Allowed domains for http.get/post/put/delete — empty blocks all HTTP'],
+                ['jira.scripting.http-timeout-ms', '5000', 'Timeout for outbound HTTP calls from scripts'],
+                ['jira.scripting.env-whitelist-keys', '[]', 'Environment variables accessible via env.get() — empty blocks all'],
+                ['jira.scripting.scheduled-enabled', 'false', 'Enable scheduled script execution (cron-based)'],
+                ['jira.scripting.scheduled-poll-interval-ms', '30000', 'Polling interval for due schedules (ShedLock protected)'],
+                ['jira.scripting.sql-write-enabled', 'false', 'Allow INSERT/UPDATE/DELETE via sql.update() — false = read-only'],
+                ['jira.scripting.datasources', '{}', 'Named SQL datasources: {name: {url, username, password, driverClassName}}'],
+              ].map(([prop, def, desc], i) => (
+                <tr key={i}>
+                  <td style={{fontFamily:'monospace', fontSize:10, fontWeight:600, color:C.brand}}>{prop}</td>
+                  <td style={{fontFamily:'monospace', fontSize:11, color:C.subtle}}>{def}</td>
+                  <td style={{fontSize:11}}>{desc}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── NEW SECTION: Complete REST API Endpoints ── */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <div className="ads-card-title">Complete REST API (44 Endpoints under /api/workflow/scripts)</div>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead><tr><th style={{width:'8%'}}>Method</th><th style={{width:'45%'}}>Path</th><th style={{width:'47%'}}>Description</th></tr></thead>
+            <tbody>
+              {[
+                ['GET', '/', 'List all scripts (optional type filter)'],
+                ['GET', '/{id}', 'Get script by ID'],
+                ['POST', '/', 'Create new script'],
+                ['PUT', '/{id}', 'Update script (creates new version)'],
+                ['DELETE', '/{id}', 'Delete script'],
+                ['PATCH', '/{id}/toggle', 'Enable/disable script'],
+                ['GET', '/{id}/versions', 'Version history'],
+                ['GET', '/{id}/versions/{num}', 'Get specific version body'],
+                ['POST', '/{id}/revert/{ver}', 'Revert to previous version'],
+                ['GET', '/{id}/executions', 'Execution log for script'],
+                ['GET', '/executions', 'All execution logs'],
+                ['POST', '/console', 'Execute in REPL/console mode'],
+                ['GET', '/available', 'Enabled scripts by type (for dropdowns)'],
+                ['GET', '/dashboard', 'Script engine metrics'],
+                ['POST', '/validate', 'Syntax validation (parseOnly)'],
+                ['POST', '/transpile', 'Preview DSL transpilation output'],
+                ['GET', '/{id}/export', 'Export script as JSON'],
+                ['POST', '/import', 'Import script from JSON'],
+                ['GET', '/search', 'Search by name/key/category/enabled'],
+                ['GET', '/{id}/usage', 'Dependency and usage tracking'],
+                ['GET', '/templates', 'Bundled template library'],
+                ['GET', '/profiler/stats', 'Execution profiler statistics'],
+                ['POST', '/{id}/schedule', 'Create cron schedule'],
+                ['GET', '/{id}/schedule', 'Get schedule'],
+                ['DELETE', '/{id}/schedule', 'Delete schedule'],
+                ['PATCH', '/{id}/schedule/toggle', 'Toggle schedule'],
+                ['POST', '/{id}/listeners', 'Create event listener'],
+                ['GET', '/{id}/listeners', 'Get listeners for script'],
+                ['GET', '/listeners', 'All listeners'],
+                ['DELETE', '/listeners/{id}', 'Delete listener'],
+                ['PATCH', '/listeners/{id}/toggle', 'Toggle listener'],
+                ['POST', '/field-behaviors/evaluate', 'Evaluate field behaviors'],
+                ['POST', '/{id}/field-behaviors', 'Create field behavior binding'],
+                ['GET', '/{id}/field-behaviors', 'Get behaviors for script'],
+                ['GET', '/field-behaviors', 'All field behaviors'],
+                ['DELETE', '/field-behaviors/{id}', 'Delete behavior'],
+                ['GET', '/calculated-fields/evaluate', 'Evaluate calculated field'],
+                ['POST', '/{id}/calculated-fields', 'Bind script to custom field'],
+                ['GET', '/{id}/calculated-fields', 'Get bindings for script'],
+                ['DELETE', '/calculated-fields/{id}', 'Delete binding'],
+                ['POST', '/execute-by-key/{key}', 'Execute by key (webhook/API)'],
+                ['GET', '/debug/sessions', 'List active debug sessions'],
+                ['GET', '/debug/state/{id}', 'Debug session state + snapshots'],
+                ['POST', '/debug/resume/{id}', 'Resume paused debug session'],
+              ].map(([method, path, desc], i) => {
+                const methodColors: Record<string,string> = { GET: C.success, POST: C.brand, PUT: C.warning, DELETE: C.danger, PATCH: C.purple };
+                return (
+                  <tr key={i}>
+                    <td><span style={{display:'inline-block', padding:'1px 6px', borderRadius:3, background:methodColors[method]||C.subtle, color:C.white, fontSize:10, fontWeight:700}}>{method}</span></td>
+                    <td style={{fontFamily:'monospace', fontSize:10}}>{path}</td>
+                    <td style={{fontSize:11}}>{desc}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── NEW SECTION: Internal Services ── */}
+      <div className="ads-card" style={{ marginBottom: 24 }}>
+        <div className="ads-card-title">Internal Engine Services</div>
+        <div className="ads-grid-3">
+          {[
+            { name: 'ScriptPluginRegistrar', desc: 'ApplicationRunner that registers all enabled CONDITION/VALIDATOR/POST_FUNCTION scripts into the WorkflowPluginRegistry at startup. Provides refreshScript() for hot-reload on update and unregisterScript() on delete.', color: C.brand },
+            { name: 'ScriptEngineHealthIndicator', desc: 'Spring Boot Actuator health check — validates GraalVM engine with parseOnly("1+1"), reports totalScripts, enabledScripts, timeoutMs, maxStatements. Status: operational / disabled / failed.', color: C.success },
+            { name: 'ScriptLogCleanupJob', desc: 'Scheduled daily at 2 AM (ShedLock-protected). Deletes execution logs older than logRetentionDays (default 30). Transactional bulk delete.', color: C.warning },
+            { name: 'ScheduledScriptExecutor', desc: 'Polls for due ScriptSchedule entries every 30s (configurable). 4-thread pool. Optimistic nextRunAt update before execution. ShedLock prevents multi-node duplicate runs.', color: C.purple },
+            { name: 'ScriptFieldBehaviorService', desc: 'Evaluates field behavior scripts for a screen context (CREATE/EDIT/TRANSITION/VIEW). Filters by project and issueType. Returns merged directive arrays.', color: C.teal },
+            { name: 'ScriptCalculatedFieldService', desc: 'Evaluates scripts bound to custom fields. Fetches full issue data, constructs context, executes script, returns computed value. Supports cacheTtlMs for result caching.', color: C.danger },
+          ].map((svc, i) => (
+            <div key={i} style={{ padding: 12, borderLeft: `3px solid ${svc.color}`, background: C.bg, borderRadius: '0 4px 4px 0' }}>
+              <div style={{ fontWeight: 600, fontSize: 12, color: C.dark, fontFamily: 'monospace', marginBottom: 4 }}>{svc.name}</div>
+              <div style={{ fontSize: 11, color: C.subtle, lineHeight: 1.5 }}>{svc.desc}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
