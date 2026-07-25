@@ -96,6 +96,7 @@ import BaselineManagementPage from './features/aircraft-design/pages/BaselineMan
 import VvDashboardPage from './features/aircraft-design/pages/VvDashboardPage';
 import CampaignPage from './features/aircraft-design/pages/CampaignPage';
 import MasterDataAdminPage from './features/aircraft-design/pages/MasterDataAdminPage';
+import ArchitecturePage from './features/aircraft-design/pages/ArchitecturePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -268,6 +269,7 @@ function App() {
                 <Route path="aircraft-design/dashboard" element={<VvDashboardPage />} />
                 <Route path="aircraft-design/campaigns" element={<CampaignPage />} />
                 <Route path="aircraft-design/master-data" element={<MasterDataAdminPage />} />
+                <Route path="aircraft-design/architecture" element={<ArchitecturePage />} />
               </Route>
               <Route
                 path="/admin/*"

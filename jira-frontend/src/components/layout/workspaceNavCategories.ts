@@ -213,6 +213,38 @@ export const WORKSPACE_NAV_CATEGORIES: WorkspaceNavCategory[] = [
 
   {
 
+    key: 'sysdops',
+
+    label: 'SYSDOPS (V&V)',
+
+    icon: '✈',
+
+    items: [
+
+      { label: 'V&V Dashboard', path: '/aircraft-design/dashboard', description: 'Project V&V metrics overview' },
+
+      { label: 'VVO Management', path: '/aircraft-design/vvos', description: 'Verification & Validation Objectives' },
+
+      { label: 'HLVVO Packages', path: '/aircraft-design/hlvvos', description: 'High-Level V&V Objective grouping' },
+
+      { label: 'Tech Events (M1668)', path: '/aircraft-design/tech-events', description: 'System anomaly management' },
+
+      { label: 'Change Cards', path: '/aircraft-design/change-cards', description: 'Design change tracking (6-tab)' },
+
+      { label: 'Baseline Management', path: '/aircraft-design/baselines', description: 'VVO baselines, DOORS, transfer' },
+
+      { label: 'Campaign Creation', path: '/aircraft-design/campaigns', description: 'CSV-driven test campaigns' },
+
+      { label: 'Master Data Admin', path: '/aircraft-design/master-data', description: 'Programs, systems, test means' },
+
+      { label: 'Architecture', path: '/aircraft-design/architecture', description: 'System architecture documentation' },
+
+    ],
+
+  },
+
+  {
+
     key: 'tools',
 
     label: 'Tools',
