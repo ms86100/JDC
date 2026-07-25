@@ -1,108 +1,72 @@
-# Prometheus Configuration for Enterprise Jira Platform
-# Based on dc-app-performance-toolkit performance expectations
-
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets: []
-
 rule_files:
-  - "alert_rules.yml"
+  - alert_rules.yml
 
 scrape_configs:
-  # Prometheus self-monitoring
-  - job_name: 'prometheus'
-    static_configs:
-      - targets: ['localhost:9090']
-
-  # Gateway metrics
   - job_name: 'jira-gateway'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-gateway:8080']
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        regex: '([^:]+):\d+'
-        replacement: '${1}'
-
-  # Issue service - critical for view_issue (34% of load)
-  - job_name: 'jira-issue'
+      - targets: ['gateway:8080']
+  - job_name: 'jira-auth-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-issue:8082']
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-
-  # Search service - critical for search_jql (11% of load)
-  - job_name: 'jira-search'
+      - targets: ['auth-service:8081']
+  - job_name: 'jira-user-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-search:8087']
-
-  # Board service - critical for board views (22% of load)
-  - job_name: 'jira-board'
+      - targets: ['user-service:8082']
+  - job_name: 'jira-project-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-board:8086']
-
-  # Auth service
-  - job_name: 'jira-auth'
+      - targets: ['project-service:8083']
+  - job_name: 'jira-issue-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-auth:8081']
-
-  # Project service
-  - job_name: 'jira-project'
+      - targets: ['issue-service:8084']
+  - job_name: 'jira-workflow-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-project:8083']
-
-  # Workflow service
-  - job_name: 'jira-workflow'
+      - targets: ['workflow-service:8085']
+  - job_name: 'jira-comment-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-workflow:8084']
-
-  # User service
-  - job_name: 'jira-user'
+      - targets: ['comment-service:8086']
+  - job_name: 'jira-notification-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-user:8085']
-
-  # Notification service
-  - job_name: 'jira-notification'
+      - targets: ['notification-service:8087']
+  - job_name: 'jira-search-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-notification:8088']
-
-  # Audit service
-  - job_name: 'jira-audit'
+      - targets: ['search-service:8088']
+  - job_name: 'jira-audit-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-audit:8089']
-
-  # OpenSearch metrics
-  - job_name: 'jira-opensearch'
+      - targets: ['audit-service:8089']
+  - job_name: 'jira-attachment-service'
+    metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-opensearch:9200']
-
-  # Redis metrics (via redis_exporter)
-  - job_name: 'jira-redis'
+      - targets: ['attachment-service:8090']
+  - job_name: 'jira-sprint-service'
+    metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-redis:6379']
-
-  # PostgreSQL metrics (via postgres_exporter)
-  - job_name: 'jira-postgres'
+      - targets: ['sprint-service:8091']
+  - job_name: 'jira-plan-service'
+    metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-postgres:5432']
-
-  # Kafka metrics (via kafka_exporter)
-  - job_name: 'jira-kafka'
+      - targets: ['plan-service:8092']
+  - job_name: 'jira-admin-service'
+    metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['jira-kafka:9092']
+      - targets: ['admin-service:8093']
+  - job_name: 'jira-migration-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['migration-service:8094']
+  - job_name: 'jira-test-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['test-service:8095']

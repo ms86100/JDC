@@ -365,3 +365,31 @@ spec:
       protocol: TCP
   selector:
     app: jira-minio
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-kafka
+  namespace: jira-platform
+spec:
+  type: ClusterIP
+  ports:
+    - name: client
+      port: 29092
+      targetPort: 29092
+  selector:
+    app: jira-kafka
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jira-zookeeper
+  namespace: jira-platform
+spec:
+  type: ClusterIP
+  ports:
+    - name: client
+      port: 2181
+      targetPort: 2181
+  selector:
+    app: jira-zookeeper

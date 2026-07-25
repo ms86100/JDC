@@ -1807,3 +1807,78 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
+---
+# =============================================================================
+# Zookeeper (Infrastructure)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-zookeeper
+  namespace: jira-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-zookeeper
+  template:
+    metadata:
+      labels:
+        app: jira-zookeeper
+    spec:
+      containers:
+        - name: zookeeper
+          image: confluentinc/cp-zookeeper:7.6.0
+          ports:
+            - containerPort: 2181
+          env:
+            - name: ZOOKEEPER_CLIENT_PORT
+              value: "2181"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 250m
+              memory: 512Mi
+---
+# =============================================================================
+# Kafka (Infrastructure)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-kafka
+  namespace: jira-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-kafka
+  template:
+    metadata:
+      labels:
+        app: jira-kafka
+    spec:
+      containers:
+        - name: kafka
+          image: confluentinc/cp-kafka:7.6.0
+          ports:
+            - containerPort: 9092
+            - containerPort: 29092
+          env:
+            - name: KAFKA_BROKER_ID
+              value: "1"
+            - name: KAFKA_ZOOKEEPER_CONNECT
+              value: "jira-zookeeper:2181"
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://jira-kafka:29092"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi

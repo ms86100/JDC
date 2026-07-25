@@ -7,3 +7,8 @@ com.jira.cluster.idempotency.IdempotencyAutoConfiguration
 com.jira.cluster.async.AsyncAutoConfiguration
 com.jira.cluster.health.HealthAutoConfiguration
 com.jira.cluster.resilience.ResilienceAutoConfiguration
+com.jira.cluster.auth.OAuth2AutoConfiguration
+com.jira.cluster.messaging.KafkaAutoConfiguration
+com.jira.cluster.datasource.DataSourceRoutingAutoConfiguration
+com.jira.cluster.tenant.TenantAutoConfiguration
+com.jira.cluster.archival.ArchivalAutoConfiguration
