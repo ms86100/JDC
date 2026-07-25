@@ -23,19 +23,25 @@ export default function PlansTopNavDropdown({ active }: PlansTopNavDropdownProps
   const wrapRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
 
-  const { data: plans = [] } = useQuery({
+  const { data: rawPlans } = useQuery({
     queryKey: ['plans-nav-recent'],
     queryFn: async () => {
-      const res = await planApi.getPlans();
-      return res.data ?? [];
+      try {
+        const res = await planApi.getPlans();
+        const d = res.data;
+        return Array.isArray(d) ? d : (d && Array.isArray(d.content)) ? d.content : [];
+      } catch {
+        return [];
+      }
     },
     staleTime: 60_000,
     retry: 1,
   });
+  const plans = Array.isArray(rawPlans) ? rawPlans : [];
 
   const recentIds = getRecentPlanViews();
   const recentPlans = recentIds
-    .map((id) => plans.find((p) => p.id === id))
+    .map((id: string) => plans.find((p: any) => p.id === id))
     .filter(Boolean)
     .slice(0, 5) as typeof plans;
 
