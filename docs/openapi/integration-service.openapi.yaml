@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
-  title: Jira Platform Integration Service API
+  title: Avionics Systems Platform Integration Service API
   description: |
     Application Links (Jira ↔ Confluence) and cross-product entity linking.
-    Implemented as stub on jira-admin-service (`/api/integration/**`) until jira-integration-service is extracted.
+    Implemented as stub on avionics-systems-admin-service (`/api/integration/**`) until avionics-systems-integration-service is extracted.
   version: 0.1.0
 servers:
   - url: http://localhost:8080
@@ -143,7 +143,7 @@ components:
           format: uri
         applicationType:
           type: string
-          enum: [confluence, jira, bitbucket, bamboo, generic]
+          enum: [confluence, legacy-tracker, bitbucket, bamboo, generic]
         direction:
           type: string
           enum: [incoming, outgoing, two-way]

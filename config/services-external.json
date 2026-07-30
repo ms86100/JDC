@@ -1,6 +1,6 @@
 {
   "platform": {
-    "name": "Jira Platform (External DB)",
+    "name": "Avionics Systems Platform (External DB)",
     "version": "1.0.0",
     "baseUrl": "http://localhost",
     "gatewayPort": 8080,
@@ -15,7 +15,7 @@
       "name": "auth-service",
       "displayName": "Authentication Service",
       "type": "backend",
-      "jarName": "jira-auth-service-1.0.0.jar",
+      "jarName": "avionics-systems-auth-service-1.0.0.jar",
       "port": 8081,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -36,7 +36,7 @@
         "DB_USERNAME": "systems_admin",
         "DB_PASSWORD": "Hcu4ieD8R13qaf7JVSsu",
         "SERVER_PORT": 8081,
-        "JWT_SECRET": "jira-platform-super-secret-key-that-is-at-least-256-bits-long",
+        "JWT_SECRET": "avionics-systems-platform-super-secret-key-that-is-at-least-256-bits-long",
         "JWT_EXPIRATION_MS": 86400000,
         "JWT_REFRESH_EXPIRATION_MS": 604800000
       }
@@ -45,7 +45,7 @@
       "name": "user-service",
       "displayName": "User Service",
       "type": "backend",
-      "jarName": "jira-user-service-1.0.0.jar",
+      "jarName": "avionics-systems-user-service-1.0.0.jar",
       "port": 8082,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -73,7 +73,7 @@
       "name": "project-service",
       "displayName": "Project Service",
       "type": "backend",
-      "jarName": "jira-project-service-1.0.0.jar",
+      "jarName": "avionics-systems-project-service-1.0.0.jar",
       "port": 8083,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -101,7 +101,7 @@
       "name": "issue-service",
       "displayName": "Issue Service",
       "type": "backend",
-      "jarName": "jira-issue-service-1.0.0.jar",
+      "jarName": "avionics-systems-issue-service-1.0.0.jar",
       "port": 8084,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -130,7 +130,7 @@
       "name": "workflow-service",
       "displayName": "Workflow Service",
       "type": "backend",
-      "jarName": "jira-workflow-service-1.0.0.jar",
+      "jarName": "avionics-systems-workflow-service-1.0.0.jar",
       "port": 8085,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -158,7 +158,7 @@
       "name": "comment-service",
       "displayName": "Comment Service",
       "type": "backend",
-      "jarName": "jira-comment-service-1.0.0.jar",
+      "jarName": "avionics-systems-comment-service-1.0.0.jar",
       "port": 8086,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -186,7 +186,7 @@
       "name": "notification-service",
       "displayName": "Notification Service",
       "type": "backend",
-      "jarName": "jira-notification-service-1.0.0.jar",
+      "jarName": "avionics-systems-notification-service-1.0.0.jar",
       "port": 8087,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -214,7 +214,7 @@
       "name": "search-service",
       "displayName": "Search Service",
       "type": "backend",
-      "jarName": "jira-search-service-1.0.0.jar",
+      "jarName": "avionics-systems-search-service-1.0.0.jar",
       "port": 8088,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -242,7 +242,7 @@
       "name": "audit-service",
       "displayName": "Audit Service",
       "type": "backend",
-      "jarName": "jira-audit-service-1.0.0.jar",
+      "jarName": "avionics-systems-audit-service-1.0.0.jar",
       "port": 8089,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -270,7 +270,7 @@
       "name": "attachment-service",
       "displayName": "Attachment Service",
       "type": "backend",
-      "jarName": "jira-attachment-service-1.0.0.jar",
+      "jarName": "avionics-systems-attachment-service-1.0.0.jar",
       "port": 8090,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -299,7 +299,7 @@
       "name": "sprint-service",
       "displayName": "Sprint Service",
       "type": "backend",
-      "jarName": "jira-sprint-service-1.0.0.jar",
+      "jarName": "avionics-systems-sprint-service-1.0.0.jar",
       "port": 8091,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -327,7 +327,7 @@
       "name": "plan-service",
       "displayName": "Plan Service",
       "type": "backend",
-      "jarName": "jira-plan-service-1.0.0.jar",
+      "jarName": "avionics-systems-plan-service-1.0.0.jar",
       "port": 8092,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -355,7 +355,7 @@
       "name": "admin-service",
       "displayName": "Admin Service",
       "type": "backend",
-      "jarName": "jira-admin-service-1.0.0.jar",
+      "jarName": "avionics-systems-admin-service-1.0.0.jar",
       "port": 8093,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -383,7 +383,7 @@
       "name": "migration-service",
       "displayName": "Migration Service",
       "type": "backend",
-      "jarName": "jira-migration-service-1.0.0.jar",
+      "jarName": "avionics-systems-migration-service-1.0.0.jar",
       "port": 8094,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -411,7 +411,7 @@
       "name": "gateway",
       "displayName": "API Gateway",
       "type": "gateway",
-      "jarName": "jira-gateway-1.0.0.jar",
+      "jarName": "avionics-systems-gateway-1.0.0.jar",
       "port": 8080,
       "healthEndpoint": "/actuator/health",
       "healthCheck": {
@@ -428,7 +428,7 @@
         "SPRING_PROFILES_ACTIVE": "local",
         "SERVER_PORT": 8080,
         "AUTH_SERVICE_URL": "http://localhost:8081",
-        "JWT_SECRET": "jira-platform-super-secret-key-that-is-at-least-256-bits-long"
+        "JWT_SECRET": "avionics-systems-platform-super-secret-key-that-is-at-least-256-bits-long"
       }
     },
     {

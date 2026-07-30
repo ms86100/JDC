@@ -1,5 +1,5 @@
 #!/bin/bash
-# Jira Platform Kubernetes Deployment Script
+# Avionics Systems Platform Kubernetes Deployment Script
 # Usage: ./deploy.sh [environment] [action]
 # Examples:
 #   ./deploy.sh prod apply
@@ -76,28 +76,28 @@ verify_deployment() {
     echo_info "Verifying deployment..."
 
     echo "Checking Pods..."
-    kubectl get pods -n jira-platform
+    kubectl get pods -n avionics-systems-platform
 
     echo ""
     echo "Checking Services..."
-    kubectl get svc -n jira-platform
+    kubectl get svc -n avionics-systems-platform
 
     echo ""
     echo "Checking Deployments..."
-    kubectl get deployments -n jira-platform
+    kubectl get deployments -n avionics-systems-platform
 
     echo ""
     echo "Checking HPA..."
-    kubectl get hpa -n jira-platform
+    kubectl get hpa -n avionics-systems-platform
 
     echo ""
     echo "Checking Ingress..."
-    kubectl get ingress -n jira-platform
+    kubectl get ingress -n avionics-systems-platform
 }
 
 # Main deployment
 main() {
-    echo_info "Starting Jira Platform deployment..."
+    echo_info "Starting Avionics Systems Platform deployment..."
     echo_info "Environment: $ENVIRONMENT"
     echo_info "Action: $ACTION"
 

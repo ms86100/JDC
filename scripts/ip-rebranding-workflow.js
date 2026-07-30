@@ -23,10 +23,10 @@ const NAMING_MAP = `
 | Maven artifactId | avionics-systems-xxx | avionics-systems-issue-service |
 | Spring app name | avionics-systems-xxx | name: avionics-systems-issue-service |
 | Config namespace jira: | avionics-systems: | avionics-systems.workflow.xxx |
-| @Value ${jira.xxx} | ${avionics-systems.xxx} | @Value("\${avionics-systems.permissions.fail-open}") |
+| @Value \${jira.xxx} | \${avionics-systems.xxx} | @Value("\\$\\{avionics-systems.permissions.fail-open}") |
 | DB schema jira_xxx | avionics_systems_xxx | avionics_systems_issue |
-| DB name jira_platform | avionics_systems_platform | jdbc:...avionics_systems_platform |
-| DB user jiraadmin | avionicsadmin | username: avionicsadmin |
+| DB name avionics_systems_platform | avionics_systems_platform | jdbc:...avionics_systems_platform |
+| DB user avionicsadmin | avionicsadmin | username: avionicsadmin |
 | Kafka group-id | avionics-systems-xxx | avionics-systems-issue-service |
 | Kafka trusted pkg | com.avionics_systems.xxx | com.avionics_systems.issue.events |
 | Kafka topics jira.xxx | avionics-systems.xxx | avionics-systems.issue.events |
@@ -35,8 +35,8 @@ const NAMING_MAP = `
 | Docker user/group jira | appuser | RUN adduser -S appuser |
 | Docker network | avionics-systems-network | networks: avionics-systems-network |
 | GHCR image | ghcr.io/ms86100/avionics-systems-xxx | ghcr.io/ms86100/avionics-systems-gateway |
-| Env var JIRA_XXX | AVIONICS_SYSTEMS_XXX | AVIONICS_SYSTEMS_PERMISSIONS_FAILOPEN |
-| Logging com.jira | com.avionics_systems | com.avionics_systems.issue: DEBUG |
+| Env var AVIONICS_SYSTEMS_XXX | AVIONICS_SYSTEMS_XXX | AVIONICS_SYSTEMS_PERMISSIONS_FAILOPEN |
+| Logging com.avionics_systems | com.avionics_systems | com.avionics_systems.issue: DEBUG |
 | S3 bucket jira-xxx | avionics-systems-xxx | avionics-systems-attachments |
 | Volume /var/jira | /var/avionics-systems | /var/avionics-systems/attachments |
 | JWT secret jira-platform | avionics-systems-platform | avionics-systems-platform-super-secret-key |
@@ -50,13 +50,13 @@ const CONTENT_CHANGE_INSTRUCTIONS = `
 
 ### 1. ALL Java files in src/main/java/ and src/test/java/
 For EVERY .java file:
-- package com.jira.{domain} → package com.avionics_systems.{domain}
-- import com.jira.{anything} → import com.avionics_systems.{anything}
-- "com.jira." (string literals) → "com.avionics_systems."
+- package com.avionics_systems.{domain} → package com.avionics_systems.{domain}
+- import com.avionics_systems.{anything} → import com.avionics_systems.{anything}
+- "com.avionics_systems." (string literals) → "com.avionics_systems."
 - "com\\\\.jira\\\\." (regex patterns) → "com\\\\.avionics_systems\\\\."
-- basePackages = "com.jira.xxx" → basePackages = "com.avionics_systems.xxx"
+- basePackages = "com.avionics_systems.xxx" → basePackages = "com.avionics_systems.xxx"
 - @Table(schema = "jira_xxx") → @Table(schema = "avionics_systems_xxx")
-- @Value("\${jira.xxx}") → @Value("\${avionics-systems.xxx}")
+- @Value("\\$\\{jira.xxx}") → @Value("\\$\\{avionics-systems.xxx}")
 - Class names starting with "Jira" → "AvionicsSystem" prefix (update class declaration AND file must be renamed)
 - Class names starting with "JiraDc" → "LegacyDc" prefix
 - Javadoc/comments mentioning "Jira" → "Avionics Systems" or "avionics-systems"
@@ -64,22 +64,22 @@ For EVERY .java file:
 - String literals containing "jira" → appropriate replacement per context
 
 ### 2. pom.xml
-- <groupId>com.jira</groupId> → <groupId>com.avionics_systems</groupId>
+- <groupId>com.avionics_systems</groupId> → <groupId>com.avionics_systems</groupId>
 - <artifactId>jira-xxx</artifactId> → <artifactId>avionics-systems-xxx</artifactId>
 - <name>jira-xxx</name> → <name>avionics-systems-xxx</name>
 - <description>Jira xxx</description> → <description>Avionics Systems xxx</description>
 - All <dependency> groupId/artifactId references to jira → avionics_systems/avionics-systems
-- mainClass references: com.jira → com.avionics_systems, JiraXxx → AvionicsSystemXxx
+- mainClass references: com.avionics_systems → com.avionics_systems, JiraXxx → AvionicsSystemXxx
 
 ### 3. application.yml / application-*.yml / bootstrap.yml
 - spring.application.name: jira-xxx → avionics-systems-xxx
-- JDBC URL default: jira_platform → avionics_systems_platform
+- JDBC URL default: avionics_systems_platform → avionics_systems_platform
 - hibernate.default_schema: jira_xxx → avionics_systems_xxx
 - jira: (top-level config key) → avionics-systems:
 - Kafka group-id: jira-xxx → avionics-systems-xxx
-- Kafka trusted.packages: com.jira → com.avionics_systems
-- Logging: com.jira → com.avionics_systems
-- Any inter-service URL defaults: http://jira-xxx → http://avionics-systems-xxx
+- Kafka trusted.packages: com.avionics_systems → com.avionics_systems
+- Logging: com.avionics_systems → com.avionics_systems
+- Any inter-service URL defaults: http://avionics-systems-xxx → http://avionics-systems-xxx
 
 ### 4. Dockerfile
 - User/group "jira" → "appuser"
@@ -87,10 +87,10 @@ For EVERY .java file:
 - Any labels/env with jira → avionics-systems
 
 ### 5. META-INF / Spring autoconfiguration files
-- Any class references: com.jira → com.avionics_systems
+- Any class references: com.avionics_systems → com.avionics_systems
 
 ### 6. logback-spring.xml / logback.xml
-- com.jira → com.avionics_systems
+- com.avionics_systems → com.avionics_systems
 
 ### 7. Create schema rename migration
 Add a NEW Flyway migration (next version number) that renames the schema:
@@ -125,7 +125,7 @@ ${CONTENT_CHANGE_INSTRUCTIONS}
 
 ## SPECIFIC TO THIS MODULE
 - This is a SHARED LIBRARY used by all services. Get it right.
-- Package root: com.jira.cluster → com.avionics_systems.cluster
+- Package root: com.avionics_systems.cluster → com.avionics_systems.cluster
 - Has Spring Boot auto-configuration in META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports — update ALL class references
 - KafkaTopics.java: rename topic constants from jira.xxx to avionics-systems.xxx
 - RedisClusterEventBus.java: rename channel prefixes from jira: to avionics-systems:
@@ -159,29 +159,29 @@ log('Cluster-commons rebranded. Now rebranding all services in parallel...')
 phase('RebrandServices')
 
 const SERVICES = [
-  { name: 'jira-issue-service', domain: 'issue', schema: 'jira_issue', nextMigration: 'V26', classPrefix: 'JiraIssueServiceApplication' },
-  { name: 'jira-project-service', domain: 'project', schema: 'jira_project', nextMigration: 'V10', classPrefix: 'JiraProjectServiceApplication' },
-  { name: 'jira-workflow-service', domain: 'workflow', schema: 'jira_workflow', nextMigration: 'V27', classPrefix: 'JiraWorkflowServiceApplication' },
-  { name: 'jira-sprint-service', domain: 'sprint', schema: 'jira_sprint', nextMigration: 'V9', classPrefix: 'JiraSprintServiceApplication', extraPackages: 'board' },
-  { name: 'jira-plan-service', domain: 'plan', schema: 'jira_plan', nextMigration: 'V31', classPrefix: 'JiraPlanServiceApplication', extraPackages: 'admin' },
-  { name: 'jira-user-service', domain: 'user', schema: 'jira_admin', nextMigration: 'V5', classPrefix: 'JiraUserServiceApplication' },
-  { name: 'jira-auth-service', domain: 'auth', schema: 'jira_auth', nextMigration: 'V3', classPrefix: 'JiraAuthServiceApplication' },
-  { name: 'jira-notification-service', domain: 'notification', schema: 'jira_notification', nextMigration: 'V6', classPrefix: 'JiraNotificationServiceApplication' },
-  { name: 'jira-search-service', domain: 'search', schema: 'jira_search', nextMigration: 'V3', classPrefix: 'JiraSearchServiceApplication' },
-  { name: 'jira-report-service', domain: 'report', schema: 'jira_report', nextMigration: 'V2', classPrefix: 'JiraReportServiceApplication' },
-  { name: 'jira-comment-service', domain: 'comment', schema: 'jira_comment', nextMigration: 'V4', classPrefix: 'JiraCommentServiceApplication' },
-  { name: 'jira-component-service', domain: 'component', schema: 'jira_component', nextMigration: 'V3', classPrefix: 'JiraComponentServiceApplication' },
-  { name: 'jira-version-service', domain: 'version', schema: 'jira_version', nextMigration: 'V3', classPrefix: 'JiraVersionServiceApplication' },
-  { name: 'jira-attachment-service', domain: 'attachment', schema: 'jira_attachment', nextMigration: 'V2', classPrefix: 'JiraAttachmentServiceApplication' },
-  { name: 'jira-audit-service', domain: 'audit', schema: 'jira_audit', nextMigration: 'V4', classPrefix: 'JiraAuditServiceApplication' },
-  { name: 'jira-dashboard-service', domain: 'dashboard', schema: 'jira_dashboard', nextMigration: 'V3', classPrefix: 'JiraDashboardServiceApplication' },
-  { name: 'jira-document-service', domain: 'document', schema: 'jira_document', nextMigration: 'V2', classPrefix: 'JiraDocumentServiceApplication' },
-  { name: 'jira-admin-service', domain: 'admin', schema: 'jira_admin', nextMigration: 'V11', classPrefix: 'JiraAdminServiceApplication' },
-  { name: 'jira-portal-service', domain: 'portal', schema: 'jira_portal', nextMigration: 'V2', classPrefix: 'JiraPortalServiceApplication' },
-  { name: 'jira-test-service', domain: 'test', schema: 'jira_test', nextMigration: 'V15', classPrefix: 'JiraTestServiceApplication' },
-  { name: 'jira-migration-service', domain: 'migration', schema: 'jira_migration', nextMigration: 'V26', classPrefix: 'JiraMigrationServiceApplication' },
-  { name: 'jira-marketplace-plugin', domain: 'plugin', schema: null, nextMigration: null, classPrefix: 'JiraMarketplacePluginApplication' },
-  { name: 'jira-gateway', domain: 'gateway', schema: null, nextMigration: null, classPrefix: 'JiraGatewayApplication' },
+  { name: 'avionics-systems-issue-service', domain: 'issue', schema: 'avionics_systems_issue', nextMigration: 'V26', classPrefix: 'JiraIssueServiceApplication' },
+  { name: 'avionics-systems-project-service', domain: 'project', schema: 'avionics_systems_project', nextMigration: 'V10', classPrefix: 'JiraProjectServiceApplication' },
+  { name: 'avionics-systems-workflow-service', domain: 'workflow', schema: 'avionics_systems_workflow', nextMigration: 'V27', classPrefix: 'JiraWorkflowServiceApplication' },
+  { name: 'avionics-systems-sprint-service', domain: 'sprint', schema: 'avionics_systems_sprint', nextMigration: 'V9', classPrefix: 'JiraSprintServiceApplication', extraPackages: 'board' },
+  { name: 'avionics-systems-plan-service', domain: 'plan', schema: 'avionics_systems_plan', nextMigration: 'V31', classPrefix: 'JiraPlanServiceApplication', extraPackages: 'admin' },
+  { name: 'avionics-systems-user-service', domain: 'user', schema: 'avionics_systems_admin', nextMigration: 'V5', classPrefix: 'JiraUserServiceApplication' },
+  { name: 'avionics-systems-auth-service', domain: 'auth', schema: 'avionics_systems_auth', nextMigration: 'V3', classPrefix: 'JiraAuthServiceApplication' },
+  { name: 'avionics-systems-notification-service', domain: 'notification', schema: 'avionics_systems_notification', nextMigration: 'V6', classPrefix: 'JiraNotificationServiceApplication' },
+  { name: 'avionics-systems-search-service', domain: 'search', schema: 'avionics_systems_search', nextMigration: 'V3', classPrefix: 'JiraSearchServiceApplication' },
+  { name: 'avionics-systems-report-service', domain: 'report', schema: 'jira_report', nextMigration: 'V2', classPrefix: 'JiraReportServiceApplication' },
+  { name: 'avionics-systems-comment-service', domain: 'comment', schema: 'avionics_systems_comment', nextMigration: 'V4', classPrefix: 'JiraCommentServiceApplication' },
+  { name: 'avionics-systems-component-service', domain: 'component', schema: 'avionics_systems_component', nextMigration: 'V3', classPrefix: 'JiraComponentServiceApplication' },
+  { name: 'avionics-systems-version-service', domain: 'version', schema: 'avionics_systems_version', nextMigration: 'V3', classPrefix: 'JiraVersionServiceApplication' },
+  { name: 'avionics-systems-attachment-service', domain: 'attachment', schema: 'avionics_systems_attachment', nextMigration: 'V2', classPrefix: 'JiraAttachmentServiceApplication' },
+  { name: 'avionics-systems-audit-service', domain: 'audit', schema: 'avionics_systems_audit', nextMigration: 'V4', classPrefix: 'JiraAuditServiceApplication' },
+  { name: 'avionics-systems-dashboard-service', domain: 'dashboard', schema: 'jira_dashboard', nextMigration: 'V3', classPrefix: 'JiraDashboardServiceApplication' },
+  { name: 'avionics-systems-document-service', domain: 'document', schema: 'jira_document', nextMigration: 'V2', classPrefix: 'JiraDocumentServiceApplication' },
+  { name: 'avionics-systems-admin-service', domain: 'admin', schema: 'avionics_systems_admin', nextMigration: 'V11', classPrefix: 'JiraAdminServiceApplication' },
+  { name: 'avionics-systems-portal-service', domain: 'portal', schema: 'jira_portal', nextMigration: 'V2', classPrefix: 'JiraPortalServiceApplication' },
+  { name: 'avionics-systems-test-service', domain: 'test', schema: 'jira_test', nextMigration: 'V15', classPrefix: 'JiraTestServiceApplication' },
+  { name: 'avionics-systems-migration-service', domain: 'migration', schema: 'avionics_systems_migration', nextMigration: 'V26', classPrefix: 'JiraMigrationServiceApplication' },
+  { name: 'avionics-systems-marketplace-plugin', domain: 'plugin', schema: null, nextMigration: null, classPrefix: 'JiraMarketplacePluginApplication' },
+  { name: 'avionics-systems-gateway', domain: 'gateway', schema: null, nextMigration: null, classPrefix: 'JiraGatewayApplication' },
 ]
 
 const serviceResults = await parallel(SERVICES.map(svc => () =>
@@ -189,7 +189,7 @@ const serviceResults = await parallel(SERVICES.map(svc => () =>
 
 PROJECT ROOT: ${PROJECT_ROOT}
 SERVICE: ${svc.name}/
-DOMAIN PACKAGE: ${svc.domain}${svc.extraPackages ? ' (also has sub-package: ' + svc.extraPackages + ' under com.jira)' : ''}
+DOMAIN PACKAGE: ${svc.domain}${svc.extraPackages ? ' (also has sub-package: ' + svc.extraPackages + ' under com.avionics_systems)' : ''}
 DB SCHEMA: ${svc.schema || 'none'}
 APP CLASS: ${svc.classPrefix}
 
@@ -206,11 +206,11 @@ ${svc.schema && svc.nextMigration ?
 - Application class: ${svc.classPrefix} → rename to AvionicsSystem${svc.classPrefix.replace('Jira', '').replace('ServiceApplication', 'ServiceApplication')}
 - Main class reference in pom.xml must be updated to match
 - Check for any test classes that reference the old class name
-- Check application.yml for inter-service URLs like http://jira-xxx-service:port → http://avionics-systems-xxx-service:port
+- Check application.yml for inter-service URLs like http://avionics-systems-xxx-service:port → http://avionics-systems-xxx-service:port
 - The cluster-commons dependency has ALREADY been rebranded to com.avionics_systems / avionics-systems-cluster-commons — use the new coordinates
-${svc.domain === 'user' ? '- NOTE: This service uses jira_admin schema (shared with admin-service). The schema rename migration should only be in ONE service (admin-service handles it). Just update @Table annotations here.' : ''}
-${svc.domain === 'sprint' ? '- NOTE: Has TWO domain packages under com.jira: "sprint" AND "board". Move BOTH to com.avionics_systems.' : ''}
-${svc.domain === 'plan' ? '- NOTE: Has TWO domain packages under com.jira: "plan" AND "admin". Move BOTH to com.avionics_systems.' : ''}
+${svc.domain === 'user' ? '- NOTE: This service uses avionics_systems_admin schema (shared with admin-service). The schema rename migration should only be in ONE service (admin-service handles it). Just update @Table annotations here.' : ''}
+${svc.domain === 'sprint' ? '- NOTE: Has TWO domain packages under com.avionics_systems: "sprint" AND "board". Move BOTH to com.avionics_systems.' : ''}
+${svc.domain === 'plan' ? '- NOTE: Has TWO domain packages under com.avionics_systems: "plan" AND "admin". Move BOTH to com.avionics_systems.' : ''}
 
 ## Steps
 1. Read the full list of Java files to understand scope
@@ -255,9 +255,9 @@ DIRECTORY: jira-frontend/
 | Component name Jira* | AviSys* | AviSysGlobalLayout |
 | React query key 'jira*' | 'avisys*' | queryKey: ['avisysUsers'] |
 | API type JiraDc* | LegacyDc* | LegacyDcValidateResponse |
-| Import type 'jira-dc' | 'legacy-dc' | type: 'legacy-dc' |
+| Import type 'avionics-systems-dc' | 'legacy-dc' | type: 'legacy-dc' |
 | localStorage jira-* | avisys-* | avisys-test-settings |
-| Env var VITE_JIRA_* | VITE_AVISYS_* | VITE_AVISYS_API_URL |
+| Env var VITE_AVIONICS_SYSTEMS_* | VITE_AVISYS_* | VITE_AVISYS_API_URL |
 | Display text "Jira" | "Avionics Systems" | <title>Avionics Systems</title> |
 | API path /jira/ | /avisys/ or just remove | fetch('/api/avisys/...') |
 | CSS file jira-*.css | avisys-*.css | avisys-classic.css |
@@ -350,7 +350,7 @@ mv jira-backend avionics-systems-backend (if exists and not already renamed)
 
 ## 2. Update Root pom.xml
 Read pom.xml at project root. Update:
-- <groupId>com.jira</groupId> → <groupId>com.avionics_systems</groupId>
+- <groupId>com.avionics_systems</groupId> → <groupId>com.avionics_systems</groupId>
 - <artifactId>jira-platform</artifactId> → <artifactId>avionics-systems-platform</artifactId>
 - <name> and <description>
 - ALL <module> entries: jira-xxx → avionics-systems-xxx
@@ -370,13 +370,13 @@ In each file, update:
 - Service names (YAML keys): jira-xxx → avionics-systems-xxx
 - container_name: jira-xxx → avionics-systems-xxx
 - image: jira-xxx → avionics-systems-xxx
-- image: ghcr.io/ms86100/jira-xxx → ghcr.io/ms86100/avionics-systems-xxx
-- build.context: ./jira-xxx → ./avionics-systems-xxx
+- image: ghcr.io/ms86100/avionics-systems-xxx → ghcr.io/ms86100/avionics-systems-xxx
+- build.context: ./avionics-systems-xxx → ./avionics-systems-xxx
 - depends_on references
-- environment variables: DB_NAME jira_platform → avionics_systems_platform, DB_USER jiraadmin → avionicsadmin
+- environment variables: DB_NAME avionics_systems_platform → avionics_systems_platform, DB_USER avionicsadmin → avionicsadmin
 - JWT_SECRET defaults containing jira → avionics-systems
-- JIRA_xxx env vars → AVIONICS_SYSTEMS_xxx
-- networks: jira-network → avionics-systems-network
+- AVIONICS_SYSTEMS_xxx env vars → AVIONICS_SYSTEMS_xxx
+- networks: avionics-systems-network → avionics-systems-network
 - volumes with jira → avionics-systems
 - Any S3/MinIO bucket names with jira → avionics-systems
 
@@ -431,8 +431,8 @@ NOTE: All service directories have been renamed from jira-* to avionics-systems-
 
 3. If compilation fails, analyze the errors:
    Common issues after rebranding:
-   a. Missed package rename — file still has "com.jira" package declaration
-   b. Missed import — import still references "com.jira"
+   a. Missed package rename — file still has "com.avionics_systems" package declaration
+   b. Missed import — import still references "com.avionics_systems"
    c. Class name mismatch — filename says AvionicsSystem but class declaration still says Jira
    d. Missed @Table schema — annotation still says jira_xxx instead of avionics_systems_xxx
    e. Missed @Value property — still references \${jira.xxx}

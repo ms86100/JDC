@@ -1,0 +1,21 @@
+package com.avionics_systems.project.repository;
+
+import com.avionics_systems.project.entity.Project;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public interface ProjectRepository extends JpaRepository<Project, UUID> {
+
+    Optional<Project> findByProjectKey(String projectKey);
+
+    boolean existsByProjectKey(String projectKey);
+
+    List<Project> findByArchivedTrue();
+
+    List<Project> findByArchivedFalse();
+}

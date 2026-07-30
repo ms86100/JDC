@@ -204,7 +204,7 @@ def main():
 
     # 3. Get issue key -> UUID mapping
     issue_rows = query_sql(
-        "SELECT issue_key, id FROM jira_issue.issues "
+        "SELECT issue_key, id FROM avionics_systems_issue.issues "
         "WHERE project_id = '" + PROJECT_ID + "'"
     )
     issue_map = {r[0]: r[1] for r in issue_rows}
@@ -224,7 +224,7 @@ def main():
         renderer = renderer_for_type(ftype)
 
         sql = (
-            "INSERT INTO jira_migration.field_definitions "
+            "INSERT INTO avionics_systems_migration.field_definitions "
             "(id, field_key, display_name, field_type, renderer, screen_region, "
             "searchable, sortable, filterable, required, read_only, hidden, "
             "custom, built_in, deprecated, version, created_at, updated_at, navigable) "
@@ -250,7 +250,7 @@ def main():
 
     # 5. Get actual field IDs (in case ON CONFLICT used existing IDs)
     field_rows = query_sql(
-        "SELECT field_key, id FROM jira_migration.field_definitions WHERE custom = true"
+        "SELECT field_key, id FROM avionics_systems_migration.field_definitions WHERE custom = true"
     )
     field_key_to_id = {r[0]: r[1] for r in field_rows}
 
@@ -286,7 +286,7 @@ def main():
                 try:
                     num_val = float(value)
                     sql = (
-                        "INSERT INTO jira_migration.issue_field_values "
+                        "INSERT INTO avionics_systems_migration.issue_field_values "
                         "(id, issue_id, field_definition_id, string_value, double_value, "
                         "formatted_value, raw_value, validation_status, value_source, "
                         "searchable_text, version, created_at, updated_at) "
@@ -300,7 +300,7 @@ def main():
                     sql = None
             else:
                 sql = (
-                    "INSERT INTO jira_migration.issue_field_values "
+                    "INSERT INTO avionics_systems_migration.issue_field_values "
                     "(id, issue_id, field_definition_id, string_value, "
                     "formatted_value, raw_value, validation_status, value_source, "
                     "searchable_text, version, created_at, updated_at) "
@@ -326,20 +326,20 @@ def main():
     # 7. Verify
     print("\n=== Verification ===")
     count_rows = query_sql(
-        "SELECT COUNT(*) FROM jira_migration.field_definitions WHERE custom = true"
+        "SELECT COUNT(*) FROM avionics_systems_migration.field_definitions WHERE custom = true"
     )
     print("Custom field definitions: {}".format(count_rows[0][0] if count_rows else 0))
 
     count_rows = query_sql(
-        "SELECT COUNT(*) FROM jira_migration.issue_field_values WHERE value_source = 'CSV_IMPORT'"
+        "SELECT COUNT(*) FROM avionics_systems_migration.issue_field_values WHERE value_source = 'CSV_IMPORT'"
     )
     print("Custom field values: {}".format(count_rows[0][0] if count_rows else 0))
 
     # Show sample
     sample_rows = query_sql(
         "SELECT d.display_name, COUNT(*) as cnt "
-        "FROM jira_migration.issue_field_values v "
-        "JOIN jira_migration.field_definitions d ON v.field_definition_id = d.id "
+        "FROM avionics_systems_migration.issue_field_values v "
+        "JOIN avionics_systems_migration.field_definitions d ON v.field_definition_id = d.id "
         "WHERE v.value_source = 'CSV_IMPORT' "
         "GROUP BY d.display_name ORDER BY cnt DESC LIMIT 10"
     )

@@ -1,5 +1,5 @@
 networks:
-  jira-network:
+  avionics-systems-network:
     driver: bridge
 
 volumes:
@@ -14,59 +14,60 @@ services:
   # =============================================================================
   postgres:
     image: postgres:16-alpine
-    container_name: jira-postgres
+    container_name: avionics-systems-postgres
     command: postgres -c max_connections=300
     environment:
-      POSTGRES_USER: jiraadmin
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-jirapass}
-      POSTGRES_DB: jira_platform
+      POSTGRES_USER: avionicsadmin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-avionicspass}
+      POSTGRES_DB: avionics_systems_platform
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init/init-schemas.sql:/docker-entrypoint-initdb.d/init-schemas.sql
     ports:
       - "5432:5432"
     networks:
-      - jira-network
+      - avionics-systems-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jiraadmin"]
+      test: ["CMD-SHELL", "pg_isready -U avionicsadmin"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   postgres-replica:
     image: postgres:16-alpine
-    container_name: jira-postgres-replica
+    container_name: avionics-systems-postgres-replica
     environment:
-      POSTGRES_USER: jiraadmin
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-jirapass}
-      POSTGRES_DB: jira_platform
+      PGPASSWORD: ${DB_PASSWORD:-avionicspass}
     command: >
       bash -c "
-      until pg_isready -h jira-postgres -U jiraadmin; do sleep 2; done;
-      pg_basebackup -h jira-postgres -U jiraadmin -D /var/lib/postgresql/data -Fp -Xs -R;
-      postgres -c hot_standby=on
+      until pg_isready -h avionics-systems-postgres -U avionicsadmin; do sleep 2; done;
+      rm -rf /var/lib/postgresql/data/*;
+      chown postgres:postgres /var/lib/postgresql/data;
+      chmod 700 /var/lib/postgresql/data;
+      su postgres -c 'pg_basebackup -h avionics-systems-postgres -U avionicsadmin -D /var/lib/postgresql/data -Fp -Xs -R';
+      su postgres -c 'postgres -c hot_standby=on -c max_connections=300'
       "
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - jira-network
+      - avionics-systems-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jiraadmin"]
+      test: ["CMD-SHELL", "pg_isready -U avionicsadmin -d avionics_systems_platform"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: jira-redis
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-jiraRedis2026!}
+    container_name: avionics-systems-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-avionicsRedis2026!}
     volumes:
       - redis_data:/data
     ports:
       - "6379:6379"
     networks:
-      - jira-network
+      - avionics-systems-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -75,7 +76,7 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: jira-minio
+    container_name: avionics-systems-minio
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -86,7 +87,7 @@ services:
       - "9000:9000"
       - "9001:9001"
     networks:
-      - jira-network
+      - avionics-systems-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
@@ -95,12 +96,12 @@ services:
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
-    container_name: jira-zookeeper
+    container_name: avionics-systems-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     networks:
-      - jira-network
+      - avionics-systems-network
     healthcheck:
       test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181"]
       interval: 10s
@@ -109,7 +110,7 @@ services:
 
   kafka:
     image: confluentinc/cp-kafka:7.6.0
-    container_name: jira-kafka
+    container_name: avionics-systems-kafka
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -124,7 +125,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks:
-      - jira-network
+      - avionics-systems-network
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 15s
@@ -134,29 +135,29 @@ services:
 
   zipkin:
     image: openzipkin/zipkin:latest
-    container_name: jira-zipkin
+    container_name: avionics-systems-zipkin
     ports:
       - "9411:9411"
     networks:
-      - jira-network
+      - avionics-systems-network
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: jira-prometheus
+    container_name: avionics-systems-prometheus
     volumes:
       - ./enterprise-architecture/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - ./enterprise-architecture/monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml
     ports:
       - "9090:9090"
     networks:
-      - jira-network
+      - avionics-systems-network
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.retention.time=30d'
 
   grafana:
     image: grafana/grafana:latest
-    container_name: jira-grafana
+    container_name: avionics-systems-grafana
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
@@ -167,7 +168,7 @@ services:
     ports:
       - "3001:3000"
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       - prometheus
 
@@ -178,19 +179,23 @@ services:
   # =============================================================================
   gateway:
     build:
-      context: ./jira-gateway
+      context: ./avionics-systems-gateway
       dockerfile: Dockerfile
-    image: jira-gateway:latest
+    image: avionics-systems-gateway:latest
     ports:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      JWT_SECRET: avionics-systems-platform-super-secret-key-that-is-at-least-256-bits-long
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       - auth-service
       - user-service
@@ -204,24 +209,27 @@ services:
   # =============================================================================
   auth-service:
     build:
-      context: ./jira-auth-service
+      context: ./avionics-systems-auth-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
-      JWT_SECRET: jira-platform-super-secret-key-that-is-at-least-256-bits-long
+      JWT_SECRET: avionics-systems-platform-super-secret-key-that-is-at-least-256-bits-long
       JWT_EXPIRATION_MS: 900000
       JWT_REFRESH_EXPIRATION_MS: 28800000
+      ADMIN_PASSWORD: Admin123!
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -236,22 +244,25 @@ services:
 
   user-service:
     build:
-      context: ./jira-user-service
+      context: ./avionics-systems-user-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -268,21 +279,24 @@ services:
 
   project-service:
     build:
-      context: ./jira-project-service
+      context: ./avionics-systems-project-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -299,28 +313,31 @@ services:
 
   issue-service:
     build:
-      context: ./jira-issue-service
+      context: ./avionics-systems-issue-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       WORKFLOW_SERVICE_URL: http://workflow-service:8085
       PROJECT_SERVICE_URL: http://project-service:8083
       VERSION_SERVICE_URL: http://version-service:8096
-      JIRA_PERMISSIONS_FAILOPEN: "false"
-      JIRA_WORKFLOW_TRANSITION_FALLBACK: "true"
+      AVIONICS_SYSTEMS_PERMISSIONS_FAILOPEN: "false"
+      AVIONICS_SYSTEMS_WORKFLOW_TRANSITION_FALLBACK: "true"
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -337,15 +354,15 @@ services:
 
   workflow-service:
     build:
-      context: ./jira-workflow-service
+      context: ./avionics-systems-workflow-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       ISSUE_SERVICE_URL: http://issue-service:8084
       COMMENT_SERVICE_URL: http://comment-service:8086
@@ -358,20 +375,23 @@ services:
       COMPONENT_SERVICE_URL: http://component-service:8097
       PLAN_SERVICE_URL: http://plan-service:8092
       SPRINT_SERVICE_URL: http://sprint-service:8091
-      JIRA_PERMISSIONS_FAILOPEN: "false"
-      JIRA_SCRIPTING_ENABLED: "true"
-      JIRA_SCRIPTING_TIMEOUT_MS: "5000"
-      JIRA_SCRIPTING_MEMORY_LIMIT_MB: "64"
-      JIRA_SCRIPTING_MAX_STATEMENTS: "500000"
-      JIRA_SCRIPTING_SCHEDULED_ENABLED: "true"
-      JIRA_SCRIPTING_SQL_WRITE_ENABLED: "false"
-      JIRA_SCRIPTING_SCHEDULED_POLL_INTERVAL_MS: "30000"
+      AVIONICS_SYSTEMS_PERMISSIONS_FAILOPEN: "false"
+      AVIONICS_SYSTEMS_SCRIPTING_ENABLED: "true"
+      AVIONICS_SYSTEMS_SCRIPTING_TIMEOUT_MS: "5000"
+      AVIONICS_SYSTEMS_SCRIPTING_MEMORY_LIMIT_MB: "64"
+      AVIONICS_SYSTEMS_SCRIPTING_MAX_STATEMENTS: "500000"
+      AVIONICS_SYSTEMS_SCRIPTING_SCHEDULED_ENABLED: "true"
+      AVIONICS_SYSTEMS_SCRIPTING_SQL_WRITE_ENABLED: "false"
+      AVIONICS_SYSTEMS_SCRIPTING_SCHEDULED_POLL_INTERVAL_MS: "30000"
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -388,22 +408,25 @@ services:
 
   comment-service:
     build:
-      context: ./jira-comment-service
+      context: ./avionics-systems-comment-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -420,24 +443,27 @@ services:
 
   notification-service:
     build:
-      context: ./jira-notification-service
+      context: ./avionics-systems-notification-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       WORKFLOW_SERVICE_URL: http://workflow-service:8085
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -454,23 +480,26 @@ services:
 
   search-service:
     build:
-      context: ./jira-search-service
+      context: ./avionics-systems-search-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -487,23 +516,26 @@ services:
 
   audit-service:
     build:
-      context: ./jira-audit-service
+      context: ./avionics-systems-audit-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -523,25 +555,27 @@ services:
   # =============================================================================
   attachment-service:
     build:
-      context: ./jira-attachment-service
+      context: ./avionics-systems-attachment-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
-      ATTACHMENT_STORAGE_PATH: /var/jira/attachments
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
+      ATTACHMENT_STORAGE_PATH: /var/avionics-systems/attachments
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     volumes:
-      - attachment_data:/var/jira/attachments
+      - attachment_data:/var/avionics-systems/attachments
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -561,21 +595,24 @@ services:
   # =============================================================================
   sprint-service:
     build:
-      context: ./jira-sprint-service
+      context: ./avionics-systems-sprint-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -595,21 +632,24 @@ services:
   # =============================================================================
   version-service:
     build:
-      context: ./jira-version-service
+      context: ./avionics-systems-version-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -629,21 +669,24 @@ services:
   # =============================================================================
   component-service:
     build:
-      context: ./jira-component-service
+      context: ./avionics-systems-component-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -663,21 +706,24 @@ services:
   # =============================================================================
   plan-service:
     build:
-      context: ./jira-plan-service
+      context: ./avionics-systems-plan-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -697,21 +743,26 @@ services:
   # =============================================================================
   admin-service:
     build:
-      context: ./jira-admin-service
+      context: ./avionics-systems-admin-service
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/avionics_systems_platform?stringtype=unspecified
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -731,16 +782,16 @@ services:
   # =============================================================================
   migration-service:
     build:
-      context: ./jira-migration-service
+      context: ./avionics-systems-migration-service
       dockerfile: Dockerfile
-    image: jira-migration-service:latest
+    image: avionics-systems-migration-service:latest
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
       GATEWAY_SERVICE_URL: http://gateway:8080
       AUTH_SERVICE_URL: http://auth-service:8081
@@ -759,9 +810,12 @@ services:
       TEST_SERVICE_URL: http://test-service:8095
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-jiraRedis2026!}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -781,16 +835,61 @@ services:
       start_period: 240s
 
   # =============================================================================
+  # TEST SERVICE
+  # =============================================================================
+  test-service:
+    build:
+      context: ./avionics-systems-test-service
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:+UseSerialGC
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-avionicsRedis2026!}
+      ISSUE_SERVICE_URL: http://issue-service:8084
+      PROJECT_SERVICE_URL: http://project-service:8083
+      WORKFLOW_SERVICE_URL: http://workflow-service:8085
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
+      CLUSTER_STORAGE_BASE_PATH: /var/avionics-systems/shared
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    networks:
+      - avionics-systems-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      issue-service:
+        condition: service_started
+      project-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8095/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 240s
+
+  # =============================================================================
   # FRONTEND (ports allowed — user-facing)
   # =============================================================================
   frontend:
     build:
-      context: ./jira-frontend
+      context: ./avionics-systems-frontend
       dockerfile: Dockerfile
-    container_name: jira-frontend
+    container_name: avionics-systems-frontend
     ports:
       - "3000:80"
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       - gateway

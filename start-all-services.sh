@@ -10,7 +10,7 @@ DB_URL="jdbc:postgresql://in0-eplmdb-v01:5432/systems"
 DB_USER="systems_admin"
 DB_PASS="Hcu4ieD8R13qaf7JVSsu"
 
-COMMON_ARGS="-Dspring.datasource.url=$DB_URL -Dspring.datasource.username=$DB_USER -Dspring.datasource.password=$DB_PASS -Dspring.flyway.url=$DB_URL -Dspring.flyway.user=$DB_USER -Dspring.flyway.password=$DB_PASS -Dspring.flyway.validate-on-migrate=false -Djira.permissions.fail-open=true -Dspring.jpa.hibernate.ddl-auto=none -Dmanagement.health.redis.enabled=false -Dmigration.security.enabled=false -Dspring.datasource.hikari.maximum-pool-size=5 -Dspring.datasource.hikari.minimum-idle=1"
+COMMON_ARGS="-Dspring.datasource.url=$DB_URL -Dspring.datasource.username=$DB_USER -Dspring.datasource.password=$DB_PASS -Dspring.flyway.url=$DB_URL -Dspring.flyway.user=$DB_USER -Dspring.flyway.password=$DB_PASS -Dspring.flyway.validate-on-migrate=false -Davionics-systems.permissions.fail-open=true -Dspring.jpa.hibernate.ddl-auto=none -Dmanagement.health.redis.enabled=false -Dmigration.security.enabled=false -Dspring.datasource.hikari.maximum-pool-size=5 -Dspring.datasource.hikari.minimum-idle=1"
 
 stop_all() {
   echo "Stopping all services..."
@@ -40,10 +40,10 @@ start_service() {
 
 start_plan_service() {
   echo -n "  Starting plan-service (8092) from compiled classes... "
-  cd "$BASE/jira-plan-service"
+  cd "$BASE/avionics-systems-plan-service"
   CP="target/classes"
   for jar in target/deps/BOOT-INF/lib/*.jar; do CP="$CP;$jar"; done
-  nohup java -Xms256m -Xmx256m $COMMON_ARGS -cp "$CP" com.jira.plan.JiraPlanServiceApplication --server.port=8092 > "$LOGDIR/plan.log" 2>&1 &
+  nohup java -Xms256m -Xmx256m $COMMON_ARGS -cp "$CP" com.avionics_systems.plan.JiraPlanServiceApplication --server.port=8092 > "$LOGDIR/plan.log" 2>&1 &
   echo "PID $!"
   cd "$BASE"
 }
@@ -58,36 +58,36 @@ echo "============================================="
 echo ""
 
 echo "--- WAVE 1: Backend services ---"
-start_service "auth"         "$BASE/jira-auth-service/target/jira-auth-service-1.0.0.jar"               8081 256m
-start_service "user"         "$BASE/jira-user-service/target/jira-user-service-1.0.0.jar"               8082 256m
-start_service "project"      "$BASE/jira-project-service/target/jira-project-service-1.0.0.jar"         8083 256m
-start_service "issue"        "$BASE/jira-issue-service/target/jira-issue-service-1.0.0.jar"             8084 512m
-start_service "workflow"     "$BASE/jira-workflow-service/target/jira-workflow-service-1.0.0.jar"        8085 256m
-start_service "comment"      "$BASE/jira-comment-service/target/jira-comment-service-1.0.0.jar"         8086 256m
-start_service "notification" "$BASE/jira-notification-service/target/jira-notification-service-1.0.0.jar" 8087 256m
-start_service "search"       "$BASE/jira-search-service/target/jira-search-service-1.0.0.jar"           8088 256m
-start_service "audit"        "$BASE/jira-audit-service/target/jira-audit-service-1.0.0.jar"             8089 256m
-start_service "attachment"   "$BASE/jira-attachment-service/target/jira-attachment-service-1.0.0.jar"    8090 512m
-start_service "sprint"       "$BASE/jira-sprint-service/target/jira-sprint-service-1.0.0.jar"           8091 256m
+start_service "auth"         "$BASE/avionics-systems-auth-service/target/avionics-systems-auth-service-1.0.0.jar"               8081 256m
+start_service "user"         "$BASE/avionics-systems-user-service/target/avionics-systems-user-service-1.0.0.jar"               8082 256m
+start_service "project"      "$BASE/avionics-systems-project-service/target/avionics-systems-project-service-1.0.0.jar"         8083 256m
+start_service "issue"        "$BASE/avionics-systems-issue-service/target/avionics-systems-issue-service-1.0.0.jar"             8084 512m
+start_service "workflow"     "$BASE/avionics-systems-workflow-service/target/avionics-systems-workflow-service-1.0.0.jar"        8085 256m
+start_service "comment"      "$BASE/avionics-systems-comment-service/target/avionics-systems-comment-service-1.0.0.jar"         8086 256m
+start_service "notification" "$BASE/avionics-systems-notification-service/target/avionics-systems-notification-service-1.0.0.jar" 8087 256m
+start_service "search"       "$BASE/avionics-systems-search-service/target/avionics-systems-search-service-1.0.0.jar"           8088 256m
+start_service "audit"        "$BASE/avionics-systems-audit-service/target/avionics-systems-audit-service-1.0.0.jar"             8089 256m
+start_service "attachment"   "$BASE/avionics-systems-attachment-service/target/avionics-systems-attachment-service-1.0.0.jar"    8090 512m
+start_service "sprint"       "$BASE/avionics-systems-sprint-service/target/avionics-systems-sprint-service-1.0.0.jar"           8091 256m
 start_plan_service
-start_service "admin"        "$BASE/jira-admin-service/target/jira-admin-service-1.0.0.jar"             8093 256m
-start_service "migration"    "$BASE/jira-migration-service/target/jira-migration-service-1.0.0.jar"     8094 512m
-start_service "test"         "$BASE/jira-test-service/target/jira-test-service-1.0.0.jar"               8095 256m
-start_service "dashboard"    "$BASE/jira-dashboard-service/target/jira-dashboard-service-1.0.0.jar"     8096 256m
-start_service "component"    "$BASE/jira-component-service/target/jira-component-service-1.0.0.jar"     8097 256m
-start_service "report"       "$BASE/jira-report-service/target/jira-report-service-1.0.0.jar"           8098 256m
-start_service "version"      "$BASE/jira-version-service/target/jira-version-service-1.0.0.jar"         8099 256m
+start_service "admin"        "$BASE/avionics-systems-admin-service/target/avionics-systems-admin-service-1.0.0.jar"             8093 256m
+start_service "migration"    "$BASE/avionics-systems-migration-service/target/avionics-systems-migration-service-1.0.0.jar"     8094 512m
+start_service "test"         "$BASE/avionics-systems-test-service/target/avionics-systems-test-service-1.0.0.jar"               8095 256m
+start_service "dashboard"    "$BASE/avionics-systems-dashboard-service/target/avionics-systems-dashboard-service-1.0.0.jar"     8096 256m
+start_service "component"    "$BASE/avionics-systems-component-service/target/avionics-systems-component-service-1.0.0.jar"     8097 256m
+start_service "report"       "$BASE/avionics-systems-report-service/target/avionics-systems-report-service-1.0.0.jar"           8098 256m
+start_service "version"      "$BASE/avionics-systems-version-service/target/avionics-systems-version-service-1.0.0.jar"         8099 256m
 
 echo ""
 echo "--- WAVE 2: Gateway ---"
 sleep 5
-start_service "gateway"      "$BASE/jira-gateway/target/jira-gateway-1.0.0.jar"                        8080 512m
+start_service "gateway"      "$BASE/avionics-systems-gateway/target/avionics-systems-gateway-1.0.0.jar"                        8080 512m
 
 echo ""
 echo "--- WAVE 3: Frontend ---"
 sleep 3
 echo -n "  Starting frontend (3000)... "
-cd "$BASE/jira-frontend" && nohup npm run dev > "$LOGDIR/frontend.log" 2>&1 &
+cd "$BASE/avionics-systems-frontend" && nohup npm run dev > "$LOGDIR/frontend.log" 2>&1 &
 echo "PID $!"
 cd "$BASE"
 

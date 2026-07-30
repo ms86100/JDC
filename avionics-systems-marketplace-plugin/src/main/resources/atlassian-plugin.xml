@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<atlassian-plugin key="${project.groupId}.${project.artifactId}" name="Avionics Systems Test Management Plugin"
+                  i18n-name-key="plugin.name" pluginsVersion="9"
+                  description="Xray Test Management Clone - Native Avionics Systems Plugin">
+
+    <plugin-info>
+        <description>${project.description}</description>
+        <version>${project.version}</version>
+        <vendor name="Avionics Systems Platform Team" url="https://platform.example.com"/>
+        <description key="plugin.description">Xray Test Management Clone Plugin</description>
+    </plugin-info>
+
+    <!-- Resource for internationalization -->
+    <resource type="i18n" name="i18n" location="i18n/plugin"/>
+    <resource type="download" name="test-icon.png" location="images/test-icon.png"/>
+
+    <!-- Web Sections -->
+    <web-section key="test-management-section" location="jira/ISSUE_MENU" weight="100">
+        <label key="avionics-systems.testmanagement.menu.label"/>
+        <description key="avionics-systems.testmanagement.menu.description"/>
+    </web-section>
+
+    <web-section key="test-cycles-section" location="jira/ISSUE_MENU" weight="110">
+        <label key="avionics-systems.testcycles.menu.label"/>
+    </web-section>
+
+    <!-- Web Items -->
+    <web-item key="test-management-item" section="jira.issue.ops.groupby" weight="100">
+        <label key="avionics-systems.testmanagement.item.label"/>
+        <link linkId="test-management-link">/secure/TestManagement!default.jspa</link>
+        <tooltip key="avionics-systems.testmanagement.item.tooltip"/>
+    </web-item>
+
+    <!-- REST Resources -->
+    <rest key="testRestResource" path="/test-management"
+          version="1.0">
+        <description>Test Management REST API</description>
+        <mapping path="/tests" class="com.avionics_systems.plugin.rest.TestResource"/>
+        <mapping path="/test-sets" class="com.avionics_systems.plugin.rest.TestSetResource"/>
+        <mapping path="/test-plans" class="com.avionics_systems.plugin.rest.TestPlanResource"/>
+        <mapping path="/test-executions" class="com.avionics_systems.plugin.rest.TestExecutionResource"/>
+        <mapping path="/import" class="com.avionics_systems.plugin.rest.ImportResource"/>
+        <mapping path="/reports" class="com.avionics_systems.plugin.rest.ReportsResource"/>
+    </rest>
+
+    <!-- Issue Type Module -->
+    <issue-type key="Test" name="Test" description="Test case for test management">
+        <icon>images/issue-types/test.png</icon>
+        <label key="avionics-systems.issuetype.test"/>
+        <hidden>false</hidden>
+        <subtasks>false</subtasks>
+    </issue-type>
+
+    <issue-type key="TestSet" name="Test Set" description="Group of related tests">
+        <icon>images/issue-types/testset.png</icon>
+        <label key="avionics-systems.issuetype.testset"/>
+    </issue-type>
+
+    <issue-type key="TestPlan" name="Test Plan" description="Test execution plan">
+        <icon>images/issue-types/testplan.png</icon>
+        <label key="avionics-systems.issuetype.testplan"/>
+    </issue-type>
+
+    <!-- Custom Field -->
+    <custom-field-type key="test-type-field" name="Test Type"
+                        i18n-name-key="avionics-systems.customfield.testtype.name">
+        <description key="avionics-systems.customfield.testtype.description"/>
+        <resource type="velocity" name="edit" location="templates/edit-test-type.vm"/>
+        <resource type="velocity" name="view" location="templates/view-test-type.vm"/>
+        <validable>true</validable>
+        <searchable>true</searchable>
+        <nestable>false</nestable>
+    </custom-field-type>
+
+    <custom-field-type key="test-steps-field" name="Test Steps"
+                        i18n-name-key="avionics-systems.customfield.teststeps.name">
+        <description key="avionics-systems.customfield.teststeps.description"/>
+        <resource type="velocity" name="edit" location="templates/edit-test-steps.vm"/>
+        <resource type="velocity" name="view" location="templates/view-test-steps.vm"/>
+    </custom-field-type>
+
+    <custom-field-type key="test-status-field" name="Test Status"
+                        i18n-name-key="avionics-systems.customfield.teststatus.name">
+        <description key="avionics-systems.customfield.teststatus.description"/>
+        <list-jira-issues-validation-params>true</list-jira-issues-validation-params>
+    </custom-field-type>
+
+    <!-- Condition for Test Issue Types -->
+    <condition key="test-issue-condition" class="com.avionics_systems.plugin.conditions.TestIssueCondition">
+        <or>
+            <issue-type id="Test"/>
+            <issue-type id="TestSet"/>
+            <issue-type id="TestPlan"/>
+        </or>
+    </condition>
+
+    <!-- Reports -->
+    <report key="test-summary-report" name="Test Summary Report"
+            key-report-renderer="com.avionics_systems.plugin.reports.TestSummaryReportRenderer">
+        <label key="avionics-systems.report.testsummary.label"/>
+        <label key="avionics-systems.report.testsummary.description"/>
+        <resource type="velocity" name="template" location="templates/reports/test-summary-report.vm"/>
+    </report>
+
+    <report key="test-coverage-report" name="Test Coverage Report"
+            key-report-renderer="com.avionics_systems.plugin.reports.TestCoverageReportRenderer">
+        <label key="avionics-systems.report.testcoverage.label"/>
+        <resource type="velocity" name="template" location="templates/reports/test-coverage-report.vm"/>
+    </report>
+
+    <report key="test-execution-history-report" name="Test Execution History"
+            key-report-renderer="com.avionics_systems.plugin.reports.TestExecutionHistoryRenderer">
+        <label key="avionics-systems.report.testexecutionhistory.label"/>
+        <resource type="velocity" name="template" location="templates/reports/test-execution-history.vm"/>
+    </report>
+
+    <!-- Workflow Conditions -->
+    <workflow-function key="test-execution-condition"
+                        name="Test Execution Condition"
+                        i18n-name-key="avionics-systems.workflow.testexecution.name">
+        <description key="avionics-systems.workflow.testexecution.description"/>
+        <function-class>com.avionics_systems.plugin.workflow.TestExecutionCondition</function-class>
+        <resource type="velocity" name="edit-template" location="templates/workflow/test-execution-condition.vm"/>
+    </workflow-function>
+
+    <!-- Post Functions -->
+    <workflow-function key="test-status-update"
+                        name="Update Test Status"
+                        i18n-name-key="avionics-systems.workflow.updateteststatus.name">
+        <function-class>com.avionics_systems.plugin.workflow.UpdateTestStatusFunction</function-class>
+    </workflow-function>
+
+    <!-- Events -->
+    <listener key="testEventListener" class="com.avionics_systems.plugin.listeners.TestEventListener">
+        <description>Listens to test-related events</description>
+    </listener>
+
+    <!-- DAO Module -->
+    <dao key="testManagementDao" class="com.avionics_systems.plugin.dao.TestManagementDao">
+        <description>Test Management Data Access Object</description>
+    </dao>
+
+    <!-- Module Type -->
+    <module-type key="test-import-processor" class="com.avionics_systems.plugin.modules.TestImportProcessor">
+        <description>Processes test imports from CI/CD systems</description>
+    </module-type>
+
+</atlassian-plugin>

@@ -1,0 +1,29 @@
+apiVersion: v2
+name: avionics-systems-platform
+description: Avionics Systems Platform - Enterprise Test Management System
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - avionics-systems
+  - test-management
+  - xray
+  - enterprise
+maintainers:
+  - name: Avionics Systems Platform Team
+    email: platform@example.com
+sources:
+  - https://github.com/example/avionics-systems-platform
+dependencies:
+  - name: postgresql
+    version: 12.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 17.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: kafka
+    version: 21.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: kafka.enabled

@@ -1,15 +1,15 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: jira-platform-services
-  namespace: jira-platform
+  name: avionics-systems-platform-services
+  namespace: avionics-systems-platform
   labels:
     release: prometheus
-    app: jira-platform
+    app: avionics-systems-platform
 spec:
   selector:
     matchLabels:
-      app: jira-platform
+      app: avionics-systems-platform
   endpoints:
     - port: http
       path: /actuator/prometheus
@@ -30,17 +30,17 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: jira-platform-alerts
-  namespace: jira-platform
+  name: avionics-systems-platform-alerts
+  namespace: avionics-systems-platform
   labels:
     release: prometheus
-    app: jira-platform
+    app: avionics-systems-platform
 spec:
   groups:
-    - name: jira-platform.rules
+    - name: avionics-systems-platform.rules
       rules:
         - alert: JiraServiceDown
-          expr: up{job="jira-platform-services"} == 0
+          expr: up{job="avionics-systems-platform-services"} == 0
           for: 2m
           labels:
             severity: critical
@@ -72,7 +72,7 @@ spec:
             summary: "High CPU usage on {{ $labels.pod }}"
             description: "CPU usage is above 80% for more than 5 minutes."
         - alert: SlowTestExecution
-          expr: histogram_quantile(0.95, rate(jira_execution_duration_seconds_bucket[5m])) > 30
+          expr: histogram_quantile(0.95, rate(avionics_systems_execution_duration_seconds_bucket[5m])) > 30
           for: 5m
           labels:
             severity: info

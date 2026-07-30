@@ -40,7 +40,7 @@ class ArchPDF(FPDF):
         self.ln(20)
         self.set_font("Helvetica", "", 11)
         self.cell(0, 8, f"Document date: {date.today().strftime('%B %d, %Y')}", align="C", new_x="LMARGIN", new_y="NEXT")
-        self.cell(0, 8, "Repository: jira-platform", align="C")
+        self.cell(0, 8, "Repository: avionics-systems-platform", align="C")
 
     def _content_width(self):
         return self.w - self.l_margin - self.r_margin
@@ -121,22 +121,22 @@ def build():
     pdf.table(
         ["Service", "Port", "DB"],
         [
-            ["jira-gateway", "8080", "-"],
-            ["jira-auth-service", "8081", "auth_db"],
-            ["jira-user-service", "8082", "user_db"],
-            ["jira-project-service", "8083", "project_db"],
-            ["jira-issue-service", "8084", "issue_db"],
-            ["jira-workflow-service", "8085", "workflow_db"],
-            ["jira-comment-service", "8086", "comment_db"],
-            ["jira-notification-service", "8087", "notification_db"],
-            ["jira-search-service", "8088", "search_db"],
-            ["jira-audit-service", "8089", "audit_db"],
-            ["jira-attachment-service", "8090", "attachment_db"],
-            ["jira-sprint-service", "8091", "sprint_db"],
-            ["jira-plan-service", "8092", "plan_db"],
-            ["jira-admin-service", "8093", "admin DB"],
-            ["jira-migration-service", "8094", "migration_db"],
-            ["jira-frontend", "3000", "-"],
+            ["avionics-systems-gateway", "8080", "-"],
+            ["avionics-systems-auth-service", "8081", "auth_db"],
+            ["avionics-systems-user-service", "8082", "user_db"],
+            ["avionics-systems-project-service", "8083", "project_db"],
+            ["avionics-systems-issue-service", "8084", "issue_db"],
+            ["avionics-systems-workflow-service", "8085", "workflow_db"],
+            ["avionics-systems-comment-service", "8086", "comment_db"],
+            ["avionics-systems-notification-service", "8087", "notification_db"],
+            ["avionics-systems-search-service", "8088", "search_db"],
+            ["avionics-systems-audit-service", "8089", "audit_db"],
+            ["avionics-systems-attachment-service", "8090", "attachment_db"],
+            ["avionics-systems-sprint-service", "8091", "sprint_db"],
+            ["avionics-systems-plan-service", "8092", "plan_db"],
+            ["avionics-systems-admin-service", "8093", "admin DB"],
+            ["avionics-systems-migration-service", "8094", "migration_db"],
+            ["avionics-systems-frontend", "3000", "-"],
         ],
         [45, 20, 35],
     )
@@ -144,7 +144,7 @@ def build():
     # --- Section 2: Gateway routes ---
     pdf.add_page()
     pdf.h1("2. Current Gateway Routes (local profile)")
-    pdf.body("Defined in jira-gateway/src/main/resources/application-local.yml")
+    pdf.body("Defined in avionics-systems-gateway/src/main/resources/application-local.yml")
     pdf.table(
         ["Path Predicate", "Target", "Filters"],
         [
@@ -262,7 +262,7 @@ def build():
         ]),
         ("3.14 Migration Service (:8094)", "Base: /api/migration", [
             ("POST", "/api/migration/import/csv", "CSV import"),
-            ("POST", "/api/migration/import/jira-dc", "Jira DC import"),
+            ("POST", "/api/migration/import/legacy-dc", "Legacy DC import"),
             ("GET", "/api/migration/jobs/{id}", "Job status"),
             ("*", "/api/migration/wizard/**", "Import wizard steps"),
             ("*", "/api/sse/**", "Server-sent events for progress"),
@@ -286,7 +286,7 @@ def build():
         "  | POST /api/issues  { projectId, title, issueTypeId, ... }",
         "  | Authorization: Bearer <JWT>",
         "  v",
-        "jira-gateway (:8080)",
+        "avionics-systems-gateway (:8080)",
         "  |-- Validate JWT, extract X-User-Id, X-Username, X-User-Roles",
         "  |-- Route to issue-service (:8084)",
         "  v",
@@ -342,7 +342,7 @@ def build():
     pdf.add_page()
     pdf.h1("6. Gateway Route Gap Analysis")
     pdf.body(
-        "Comparison of frontend API calls (jira-frontend/src/api/* and hooks) against "
+        "Comparison of frontend API calls (avionics-systems-frontend/src/api/* and hooks) against "
         "gateway routes in application-local.yml. Status: MISSING = no gateway route."
     )
 
@@ -395,7 +395,7 @@ def build():
     pdf.bullet("WorkflowsPage.tsx: change API_BASE from localhost:8082 to gateway /api/admin/workflows")
     pdf.bullet("serviceApi searchApi: align /search and /api/jql paths with gateway routes")
     pdf.bullet("RegisterPage.tsx: use apiClient instead of hardcoded fetch to :8080")
-    pdf.bullet("Add jira-admin-service to root pom.xml <modules> for Maven builds")
+    pdf.bullet("Add avionics-systems-admin-service to root pom.xml <modules> for Maven builds")
 
     pdf.h2("6.3 Comment Service StripPrefix Issue")
     pdf.body(

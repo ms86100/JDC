@@ -6,37 +6,37 @@
       {
         "title": "Service Up/Down Status",
         "type": "stat",
-        "targets": [{ "expr": "up{job=~\"jira-.*\"}", "legendFormat": "{{job}}" }],
+        "targets": [{ "expr": "up{job=~\"avionics-systems-.*\"}", "legendFormat": "{{job}}" }],
         "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 }
       },
       {
         "title": "HTTP Request Rate (5m)",
         "type": "graph",
-        "targets": [{ "expr": "rate(http_server_requests_seconds_count{job=~\"jira-.*\"}[5m])", "legendFormat": "{{job}} {{method}} {{uri}}" }],
+        "targets": [{ "expr": "rate(http_server_requests_seconds_count{job=~\"avionics-systems-.*\"}[5m])", "legendFormat": "{{job}} {{method}} {{uri}}" }],
         "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 }
       },
       {
         "title": "HTTP Response Time P99",
         "type": "graph",
-        "targets": [{ "expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=~\"jira-.*\"}[5m]))", "legendFormat": "{{job}}" }],
+        "targets": [{ "expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=~\"avionics-systems-.*\"}[5m]))", "legendFormat": "{{job}}" }],
         "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 }
       },
       {
         "title": "HikariCP Active Connections",
         "type": "graph",
-        "targets": [{ "expr": "hikaricp_connections_active{job=~\"jira-.*\"}", "legendFormat": "{{job}} {{pool}}" }],
+        "targets": [{ "expr": "hikaricp_connections_active{job=~\"avionics-systems-.*\"}", "legendFormat": "{{job}} {{pool}}" }],
         "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 }
       },
       {
         "title": "JVM Memory Usage",
         "type": "graph",
-        "targets": [{ "expr": "jvm_memory_used_bytes{job=~\"jira-.*\", area=\"heap\"}", "legendFormat": "{{job}}" }],
+        "targets": [{ "expr": "jvm_memory_used_bytes{job=~\"avionics-systems-.*\", area=\"heap\"}", "legendFormat": "{{job}}" }],
         "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 }
       },
       {
         "title": "Circuit Breaker State",
         "type": "stat",
-        "targets": [{ "expr": "resilience4j_circuitbreaker_state{job=~\"jira-.*\"}", "legendFormat": "{{job}} {{name}}" }],
+        "targets": [{ "expr": "resilience4j_circuitbreaker_state{job=~\"avionics-systems-.*\"}", "legendFormat": "{{job}} {{name}}" }],
         "gridPos": { "h": 4, "w": 24, "x": 0, "y": 20 }
       }
     ],

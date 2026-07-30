@@ -1,10 +1,10 @@
 #!/bin/bash
 # Run this after restarting Docker Desktop to deploy the fixed migration service.
 set -e
-cd "$(dirname "$0")/jira-migration-service"
+cd "$(dirname "$0")/avionics-systems-migration-service"
 
 echo "=== Building fixed migration-service image (includes Maven build + Netskope cert) ==="
-docker build -f Dockerfile.build-and-package -t jira-migration-service:latest .
+docker build -f Dockerfile.build-and-package -t avionics-systems-migration-service:latest .
 
 echo "=== Recreating migration-service container with new image ==="
 cd ..

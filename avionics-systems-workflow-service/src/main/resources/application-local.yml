@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/avionics_systems_platform
+    username: avionicsadmin
+    password: ${DB_PASSWORD:localpass}
+  flyway:
+    validate-on-migrate: false
+
+avionics-systems:
+  permissions:
+    fail-open: true
+
+avionics-systems.services.issue-url: http://localhost:8084
+avionics-systems.services.project-url: http://localhost:8083

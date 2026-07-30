@@ -1,5 +1,5 @@
 # =============================================================================
-# Jira Platform - Centralized Configuration
+# Avionics Systems Platform - Centralized Configuration
 # =============================================================================
 # This file is the single source of truth for all service ports, database
 # credentials, security settings, and startup options.
@@ -7,12 +7,12 @@
 #
 # Usage:
 #   python launcher.py        - reads this file automatically
-#   .\start-jira.ps1         - reads this file automatically
+#   .\start-platform.ps1         - reads this file automatically
 #   docker-compose up         - uses environment variables set from this file
 #
 # To override any value, set the corresponding environment variable:
-#   export JIRA_DB_PASSWORD=secret   (Unix)
-#   $env:JIRA_DB_PASSWORD="secret"   (PowerShell)
+#   export AVIONICS_SYSTEMS_DB_PASSWORD=secret   (Unix)
+#   $env:AVIONICS_SYSTEMS_DB_PASSWORD="secret"   (PowerShell)
 # =============================================================================
 
 version: "1.0"
@@ -23,7 +23,7 @@ version: "1.0"
 database:
   host: "localhost"
   port: 5432
-  username: "jiraadmin"
+  username: "avionicsadmin"
   password: "UNIpay@123"
 
   # Multi-database setup — comma-separated list of database names
@@ -46,15 +46,15 @@ database:
   # Docker container settings
   docker:
     image: "postgres:16-alpine"
-    container_name: "jira-postgres"
-    data_volume: "jira-postgres-data"
+    container_name: "avionics-systems-postgres"
+    data_volume: "avionics-systems-postgres-data"
 
 # ---------------------------------------------------------------------------
 # SECURITY
 # ---------------------------------------------------------------------------
 security:
   # JWT secret — must be at least 256 bits (32+ characters)
-  jwt_secret: "jira-platform-super-secret-key-that-is-at-least-256-bits-long"
+  jwt_secret: "avionics-systems-platform-super-secret-key-that-is-at-least-256-bits-long"
 
 # ---------------------------------------------------------------------------
 # SERVICES
@@ -72,116 +72,116 @@ security:
 services:
   auth:
     port: 8081
-    dir: "jira-auth-service"
-    jar: "jira-auth-service-1.0.0.jar"
+    dir: "avionics-systems-auth-service"
+    jar: "avionics-systems-auth-service-1.0.0.jar"
     health: "/actuator/health"
     deps: []
 
   gateway:
     port: 8080
-    dir: "jira-gateway"
-    jar: "jira-gateway-1.0.0.jar"
+    dir: "avionics-systems-gateway"
+    jar: "avionics-systems-gateway-1.0.0.jar"
     health: "/actuator/health"
     deps: ["auth"]
 
   user:
     port: 8082
-    dir: "jira-user-service"
-    jar: "jira-user-service-1.0.0.jar"
+    dir: "avionics-systems-user-service"
+    jar: "avionics-systems-user-service-1.0.0.jar"
     health: "/actuator/health"
     deps: ["auth"]
 
   project:
     port: 8083
-    dir: "jira-project-service"
-    jar: "jira-project-service-1.0.0.jar"
+    dir: "avionics-systems-project-service"
+    jar: "avionics-systems-project-service-1.0.0.jar"
     health: "/actuator/health"
     deps: ["auth"]
 
   issue:
     port: 8084
-    dir: "jira-issue-service"
-    jar: "jira-issue-service-1.0.0.jar"
+    dir: "avionics-systems-issue-service"
+    jar: "avionics-systems-issue-service-1.0.0.jar"
     health: "/actuator/health"
     deps: ["auth"]
 
   workflow:
     port: 8085
-    dir: "jira-workflow-service"
-    jar: "jira-workflow-service-1.0.0.jar"
+    dir: "avionics-systems-workflow-service"
+    jar: "avionics-systems-workflow-service-1.0.0.jar"
     health: "/actuator/health"
     health_timeout: 240
     deps: ["auth"]
 
   comment:
     port: 8086
-    dir: "jira-comment-service"
-    jar: "jira-comment-service-1.0.0.jar"
+    dir: "avionics-systems-comment-service"
+    jar: "avionics-systems-comment-service-1.0.0.jar"
     health: "/actuator/health"
     deps: ["auth"]
 
   notification:
     port: 8087
-    dir: "jira-notification-service"
-    jar: "jira-notification-service-1.0.0.jar"
+    dir: "avionics-systems-notification-service"
+    jar: "avionics-systems-notification-service-1.0.0.jar"
     health: "/actuator/health"
     deps: ["auth"]
 
   search:
     port: 8088
-    dir: "jira-search-service"
-    jar: "jira-search-service-1.0.0.jar"
+    dir: "avionics-systems-search-service"
+    jar: "avionics-systems-search-service-1.0.0.jar"
     health: "/actuator/health"
     deps: ["auth"]
 
   audit:
     port: 8089
-    dir: "jira-audit-service"
-    jar: "jira-audit-service-1.0.0.jar"
+    dir: "avionics-systems-audit-service"
+    jar: "avionics-systems-audit-service-1.0.0.jar"
     health: "/actuator/health"
     deps: ["auth"]
 
   attachment:
     port: 8090
-    dir: "jira-attachment-service"
-    jar: "jira-attachment-service-1.0.0.jar"
+    dir: "avionics-systems-attachment-service"
+    jar: "avionics-systems-attachment-service-1.0.0.jar"
     health: "/actuator/health"
     deps: ["auth"]
 
   sprint:
     port: 8091
-    dir: "jira-sprint-service"
-    jar: "jira-sprint-service-1.0.0.jar"
+    dir: "avionics-systems-sprint-service"
+    jar: "avionics-systems-sprint-service-1.0.0.jar"
     health: "/actuator/health"
     health_timeout: 240
     deps: ["auth"]
 
   plan:
     port: 8092
-    dir: "jira-plan-service"
-    jar: "jira-plan-service-1.0.0.jar"
+    dir: "avionics-systems-plan-service"
+    jar: "avionics-systems-plan-service-1.0.0.jar"
     health: "/actuator/health"
     deps: ["auth"]
 
   admin:
     port: 8093
-    dir: "jira-admin-service"
-    jar: "jira-admin-service-1.0.0.jar"
+    dir: "avionics-systems-admin-service"
+    jar: "avionics-systems-admin-service-1.0.0.jar"
     health: "/actuator/health"
     deps: ["auth"]
 
   migration:
     port: 8094
-    dir: "jira-migration-service"
-    jar: "jira-migration-service-1.0.0.jar"
+    dir: "avionics-systems-migration-service"
+    jar: "avionics-systems-migration-service-1.0.0.jar"
     health: "/actuator/health"
     health_timeout: 300
     deps: ["auth"]
 
   test:
     port: 8095
-    dir: "jira-test-service"
-    jar: "jira-test-service-1.0.0.jar"
+    dir: "avionics-systems-test-service"
+    jar: "avionics-systems-test-service-1.0.0.jar"
     health: "/actuator/health"
     deps: ["auth"]
 
@@ -190,7 +190,7 @@ services:
 # ---------------------------------------------------------------------------
 frontend:
   port: 3000
-  dir: "jira-frontend"
+  dir: "avionics-systems-frontend"
   open_browser: true
 
 # ---------------------------------------------------------------------------

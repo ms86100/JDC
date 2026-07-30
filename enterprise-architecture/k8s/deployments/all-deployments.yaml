@@ -1,35 +1,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-project-service
-  namespace: jira-platform
+  name: avionics-systems-project-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-project-service
+    app: avionics-systems-project-service
     version: v1
     component: backend
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: jira-project-service
+      app: avionics-systems-project-service
   template:
     metadata:
       labels:
-        app: jira-project-service
+        app: avionics-systems-project-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8083"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
       containers:
-        - name: jira-project-service
-          image: jira-platform/jira-project-service:1.0.0
+        - name: avionics-systems-project-service
+          image: avionics-systems-platform/avionics-systems-project-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -43,17 +43,17 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: EUREKA_SERVER_URL
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: EUREKA_SERVER_URL
           resources:
             requests:
@@ -84,19 +84,19 @@ spec:
                     - key: app
                       operator: In
                       values:
-                        - jira-project-service
+                        - avionics-systems-project-service
                 topologyKey: kubernetes.io/hostname
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-project-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-project-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-project-service
+    name: avionics-systems-project-service
   minReplicas: 2
   maxReplicas: 6
   metrics:
@@ -110,35 +110,35 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-workflow-service
-  namespace: jira-platform
+  name: avionics-systems-workflow-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-workflow-service
+    app: avionics-systems-workflow-service
     version: v1
     component: backend
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: jira-workflow-service
+      app: avionics-systems-workflow-service
   template:
     metadata:
       labels:
-        app: jira-workflow-service
+        app: avionics-systems-workflow-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8085"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
       containers:
-        - name: jira-workflow-service
-          image: jira-platform/jira-workflow-service:1.0.0
+        - name: avionics-systems-workflow-service
+          image: avionics-systems-platform/avionics-systems-workflow-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -152,7 +152,7 @@ spec:
             - name: EUREKA_SERVER_URL
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: EUREKA_SERVER_URL
           resources:
             requests:
@@ -183,19 +183,19 @@ spec:
                     - key: app
                       operator: In
                       values:
-                        - jira-workflow-service
+                        - avionics-systems-workflow-service
                 topologyKey: kubernetes.io/hostname
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-workflow-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-workflow-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-workflow-service
+    name: avionics-systems-workflow-service
   minReplicas: 2
   maxReplicas: 6
   metrics:
@@ -209,35 +209,35 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-admin-service
-  namespace: jira-platform
+  name: avionics-systems-admin-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-admin-service
+    app: avionics-systems-admin-service
     version: v1
     component: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-admin-service
+      app: avionics-systems-admin-service
   template:
     metadata:
       labels:
-        app: jira-admin-service
+        app: avionics-systems-admin-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8082"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
       containers:
-        - name: jira-admin-service
-          image: jira-platform/jira-admin-service:1.0.0
+        - name: avionics-systems-admin-service
+          image: avionics-systems-platform/avionics-systems-admin-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -271,35 +271,35 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-gateway
-  namespace: jira-platform
+  name: avionics-systems-gateway
+  namespace: avionics-systems-platform
   labels:
-    app: jira-gateway
+    app: avionics-systems-gateway
     version: v1
     component: gateway
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: jira-gateway
+      app: avionics-systems-gateway
   template:
     metadata:
       labels:
-        app: jira-gateway
+        app: avionics-systems-gateway
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "80"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
       containers:
-        - name: jira-gateway
-          image: jira-platform/jira-gateway:1.0.0
+        - name: avionics-systems-gateway
+          image: avionics-systems-platform/avionics-systems-gateway:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -312,13 +312,13 @@ spec:
             - name: SPRING_PROFILES_ACTIVE
               value: "kubernetes"
             - name: ISSUE_SERVICE_URL
-              value: "http://jira-issue-service.jira-platform.svc.cluster.local:8084"
+              value: "http://avionics-systems-issue-service.avionics-systems-platform.svc.cluster.local:8084"
             - name: PROJECT_SERVICE_URL
-              value: "http://jira-project-service.jira-platform.svc.cluster.local:8083"
+              value: "http://avionics-systems-project-service.avionics-systems-platform.svc.cluster.local:8083"
             - name: WORKFLOW_SERVICE_URL
-              value: "http://jira-workflow-service.jira-platform.svc.cluster.local:8085"
+              value: "http://avionics-systems-workflow-service.avionics-systems-platform.svc.cluster.local:8085"
             - name: ADMIN_SERVICE_URL
-              value: "http://jira-admin-service.jira-platform.svc.cluster.local:8082"
+              value: "http://avionics-systems-admin-service.avionics-systems-platform.svc.cluster.local:8082"
           resources:
             requests:
               cpu: 250m
@@ -348,19 +348,19 @@ spec:
                     - key: app
                       operator: In
                       values:
-                        - jira-gateway
+                        - avionics-systems-gateway
                 topologyKey: kubernetes.io/hostname
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-gateway-hpa
-  namespace: jira-platform
+  name: avionics-systems-gateway-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-gateway
+    name: avionics-systems-gateway
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -383,31 +383,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-auth-service
-  namespace: jira-platform
+  name: avionics-systems-auth-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-auth-service
+    app: avionics-systems-auth-service
     version: v1
     component: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-auth-service
+      app: avionics-systems-auth-service
   template:
     metadata:
       labels:
-        app: jira-auth-service
+        app: avionics-systems-auth-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8081"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-auth-service
-          image: jira-platform/jira-auth-service:1.0.0
+        - name: avionics-systems-auth-service
+          image: avionics-systems-platform/avionics-systems-auth-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -421,15 +421,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -458,31 +458,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-user-service
-  namespace: jira-platform
+  name: avionics-systems-user-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-user-service
+    app: avionics-systems-user-service
     version: v1
     component: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-user-service
+      app: avionics-systems-user-service
   template:
     metadata:
       labels:
-        app: jira-user-service
+        app: avionics-systems-user-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8082"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-user-service
-          image: jira-platform/jira-user-service:1.0.0
+        - name: avionics-systems-user-service
+          image: avionics-systems-platform/avionics-systems-user-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -496,15 +496,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -533,31 +533,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-issue-service
-  namespace: jira-platform
+  name: avionics-systems-issue-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-issue-service
+    app: avionics-systems-issue-service
     version: v1
     component: backend
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: jira-issue-service
+      app: avionics-systems-issue-service
   template:
     metadata:
       labels:
-        app: jira-issue-service
+        app: avionics-systems-issue-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8084"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-issue-service
-          image: jira-platform/jira-issue-service:1.0.0
+        - name: avionics-systems-issue-service
+          image: avionics-systems-platform/avionics-systems-issue-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -571,15 +571,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -605,13 +605,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-issue-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-issue-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-issue-service
+    name: avionics-systems-issue-service
   minReplicas: 2
   maxReplicas: 6
   metrics:
@@ -628,31 +628,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-comment-service
-  namespace: jira-platform
+  name: avionics-systems-comment-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-comment-service
+    app: avionics-systems-comment-service
     version: v1
     component: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-comment-service
+      app: avionics-systems-comment-service
   template:
     metadata:
       labels:
-        app: jira-comment-service
+        app: avionics-systems-comment-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8086"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-comment-service
-          image: jira-platform/jira-comment-service:1.0.0
+        - name: avionics-systems-comment-service
+          image: avionics-systems-platform/avionics-systems-comment-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -666,15 +666,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -703,31 +703,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-notification-service
-  namespace: jira-platform
+  name: avionics-systems-notification-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-notification-service
+    app: avionics-systems-notification-service
     version: v1
     component: backend
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: jira-notification-service
+      app: avionics-systems-notification-service
   template:
     metadata:
       labels:
-        app: jira-notification-service
+        app: avionics-systems-notification-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8087"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-notification-service
-          image: jira-platform/jira-notification-service:1.0.0
+        - name: avionics-systems-notification-service
+          image: avionics-systems-platform/avionics-systems-notification-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -741,15 +741,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -775,13 +775,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-notification-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-notification-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-notification-service
+    name: avionics-systems-notification-service
   minReplicas: 2
   maxReplicas: 6
   metrics:
@@ -798,31 +798,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-search-service
-  namespace: jira-platform
+  name: avionics-systems-search-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-search-service
+    app: avionics-systems-search-service
     version: v1
     component: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-search-service
+      app: avionics-systems-search-service
   template:
     metadata:
       labels:
-        app: jira-search-service
+        app: avionics-systems-search-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8088"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-search-service
-          image: jira-platform/jira-search-service:1.0.0
+        - name: avionics-systems-search-service
+          image: avionics-systems-platform/avionics-systems-search-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -836,15 +836,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -873,31 +873,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-audit-service
-  namespace: jira-platform
+  name: avionics-systems-audit-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-audit-service
+    app: avionics-systems-audit-service
     version: v1
     component: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-audit-service
+      app: avionics-systems-audit-service
   template:
     metadata:
       labels:
-        app: jira-audit-service
+        app: avionics-systems-audit-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8089"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-audit-service
-          image: jira-platform/jira-audit-service:1.0.0
+        - name: avionics-systems-audit-service
+          image: avionics-systems-platform/avionics-systems-audit-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -911,15 +911,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -948,31 +948,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-attachment-service
-  namespace: jira-platform
+  name: avionics-systems-attachment-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-attachment-service
+    app: avionics-systems-attachment-service
     version: v1
     component: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-attachment-service
+      app: avionics-systems-attachment-service
   template:
     metadata:
       labels:
-        app: jira-attachment-service
+        app: avionics-systems-attachment-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8090"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-attachment-service
-          image: jira-platform/jira-attachment-service:1.0.0
+        - name: avionics-systems-attachment-service
+          image: avionics-systems-platform/avionics-systems-attachment-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -986,15 +986,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -1023,31 +1023,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-sprint-service
-  namespace: jira-platform
+  name: avionics-systems-sprint-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-sprint-service
+    app: avionics-systems-sprint-service
     version: v1
     component: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-sprint-service
+      app: avionics-systems-sprint-service
   template:
     metadata:
       labels:
-        app: jira-sprint-service
+        app: avionics-systems-sprint-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8091"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-sprint-service
-          image: jira-platform/jira-sprint-service:1.0.0
+        - name: avionics-systems-sprint-service
+          image: avionics-systems-platform/avionics-systems-sprint-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -1061,15 +1061,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -1098,31 +1098,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-plan-service
-  namespace: jira-platform
+  name: avionics-systems-plan-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-plan-service
+    app: avionics-systems-plan-service
     version: v1
     component: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-plan-service
+      app: avionics-systems-plan-service
   template:
     metadata:
       labels:
-        app: jira-plan-service
+        app: avionics-systems-plan-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8092"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-plan-service
-          image: jira-platform/jira-plan-service:1.0.0
+        - name: avionics-systems-plan-service
+          image: avionics-systems-platform/avionics-systems-plan-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -1136,15 +1136,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -1173,31 +1173,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-migration-service
-  namespace: jira-platform
+  name: avionics-systems-migration-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-migration-service
+    app: avionics-systems-migration-service
     version: v1
     component: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-migration-service
+      app: avionics-systems-migration-service
   template:
     metadata:
       labels:
-        app: jira-migration-service
+        app: avionics-systems-migration-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8094"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-migration-service
-          image: jira-platform/jira-migration-service:1.0.0
+        - name: avionics-systems-migration-service
+          image: avionics-systems-platform/avionics-systems-migration-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -1211,15 +1211,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -1248,31 +1248,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-test-service
-  namespace: jira-platform
+  name: avionics-systems-test-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-test-service
+    app: avionics-systems-test-service
     version: v1
     component: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-test-service
+      app: avionics-systems-test-service
   template:
     metadata:
       labels:
-        app: jira-test-service
+        app: avionics-systems-test-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8095"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-test-service
-          image: jira-platform/jira-test-service:1.0.0
+        - name: avionics-systems-test-service
+          image: avionics-systems-platform/avionics-systems-test-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -1286,15 +1286,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -1323,31 +1323,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-version-service
-  namespace: jira-platform
+  name: avionics-systems-version-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-version-service
+    app: avionics-systems-version-service
     version: v1
     component: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-version-service
+      app: avionics-systems-version-service
   template:
     metadata:
       labels:
-        app: jira-version-service
+        app: avionics-systems-version-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8096"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-version-service
-          image: jira-platform/jira-version-service:1.0.0
+        - name: avionics-systems-version-service
+          image: avionics-systems-platform/avionics-systems-version-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -1361,15 +1361,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -1398,31 +1398,31 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-component-service
-  namespace: jira-platform
+  name: avionics-systems-component-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-component-service
+    app: avionics-systems-component-service
     version: v1
     component: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-component-service
+      app: avionics-systems-component-service
   template:
     metadata:
       labels:
-        app: jira-component-service
+        app: avionics-systems-component-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8097"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       containers:
-        - name: jira-component-service
-          image: jira-platform/jira-component-service:1.0.0
+        - name: avionics-systems-component-service
+          image: avionics-systems-platform/avionics-systems-component-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -1436,15 +1436,15 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: REDIS_HOST
-              value: "jira-redis"
+              value: "avionics-systems-redis"
             - name: REDIS_PORT
               value: "6379"
           resources:
@@ -1473,17 +1473,17 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-redis
-  namespace: jira-platform
+  name: avionics-systems-redis
+  namespace: avionics-systems-platform
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-redis
+      app: avionics-systems-redis
   template:
     metadata:
       labels:
-        app: jira-redis
+        app: avionics-systems-redis
     spec:
       containers:
         - name: redis
@@ -1505,17 +1505,17 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-minio
-  namespace: jira-platform
+  name: avionics-systems-minio
+  namespace: avionics-systems-platform
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-minio
+      app: avionics-systems-minio
   template:
     metadata:
       labels:
-        app: jira-minio
+        app: avionics-systems-minio
     spec:
       containers:
         - name: minio
@@ -1531,12 +1531,12 @@ spec:
             - name: MINIO_ROOT_USER
               valueFrom:
                 secretKeyRef:
-                  name: jira-minio-secret
+                  name: avionics-systems-minio-secret
                   key: MINIO_ROOT_USER
             - name: MINIO_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: jira-minio-secret
+                  name: avionics-systems-minio-secret
                   key: MINIO_ROOT_PASSWORD
           resources:
             requests:
@@ -1563,7 +1563,7 @@ spec:
       volumes:
         - name: minio-data
           persistentVolumeClaim:
-            claimName: jira-minio-pvc
+            claimName: avionics-systems-minio-pvc
 ---
 # =============================================================================
 # HPA for all remaining services
@@ -1571,13 +1571,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-auth-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-auth-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-auth-service
+    name: avionics-systems-auth-service
   minReplicas: 2
   maxReplicas: 6
   metrics:
@@ -1591,13 +1591,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-user-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-user-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-user-service
+    name: avionics-systems-user-service
   minReplicas: 1
   maxReplicas: 4
   metrics:
@@ -1611,13 +1611,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-comment-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-comment-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-comment-service
+    name: avionics-systems-comment-service
   minReplicas: 1
   maxReplicas: 4
   metrics:
@@ -1631,13 +1631,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-search-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-search-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-search-service
+    name: avionics-systems-search-service
   minReplicas: 2
   maxReplicas: 6
   metrics:
@@ -1651,13 +1651,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-audit-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-audit-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-audit-service
+    name: avionics-systems-audit-service
   minReplicas: 1
   maxReplicas: 4
   metrics:
@@ -1671,13 +1671,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-attachment-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-attachment-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-attachment-service
+    name: avionics-systems-attachment-service
   minReplicas: 1
   maxReplicas: 4
   metrics:
@@ -1691,13 +1691,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-sprint-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-sprint-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-sprint-service
+    name: avionics-systems-sprint-service
   minReplicas: 1
   maxReplicas: 4
   metrics:
@@ -1711,13 +1711,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-plan-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-plan-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-plan-service
+    name: avionics-systems-plan-service
   minReplicas: 1
   maxReplicas: 4
   metrics:
@@ -1731,13 +1731,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-migration-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-migration-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-migration-service
+    name: avionics-systems-migration-service
   minReplicas: 1
   maxReplicas: 3
   metrics:
@@ -1751,13 +1751,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-test-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-test-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-test-service
+    name: avionics-systems-test-service
   minReplicas: 1
   maxReplicas: 4
   metrics:
@@ -1771,13 +1771,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-version-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-version-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-version-service
+    name: avionics-systems-version-service
   minReplicas: 1
   maxReplicas: 4
   metrics:
@@ -1791,13 +1791,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-component-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-component-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-component-service
+    name: avionics-systems-component-service
   minReplicas: 1
   maxReplicas: 4
   metrics:
@@ -1814,17 +1814,17 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-zookeeper
-  namespace: jira-platform
+  name: avionics-systems-zookeeper
+  namespace: avionics-systems-platform
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-zookeeper
+      app: avionics-systems-zookeeper
   template:
     metadata:
       labels:
-        app: jira-zookeeper
+        app: avionics-systems-zookeeper
     spec:
       containers:
         - name: zookeeper
@@ -1848,17 +1848,17 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-kafka
-  namespace: jira-platform
+  name: avionics-systems-kafka
+  namespace: avionics-systems-platform
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jira-kafka
+      app: avionics-systems-kafka
   template:
     metadata:
       labels:
-        app: jira-kafka
+        app: avionics-systems-kafka
     spec:
       containers:
         - name: kafka
@@ -1870,9 +1870,9 @@ spec:
             - name: KAFKA_BROKER_ID
               value: "1"
             - name: KAFKA_ZOOKEEPER_CONNECT
-              value: "jira-zookeeper:2181"
+              value: "avionics-systems-zookeeper:2181"
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: "PLAINTEXT://jira-kafka:29092"
+              value: "PLAINTEXT://avionics-systems-kafka:29092"
             - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
               value: "1"
           resources:

@@ -1,0 +1,36 @@
+package com.avionics_systems.migration.parser;
+
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
+/**
+ * Unified parser for CSV and Excel migration uploads.
+ */
+@Component
+public class ImportSpreadsheetParser {
+
+    private final CsvParser csvParser;
+    private final ExcelParser excelParser;
+
+    public ImportSpreadsheetParser(CsvParser csvParser, ExcelParser excelParser) {
+        this.csvParser = csvParser;
+        this.excelParser = excelParser;
+    }
+
+    public boolean isExcelFile(String fileName) {
+        return fileName != null && fileName.toLowerCase().endsWith(".xlsx");
+    }
+
+    public CsvParser.CsvParseResult parse(byte[] content, String fileName) throws IOException {
+        if (isExcelFile(fileName)) {
+            return excelParser.parseBytes(content, 1);
+        }
+        String text = new String(content, StandardCharsets.UTF_8);
+        if (!text.isEmpty() && text.charAt(0) == '\uFEFF') {
+            text = text.substring(1);
+        }
+        return csvParser.parseContent(text, 1);
+    }
+}

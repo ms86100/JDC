@@ -1,0 +1,38 @@
+/* Systems and Avionics — design tokens (must load first) */
+@import './styles/tokens.css';
+
+/* Airbus Design System Theme */
+@import './styles/airbus-theme.css';
+
+/* Avionics Systems Classic UI */
+@import './styles/avisys-classic.css';
+
+/* Avionics Systems Platform Custom Styles */
+@import './features/dashboard/DashboardStyles.css';
+
+/* Administration — Avionics Systems shell + shared page primitives */
+@import './features/admin/styles/admin-shell.css';
+@import './components/layout/styles/workspace-shell.css';
+@import './features/admin/styles/admin-shared.css';
+
+/* Avionics Systems visual overlay */
+@import './styles/avisys-dc-overlay.css';
+
+/* Airbus tokens → Avionics Systems composition variables */
+@import './styles/airbus-dc-bridge.css';
+
+/* Avionics Systems UI composition */
+@import './styles/avisys-dc-ui.css';
+@import './features/projects/styles/project-dc.css';
+@import './features/issues/styles/issues-layout.css';
+@import './components/workspace/workspace-dashboard.css';
+@import './styles/ui-polish.css';
+@import './features/boards/styles/kanban-board.css';
+
+/* Page & list entrance animations */
+@import './styles/animations.css';
+
+/* Tailwind — loaded LAST but in base layer so custom CSS wins by specificity */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

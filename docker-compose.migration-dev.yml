@@ -3,14 +3,14 @@
 # Usage:
 #   docker compose -f docker-compose.migration-dev.yml down
 #   docker compose -f docker-compose.migration-dev.yml up -d
-# Reset migration Flyway only: docker exec jira-postgres psql -U jiraadmin -d jira_platform -c "DROP SCHEMA IF EXISTS jira_migration CASCADE;"
+# Reset migration Flyway only: docker exec avionics-systems-postgres psql -U avionicsadmin -d avionics_systems_platform -c "DROP SCHEMA IF EXISTS jira_migration CASCADE;"
 # UI: http://localhost:3000  login ms86100 / admin123  → Migration Center
 # API smoke: http://localhost:3000/api/migration/templates  or  http://localhost:8094/actuator/health
 
-name: jira-migration-dev
+name: avionics-systems-migration-dev
 
 networks:
-  jira-network:
+  avionics-systems-network:
     driver: bridge
 
 volumes:
@@ -19,42 +19,42 @@ volumes:
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: jira-postgres
+    container_name: avionics-systems-postgres
     environment:
-      POSTGRES_USER: jiraadmin
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-jirapass}
-      POSTGRES_DB: jira_platform
+      POSTGRES_USER: avionicsadmin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-avionicspass}
+      POSTGRES_DB: avionics_systems_platform
     volumes:
       - postgres_migration_dev_data:/var/lib/postgresql/data
       - ./postgres/init/init-schemas.sql:/docker-entrypoint-initdb.d/init-schemas.sql
     ports:
       - "5432:5432"
     networks:
-      - jira-network
+      - avionics-systems-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jiraadmin"]
+      test: ["CMD-SHELL", "pg_isready -U avionicsadmin"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   auth-service:
-    image: ghcr.io/ms86100/jira-auth-service:latest
-    container_name: jira-auth-service
+    image: ghcr.io/ms86100/avionics-systems-auth-service:latest
+    container_name: avionics-systems-auth-service
     ports:
       - "8081:8081"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms128m -Xmx384m
-      JWT_SECRET: jira-platform-super-secret-key-that-is-at-least-256-bits-long
+      JWT_SECRET: avionics-systems-platform-super-secret-key-that-is-at-least-256-bits-long
       JWT_EXPIRATION_MS: 86400000
       JWT_REFRESH_EXPIRATION_MS: 604800000
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,20 +66,20 @@ services:
       start_period: 90s
 
   user-service:
-    image: ghcr.io/ms86100/jira-user-service:latest
-    container_name: jira-user-service
+    image: ghcr.io/ms86100/avionics-systems-user-service:latest
+    container_name: avionics-systems-user-service
     ports:
       - "8082:8082"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms128m -Xmx384m
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,20 +93,20 @@ services:
       start_period: 90s
 
   project-service:
-    image: ghcr.io/ms86100/jira-project-service:latest
-    container_name: jira-project-service
+    image: ghcr.io/ms86100/avionics-systems-project-service:latest
+    container_name: avionics-systems-project-service
     ports:
       - "8083:8083"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms128m -Xmx384m
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -122,20 +122,20 @@ services:
       start_period: 90s
 
   workflow-service:
-    image: ghcr.io/ms86100/jira-workflow-service:latest
-    container_name: jira-workflow-service
+    image: ghcr.io/ms86100/avionics-systems-workflow-service:latest
+    container_name: avionics-systems-workflow-service
     ports:
       - "8085:8085"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms128m -Xmx384m
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -149,22 +149,22 @@ services:
       start_period: 90s
 
   issue-service:
-    image: ghcr.io/ms86100/jira-issue-service:latest
-    container_name: jira-issue-service
+    image: ghcr.io/ms86100/avionics-systems-issue-service:latest
+    container_name: avionics-systems-issue-service
     ports:
       - "8084:8084"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms128m -Xmx384m
       WORKFLOW_SERVICE_URL: http://workflow-service:8085
       PROJECT_SERVICE_URL: http://project-service:8083
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -180,15 +180,15 @@ services:
       start_period: 120s
 
   gateway:
-    image: ghcr.io/ms86100/jira-gateway:latest
-    container_name: jira-gateway
+    image: ghcr.io/ms86100/avionics-systems-gateway:latest
+    container_name: avionics-systems-gateway
     ports:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_OPTS: -Xms128m -Xmx384m
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       auth-service:
         condition: service_healthy
@@ -200,20 +200,20 @@ services:
         condition: service_healthy
 
   migration-service:
-    image: ghcr.io/ms86100/jira-migration-service:latest
-    container_name: jira-migration-service
+    image: ghcr.io/ms86100/avionics-systems-migration-service:latest
+    container_name: avionics-systems-migration-service
     ports:
       - "8094:8094"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: jira_platform
-      DB_USERNAME: jiraadmin
-      DB_PASSWORD: ${DB_PASSWORD:-jirapass}
+      DB_NAME: avionics_systems_platform
+      DB_USERNAME: avionicsadmin
+      DB_PASSWORD: ${DB_PASSWORD:-avionicspass}
       JAVA_OPTS: -Xms128m -Xmx512m
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -231,12 +231,12 @@ services:
       start_period: 120s
 
   frontend:
-    image: ghcr.io/ms86100/jira-frontend:latest
-    container_name: jira-frontend
+    image: ghcr.io/ms86100/avionics-systems-frontend:latest
+    container_name: avionics-systems-frontend
     ports:
       - "3000:3000"
     networks:
-      - jira-network
+      - avionics-systems-network
     depends_on:
       gateway:
         condition: service_started

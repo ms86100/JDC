@@ -3,7 +3,7 @@
 -- Seeds project, version, issue, and change card data into
 -- jira_project and jira_issue schemas for the nFMS V&V project.
 -- ============================================================
--- Well-known IDs (must match V12 seed in jira-test-service):
+-- Well-known IDs (must match V12 seed in avionics-systems-test-service):
 --   Project:     10000000-0000-0000-0000-000000000001  (NFMS)
 --   Fix Version: 20000000-0000-0000-0000-000000000001  (Baseline 1)
 --   Fix Version: 20000000-0000-0000-0000-000000000002  (Baseline 2)

@@ -1,10 +1,10 @@
 # Load Testing Configuration
-# Based on dc-app-performance-toolkit jira.yml workload model
+# Based on dc-app-performance-toolkit avionics-systems.yml workload model
 
 version: '3.8'
 
 settings:
-  artifacts-dir: results/jira-enterprise/%Y-%m-%d_%H-%M-%S
+  artifacts-dir: results/avionics-systems-enterprise/%Y-%m-%d_%H-%M-%S
   aggregator: consolidator
   verbose: false
   check-updates: false
@@ -51,7 +51,7 @@ modules:
 
 scenarios:
   jmeter:
-    script: jmeter/jira-enterprise.jmx
+    script: jmeter/avionics-systems-enterprise.jmx
 
 execution:
   - scenario: jmeter

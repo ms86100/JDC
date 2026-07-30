@@ -1,0 +1,374 @@
+/* Bulk Create Wizard - Avionics Systems styling */
+
+.bulk-wizard {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Header */
+.bulk-wizard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.bulk-wizard-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #172B4D;
+  margin: 0;
+}
+
+/* Stepper */
+.bulk-wizard-stepper {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+.bulk-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulk-step-indicator {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bulk-step-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #DFE1E6;
+  transition: background 0.2s;
+}
+
+.bulk-step-active .bulk-step-dot {
+  background: #0052CC;
+  box-shadow: 0 0 0 4px rgba(0, 82, 204, 0.2);
+}
+
+.bulk-step-completed .bulk-step-dot {
+  background: #0052CC;
+}
+
+.bulk-step-check {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.bulk-step-label {
+  font-size: 12px;
+  color: #6B778C;
+  white-space: nowrap;
+}
+
+.bulk-step-active .bulk-step-label {
+  color: #0052CC;
+  font-weight: 600;
+}
+
+.bulk-step-completed .bulk-step-label {
+  color: #172B4D;
+}
+
+/* Content Card */
+.bulk-wizard-content {
+  background: white;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  margin-bottom: 16px;
+}
+
+.bulk-step-content {
+  padding: 24px;
+}
+
+.bulk-section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #172B4D;
+  margin: 0 0 16px 0;
+}
+
+.bulk-section-divider {
+  height: 1px;
+  background: #DFE1E6;
+  margin-bottom: 20px;
+}
+
+/* Form Section */
+.bulk-form-section {
+  max-width: 500px;
+}
+
+.bulk-instructions {
+  font-size: 14px;
+  color: #6B778C;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+.bulk-form-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.bulk-form-label {
+  width: 160px;
+  padding-top: 8px;
+  text-align: right;
+  padding-right: 16px;
+  font-size: 14px;
+  color: #172B4D;
+  flex-shrink: 0;
+}
+
+.bulk-form-label-required::after {
+  content: '*';
+  color: #D04437;
+  margin-left: 4px;
+}
+
+.bulk-form-input {
+  flex: 1;
+}
+
+.bulk-form-input-small {
+  width: 200px;
+  padding: 8px 12px;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.bulk-form-input-small:focus {
+  border-color: #4C9AFF;
+}
+
+.bulk-form-select {
+  padding: 8px 12px;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  min-width: 200px;
+  outline: none;
+}
+
+.bulk-form-select:focus {
+  border-color: #4C9AFF;
+}
+
+.bulk-form-select-full {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.bulk-form-select-full:focus {
+  border-color: #4C9AFF;
+}
+
+.bulk-form-hint {
+  display: block;
+  font-size: 12px;
+  color: #6B778C;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+/* File Upload */
+.bulk-file-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: #F4F5F7;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  font-size: 14px;
+  color: #172B4D;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.bulk-file-button:hover {
+  background: #EBECF0;
+}
+
+.bulk-file-input {
+  display: none;
+}
+
+.bulk-file-name {
+  margin-left: 12px;
+  font-size: 14px;
+  color: #6B778C;
+}
+
+/* Checkbox */
+.bulk-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #172B4D;
+}
+
+.bulk-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Mapping Table */
+.bulk-mapping-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.bulk-mapping-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B778C;
+  text-transform: uppercase;
+  background: #F4F5F7;
+  border-bottom: 1px solid #DFE1E6;
+}
+
+.bulk-mapping-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #DFE1E6;
+  vertical-align: middle;
+}
+
+.bulk-mapping-table tr:hover td {
+  background: #FAFBFC;
+}
+
+.bulk-remove-btn {
+  padding: 4px 12px;
+  background: transparent;
+  border: none;
+  color: #D04437;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.bulk-remove-btn:hover {
+  text-decoration: underline;
+}
+
+.bulk-remove-btn:disabled {
+  color: #DFE1E6;
+  cursor: not-allowed;
+}
+
+.bulk-add-btn {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px dashed #DFE1E6;
+  border-radius: 3px;
+  color: #0052CC;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.bulk-add-btn:hover {
+  background: #F4F5F7;
+  border-color: #0052CC;
+}
+
+/* Footer */
+.bulk-wizard-footer {
+  display: flex;
+  gap: 16px;
+  padding: 16px 24px;
+  border-top: 1px solid #DFE1E6;
+  background: #FAFBFC;
+}
+
+.bulk-btn-primary {
+  padding: 8px 20px;
+  background: #0052CC;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.bulk-btn-primary:hover {
+  background: #0065FF;
+}
+
+.bulk-btn-primary:disabled {
+  background: #DFE1E6;
+  color: #6B778C;
+  cursor: not-allowed;
+}
+
+.bulk-btn-link {
+  padding: 8px 16px;
+  background: transparent;
+  color: #0052CC;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.bulk-btn-link:hover {
+  text-decoration: underline;
+}
+
+.bulk-btn-link:disabled {
+  color: #DFE1E6;
+  cursor: not-allowed;
+}
+
+/* System Info */
+.bulk-wizard-system-info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  font-size: 12px;
+  color: #6B778C;
+}
+
+.bulk-info-separator {
+  color: #DFE1E6;
+}

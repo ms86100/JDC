@@ -6,67 +6,67 @@ rule_files:
   - alert_rules.yml
 
 scrape_configs:
-  - job_name: 'jira-gateway'
+  - job_name: 'avionics-systems-gateway'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['gateway:8080']
-  - job_name: 'jira-auth-service'
+  - job_name: 'avionics-systems-auth-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['auth-service:8081']
-  - job_name: 'jira-user-service'
+  - job_name: 'avionics-systems-user-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['user-service:8082']
-  - job_name: 'jira-project-service'
+  - job_name: 'avionics-systems-project-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['project-service:8083']
-  - job_name: 'jira-issue-service'
+  - job_name: 'avionics-systems-issue-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['issue-service:8084']
-  - job_name: 'jira-workflow-service'
+  - job_name: 'avionics-systems-workflow-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['workflow-service:8085']
-  - job_name: 'jira-comment-service'
+  - job_name: 'avionics-systems-comment-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['comment-service:8086']
-  - job_name: 'jira-notification-service'
+  - job_name: 'avionics-systems-notification-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['notification-service:8087']
-  - job_name: 'jira-search-service'
+  - job_name: 'avionics-systems-search-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['search-service:8088']
-  - job_name: 'jira-audit-service'
+  - job_name: 'avionics-systems-audit-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['audit-service:8089']
-  - job_name: 'jira-attachment-service'
+  - job_name: 'avionics-systems-attachment-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['attachment-service:8090']
-  - job_name: 'jira-sprint-service'
+  - job_name: 'avionics-systems-sprint-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['sprint-service:8091']
-  - job_name: 'jira-plan-service'
+  - job_name: 'avionics-systems-plan-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['plan-service:8092']
-  - job_name: 'jira-admin-service'
+  - job_name: 'avionics-systems-admin-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['admin-service:8093']
-  - job_name: 'jira-migration-service'
+  - job_name: 'avionics-systems-migration-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['migration-service:8094']
-  - job_name: 'jira-test-service'
+  - job_name: 'avionics-systems-test-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['test-service:8095']

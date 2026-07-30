@@ -14,7 +14,7 @@ $projectId = $issues[0].projectId
 Write-Host "OK $($issues[0].issueKey)"
 
 Write-Host "`n== Export CSV ==" -ForegroundColor Cyan
-$csvPath = Join-Path $env:TEMP "jira-export-test.csv"
+$csvPath = Join-Path $env:TEMP "avionics-systems-export-test.csv"
 Invoke-WebRequest -Uri "$base/api/issues/search/export?jql=ORDER%20BY%20updated%20DESC" -Headers $headers -OutFile $csvPath
 $lines = (Get-Content $csvPath | Measure-Object -Line).Lines
 if ($lines -lt 2) { throw "CSV export empty" }

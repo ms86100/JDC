@@ -1,0 +1,52 @@
+package com.avionics_systems.test.enums;
+
+public enum AuditAction {
+    // Test actions
+    TEST_CREATED,
+    TEST_UPDATED,
+    TEST_DELETED,
+    TEST_ARCHIVED,
+    TEST_RESTORED,
+
+    // Test execution actions
+    EXECUTION_STARTED,
+    EXECUTION_COMPLETED,
+    EXECUTION_CANCELLED,
+    EXECUTION_FAILED,
+    STEP_PASSED,
+    STEP_FAILED,
+    STEP_BLOCKED,
+
+    // Import actions
+    CUCUMBER_IMPORTED,
+    JUNIT_IMPORTED,
+    IMPORT_FAILED,
+
+    // Link actions
+    REQUIREMENT_LINKED,
+    REQUIREMENT_UNLINKED,
+    DEFECT_LINKED,
+    DEFECT_UNLINKED,
+    PRECONDITION_LINKED,
+
+    // Workflow actions
+    WORKFLOW_STARTED,
+    WORKFLOW_TRANSITIONED,
+    WORKFLOW_COMPLETED,
+
+    // Permission actions
+    PERMISSION_GRANTED,
+    PERMISSION_REVOKED,
+    USER_ADDED_TO_PROJECT,
+    USER_REMOVED_FROM_PROJECT,
+
+    // Test data actions
+    TEST_DATA_CREATED,
+    TEST_DATA_UPDATED,
+    TEST_DATA_DELETED,
+    EVIDENCE_UPLOADED,
+
+    // Other
+    CONFIGURATION_CHANGED,
+    EXPORT_PERFORMED
+}

@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/avionics_systems_platform
+    username: avionicsadmin
+    password: ${DB_PASSWORD:localpass}
+
+# Local dev: no SMTP server — mail health must not mark the service DOWN
+management:
+  health:
+    mail:
+      enabled: false

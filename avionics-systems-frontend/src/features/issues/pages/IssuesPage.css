@@ -1,0 +1,248 @@
+/* Issues page — Modern Avionics Systems look */
+
+.ab-issues-page {
+  padding: 28px 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.ab-issues-page .ab-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ab-issues-page .ab-page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--ab-gray-900);
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+
+.ab-issues-page .ab-page-subtitle {
+  font-size: 14px;
+  color: var(--ab-gray-500);
+  margin: 0;
+}
+
+.ab-issues-page .ab-header-actions {
+  display: flex;
+  gap: var(--ab-spacing-sm);
+  align-items: center;
+}
+
+/* Tabs / filters bar */
+.ab-issues-page .ab-filters {
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--ab-gray-200);
+}
+
+.ab-issues-page .ab-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.ab-issues-page .ab-tab {
+  background: transparent;
+  border: none;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ab-gray-600);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color var(--ab-transition-fast), border-color var(--ab-transition-fast);
+  font-family: inherit;
+}
+
+.ab-issues-page .ab-tab:hover { color: var(--ab-gray-900); }
+
+.ab-issues-page .ab-tab.active {
+  color: var(--ab-primary-600);
+  border-bottom-color: var(--ab-primary-500);
+}
+
+/* Card containing the table */
+.ab-issues-page .ab-card {
+  background: var(--ab-white);
+  border: 1px solid var(--ab-gray-200);
+  border-radius: var(--ab-radius-lg);
+  box-shadow: var(--ab-shadow-sm);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ab-issues-page .ab-card .ab-table {
+  min-width: 720px;
+}
+
+/* Table */
+.ab-issues-page .ab-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ab-issues-page .ab-table th {
+  text-align: left;
+  padding: 10px 14px;
+  background: var(--ab-gray-50);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ab-gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--ab-gray-200);
+  white-space: nowrap;
+}
+
+.ab-issues-page .ab-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--ab-gray-100);
+  font-size: 14px;
+  color: var(--ab-gray-800);
+  vertical-align: middle;
+}
+
+.ab-issues-page .ab-table tbody tr {
+  transition: background var(--ab-transition-fast);
+}
+
+.ab-issues-page .ab-table tbody tr:hover { background: var(--ab-gray-50); }
+.ab-issues-page .ab-table tbody tr.selected { background: var(--ab-primary-50); }
+.ab-issues-page .ab-table tbody tr.selected:hover { background: var(--ab-primary-100); }
+
+.ab-issues-page .ab-table input[type="checkbox"] {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  accent-color: var(--ab-primary-500);
+}
+
+.ab-issue-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+}
+
+.ab-issue-key-link {
+  font-family: var(--ab-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ab-primary-600);
+  letter-spacing: 0.02em;
+}
+
+.ab-issue-summary {
+  font-weight: 500;
+  color: var(--ab-gray-900);
+}
+
+.ab-issues-page .ab-text-muted {
+  color: var(--ab-gray-500);
+  font-size: 13px;
+}
+
+/* Badges */
+.ab-issues-page .ab-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--ab-radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.ab-issues-page .ab-badge-primary { background: var(--ab-primary-50); color: var(--ab-primary-700); }
+.ab-issues-page .ab-badge-success { background: var(--ab-success-50); color: var(--ab-success-700); }
+.ab-issues-page .ab-badge-warning { background: var(--ab-warning-50); color: var(--ab-warning-700); }
+.ab-issues-page .ab-badge-danger  { background: var(--ab-danger-50);  color: var(--ab-danger-700); }
+.ab-issues-page .ab-badge-secondary { background: var(--ab-gray-100); color: var(--ab-gray-700); }
+
+/* Priority */
+.ab-issues-page .priority-highest,
+.ab-issues-page .priority-critical { color: var(--ab-priority-critical); font-weight: 600; }
+.ab-issues-page .priority-high     { color: var(--ab-priority-high); font-weight: 600; }
+.ab-issues-page .priority-medium   { color: var(--ab-priority-medium); font-weight: 600; }
+.ab-issues-page .priority-low,
+.ab-issues-page .priority-lowest   { color: var(--ab-priority-low); font-weight: 600; }
+
+/* Buttons */
+.ab-issues-page .ab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--ab-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--ab-transition-fast);
+  font-family: inherit;
+}
+.ab-issues-page .ab-btn-primary { background: var(--ab-primary-500); color: var(--ab-white); }
+.ab-issues-page .ab-btn-primary:hover { background: var(--ab-primary-600); }
+.ab-issues-page .ab-btn-secondary {
+  background: var(--ab-white);
+  color: var(--ab-gray-700);
+  border-color: var(--ab-gray-300);
+}
+.ab-issues-page .ab-btn-secondary:hover { background: var(--ab-gray-50); }
+
+.ab-icon-plus::before { content: "+"; font-weight: 700; font-size: 16px; line-height: 1; }
+
+/* Empty state */
+.ab-issues-page .ab-empty-state {
+  text-align: center;
+  padding: 56px 24px;
+}
+.ab-issues-page .ab-empty-state-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+.ab-issues-page .ab-empty-state-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ab-gray-900);
+  margin: 0 0 6px;
+}
+.ab-issues-page .ab-empty-state-description {
+  font-size: 14px;
+  color: var(--ab-gray-500);
+  margin: 0 0 18px;
+}
+
+/* Loading */
+.ab-issues-page .ab-loading {
+  display: flex;
+  justify-content: center;
+  padding: 64px;
+}
+.ab-issues-page .ab-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--ab-gray-200);
+  border-top-color: var(--ab-primary-500);
+  border-radius: 50%;
+  animation: ab-issues-spin 0.9s linear infinite;
+}
+@keyframes ab-issues-spin { to { transform: rotate(360deg); } }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .ab-issues-page { padding: 16px; }
+  .ab-issues-page .ab-card { overflow-x: auto; }
+  .ab-issues-page .ab-table { min-width: 720px; }
+}

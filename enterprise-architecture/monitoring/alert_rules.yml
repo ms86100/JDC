@@ -2,7 +2,7 @@ groups:
   - name: jdc-platform-alerts
     rules:
       - alert: ServiceDown
-        expr: up{job=~"jira-.*"} == 0
+        expr: up{job=~"avionics-systems-.*"} == 0
         for: 1m
         labels:
           severity: critical

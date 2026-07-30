@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: jira-platform-logs-pvc
-  namespace: jira-platform
+  name: avionics-systems-platform-logs-pvc
+  namespace: avionics-systems-platform
   labels:
-    app: jira-platform
+    app: avionics-systems-platform
     component: storage
 spec:
   accessModes:
@@ -17,10 +17,10 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: jira-platform-backup-pvc
-  namespace: jira-platform
+  name: avionics-systems-platform-backup-pvc
+  namespace: avionics-systems-platform
   labels:
-    app: jira-platform
+    app: avionics-systems-platform
     component: backup
 spec:
   accessModes:

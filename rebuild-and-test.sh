@@ -3,7 +3,7 @@
 # Handles OneDrive file locking issues
 
 set -e
-cd /c/Users/thech/OneDrive/Desktop/cloudetest/jira-platform
+cd /c/Users/thech/OneDrive/Desktop/cloudetest/avionics-systems-platform
 
 echo "=== Stopping all Java services ==="
 for pid in $(netstat -ano 2>/dev/null | grep -E ":808[0-9]|:809[0-9]" | grep LISTENING | awk '{print $5}' | sort -u); do
@@ -12,7 +12,7 @@ done
 sleep 5
 
 echo "=== Rebuilding services ==="
-services=("jira-plan-service" "jira-admin-service" "jira-notification-service" "jira-gateway")
+services=("avionics-systems-plan-service" "avionics-systems-admin-service" "avionics-systems-notification-service" "avionics-systems-gateway")
 
 for service in "${services[@]}"; do
   echo "Building $service..."
@@ -24,11 +24,11 @@ for service in "${services[@]}"; do
 done
 
 echo "=== Starting all services ==="
-for service_dir in jira-auth-service jira-user-service jira-project-service jira-issue-service \
-                   jira-workflow-service jira-comment-service jira-notification-service \
-                   jira-search-service jira-audit-service jira-attachment-service \
-                   jira-sprint-service jira-plan-service jira-admin-service \
-                   jira-migration-service jira-gateway; do
+for service_dir in avionics-systems-auth-service avionics-systems-user-service avionics-systems-project-service avionics-systems-issue-service \
+                   avionics-systems-workflow-service avionics-systems-comment-service avionics-systems-notification-service \
+                   avionics-systems-search-service avionics-systems-audit-service avionics-systems-attachment-service \
+                   avionics-systems-sprint-service avionics-systems-plan-service avionics-systems-admin-service \
+                   avionics-systems-migration-service avionics-systems-gateway; do
   service_name=$(basename "$service_dir")
   jar_file="$service_dir/target/${service_name}-1.0.0.jar"
   if [ -f "$jar_file" ]; then

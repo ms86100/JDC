@@ -1,0 +1,5 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/avionics_systems_platform
+    username: avionicsadmin
+    password: ${DB_PASSWORD:localpass}

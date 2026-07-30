@@ -1,0 +1,22 @@
+package com.avionics_systems.search.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.*;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class SearchRequest {
+
+    @NotBlank(message = "{validation.query.required}")
+    private String query;
+
+    private String entityType;
+
+    @Builder.Default
+    private int page = 0;
+
+    @Builder.Default
+    private int size = 20;
+}

@@ -1,0 +1,134 @@
+spring:
+  application:
+    name: avionics-systems-sprint-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:avionics_systems_platform}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 5
+      connection-timeout: 20000
+      leak-detection-threshold: 30000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: jira_sprint
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 500
+        generate_statistics: false
+  flyway:
+    enabled: false
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+server:
+  port: 8091
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: never
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    max-connections: 8192
+    accept-count: 100
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: w3c
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://zipkin:9411/api/v2/spans}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failureRateThreshold: 50
+        slidingWindowSize: 10
+        waitDurationInOpenState: 30s
+        minimumNumberOfCalls: 5
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 500ms
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  file:
+    path: ${LOG_PATH:../../logs}/sprint
+
+# --- Configurable Business Defaults ---
+app:
+  defaults:
+    board-type: SCRUM
+    card-layout: FULL
+    days-on-board: 5
+    holder-type: USER
+    subscription-frequency: DAILY
+    status-fallback: "To Do"
+  board:
+    max-card-fields: 3
+    # Kanban board default columns (com.avionics_systems.board.service.BoardService)
+    kanban-columns: "Backlog,Selected for Development,In Progress,Done"
+    kanban-column-categories: "TODO,TODO,IN_PROGRESS,DONE"
+    kanban-column-colors: "#6b778c,#0052cc,#ff8b00,#36b37e"
+    kanban-column-wip-limits: "0,0,5,0"
+    # Scrum board default columns (com.avionics_systems.board.service.BoardService)
+    scrum-columns: "Backlog,To Do,In Progress,In Review,Done"
+    scrum-column-categories: "TODO,TODO,IN_PROGRESS,IN_REVIEW,DONE"
+    scrum-column-colors: "#6c757d,#6c757d,#0066ff,#ff9200,#28a745"
+    scrum-column-wip-limits: "0,0,5,3,0"
+    # AgileBoardService default columns (simpler variant)
+    kanban-default-columns: "To Do,In Progress,Done"
+    kanban-default-categories: "TODO,IN_PROGRESS,DONE"
+    scrum-default-columns: "To Do,In Progress,In Review,Done"
+    scrum-default-categories: "TODO,IN_PROGRESS,IN_PROGRESS,DONE"
+    badge-default-columns: "Backlog,Active,Complete"
+    badge-default-categories: "TODO,IN_PROGRESS,DONE"
+    # Quick filters
+    quick-filter-ids: "qf-assigned-me,qf-reporter-me,qf-recently-updated,qf-no-assignee,qf-has-due-date"
+    quick-filter-names: "Assigned to Me,Reported by Me,Recently Updated,Unassigned,Has Due Date"
+    quick-filter-jqls: "assignee = currentUser(),reporter = currentUser(),updated >= -1d,assignee is empty,duedate is not empty"
+  report:
+    priority-categories: "Highest,High,Medium,Low,Lowest"
+    type-categories: "Bug,Story,Task,Epic,Other"
+    default-priority-fallback: Medium
+  dashboard:
+    default-gadget-types: "STATS_GRAPH,ISSUES_ASSIGNED,DISTRIBUTION,CREATED_vs_RESOLVED,QUICK_LINKS"
+    default-gadget-titles: "Project Statistics,My Assigned Issues,Issue Distribution,Created vs Resolved,Quick Links"
+    distribution-labels: "Bug,Story,Task,Epic"
+    distribution-colors: "#dc3545,#28a745,#007bff,#6c757d"
+  filter:
+    system-filter-names: "All Issues,My Issues,Reported by Me,Recently Updated,Open Issues"
+    system-filter-jqls: ",assignee = currentUser(),reporter = currentUser(),ORDER BY updated DESC,status NOT IN (Done\\, Closed)"

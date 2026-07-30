@@ -1,35 +1,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-issue-service
-  namespace: jira-platform
+  name: avionics-systems-issue-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-issue-service
+    app: avionics-systems-issue-service
     version: v1
     component: backend
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: jira-issue-service
+      app: avionics-systems-issue-service
   template:
     metadata:
       labels:
-        app: jira-issue-service
+        app: avionics-systems-issue-service
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8084"
         prometheus.io/path: "/actuator/prometheus"
     spec:
-      serviceAccountName: jira-platform-sa
+      serviceAccountName: avionics-systems-platform-sa
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
       containers:
-        - name: jira-issue-service
-          image: jira-platform/jira-issue-service:1.0.0
+        - name: avionics-systems-issue-service
+          image: avionics-systems-platform/avionics-systems-issue-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -46,42 +46,42 @@ spec:
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_PORT
             - name: DB_NAME
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: DB_NAME
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: jira-db-secret
+                  name: avionics-systems-db-secret
                   key: DB_USERNAME
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: jira-db-secret
+                  name: avionics-systems-db-secret
                   key: DB_PASSWORD
             - name: REDIS_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: REDIS_HOST
             - name: KAFKA_BOOTSTRAP_SERVERS
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: KAFKA_BOOTSTRAP_SERVERS
             - name: EUREKA_SERVER_URL
               valueFrom:
                 configMapKeyRef:
-                  name: jira-config
+                  name: avionics-systems-config
                   key: EUREKA_SERVER_URL
           resources:
             requests:
@@ -126,7 +126,7 @@ spec:
                     - key: app
                       operator: In
                       values:
-                        - jira-issue-service
+                        - avionics-systems-issue-service
                 topologyKey: kubernetes.io/hostname
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -141,10 +141,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-issue-service
-  namespace: jira-platform
+  name: avionics-systems-issue-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-issue-service
+    app: avionics-systems-issue-service
 spec:
   type: ClusterIP
   ports:
@@ -157,18 +157,18 @@ spec:
       targetPort: 9090
       protocol: TCP
   selector:
-    app: jira-issue-service
+    app: avionics-systems-issue-service
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-issue-service-hpa
-  namespace: jira-platform
+  name: avionics-systems-issue-service-hpa
+  namespace: avionics-systems-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-issue-service
+    name: avionics-systems-issue-service
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -205,10 +205,10 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: jira-issue-service-pdb
-  namespace: jira-platform
+  name: avionics-systems-issue-service-pdb
+  namespace: avionics-systems-platform
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: jira-issue-service
+      app: avionics-systems-issue-service

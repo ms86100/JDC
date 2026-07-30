@@ -13,9 +13,9 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: jiraadmin
-          POSTGRES_PASSWORD: jirapass
-          POSTGRES_DB: jira_platform
+          POSTGRES_USER: avionicsadmin
+          POSTGRES_PASSWORD: avionicspass
+          POSTGRES_DB: avionics_systems_platform
         ports:
           - 5432:5432
         options: >-
@@ -45,14 +45,14 @@ jobs:
           cache: maven
 
       - name: Build cluster-commons
-        run: mvn clean install -pl jira-cluster-commons -DskipTests -q
+        run: mvn clean install -pl avionics-systems-cluster-commons -DskipTests -q
 
       - name: Build all services
         run: mvn clean compile -DskipTests -q
 
       - name: Run ArchUnit cluster safety tests
         run: |
-          for service in jira-issue-service jira-workflow-service jira-notification-service jira-user-service jira-sprint-service jira-plan-service jira-test-service jira-migration-service; do
+          for service in avionics-systems-issue-service avionics-systems-workflow-service avionics-systems-notification-service avionics-systems-user-service avionics-systems-sprint-service avionics-systems-plan-service avionics-systems-test-service avionics-systems-migration-service; do
             echo "Testing $service..."
             mvn test -pl $service -Dtest="*ClusterArchTest" -q || exit 1
           done

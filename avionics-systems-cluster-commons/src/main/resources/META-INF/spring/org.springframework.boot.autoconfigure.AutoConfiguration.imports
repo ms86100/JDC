@@ -1,0 +1,14 @@
+com.avionics_systems.cluster.config.ClusterAutoConfiguration
+com.avionics_systems.cluster.scheduler.ShedLockAutoConfiguration
+com.avionics_systems.cluster.storage.StorageAutoConfiguration
+com.avionics_systems.cluster.cache.CacheAutoConfiguration
+com.avionics_systems.cluster.event.EventBusAutoConfiguration
+com.avionics_systems.cluster.idempotency.IdempotencyAutoConfiguration
+com.avionics_systems.cluster.async.AsyncAutoConfiguration
+com.avionics_systems.cluster.health.AvionicsSystemsHealthAutoConfiguration
+com.avionics_systems.cluster.resilience.ResilienceAutoConfiguration
+com.avionics_systems.cluster.auth.OAuth2AutoConfiguration
+com.avionics_systems.cluster.messaging.KafkaAutoConfiguration
+com.avionics_systems.cluster.datasource.DataSourceRoutingAutoConfiguration
+com.avionics_systems.cluster.tenant.TenantAutoConfiguration
+com.avionics_systems.cluster.archival.ArchivalAutoConfiguration

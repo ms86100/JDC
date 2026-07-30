@@ -1,0 +1,44 @@
+# Specific ignore rules for the migration-service multi-stage build
+# This file takes precedence over the root .dockerignore when building with
+# -f avionics-systems-migration-service/Dockerfile.build-and-package from the JDC-main/ context
+
+# Exclude all other services (they're not needed for this build)
+avionics-systems-admin-service/
+avionics-systems-attachment-service/
+avionics-systems-audit-service/
+avionics-systems-auth-service/
+avionics-systems-comment-service/
+avionics-systems-component-service/
+avionics-systems-dashboard-service/
+avionics-systems-document-service/
+avionics-systems-frontend/
+avionics-systems-gateway/
+avionics-systems-issue-service/
+avionics-systems-notification-service/
+avionics-systems-plan-service/
+avionics-systems-portal-service/
+avionics-systems-project-service/
+avionics-systems-report-service/
+avionics-systems-search-service/
+avionics-systems-sprint-service/
+avionics-systems-test-service/
+avionics-systems-user-service/
+avionics-systems-version-service/
+avionics-systems-workflow-service/
+
+# Exclude unnecessary root-level files
+.git
+node_modules/
+*.log
+.env
+.env.*
+docs/
+config/
+*.md
+*.bat
+*.py
+*.js
+*.yaml
+
+# .m2-cache is intentionally INCLUDED (needed for offline Maven build)
+# avionics-systems-migration-service/ is intentionally INCLUDED (source code)

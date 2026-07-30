@@ -69,7 +69,7 @@ async function main() {
 
   let r = await req('GET', '/api/migration/health/cluster');
   if (!ok('GET migration cluster health', r.status)) {
-    console.error('Start jira-migration-service on port 8094 and gateway on 8080.');
+    console.error('Start avionics-systems-migration-service on port 8094 and gateway on 8080.');
     return finish(1);
   }
 

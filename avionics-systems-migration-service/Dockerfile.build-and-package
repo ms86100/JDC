@@ -1,0 +1,22 @@
+FROM maven:3.9-eclipse-temurin-21 AS builder
+WORKDIR /build
+
+# Copy cached Maven repo (pre-downloaded dependencies, avoids Maven Central)
+# Build context must be JDC-main/ for this COPY to work
+COPY .m2-cache /root/.m2/repository
+
+# Copy project files (paths relative to JDC-main/ build context)
+COPY avionics-systems-migration-service/pom.xml .
+COPY avionics-systems-migration-service/src ./src
+
+# Build offline using the pre-populated local Maven repo
+RUN mvn package -Dmaven.test.skip=true -o -q
+
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+RUN addgroup -S appuser && adduser -S appuser -G appuser
+COPY --from=builder /build/target/*.jar app.jar
+RUN chown -R appuser:appuser /app
+USER appuser
+EXPOSE 8094
+ENTRYPOINT ["java","-jar","app.jar"]

@@ -43,58 +43,58 @@ jobs:
           echo "=========================================="
 
           for service in auth-service gateway user-service project-service workflow-service comment-service notification-service search-service audit-service attachment-service sprint-service plan-service admin-service migration-service version-service component-service; do
-            if [ -d "jira-$service" ]; then
+            if [ -d "avionics-systems-$service" ]; then
               echo ""
-              echo ">>> Building jira-$service"
+              echo ">>> Building avionics-systems-$service"
               docker build \
                 --platform linux/amd64 \
-                -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-$service:${{ github.sha }} \
-                -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-$service:latest \
-                -f jira-$service/Dockerfile .
-              docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-$service:${{ github.sha }}
-              docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-$service:latest
+                -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-$service:${{ github.sha }} \
+                -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-$service:latest \
+                -f avionics-systems-$service/Dockerfile .
+              docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-$service:${{ github.sha }}
+              docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-$service:latest
             fi
           done
 
       - name: Build issue-service (with dependencies)
         run: |
           echo ""
-          echo ">>> Building jira-issue-service"
+          echo ">>> Building avionics-systems-issue-service"
           docker build \
             --platform linux/amd64 \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-issue-service:${{ github.sha }} \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-issue-service:latest \
-            -f jira-issue-service/Dockerfile .
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-issue-service:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-issue-service:latest
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-issue-service:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-issue-service:latest \
+            -f avionics-systems-issue-service/Dockerfile .
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-issue-service:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-issue-service:latest
 
       - name: Build remaining services
         run: |
           for service in test-service dashboard-service portal-service report-service document-service; do
-            if [ -d "jira-$service" ]; then
+            if [ -d "avionics-systems-$service" ]; then
               echo ""
-              echo ">>> Building jira-$service"
+              echo ">>> Building avionics-systems-$service"
               docker build \
                 --platform linux/amd64 \
-                -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-$service:${{ github.sha }} \
-                -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-$service:latest \
-                -f jira-$service/Dockerfile .
-              docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-$service:${{ github.sha }}
-              docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-$service:latest
+                -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-$service:${{ github.sha }} \
+                -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-$service:latest \
+                -f avionics-systems-$service/Dockerfile .
+              docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-$service:${{ github.sha }}
+              docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-$service:latest
             fi
           done
 
       - name: Build and push frontend
         run: |
           echo ""
-          echo ">>> Building jira-frontend"
+          echo ">>> Building avionics-systems-frontend"
           docker build \
             --platform linux/amd64 \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-frontend:${{ github.sha }} \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-frontend:latest \
-            -f jira-frontend/Dockerfile .
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-frontend:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-frontend:latest
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-frontend:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-frontend:latest \
+            -f avionics-systems-frontend/Dockerfile .
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-frontend:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-frontend:latest
 
       - name: Show success
         run: |

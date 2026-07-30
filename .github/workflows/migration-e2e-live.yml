@@ -6,8 +6,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'jira-frontend/**'
-      - 'jira-migration-service/**'
+      - 'avionics-systems-frontend/**'
+      - 'avionics-systems-migration-service/**'
       - '.github/workflows/migration-e2e-live.yml'
 
 jobs:
@@ -17,19 +17,19 @@ jobs:
     timeout-minutes: 25
     defaults:
       run:
-        working-directory: jira-frontend
+        working-directory: avionics-systems-frontend
 
     services:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: jiraadmin
-          POSTGRES_PASSWORD: jiraadmin
-          POSTGRES_DB: jira_platform
+          POSTGRES_USER: avionicsadmin
+          POSTGRES_PASSWORD: avionicsadmin
+          POSTGRES_DB: avionics_systems_platform
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U jiraadmin -d jira_platform"
+          --health-cmd "pg_isready -U avionicsadmin -d avionics_systems_platform"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -45,14 +45,14 @@ jobs:
           cache: maven
 
       - name: Start migration service
-        working-directory: jira-migration-service
+        working-directory: avionics-systems-migration-service
         env:
           DB_HOST: localhost
           DB_PORT: 5432
-          DB_NAME: jira_platform
-          DB_USERNAME: jiraadmin
-          DB_PASSWORD: jiraadmin
-          JWT_SECRET: jira-platform-super-secret-key-that-is-at-least-256-bits-long
+          DB_NAME: avionics_systems_platform
+          DB_USERNAME: avionicsadmin
+          DB_PASSWORD: avionicsadmin
+          JWT_SECRET: avionics-systems-platform-super-secret-key-that-is-at-least-256-bits-long
         run: |
           mvn -q -DskipTests spring-boot:run &
           for i in $(seq 1 60); do
@@ -65,7 +65,7 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: jira-frontend/package-lock.json
+          cache-dependency-path: avionics-systems-frontend/package-lock.json
 
       - name: Install frontend + Playwright
         run: |

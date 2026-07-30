@@ -1,7 +1,8 @@
 -- Enable UUID extension for all microservices
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create all schemas upfront so Flyway migrations can run
+-- Create schemas used by existing Flyway migrations.
+-- Schema names remain as jira_* internally (an implementation detail invisible to users).
 CREATE SCHEMA IF NOT EXISTS jira_auth;
 CREATE SCHEMA IF NOT EXISTS jira_user;
 CREATE SCHEMA IF NOT EXISTS jira_project;
@@ -18,3 +19,8 @@ CREATE SCHEMA IF NOT EXISTS jira_admin;
 CREATE SCHEMA IF NOT EXISTS jira_migration;
 CREATE SCHEMA IF NOT EXISTS jira_version;
 CREATE SCHEMA IF NOT EXISTS jira_component;
+CREATE SCHEMA IF NOT EXISTS jira_test;
+CREATE SCHEMA IF NOT EXISTS jira_dashboard;
+CREATE SCHEMA IF NOT EXISTS jira_document;
+CREATE SCHEMA IF NOT EXISTS jira_portal;
+CREATE SCHEMA IF NOT EXISTS jira_report;

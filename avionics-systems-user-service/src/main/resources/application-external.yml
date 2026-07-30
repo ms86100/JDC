@@ -1,0 +1,28 @@
+spring:
+  config:
+    activate:
+      on-profile: external
+  datasource:
+    url: jdbc:postgresql://in0-eplmdb-v01:5432/systems
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        default_schema: jira_user
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    default-schema: jira_user
+    schemas: jira_user
+    create-schemas: true
+    validate-on-migrate: false
+    locations: filesystem:migrations-external/avionics-systems-user-service
+
+logging:
+  level:
+    com.avionics_systems.user: INFO
+    org.springframework.web: WARN
+    org.hibernate: WARN

@@ -2,7 +2,7 @@
 # =============================================================================
 # Docker Build with Pre-built Dependencies
 #
-# This script first builds dependency JARs (jira-admin-service, jira-project-service)
+# This script first builds dependency JARs (avionics-systems-admin-service, avionics-systems-project-service)
 # and then runs Docker build, making JARs available via a build cache volume.
 # =============================================================================
 
@@ -13,8 +13,8 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Dependency services that need to be pre-built
 DEPENDENCY_SERVICES=(
-    "jira-admin-service"
-    "jira-project-service"
+    "avionics-systems-admin-service"
+    "avionics-systems-project-service"
 )
 
 echo "==============================================="
@@ -49,7 +49,7 @@ for SERVICE in "${DEPENDENCY_SERVICES[@]}"; do
     JAR_FILE=$(find "$SERVICE_DIR/target" -name "*.jar" -not -name "*-sources.jar" -not -name "*-javadoc.jar" 2>/dev/null | head -1)
 
     if [ -n "$JAR_FILE" ]; then
-        CACHED_JAR="$CACHE_DIR/${SERVICE##jira-}-service.jar"
+        CACHED_JAR="$CACHE_DIR/${SERVICE##avionics-systems-}-service.jar"
         cp "$JAR_FILE" "$CACHED_JAR"
         echo "  -> Cached: $CACHED_JAR"
     fi

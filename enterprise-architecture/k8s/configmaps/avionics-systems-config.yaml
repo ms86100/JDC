@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: avionics-systems-config
+  namespace: avionics-systems-platform
+  labels:
+    app: avionics-systems-platform
+    component: config
+data:
+  DB_HOST: "avionics-systems-postgres.avionics-systems-platform.svc.cluster.local"
+  DB_PORT: "5432"
+  DB_NAME: "avionics_systems_platform"
+  DB_SCHEMA: "jira_issue"
+  REDIS_HOST: "avionics-systems-redis.avionics-systems-platform.svc.cluster.local"
+  REDIS_PORT: "6379"
+  KAFKA_BOOTSTRAP_SERVERS: "avionics-systems-kafka-0.avionics-systems-kafka-headless.avionics-systems-platform.svc.cluster.local:9092,avionics-systems-kafka-1.avionics-systems-kafka-headless.avionics-systems-platform.svc.cluster.local:9092,avionics-systems-kafka-2.avionics-systems-kafka-headless.avionics-systems-platform.svc.cluster.local:9092"
+  EUREKA_SERVER_URL: "http://avionics-systems-eureka.avionics-systems-platform.svc.cluster.local:8761/eureka"
+  SPRING_PROFILES_ACTIVE: "kubernetes"
+  LOG_LEVEL: "INFO"
+  CACHE_TTL_MINUTES: "15"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-config
+  namespace: avionics-systems-platform
+  labels:
+    app: avionics-systems-gateway
+    component: config
+data:
+  GATEWAY_PORT: "80"
+  GATEWAY_HTTPS_PORT: "443"
+  ISSUE_SERVICE_URL: "http://avionics-systems-issue-service.avionics-systems-platform.svc.cluster.local:8084"
+  PROJECT_SERVICE_URL: "http://avionics-systems-project-service.avionics-systems-platform.svc.cluster.local:8083"
+  WORKFLOW_SERVICE_URL: "http://avionics-systems-workflow-service.avionics-systems-platform.svc.cluster.local:8085"
+  ADMIN_SERVICE_URL: "http://avionics-systems-admin-service.avionics-systems-platform.svc.cluster.local:8082"
+  RATE_LIMIT_REQUESTS_PER_MINUTE: "1000"
+  RATE_LIMIT_CONNECTIONS_PER_HOST: "100"
+  TIMEOUT_READ: "30000"
+  TIMEOUT_WRITE: "30000"

@@ -1,23 +1,23 @@
-# Kubernetes Deployment - Enterprise Jira Platform
+# Kubernetes Deployment - Enterprise Avionics Systems Platform
 # Based on dc-app-performance-toolkit architecture insights
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jira-gateway
-  namespace: jira-enterprise
+  name: avionics-systems-gateway
+  namespace: avionics-systems-enterprise
   labels:
-    app: jira-gateway
+    app: avionics-systems-gateway
     tier: gateway
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: jira-gateway
+      app: avionics-systems-gateway
   template:
     metadata:
       labels:
-        app: jira-gateway
+        app: avionics-systems-gateway
         tier: gateway
       annotations:
         prometheus.io/scrape: "true"
@@ -34,11 +34,11 @@ spec:
                     - key: app
                       operator: In
                       values:
-                        - jira-gateway
+                        - avionics-systems-gateway
                 topologyKey: kubernetes.io/hostname
       containers:
         - name: gateway
-          image: jira-enterprise/jira-gateway:latest
+          image: avionics-systems-enterprise/avionics-systems-gateway:latest
           ports:
             - containerPort: 8080
           env:
@@ -71,11 +71,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-gateway
-  namespace: jira-enterprise
+  name: avionics-systems-gateway
+  namespace: avionics-systems-enterprise
 spec:
   selector:
-    app: jira-gateway
+    app: avionics-systems-gateway
   ports:
     - port: 80
       targetPort: 8080
@@ -84,13 +84,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: jira-gateway-hpa
-  namespace: jira-enterprise
+  name: avionics-systems-gateway-hpa
+  namespace: avionics-systems-enterprise
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: jira-gateway
+    name: avionics-systems-gateway
   minReplicas: 3
   maxReplicas: 20
   metrics:

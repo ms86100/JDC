@@ -1,0 +1,180 @@
+/* Avionics Systems View Group - Exact Avionics Systems styling */
+
+.view-group {
+  padding: 0;
+}
+
+.view-group-loading,
+.view-group-error {
+  padding: 32px;
+  text-align: center;
+  color: #6B778C;
+}
+
+/* Breadcrumb */
+.view-group-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.breadcrumb-link {
+  color: #0052CC;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-sep {
+  color: #6B778C;
+}
+
+.breadcrumb-current {
+  color: #172B4D;
+  font-size: 14px;
+}
+
+/* Header */
+.view-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  background: white;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  padding: 16px 20px;
+}
+
+.view-group-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.view-group-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #172B4D;
+  margin: 0;
+}
+
+.group-badges {
+  display: flex;
+  gap: 4px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-admin {
+  background: #505F79;
+  color: white;
+}
+
+.badge-avisys {
+  background: #DFE1E6;
+  color: #505F79;
+}
+
+.view-group-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Scheme Associations */
+.view-group-schemes {
+  background: white;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+}
+
+.schemes-heading {
+  font-size: 16px;
+  font-weight: 600;
+  color: #172B4D;
+  padding: 12px 20px;
+  margin: 0;
+  border-bottom: 1px solid #DFE1E6;
+  background: #F4F5F7;
+}
+
+.scheme-list {
+  padding: 0;
+}
+
+.scheme-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 20px;
+  border-bottom: 1px solid #DFE1E6;
+}
+
+.scheme-item:last-child {
+  border-bottom: none;
+}
+
+.scheme-label {
+  width: 200px;
+  flex-shrink: 0;
+  font-size: 14px;
+  color: #6B778C;
+}
+
+.scheme-content {
+  flex: 1;
+}
+
+.scheme-empty {
+  font-size: 14px;
+  color: #6B778C;
+  font-style: italic;
+}
+
+.scheme-list-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scheme-list-item {
+  padding: 4px 0;
+}
+
+.scheme-link {
+  color: #0052CC;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.scheme-link:hover {
+  text-decoration: underline;
+}
+
+/* Buttons */
+.btn-secondary {
+  padding: 8px 16px;
+  background: white;
+  color: #505F79;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.btn-secondary:hover {
+  background: #F4F5F7;
+}

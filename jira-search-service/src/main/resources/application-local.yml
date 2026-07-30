@@ -1,5 +1,0 @@
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/jira_platform
-    username: jiraadmin
-    password: ${DB_PASSWORD:localpass}

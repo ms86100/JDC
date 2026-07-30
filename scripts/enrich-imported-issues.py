@@ -60,7 +60,7 @@ def get_token():
     return data["accessToken"]
 
 
-def parse_jira_date(date_str):
+def parse_legacy_date(date_str):
     if not date_str or not date_str.strip():
         return None
     for fmt in ["%d/%b/%y %I:%M %p", "%d/%b/%y %H:%M %p", "%d/%b/%y"]:
@@ -115,7 +115,7 @@ def build_update(row):
     if env:
         update["environment"] = env
 
-    due = parse_jira_date(row.get("Due Date"))
+    due = parse_legacy_date(row.get("Due Date"))
     if due:
         update["dueDate"] = due
 

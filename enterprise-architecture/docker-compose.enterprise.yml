@@ -5,8 +5,8 @@ version: '3.8'
 
 services:
   # ============ GATEWAY ============
-  jira-gateway:
-    build: ./jira-gateway
+  avionics-systems-gateway:
+    build: ./avionics-systems-gateway
     ports:
       - "8080:8080"
     environment:
@@ -14,158 +14,158 @@ services:
       - EUREKA_CLIENT_ENABLED=false
       - KUBERNETES_ENABLED=true
     depends_on:
-      - jira-auth
-      - jira-issue
-      - jira-project
+      - avionics-systems-auth
+      - avionics-systems-issue
+      - avionics-systems-project
     networks:
-      - jira-network
+      - avionics-systems-network
 
   # ============ CORE SERVICES ============
-  jira-auth:
-    build: ./jira-auth-service
+  avionics-systems-auth:
+    build: ./avionics-systems-auth-service
     ports:
       - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=enterprise
-      - SPRING_REDIS_HOST=jira-redis
+      - SPRING_REDIS_HOST=avionics-systems-redis
     depends_on:
-      - jira-redis
-      - jira-postgres
+      - avionics-systems-redis
+      - avionics-systems-postgres
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-issue:
-    build: ./jira-issue-service
+  avionics-systems-issue:
+    build: ./avionics-systems-issue-service
     ports:
       - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=enterprise
-      - SPRING_REDIS_HOST=jira-redis
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=jira-kafka:9092
+      - SPRING_REDIS_HOST=avionics-systems-redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=avionics-systems-kafka:9092
     depends_on:
-      - jira-redis
-      - jira-postgres
-      - jira-kafka
-      - jira-search
+      - avionics-systems-redis
+      - avionics-systems-postgres
+      - avionics-systems-kafka
+      - avionics-systems-search
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-project:
-    build: ./jira-project-service
+  avionics-systems-project:
+    build: ./avionics-systems-project-service
     ports:
       - "8083:8083"
     environment:
       - SPRING_PROFILES_ACTIVE=enterprise
     depends_on:
-      - jira-postgres
+      - avionics-systems-postgres
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-workflow:
-    build: ./jira-workflow-service
+  avionics-systems-workflow:
+    build: ./avionics-systems-workflow-service
     ports:
       - "8084:8084"
     environment:
       - SPRING_PROFILES_ACTIVE=enterprise
     depends_on:
-      - jira-postgres
-      - jira-kafka
+      - avionics-systems-postgres
+      - avionics-systems-kafka
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-user:
-    build: ./jira-user-service
+  avionics-systems-user:
+    build: ./avionics-systems-user-service
     ports:
       - "8085:8085"
     environment:
       - SPRING_PROFILES_ACTIVE=enterprise
     depends_on:
-      - jira-postgres
-      - jira-redis
+      - avionics-systems-postgres
+      - avionics-systems-redis
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-board:
-    build: ./jira-sprint-service
+  avionics-systems-board:
+    build: ./avionics-systems-sprint-service
     ports:
       - "8086:8086"
     environment:
       - SPRING_PROFILES_ACTIVE=enterprise
-      - SPRING_REDIS_HOST=jira-redis
+      - SPRING_REDIS_HOST=avionics-systems-redis
     depends_on:
-      - jira-redis
-      - jira-postgres
-      - jira-issue
+      - avionics-systems-redis
+      - avionics-systems-postgres
+      - avionics-systems-issue
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-search:
-    build: ./jira-search-service
+  avionics-systems-search:
+    build: ./avionics-systems-search-service
     ports:
       - "8087:8087"
     environment:
       - SPRING_PROFILES_ACTIVE=enterprise
-      - OPENSEARCH_HOSTS=jira-opensearch:9200
+      - OPENSEARCH_HOSTS=avionics-systems-opensearch:9200
     depends_on:
-      - jira-opensearch
-      - jira-kafka
+      - avionics-systems-opensearch
+      - avionics-systems-kafka
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-notification:
-    build: ./jira-notification-service
+  avionics-systems-notification:
+    build: ./avionics-systems-notification-service
     ports:
       - "8088:8088"
     environment:
       - SPRING_PROFILES_ACTIVE=enterprise
     depends_on:
-      - jira-kafka
+      - avionics-systems-kafka
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-audit:
-    build: ./jira-audit-service
+  avionics-systems-audit:
+    build: ./avionics-systems-audit-service
     ports:
       - "8089:8089"
     environment:
       - SPRING_PROFILES_ACTIVE=enterprise
     depends_on:
-      - jira-postgres
-      - jira-kafka
+      - avionics-systems-postgres
+      - avionics-systems-kafka
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-plan:
-    build: ./jira-plan-service
+  avionics-systems-plan:
+    build: ./avionics-systems-plan-service
     ports:
       - "8090:8090"
     environment:
       - SPRING_PROFILES_ACTIVE=enterprise
     depends_on:
-      - jira-postgres
+      - avionics-systems-postgres
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-admin:
-    build: ./jira-admin-service
+  avionics-systems-admin:
+    build: ./avionics-systems-admin-service
     ports:
       - "8091:8091"
     environment:
       - SPRING_PROFILES_ACTIVE=enterprise
     depends_on:
-      - jira-postgres
+      - avionics-systems-postgres
     networks:
-      - jira-network
+      - avionics-systems-network
 
   # ============ DATA STORES ============
-  jira-postgres:
+  avionics-systems-postgres:
     image: postgres:17-alpine
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=jira
-      - POSTGRES_PASSWORD=jira123
-      - POSTGRES_DB=jira_enterprise
+      - POSTGRES_USER=avionics
+      - POSTGRES_PASSWORD=avionics123
+      - POSTGRES_DB=avionics_systems_enterprise
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -179,9 +179,9 @@ services:
       -c wal_buffers=16MB
       -c default_statistics_target=100
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-redis:
+  avionics-systems-redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
@@ -194,9 +194,9 @@ services:
     volumes:
       - redis-data:/data
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-redis-cluster:
+  avionics-systems-redis-cluster:
     image: redis:7-alpine
     ports:
       - "7380-7385:7380-7385"
@@ -207,9 +207,9 @@ services:
     volumes:
       - redis-cluster-data:/data
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-opensearch:
+  avionics-systems-opensearch:
     image: opensearchproject/opensearch:2.12.0
     ports:
       - "9200:9200"
@@ -217,7 +217,7 @@ services:
     environment:
       - OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g
       - DISABLE_SECURITY_PLUGIN=true
-      - cluster.name=jira-cluster
+      - cluster.name=avionics-systems-cluster
       - node.name=node-1
       - discovery.seed_hosts=opensearch-node-1,opensearch-node-2
       - bootstrap.memory_lock=true
@@ -228,26 +228,26 @@ services:
     volumes:
       - opensearch-data:/usr/share/opensearch/data
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-kafka:
+  avionics-systems-kafka:
     image: confluentinc/cp-kafka:7.5.0
     ports:
       - "9092:9092"
     environment:
       - KAFKA_BROKER_ID=1
-      - KAFKA_ZOOKEEPER_CONNECT=jira-zookeeper:2181
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://jira-kafka:9092
+      - KAFKA_ZOOKEEPER_CONNECT=avionics-systems-zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://avionics-systems-kafka:9092
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
       - KAFKA_NUM_PARTITIONS=10
       - KAFKA_LOG_RETENTION_HOURS=168
     depends_on:
-      - jira-zookeeper
+      - avionics-systems-zookeeper
     networks:
-      - jira-network
+      - avionics-systems-network
 
-  jira-zookeeper:
+  avionics-systems-zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     ports:
       - "2181:2181"
@@ -255,7 +255,7 @@ services:
       - ZOOKEEPER_CLIENT_PORT=2181
       - ZOOKEEPER_TICK_TIME=2000
     networks:
-      - jira-network
+      - avionics-systems-network
 
   # ============ MONITORING ============
   prometheus:
@@ -271,7 +271,7 @@ services:
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
     networks:
-      - jira-network
+      - avionics-systems-network
 
   grafana:
     image: grafana/grafana:10.2.0
@@ -286,7 +286,7 @@ services:
     depends_on:
       - prometheus
     networks:
-      - jira-network
+      - avionics-systems-network
 
   jaeger:
     image: jaegertracing/all-in-one:1.50
@@ -296,10 +296,10 @@ services:
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     networks:
-      - jira-network
+      - avionics-systems-network
 
 networks:
-  jira-network:
+  avionics-systems-network:
     driver: bridge
 
 volumes:

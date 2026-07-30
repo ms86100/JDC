@@ -1,0 +1,181 @@
+server:
+  port: 8087
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: never
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    max-connections: 8192
+    accept-count: 100
+
+spring:
+  application:
+    name: avionics-systems-notification-service
+
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    cache: true
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:avionics_systems_platform}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 20000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: jira_notification
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 500
+        generate_statistics: false
+
+  flyway:
+    enabled: false
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    mail:
+      enabled: ${MAIL_HEALTH_ENABLED:false}
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: w3c
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://zipkin:9411/api/v2/spans}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failureRateThreshold: 50
+        slidingWindowSize: 10
+        waitDurationInOpenState: 30s
+        minimumNumberOfCalls: 5
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 500ms
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+logging:
+  level:
+    com.avionics_systems.notification: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+  file:
+    path: ${LOG_PATH:../../logs}/notification
+
+notification:
+  email:
+    enabled: ${EMAIL_ENABLED:false}
+    from: ${EMAIL_FROM:noreply@avionics-systems.local}
+
+# --- Configurable business defaults (Pattern B / D) ---
+app:
+  notification:
+    default-reference-type: ISSUE
+    title:
+      issue-created: "has been created"
+      issue-updated: "has been updated"
+      issue-assigned: "has been assigned"
+      issue-commented: "has a new comment"
+      issue-resolved: "has been resolved"
+      issue-closed: "has been closed"
+      issue-reopened: "has been reopened"
+      issue-deleted: "has been deleted"
+      issue-moved: "has been moved"
+    event-categories:
+      issue: Issue
+      comment: Comment
+      status: Status
+      sprint: Sprint
+      project: Project
+  automation:
+    default-trigger-type: AUTOMATION
+    status:
+      success: SUCCESS
+      failed: FAILED
+    failure-handling:
+      stop: STOP
+    defaults:
+      logical-group: ALL
+      failure-handling: CONTINUE
+  mail:
+    defaults:
+      server-type: IMAP
+      port: 993
+      use-ssl: true
+      folder: INBOX
+      handler-type: CREATE_ISSUE
+      poll-interval-minutes: 5
+      connection-timeout: "10000"
+      read-timeout: "10000"
+  email:
+    status:
+      queued: QUEUED
+      sent: SENT
+      failed: FAILED
+    default-subject: Avionics Systems Notification
+    max-retries: 3
+    retry-backoff-base-seconds: 30
+    fallback-label: Unknown
+    template:
+      default-type: THYMELEAF

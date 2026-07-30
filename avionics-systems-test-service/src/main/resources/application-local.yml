@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/avionics_systems_platform
+    username: avionicsadmin
+    password: ${DB_PASSWORD:localpass}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+  flyway:
+    enabled: false
+
+server:
+  port: 8095
+
+issue:
+  service:
+    url: http://localhost:8084
+
+project:
+  service:
+    url: http://localhost:8083
+
+workflow:
+  service:
+    url: http://localhost:8085
+
+logging:
+  level:
+    com.avionics_systems.test: INFO
+    org.springframework.web: WARN

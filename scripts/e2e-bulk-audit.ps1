@@ -50,7 +50,7 @@ Step "Audit: entries for issue" {
             Write-Warning "No audit rows yet — ensure audit-service 8089 is running with Flyway V1"
         }
     } catch {
-        Write-Warning "Audit service not reachable at $base/api/audit — start jira-audit-service on 8089"
+        Write-Warning "Audit service not reachable at $base/api/audit — start avionics-systems-audit-service on 8089"
     }
 }
 

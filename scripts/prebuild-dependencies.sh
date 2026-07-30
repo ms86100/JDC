@@ -12,8 +12,8 @@ CACHE_DIR="$PROJECT_DIR/.m2-cache"
 
 # Services that need to be pre-built (they are dependencies of other services)
 DEPENDENCY_SERVICES=(
-    "jira-admin-service"
-    "jira-project-service"
+    "avionics-systems-admin-service"
+    "avionics-systems-project-service"
 )
 
 echo "==============================================="

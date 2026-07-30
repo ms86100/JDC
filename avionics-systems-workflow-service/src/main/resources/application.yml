@@ -1,0 +1,172 @@
+server:
+  port: 8085
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: never
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    max-connections: 8192
+    accept-count: 100
+
+spring:
+  main:
+    allow-circular-references: true
+  application:
+    name: avionics-systems-workflow-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:avionics_systems_platform}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      idle-timeout: 300000
+      connection-timeout: 20000
+      leak-detection-threshold: 30000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: jira_workflow
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 500
+        generate_statistics: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: '0'
+    validate-on-migrate: true
+    schemas: jira_workflow
+    default-schema: jira_workflow
+    table: flyway_schema_history
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: w3c
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://zipkin:9411/api/v2/spans}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failureRateThreshold: 50
+        slidingWindowSize: 10
+        waitDurationInOpenState: 30s
+        minimumNumberOfCalls: 5
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 500ms
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+avionics-systems:
+  services:
+    issue-url: ${ISSUE_SERVICE_URL:http://issue-service:8084}
+    test-url: ${TEST_SERVICE_URL:http://test-service:8095}
+    comment-url: ${COMMENT_SERVICE_URL:http://comment-service:8086}
+    attachment-url: ${ATTACHMENT_SERVICE_URL:http://attachment-service:8090}
+    admin-url: ${ADMIN_SERVICE_URL:http://admin-service:8093}
+    user-url: ${USER_SERVICE_URL:http://user-service:8082}
+    notification-url: ${NOTIFICATION_SERVICE_URL:http://notification-service:8087}
+    search-url: ${SEARCH_SERVICE_URL:http://search-service:8088}
+    project-url: ${PROJECT_SERVICE_URL:http://project-service:8083}
+    version-url: ${VERSION_SERVICE_URL:http://version-service:8096}
+    component-url: ${COMPONENT_SERVICE_URL:http://component-service:8097}
+    sprint-url: ${SPRINT_SERVICE_URL:http://sprint-service:8091}
+    plan-url: ${PLAN_SERVICE_URL:http://plan-service:8092}
+  workflow:
+    transition-fallback: false
+    outbox:
+      batch-size: 50
+      poll-interval-ms: 5000
+  scripting:
+    enabled: true
+
+app:
+  workflow:
+    status-catalog:
+      cache-ttl-ms: 300000
+      null-status-color: "#6C757D"
+      color-todo: "#6C757D"
+      color-in-progress: "#FF991F"
+      color-done: "#00875A"
+      legacy-filter-suffix: "(legacy)"
+    status-category:
+      color-todo: "#6C757D"
+      color-in-progress: "#0066FF"
+      color-done: "#28A745"
+    post-function:
+      max-retries: 3
+      retry-delay-ms: 100
+      default-email-subject: "Issue Notification"
+      default-email-body: "Issue has been updated."
+      default-notify-message: "Issue transitioned"
+      default-automation-queue: "issue-transitioned"
+      summary-template: "Issue {issueKey} was transitioned to {toStatusName} by {userName}."
+    permission:
+      default-suffix: "_ISSUES"
+    status-resolver:
+      strip-suffixes: "(legacy),(new)"
+    fallback:
+      transition-name-prefix: "Move to "
+      transition-description: "Direct status change (workflow fallback)"
+    context:
+      project-permissions: "BROWSE_PROJECTS,CREATE_ISSUES,EDIT_ISSUES,RESOLVE_ISSUES,DELETE_ISSUES,ASSIGN_ISSUES,ASSIGNABLE_USER,LINK_ISSUES"
+    outbox:
+      default-transition-name: "Transition"
+    timeout-ms: 5000
+    memory-limit-mb: 64
+    max-statements: 500000
+    console-timeout-ms: 10000
+    log-retention-days: 30
+    http-whitelist-domains: []
+    http-timeout-ms: 5000
+    env-whitelist-keys: []
+    scheduled-enabled: false
+    sql-write-enabled: false
+    datasources: {}
+    scheduled-poll-interval-ms: 30000
+
+logging:
+  level:
+    com.avionics_systems: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+  file:
+    path: ${LOG_PATH:../../logs}/workflow

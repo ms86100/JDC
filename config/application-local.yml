@@ -452,4 +452,4 @@ spring:
             - RewritePath=/api-docs/component/(?<path>.*), /api-docs/$\{path}
 
 jwt:
-  secret: jira-platform-super-secret-key-that-is-at-least-256-bits-long
+  secret: avionics-systems-platform-super-secret-key-that-is-at-least-256-bits-long

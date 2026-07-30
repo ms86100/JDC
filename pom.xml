@@ -4,13 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.jira</groupId>
-    <artifactId>jira-platform</artifactId>
+    <groupId>com.avionics_systems</groupId>
+    <artifactId>avionics-systems-platform</artifactId>
     <version>1.0.0</version>
     <packaging>pom</packaging>
 
-    <name>Jira Platform</name>
-    <description>Production-grade Jira-inspired microservices platform</description>
+    <name>Avionics Systems Platform</name>
+    <description>Production-grade avionics systems microservices platform</description>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -20,29 +20,29 @@
     </parent>
 
     <modules>
-        <module>jira-cluster-commons</module>
-        <module>jira-gateway</module>
-        <module>jira-auth-service</module>
-        <module>jira-user-service</module>
-        <module>jira-project-service</module>
-        <module>jira-issue-service</module>
-        <module>jira-workflow-service</module>
-        <module>jira-comment-service</module>
-        <module>jira-notification-service</module>
-        <module>jira-search-service</module>
-        <module>jira-audit-service</module>
-        <module>jira-sprint-service</module>
-        <module>jira-attachment-service</module>
-        <module>jira-migration-service</module>
-        <module>jira-plan-service</module>
-        <module>jira-admin-service</module>
-        <module>jira-test-service</module>
-        <module>jira-dashboard-service</module>
-        <module>jira-report-service</module>
-        <module>jira-document-service</module>
-        <module>jira-portal-service</module>
-        <module>jira-version-service</module>
-        <module>jira-component-service</module>
+        <module>avionics-systems-cluster-commons</module>
+        <module>avionics-systems-gateway</module>
+        <module>avionics-systems-auth-service</module>
+        <module>avionics-systems-user-service</module>
+        <module>avionics-systems-project-service</module>
+        <module>avionics-systems-issue-service</module>
+        <module>avionics-systems-workflow-service</module>
+        <module>avionics-systems-comment-service</module>
+        <module>avionics-systems-notification-service</module>
+        <module>avionics-systems-search-service</module>
+        <module>avionics-systems-audit-service</module>
+        <module>avionics-systems-sprint-service</module>
+        <module>avionics-systems-attachment-service</module>
+        <module>avionics-systems-migration-service</module>
+        <module>avionics-systems-plan-service</module>
+        <module>avionics-systems-admin-service</module>
+        <module>avionics-systems-test-service</module>
+        <module>avionics-systems-dashboard-service</module>
+        <module>avionics-systems-report-service</module>
+        <module>avionics-systems-document-service</module>
+        <module>avionics-systems-portal-service</module>
+        <module>avionics-systems-version-service</module>
+        <module>avionics-systems-component-service</module>
     </modules>
 
     <properties>

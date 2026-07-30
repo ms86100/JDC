@@ -1,0 +1,15 @@
+package com.avionics_systems.plan.dto.request;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+import java.util.UUID;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class MoveToBacklogRequest {
+    private List<UUID> planItemIds;
+}

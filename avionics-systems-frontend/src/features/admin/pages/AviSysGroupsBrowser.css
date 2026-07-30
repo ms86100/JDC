@@ -1,0 +1,229 @@
+/* Avionics Systems Groups Browser - Exact Avionics Systems styling */
+
+.groups-browser {
+  padding: 0;
+}
+
+.groups-browser-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.groups-browser-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #172B4D;
+  margin: 0;
+}
+
+/* Toolbar - Two Column Layout */
+.groups-browser-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  background: white;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.filter-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.add-group-section {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B778C;
+  text-transform: uppercase;
+}
+
+.filter-input {
+  padding: 8px 12px;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  font-size: 14px;
+  width: 200px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.filter-input:focus {
+  border-color: #4C9AFF;
+  box-shadow: 0 0 0 2px rgba(76, 159, 255, 0.2);
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  min-width: 120px;
+  outline: none;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Pagination Info */
+.groups-browser-pagination-info {
+  font-size: 14px;
+  color: #6B778C;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+/* Groups Table */
+.groups-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.groups-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B778C;
+  text-transform: uppercase;
+  background: #F4F5F7;
+  border-bottom: 1px solid #DFE1E6;
+  white-space: nowrap;
+}
+
+.groups-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #DFE1E6;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.groups-table tr:hover td {
+  background: #FAFBFC;
+}
+
+.groups-table tr:last-child td {
+  border-bottom: none;
+}
+
+.loading-cell,
+.empty-cell {
+  text-align: center;
+  padding: 32px !important;
+  color: #6B778C;
+}
+
+/* Group Name Cell */
+.group-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.group-name-link {
+  color: #0052CC;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.group-name-link:hover {
+  text-decoration: underline;
+}
+
+.group-badges {
+  display: flex;
+  gap: 4px;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-admin {
+  background: #505F79;
+  color: white;
+}
+
+.badge-avisys {
+  background: #DFE1E6;
+  color: #505F79;
+}
+
+/* User Count Link */
+.user-count-link {
+  color: #0052CC;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.user-count-link:hover {
+  text-decoration: underline;
+}
+
+/* Scheme Count */
+.scheme-count {
+  color: #6B778C;
+  font-size: 13px;
+}
+
+/* Action Links */
+.action-links {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.action-link {
+  color: #0052CC;
+  text-decoration: none;
+  font-size: 13px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.action-link:hover {
+  text-decoration: underline;
+}
+
+.action-link-danger {
+  color: #D04437;
+}
+
+.action-link-danger:hover {
+  text-decoration: underline;
+}

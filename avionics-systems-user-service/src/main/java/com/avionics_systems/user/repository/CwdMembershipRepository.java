@@ -1,0 +1,33 @@
+package com.avionics_systems.user.repository;
+
+import com.avionics_systems.user.entity.CwdMembership;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public interface CwdMembershipRepository extends JpaRepository<CwdMembership, UUID> {
+
+    List<CwdMembership> findByParentIdAndMembershipType(UUID parentId, String membershipType);
+
+    List<CwdMembership> findByChildIdAndMembershipType(UUID childId, String membershipType);
+
+    Optional<CwdMembership> findByParentIdAndChildIdAndMembershipType(UUID parentId, UUID childId, String membershipType);
+
+    boolean existsByParentIdAndChildIdAndMembershipType(UUID parentId, UUID childId, String membershipType);
+
+    void deleteByParentIdAndChildIdAndMembershipType(UUID parentId, UUID childId, String membershipType);
+
+    @Query("SELECT COUNT(m) FROM CwdMembership m WHERE m.parentId = :parentId AND m.membershipType = :type")
+    int countByParentIdAndType(@Param("parentId") UUID parentId, @Param("type") String type);
+
+    @Modifying
+    @Query("DELETE FROM CwdMembership m WHERE m.childId = :childId AND m.membershipType = :type")
+    void deleteAllByChildIdAndMembershipType(@Param("childId") UUID childId, @Param("type") String type);
+}

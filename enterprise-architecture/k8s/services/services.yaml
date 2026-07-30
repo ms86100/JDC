@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-project-service
-  namespace: jira-platform
+  name: avionics-systems-project-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-project-service
+    app: avionics-systems-project-service
     component: backend
 spec:
   type: ClusterIP
@@ -14,15 +14,15 @@ spec:
       targetPort: 8083
       protocol: TCP
   selector:
-    app: jira-project-service
+    app: avionics-systems-project-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-workflow-service
-  namespace: jira-platform
+  name: avionics-systems-workflow-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-workflow-service
+    app: avionics-systems-workflow-service
     component: backend
 spec:
   type: ClusterIP
@@ -32,15 +32,15 @@ spec:
       targetPort: 8085
       protocol: TCP
   selector:
-    app: jira-workflow-service
+    app: avionics-systems-workflow-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-admin-service
-  namespace: jira-platform
+  name: avionics-systems-admin-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-admin-service
+    app: avionics-systems-admin-service
     component: backend
 spec:
   type: ClusterIP
@@ -50,15 +50,15 @@ spec:
       targetPort: 8082
       protocol: TCP
   selector:
-    app: jira-admin-service
+    app: avionics-systems-admin-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-gateway
-  namespace: jira-platform
+  name: avionics-systems-gateway
+  namespace: avionics-systems-platform
   labels:
-    app: jira-gateway
+    app: avionics-systems-gateway
     component: gateway
 spec:
   type: LoadBalancer
@@ -72,15 +72,15 @@ spec:
       targetPort: 443
       protocol: TCP
   selector:
-    app: jira-gateway
+    app: avionics-systems-gateway
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-auth-service
-  namespace: jira-platform
+  name: avionics-systems-auth-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-auth-service
+    app: avionics-systems-auth-service
     component: backend
 spec:
   type: ClusterIP
@@ -90,15 +90,15 @@ spec:
       targetPort: 8081
       protocol: TCP
   selector:
-    app: jira-auth-service
+    app: avionics-systems-auth-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-user-service
-  namespace: jira-platform
+  name: avionics-systems-user-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-user-service
+    app: avionics-systems-user-service
     component: backend
 spec:
   type: ClusterIP
@@ -108,15 +108,15 @@ spec:
       targetPort: 8082
       protocol: TCP
   selector:
-    app: jira-user-service
+    app: avionics-systems-user-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-issue-service
-  namespace: jira-platform
+  name: avionics-systems-issue-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-issue-service
+    app: avionics-systems-issue-service
     component: backend
 spec:
   type: ClusterIP
@@ -126,15 +126,15 @@ spec:
       targetPort: 8084
       protocol: TCP
   selector:
-    app: jira-issue-service
+    app: avionics-systems-issue-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-comment-service
-  namespace: jira-platform
+  name: avionics-systems-comment-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-comment-service
+    app: avionics-systems-comment-service
     component: backend
 spec:
   type: ClusterIP
@@ -144,15 +144,15 @@ spec:
       targetPort: 8086
       protocol: TCP
   selector:
-    app: jira-comment-service
+    app: avionics-systems-comment-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-notification-service
-  namespace: jira-platform
+  name: avionics-systems-notification-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-notification-service
+    app: avionics-systems-notification-service
     component: backend
 spec:
   type: ClusterIP
@@ -162,15 +162,15 @@ spec:
       targetPort: 8087
       protocol: TCP
   selector:
-    app: jira-notification-service
+    app: avionics-systems-notification-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-search-service
-  namespace: jira-platform
+  name: avionics-systems-search-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-search-service
+    app: avionics-systems-search-service
     component: backend
 spec:
   type: ClusterIP
@@ -180,15 +180,15 @@ spec:
       targetPort: 8088
       protocol: TCP
   selector:
-    app: jira-search-service
+    app: avionics-systems-search-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-audit-service
-  namespace: jira-platform
+  name: avionics-systems-audit-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-audit-service
+    app: avionics-systems-audit-service
     component: backend
 spec:
   type: ClusterIP
@@ -198,15 +198,15 @@ spec:
       targetPort: 8089
       protocol: TCP
   selector:
-    app: jira-audit-service
+    app: avionics-systems-audit-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-attachment-service
-  namespace: jira-platform
+  name: avionics-systems-attachment-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-attachment-service
+    app: avionics-systems-attachment-service
     component: backend
 spec:
   type: ClusterIP
@@ -216,15 +216,15 @@ spec:
       targetPort: 8090
       protocol: TCP
   selector:
-    app: jira-attachment-service
+    app: avionics-systems-attachment-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-sprint-service
-  namespace: jira-platform
+  name: avionics-systems-sprint-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-sprint-service
+    app: avionics-systems-sprint-service
     component: backend
 spec:
   type: ClusterIP
@@ -234,15 +234,15 @@ spec:
       targetPort: 8091
       protocol: TCP
   selector:
-    app: jira-sprint-service
+    app: avionics-systems-sprint-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-plan-service
-  namespace: jira-platform
+  name: avionics-systems-plan-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-plan-service
+    app: avionics-systems-plan-service
     component: backend
 spec:
   type: ClusterIP
@@ -252,15 +252,15 @@ spec:
       targetPort: 8092
       protocol: TCP
   selector:
-    app: jira-plan-service
+    app: avionics-systems-plan-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-migration-service
-  namespace: jira-platform
+  name: avionics-systems-migration-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-migration-service
+    app: avionics-systems-migration-service
     component: backend
 spec:
   type: ClusterIP
@@ -270,15 +270,15 @@ spec:
       targetPort: 8094
       protocol: TCP
   selector:
-    app: jira-migration-service
+    app: avionics-systems-migration-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-test-service
-  namespace: jira-platform
+  name: avionics-systems-test-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-test-service
+    app: avionics-systems-test-service
     component: backend
 spec:
   type: ClusterIP
@@ -288,15 +288,15 @@ spec:
       targetPort: 8095
       protocol: TCP
   selector:
-    app: jira-test-service
+    app: avionics-systems-test-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-version-service
-  namespace: jira-platform
+  name: avionics-systems-version-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-version-service
+    app: avionics-systems-version-service
     component: backend
 spec:
   type: ClusterIP
@@ -306,15 +306,15 @@ spec:
       targetPort: 8096
       protocol: TCP
   selector:
-    app: jira-version-service
+    app: avionics-systems-version-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-component-service
-  namespace: jira-platform
+  name: avionics-systems-component-service
+  namespace: avionics-systems-platform
   labels:
-    app: jira-component-service
+    app: avionics-systems-component-service
     component: backend
 spec:
   type: ClusterIP
@@ -324,15 +324,15 @@ spec:
       targetPort: 8097
       protocol: TCP
   selector:
-    app: jira-component-service
+    app: avionics-systems-component-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-redis
-  namespace: jira-platform
+  name: avionics-systems-redis
+  namespace: avionics-systems-platform
   labels:
-    app: jira-redis
+    app: avionics-systems-redis
     component: infrastructure
 spec:
   type: ClusterIP
@@ -342,15 +342,15 @@ spec:
       targetPort: 6379
       protocol: TCP
   selector:
-    app: jira-redis
+    app: avionics-systems-redis
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-minio
-  namespace: jira-platform
+  name: avionics-systems-minio
+  namespace: avionics-systems-platform
   labels:
-    app: jira-minio
+    app: avionics-systems-minio
     component: infrastructure
 spec:
   type: ClusterIP
@@ -364,13 +364,13 @@ spec:
       targetPort: 9001
       protocol: TCP
   selector:
-    app: jira-minio
+    app: avionics-systems-minio
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-kafka
-  namespace: jira-platform
+  name: avionics-systems-kafka
+  namespace: avionics-systems-platform
 spec:
   type: ClusterIP
   ports:
@@ -378,13 +378,13 @@ spec:
       port: 29092
       targetPort: 29092
   selector:
-    app: jira-kafka
+    app: avionics-systems-kafka
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jira-zookeeper
-  namespace: jira-platform
+  name: avionics-systems-zookeeper
+  namespace: avionics-systems-platform
 spec:
   type: ClusterIP
   ports:
@@ -392,4 +392,4 @@ spec:
       port: 2181
       targetPort: 2181
   selector:
-    app: jira-zookeeper
+    app: avionics-systems-zookeeper

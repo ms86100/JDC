@@ -1,0 +1,213 @@
+server:
+  port: 8084
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: never
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    max-connections: 8192
+    accept-count: 100
+
+spring:
+  application:
+    name: avionics-systems-issue-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:avionics_systems_platform}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      idle-timeout: 300000
+      connection-timeout: 20000
+      leak-detection-threshold: 30000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: jira_issue
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 500
+        generate_statistics: false
+  flyway:
+    enabled: false
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
+    consumer:
+      group-id: avionics-systems-issue-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.avionics_systems.issue.events"
+  # GraphQL Configuration
+  graphql:
+    graphiql:
+      enabled: true
+      path: /graphiql
+    schema:
+      locations: classpath:graphql/
+      fileExtensions: .graphqls
+    cors:
+      allowed-origins: "*"
+      allowed-methods: GET, POST
+      allowed-headers: "*"
+  websocket:
+    path: /graphql-ws
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+workflow:
+  service:
+    url: ${WORKFLOW_SERVICE_URL:http://workflow-service:8085}
+
+project:
+  service:
+    url: ${PROJECT_SERVICE_URL:http://project-service:8083}
+
+sprint:
+  service:
+    url: ${SPRINT_SERVICE_URL:http://sprint-service:8091}
+
+avionics-systems:
+  permissions:
+    fail-open: false
+  workflow:
+    transition-fallback: true
+    validation-lenient: true
+
+# Configurable defaults (Pattern B) — override per environment as needed
+app:
+  defaults:
+    status-id: "00000000-0000-0000-0001-000000000002"
+    type-id: "a0000000-0000-0000-0000-000000000001"
+    priority-id: "b0000000-0000-0000-0000-000000000003"
+    clone-title-prefix: "CLONE - "
+    clone-title-suffix: " (Copy)"
+    fallback-link-type: Related
+    fallback-link-label: relates to
+    issue-type-icon: standard
+    epic-color: "#0052CC"
+    epic-status: OPEN
+    test-type: MANUAL
+    test-status: DRAFT
+    test-plan-status: OPEN
+    test-set-status: DRAFT
+    execution-status: RUNNING
+    coverage-status: COVERED
+    defect-status: OPEN
+    pr-default-status: OPEN
+    branch-default-status: ACTIVE
+    import-test-type-bdd: BDD
+    import-test-type-automated: AUTOMATED
+    import-test-status: DRAFT
+    import-ci-source-manual: MANUAL
+    import-default-env: CI
+    import-test-set-active-status: ACTIVE
+  quality:
+    pass-rate-excellent: 95
+    pass-rate-good: 85
+    pass-rate-needs-improvement: 70
+    risk-threshold-high: 5
+    risk-threshold-medium: 2
+  ai:
+    duplicate-similarity-threshold: 0.8
+    risk-threshold-high: 0.7
+    risk-threshold-medium: 0.4
+    stability-warning-threshold: 0.7
+    coverage-warning-threshold: 0.5
+  export:
+    max-rows: 10000
+  hierarchy:
+    max-depth: 10
+  change-management:
+    standard-review-types: COMMON_KOM,PLANS_REVIEW,FCR,PDR,DDR,CDR,LAR,FAR,FFR,CR
+    default-review-status: BACKLOG
+    follow-up-trigger-status: PASSED_RED
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: w3c
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://zipkin:9411/api/v2/spans}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failureRateThreshold: 50
+        slidingWindowSize: 10
+        waitDurationInOpenState: 30s
+        minimumNumberOfCalls: 5
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 500ms
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+logging:
+  level:
+    com.avionics_systems: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.springframework.kafka: INFO
+    org.springframework.cache: DEBUG
+  file:
+    path: ${LOG_PATH:../../logs}/issue

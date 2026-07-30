@@ -26,18 +26,18 @@ jobs:
         run: |
           echo "Pulling pre-built images..."
           for service in auth-service gateway user-service project-service workflow-service comment-service notification-service search-service audit-service attachment-service sprint-service plan-service admin-service migration-service version-service component-service issue-service test-service dashboard-service portal-service report-service document-service; do
-            echo "Pulling: jira-$service"
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-$service:latest || echo "Failed: $service"
+            echo "Pulling: avionics-systems-$service"
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-$service:latest || echo "Failed: $service"
           done
 
       - name: Pull frontend
         run: |
-          echo "Pulling: jira-frontend"
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/jira-frontend:latest || echo "Failed: frontend"
+          echo "Pulling: avionics-systems-frontend"
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avionics-systems-frontend:latest || echo "Failed: frontend"
 
       - name: Show available images
         run: |
           echo "=========================================="
           echo " Available Images"
           echo "=========================================="
-          docker images | grep "${{ env.IMAGE_PREFIX }}/jira" | head -30
+          docker images | grep "${{ env.IMAGE_PREFIX }}/avionics-systems" | head -30
