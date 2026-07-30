@@ -407,6 +407,42 @@ public class IssuePersisterHandler {
             builder.customFields(cf);
         }
 
+        // Handle environment
+        String environment = (String) data.getOrDefault("environment", data.get("env"));
+        if (environment != null && !environment.isBlank()) {
+            builder.environment(environment);
+        }
+
+        // Handle resolution
+        String resolution = (String) data.getOrDefault("resolution", data.get("resolution_name"));
+        if (resolution != null && !resolution.isBlank()) {
+            builder.resolution(resolution);
+        }
+
+        // Handle security level
+        String secLevel = (String) data.getOrDefault("securityLevel", data.get("security_level"));
+        if (secLevel != null && !secLevel.isBlank()) {
+            builder.securityLevel(secLevel);
+        }
+
+        // Handle components (names or UUIDs)
+        Object comps = data.getOrDefault("components", data.get("component"));
+        if (comps instanceof List<?> compList && !compList.isEmpty()) {
+            builder.components(compList.stream().map(Object::toString).toList());
+        }
+
+        // Handle fix versions
+        Object fixVer = data.getOrDefault("fixVersions", data.get("fix_versions"));
+        if (fixVer instanceof List<?> fvList && !fvList.isEmpty()) {
+            builder.fixVersions(fvList.stream().map(Object::toString).toList());
+        }
+
+        // Handle affects versions
+        Object affVer = data.getOrDefault("affectsVersions", data.get("affects_versions"));
+        if (affVer instanceof List<?> avList && !avList.isEmpty()) {
+            builder.affectedVersions(avList.stream().map(Object::toString).toList());
+        }
+
         return builder.build();
     }
 

@@ -75,10 +75,12 @@ public class JiraDcApiImportOrchestrator {
             // Phase 4: Fetch and import components/versions per project
             int componentCount = 0;
             int versionCount = 0;
+            Map<String, String> componentNameToId = new HashMap<>();
+            Map<String, String> versionNameToId = new HashMap<>();
             if (config.getProjectKeys() != null && !config.getProjectKeys().isEmpty()) {
                 for (String projectKey : config.getProjectKeys()) {
-                    componentCount += importProjectComponents(client, projectKey, jobId);
-                    versionCount += importProjectVersions(client, projectKey, jobId);
+                    componentCount += importProjectComponents(client, projectKey, jobId, componentNameToId);
+                    versionCount += importProjectVersions(client, projectKey, jobId, versionNameToId);
                 }
             }
 
@@ -119,6 +121,33 @@ public class JiraDcApiImportOrchestrator {
 
                     if (targetProjectId != null && !targetProjectId.isBlank()) {
                         issueData.put("projectId", targetProjectId);
+                    }
+
+                    // Resolve component names to UUIDs
+                    @SuppressWarnings("unchecked")
+                    List<String> compNames = issueData.get("components") instanceof List<?> cl
+                            ? ((List<Object>) cl).stream().map(Object::toString).toList() : null;
+                    if (compNames != null && !compNames.isEmpty()) {
+                        List<String> compIds = compNames.stream()
+                                .map(n -> componentNameToId.getOrDefault(n, n))
+                                .toList();
+                        issueData.put("components", compIds);
+                    }
+
+                    // Resolve version names to UUIDs
+                    @SuppressWarnings("unchecked")
+                    List<String> fvNames = issueData.get("fixVersions") instanceof List<?> fl
+                            ? ((List<Object>) fl).stream().map(Object::toString).toList() : null;
+                    if (fvNames != null && !fvNames.isEmpty()) {
+                        issueData.put("fixVersions", fvNames.stream()
+                                .map(n -> versionNameToId.getOrDefault(n, n)).toList());
+                    }
+                    @SuppressWarnings("unchecked")
+                    List<String> avNames = issueData.get("affectsVersions") instanceof List<?> al
+                            ? ((List<Object>) al).stream().map(Object::toString).toList() : null;
+                    if (avNames != null && !avNames.isEmpty()) {
+                        issueData.put("affectsVersions", avNames.stream()
+                                .map(n -> versionNameToId.getOrDefault(n, n)).toList());
                     }
 
                     EntityStatus status = EntityStatus.builder()
@@ -233,14 +262,20 @@ public class JiraDcApiImportOrchestrator {
 
     // ========== Component / Version Import ==========
 
-    private int importProjectComponents(JiraDcRestClient client, String projectKey, UUID jobId) {
+    private int importProjectComponents(JiraDcRestClient client, String projectKey, UUID jobId,
+                                         Map<String, String> componentNameToId) {
         try {
             List<Map<String, Object>> components = client.getProjectComponents(projectKey);
             int count = 0;
             for (Map<String, Object> comp : components) {
                 try {
                     Map<String, Object> data = JiraDcEntityMapper.toComponentData(comp, projectKey);
-                    componentPersisterHandler.persistComponent(data, jobId);
+                    ComponentPersisterHandler.ComponentPersistResult result =
+                            componentPersisterHandler.persistComponent(data, jobId);
+                    if (result.isSuccess() && result.getComponentId() != null) {
+                        String name = data.get("name") != null ? data.get("name").toString() : "";
+                        componentNameToId.put(name, result.getComponentId().toString());
+                    }
                     count++;
                 } catch (Exception e) {
                     log.warn("Job {}: Failed to import component '{}': {}",
@@ -255,14 +290,20 @@ public class JiraDcApiImportOrchestrator {
         }
     }
 
-    private int importProjectVersions(JiraDcRestClient client, String projectKey, UUID jobId) {
+    private int importProjectVersions(JiraDcRestClient client, String projectKey, UUID jobId,
+                                       Map<String, String> versionNameToId) {
         try {
             List<Map<String, Object>> versions = client.getProjectVersions(projectKey);
             int count = 0;
             for (Map<String, Object> ver : versions) {
                 try {
                     Map<String, Object> data = JiraDcEntityMapper.toVersionData(ver, projectKey);
-                    versionPersisterHandler.persistVersion(data, jobId);
+                    VersionPersisterHandler.VersionPersistResult result =
+                            versionPersisterHandler.persistVersion(data, jobId);
+                    if (result.isSuccess() && result.getVersionId() != null) {
+                        String name = data.get("name") != null ? data.get("name").toString() : "";
+                        versionNameToId.put(name, result.getVersionId().toString());
+                    }
                     count++;
                 } catch (Exception e) {
                     log.warn("Job {}: Failed to import version '{}': {}",

@@ -1,34 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import '../AircraftDesignStyles.css';
-
-let mermaidModule: typeof import('mermaid')['default'] | null = null;
-let mermaidReady: Promise<typeof import('mermaid')['default']> | null = null;
-
-function getMermaid() {
-  if (mermaidReady) return mermaidReady;
-  mermaidReady = import('mermaid').then((mod) => {
-    const m = mod.default;
-    m.initialize({
-      startOnLoad: false,
-      theme: 'default',
-      securityLevel: 'loose',
-      flowchart: { curve: 'basis', padding: 16 },
-      sequence: { actorMargin: 40, messageFontSize: 12 },
-      er: { fontSize: 12 },
-      themeVariables: {
-        primaryColor: '#0052cc',
-        primaryTextColor: '#172b4d',
-        primaryBorderColor: '#0052cc',
-        lineColor: '#6b778c',
-        secondaryColor: '#f4f5f7',
-        tertiaryColor: '#deebff',
-      },
-    });
-    mermaidModule = m;
-    return m;
-  });
-  return mermaidReady;
-}
 
 /* ─── colour tokens ─── */
 const C = {
@@ -286,58 +257,89 @@ function EndpointRow({ method, path, desc }: { method: string; path: string; des
    Tab render functions
    ========================================================================= */
 
-function MermaidBlock({ title, chart }: { title: string; chart: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
-
-  useEffect(() => {
-    let cancelled = false;
-    const container = containerRef.current;
-    if (!container) return;
-
-    const id = `mm-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-
-    getMermaid()
-      .then((m) => {
-        if (cancelled) return;
-        return m.render(id, chart.trim());
-      })
-      .then((result) => {
-        if (cancelled || !result) return;
-        container.innerHTML = result.svg;
-        setStatus('ok');
-      })
-      .catch(() => {
-        if (cancelled) return;
-        container.innerHTML = '';
-        setStatus('error');
-      });
-
-    return () => {
-      cancelled = true;
-      const el = document.getElementById(id);
-      if (el) el.remove();
-    };
-  }, [chart]);
-
+function DiagramCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="ads-card" style={{ marginBottom: 20 }}>
       <h4 className="ads-card-title">{title}</h4>
-      <div
-        ref={containerRef}
-        style={{
-          background: '#fff', borderRadius: 6, padding: 16, overflowX: 'auto', textAlign: 'center',
-          display: status === 'error' ? 'none' : 'block',
-          minHeight: status === 'loading' ? 80 : undefined,
-        }}
-      />
-      {status === 'error' && (
-        <pre style={{
-          background: '#1e1e1e', color: '#d4d4d4', padding: 20, borderRadius: 6,
-          fontSize: 12, lineHeight: 1.7, overflowX: 'auto', whiteSpace: 'pre',
-          fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
-        }}>{chart}</pre>
-      )}
+      <div style={{ padding: 16, background: C.bg, borderRadius: 8, overflowX: 'auto' }}>{children}</div>
+    </div>
+  );
+}
+
+function FlowRow({ children, gap = 12, justify = 'center' }: { children: React.ReactNode; gap?: number; justify?: string }) {
+  return <div style={{ display: 'flex', alignItems: 'center', gap, justifyContent: justify, flexWrap: 'wrap', marginBottom: 8 }}>{children}</div>;
+}
+
+function SubgraphBox({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+  return (
+    <div style={{ border: `2px solid ${color}`, borderRadius: 8, padding: '8px 12px 12px', background: `${color}08`, minWidth: 140 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color, marginBottom: 8, textAlign: 'center' }}>{title}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function MiniBox({ label, color = C.brand }: { label: string; color?: string }) {
+  return (
+    <div style={{ padding: '4px 10px', borderRadius: 4, border: `1.5px solid ${color}`, background: C.white, fontSize: 11, fontWeight: 600, color: C.dark, textAlign: 'center', whiteSpace: 'nowrap' }}>
+      {label}
+    </div>
+  );
+}
+
+function StateNode({ label, color = C.brand, active }: { label: string; color?: string; active?: boolean }) {
+  return (
+    <div style={{ padding: '5px 14px', borderRadius: 20, background: active ? color : C.white, color: active ? C.white : color, border: `2px solid ${color}`, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
+      {label}
+    </div>
+  );
+}
+
+function SmallArrow({ label }: { label?: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <span style={{ fontSize: 16, color: C.subtle, lineHeight: 1 }}>&rarr;</span>
+      {label && <span style={{ fontSize: 9, color: C.subtle }}>{label}</span>}
+    </div>
+  );
+}
+
+function SmallArrowDown({ label }: { label?: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '2px 0' }}>
+      <span style={{ fontSize: 14, color: C.subtle, lineHeight: 1 }}>&darr;</span>
+      {label && <span style={{ fontSize: 9, color: C.subtle }}>{label}</span>}
+    </div>
+  );
+}
+
+function ERRow({ left, rel, right }: { left: string; rel: string; right: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 12 }}>
+      <span style={{ fontWeight: 700, color: C.brand, minWidth: 120 }}>{left}</span>
+      <span style={{ color: C.subtle, fontFamily: 'monospace', fontSize: 11 }}>{rel}</span>
+      <span style={{ fontWeight: 700, color: C.success }}>{right}</span>
+    </div>
+  );
+}
+
+function SeqRow({ from, to, label }: { from: string; to: string; label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, fontSize: 12, paddingLeft: 8 }}>
+      <span style={{ fontWeight: 600, color: C.brand, minWidth: 60 }}>{from}</span>
+      <span style={{ color: C.subtle }}>&rarr;</span>
+      <span style={{ fontWeight: 600, color: C.success, minWidth: 60 }}>{to}</span>
+      <span style={{ color: C.dark }}>{label}</span>
+    </div>
+  );
+}
+
+function SeqNote({ text, color = C.teal }: { text: string; color?: string }) {
+  return (
+    <div style={{ background: `${color}15`, border: `1px solid ${color}40`, borderRadius: 4, padding: '4px 10px', margin: '6px 0', fontSize: 11, fontWeight: 600, color }}>
+      {text}
     </div>
   );
 }
@@ -356,368 +358,280 @@ function renderSysdopsRelations() {
       </Paragraph>
 
       {/* ── 1. Multi-Project Architecture ── */}
-      <MermaidBlock title="1. Multi-Project Architecture (4 Project Templates)" chart={`graph LR
-    subgraph DO["DO Project (Design Office)"]
-        HLVVO["HLVVO\\n(Review Package)"]
-        VVO["VVO\\n(V&V Objective)"]
-        TR["Test Request\\n(LTR/FTR)"]
-        DI["Design Item"]
-        CC["Change Card\\n(7 tabs)"]
-        DCL["DCL\\n(Spec Clarification)"]
-        DEL["Deliverable"]
-        SS["System Standard\\n(M1659.2)"]
-    end
-
-    subgraph LAB["LAB Project (Laboratory)"]
-        LVVO["VVO (read-only)"]
-        TEST["Test\\n(Procedure + Steps)"]
-        TP["Test Plan\\n(Campaign)"]
-        TE["Test Execution\\n(Run Instance)"]
-        PC["Pre-Condition"]
-    end
-
-    subgraph DEF["DEFECT Project (Shared)"]
-        TECH["TechEvent\\n(M1668 Anomaly)"]
-        BD["Bench Defect\\n(Test Means)"]
-        PR["Problem Report\\n(Certification)"]
-    end
-
-    subgraph SUP["SUPPLIER Project"]
-        S_DCL["DCL (synced)"]
-        S_DI["DI (shared)"]
-        S_TE["TechEvent (synced)"]
-    end
-
-    VVO -->|"transfer via ID Doors"| LVVO
-    LVVO -->|"tested by"| TEST
-    TEST -->|"executed in"| TE
-    TE -->|"grouped by"| TP
-    TE -->|"defect from"| TECH
-    TECH -->|"creates"| CC
-    TECH -->|"creates"| BD
-    TECH -->|"links"| PR
-    DCL <-->|"bidirectional sync"| S_DCL
-    DI -->|"copy to supplier"| S_DI
-    TECH -->|"supplier analysis"| S_TE
-    PR -->|"transmitted to"| EASA["EASA/FAA\\n(Certification Authority)"]`} />
+      <DiagramCard title="1. Multi-Project Architecture (4 Project Templates)">
+        <FlowRow gap={16}>
+          <SubgraphBox title="DO - Design Office" color={C.brand}>
+            <MiniBox label="HLVVO" /><MiniBox label="VVO" /><MiniBox label="Test Request" /><MiniBox label="Design Item" />
+            <MiniBox label="Change Card" /><MiniBox label="DCL" /><MiniBox label="Deliverable" /><MiniBox label="System Standard" />
+          </SubgraphBox>
+          <ArrowRight label="VVO transfer" width={70} />
+          <SubgraphBox title="LAB - Laboratory" color={C.success}>
+            <MiniBox label="VVO (read-only)" color={C.success} /><MiniBox label="Test" color={C.success} />
+            <MiniBox label="Test Plan" color={C.success} /><MiniBox label="Test Execution" color={C.success} /><MiniBox label="Pre-Condition" color={C.success} />
+          </SubgraphBox>
+        </FlowRow>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 60 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <ArrowDown label="defects" />
+            <SubgraphBox title="DEFECT - Shared" color={C.danger}>
+              <MiniBox label="TechEvent M1668" color={C.danger} /><MiniBox label="Bench Defect" color={C.danger} /><MiniBox label="Problem Report" color={C.danger} />
+            </SubgraphBox>
+            <ArrowDown label="transmitted" />
+            <MiniBox label="EASA / FAA" color={C.dark} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <ArrowDown label="supplier sync" />
+            <SubgraphBox title="SUPPLIER" color={C.purple}>
+              <MiniBox label="DCL (synced)" color={C.purple} /><MiniBox label="DI (shared)" color={C.purple} /><MiniBox label="TechEvent (synced)" color={C.purple} />
+            </SubgraphBox>
+          </div>
+        </div>
+      </DiagramCard>
 
       {/* ── 2. Entity Relationship Diagram ── */}
-      <MermaidBlock title="2. Entity Relationship Diagram (Full Traceability Chain)" chart={`erDiagram
-    HLVVO ||--|{ VVO : "is parent of (1:N)"
-    VVO ||--|{ TEST : "tested by (1:N)"
-    VVO }|--|| TEST_REQUEST : "contained in (N:1)"
-    VVO ||--o| VVO : "clone/supersede (version chain)"
-    TEST ||--|{ TEST_EXECUTION : "executed as (1:N)"
-    TEST_EXECUTION }|--|| TEST_PLAN : "grouped in (N:1)"
-    TEST_EXECUTION ||--o{ TECH_EVENT : "defect from"
-    TECH_EVENT ||--o{ BENCH_DEFECT : "creates"
-    TECH_EVENT ||--o{ PROBLEM_REPORT : "links PR"
-    TECH_EVENT ||--o| CHANGE_CARD : "creates change"
-    DESIGN_ITEM ||--|{ CHANGE_CARD : "is parent of (1:N)"
-    SYSTEM_STANDARD ||--|{ REVIEW_SUB_TASK : "auto-creates (1:N)"
-
-    VVO {
-        UUID id PK
-        string summary
-        string status "NEW|TO_BE_VERIFIED|VERIFIED|RELEASED|CANCELLED|SUPERSEDED"
-        string id_doors "DOORS traceability"
-        int vvo_version "auto-incremented on clone"
-        string fix_version "baseline identifier"
-        string[] applicability "A320_CEONEO|A330|A350..."
-        string[] vvo_usage "Maturity|Formal|NonRegression"
-        string vvo_scope "Interface|Functional"
-        UUID hlvvo_id FK
-        UUID clone_source_id FK
-    }
-
-    HLVVO {
-        UUID id PK
-        string summary
-        string status "NEW|PLAN|VVO_WRITING|SUPPLIER_REVIEW|AUTHORIZE"
-        jsonb proofreading_data
-    }
-
-    TECH_EVENT {
-        UUID id PK
-        string summary
-        string status "14 states per M1668"
-        UUID program_id FK "cascading"
-        UUID test_mean_id FK "cascading"
-        UUID system_id FK "cascading"
-        string defect_type "Hardware|Software"
-        string defect_impact "Safety|Functional|Operational"
-        string reporter_team
-    }
-
-    CHANGE_CARD {
-        UUID id PK
-        string change_type "ANOMALY|EVOLUTION"
-        string classification "EASA Part 21 types"
-        string design_review_rag "Green|Amber|Red"
-        UUID parent_design_item_id FK
-    }`} />
+      <DiagramCard title="2. Entity Relationship Diagram (Full Traceability Chain)">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.dark, marginBottom: 8 }}>Relationships</div>
+            <ERRow left="HLVVO" rel="||--|{" right="VVO (parent of 1:N)" />
+            <ERRow left="VVO" rel="||--|{" right="TEST (tested by 1:N)" />
+            <ERRow left="VVO" rel="}|--||" right="TEST_REQUEST (contained in)" />
+            <ERRow left="TEST" rel="||--|{" right="TEST_EXECUTION (executed as)" />
+            <ERRow left="TEST_EXECUTION" rel="}|--||" right="TEST_PLAN (grouped in)" />
+            <ERRow left="TEST_EXECUTION" rel="||--o{" right="TECH_EVENT (defect from)" />
+            <ERRow left="TECH_EVENT" rel="||--o{" right="BENCH_DEFECT (creates)" />
+            <ERRow left="TECH_EVENT" rel="||--o{" right="PROBLEM_REPORT (links)" />
+            <ERRow left="TECH_EVENT" rel="||--o|" right="CHANGE_CARD (creates change)" />
+            <ERRow left="DESIGN_ITEM" rel="||--|{" right="CHANGE_CARD (parent of 1:N)" />
+            <ERRow left="SYSTEM_STD" rel="||--|{" right="REVIEW_SUBTASK (auto-creates)" />
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.dark, marginBottom: 8 }}>Key Entities</div>
+            {[
+              { name: 'VVO', fields: 'id, status, id_doors, vvo_version, fix_version, hlvvo_id', color: C.brand },
+              { name: 'HLVVO', fields: 'id, status, proofreading_data', color: C.brand },
+              { name: 'TECH_EVENT', fields: 'id, status, program_id, defect_type, defect_impact', color: C.danger },
+              { name: 'CHANGE_CARD', fields: 'id, change_type, classification, design_review_rag', color: C.purple },
+            ].map((e) => (
+              <div key={e.name} style={{ border: `2px solid ${e.color}`, borderRadius: 6, padding: '6px 10px', marginBottom: 6, background: C.white }}>
+                <div style={{ fontWeight: 700, fontSize: 12, color: e.color }}>{e.name}</div>
+                <div style={{ fontSize: 11, color: C.subtle, fontFamily: 'monospace' }}>{e.fields}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </DiagramCard>
 
       {/* ── 3. V&V Lifecycle Flow ── */}
-      <MermaidBlock title="3. End-to-End V&V Lifecycle (DO → LAB → DEFECT → Certification)" chart={`sequenceDiagram
-    participant DO as Design Office
-    participant DOORS as IBM DOORS
-    participant LAB as Laboratory
-    participant DEF as DEFECT Project
-    participant SUP as Supplier
-    participant CERT as EASA/FAA
-
-    Note over DO: Phase 1 - Requirement Definition
-    DO->>DO: Author VVOs (25+ fields each)
-    DO->>DO: Group into HLVVOs for review
-    DO->>DO: HLVVO → "Authorize" auto-transitions child VVOs to Verified
-
-    Note over DO: Phase 2 - Baseline & DOORS
-    DO->>DO: Tag VVOs with Fix Version (baseline)
-    DO->>DO: Bulk transition Verified → Released
-    DO->>DOORS: Export Released/Cancelled VVOs (CSV via XPorter)
-    DOORS->>DO: Import DOORS IDs back (6 validation rules)
-
-    Note over DO,LAB: Phase 3 - Transfer
-    DO->>LAB: Transfer VVOs via "ID Doors" identifier
-    LAB->>LAB: VVOs arrive read-only, status = New
-
-    Note over LAB: Phase 4 - Test Campaign
-    LAB->>LAB: Write Test procedures linked to VVOs
-    LAB->>LAB: Auto-populate Component/Applicability from VVO
-    LAB->>LAB: Create Campaign from CSV (per {test, applicability} pair)
-    LAB->>LAB: Execute Tests on SIB/FIB/SIMULATOR benches
-
-    Note over LAB,DEF: Phase 5 - Defect Management
-    LAB->>DEF: Create TechEvent (M1668 system anomaly)
-    DEF->>SUP: "Supplier Analysis" → sync TechEvent to supplier
-    SUP->>DEF: Supplier responds with analysis
-    DEF->>DO: "Create Change" → Change Card in DO project
-    DEF->>DEF: "Link Problem Report" → for certification
-
-    Note over DEF,CERT: Phase 6 - Certification
-    DEF->>CERT: Open Problem Reports transmitted to authorities
-    DO->>DO: Implement Change Cards → new System Standard
-    DO->>DO: New baseline cycle begins`} />
+      <DiagramCard title="3. End-to-End V&V Lifecycle (DO → LAB → DEFECT → Certification)">
+        <SeqNote text="Phase 1 — Requirement Definition" />
+        <SeqRow from="DO" to="DO" label="Author VVOs (25+ fields each)" />
+        <SeqRow from="DO" to="DO" label="Group into HLVVOs for review" />
+        <SeqRow from="DO" to="DO" label="HLVVO Authorize → child VVOs transition to Verified" />
+        <SeqNote text="Phase 2 — Baseline & DOORS" />
+        <SeqRow from="DO" to="DO" label="Tag VVOs with Fix Version (baseline)" />
+        <SeqRow from="DO" to="DO" label="Bulk transition Verified → Released" />
+        <SeqRow from="DO" to="DOORS" label="Export Released/Cancelled VVOs (CSV via XPorter)" />
+        <SeqRow from="DOORS" to="DO" label="Import DOORS IDs back (6 validation rules)" />
+        <SeqNote text="Phase 3 — Transfer" />
+        <SeqRow from="DO" to="LAB" label="Transfer VVOs via ID Doors identifier" />
+        <SeqRow from="LAB" to="LAB" label="VVOs arrive read-only, status = New" />
+        <SeqNote text="Phase 4 — Test Campaign" />
+        <SeqRow from="LAB" to="LAB" label="Write Test procedures linked to VVOs" />
+        <SeqRow from="LAB" to="LAB" label="Create Campaign from CSV (per test + applicability)" />
+        <SeqRow from="LAB" to="LAB" label="Execute Tests on SIB/FIB/SIMULATOR benches" />
+        <SeqNote text="Phase 5 — Defect Management" color={C.danger} />
+        <SeqRow from="LAB" to="DEF" label="Create TechEvent (M1668 system anomaly)" />
+        <SeqRow from="DEF" to="SUP" label="Supplier Analysis → sync TechEvent to supplier" />
+        <SeqRow from="DEF" to="DO" label="Create Change → Change Card in DO project" />
+        <SeqNote text="Phase 6 — Certification" color={C.warning} />
+        <SeqRow from="DEF" to="CERT" label="Open Problem Reports transmitted to authorities" />
+        <SeqRow from="DO" to="DO" label="Implement Change Cards → new System Standard → new baseline cycle" />
+      </DiagramCard>
 
       {/* ── 4. VVO State Machines ── */}
-      <MermaidBlock title="4. VVO Workflow State Machines (DO + LAB + HLVVO)" chart={`stateDiagram-v2
-    state "VVO (Design Office)" as DO_VVO {
-        [*] --> NEW
-        NEW --> TO_BE_VERIFIED: Submit for review
-        TO_BE_VERIFIED --> VERIFIED: Reviewer approves
-        VERIFIED --> RELEASED: PM releases (baseline)
-        NEW --> CANCELLED: Descope
-        TO_BE_VERIFIED --> CANCELLED: Descope
-        VERIFIED --> SUPERSEDED: Newer clone reaches Verified
-        RELEASED --> SUPERSEDED: Newer clone reaches Released
-        note right of VERIFIED: Edition locked from here
-        note right of RELEASED: Part of baseline snapshot
-        note right of SUPERSEDED: Auto-set when clone transitions
-    }
-
-    state "VVO (Laboratory)" as LAB_VVO {
-        [*] --> LAB_NEW
-        LAB_NEW --> COVERED: All test procedures written
-        COVERED --> UPDATE: VVO modified by DO transfer
-        LAB_NEW --> LAB_CANCELLED: Not applicable
-        LAB_NEW --> TO_BE_CORRECTED: Error found
-        TO_BE_CORRECTED --> LAB_NEW: Correction applied
-        UPDATE --> COVERED: Impact analysis done
-        note right of UPDATE: Auto-cascades to linked Tests
-    }
-
-    state "HLVVO" as HLVVO_SM {
-        [*] --> H_NEW
-        H_NEW --> PLAN: Target date set
-        PLAN --> VVO_WRITING: VVO authoring begins
-        VVO_WRITING --> SUPPLIER_REVIEW: Sent for review
-        SUPPLIER_REVIEW --> AUTHORIZE: Review passed
-        note right of AUTHORIZE: All child VVOs → Verified
-    }`} />
+      <DiagramCard title="4. VVO Workflow State Machines (DO + LAB + HLVVO)">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.brand, marginBottom: 8 }}>Design Office (6 states)</div>
+            <FlowRow justify="flex-start"><StateNode label="NEW" color={C.brand} active /></FlowRow>
+            <SmallArrowDown label="Submit" />
+            <FlowRow justify="flex-start"><StateNode label="TO_BE_VERIFIED" color={C.warning} active /></FlowRow>
+            <SmallArrowDown label="Approve" />
+            <FlowRow justify="flex-start"><StateNode label="VERIFIED" color={C.success} active /></FlowRow>
+            <SmallArrowDown label="Release" />
+            <FlowRow justify="flex-start"><StateNode label="RELEASED" color="#36b37e" active /></FlowRow>
+            <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
+              <StateNode label="CANCELLED" color={C.danger} /><StateNode label="SUPERSEDED" color={C.subtle} />
+            </div>
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.success, marginBottom: 8 }}>Laboratory (5 states)</div>
+            <FlowRow justify="flex-start"><StateNode label="LAB_NEW" color={C.brand} active /></FlowRow>
+            <SmallArrowDown label="Tests written" />
+            <FlowRow justify="flex-start"><StateNode label="COVERED" color={C.success} active /></FlowRow>
+            <SmallArrowDown label="VVO modified" />
+            <FlowRow justify="flex-start"><StateNode label="UPDATE" color={C.warning} active /></FlowRow>
+            <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
+              <StateNode label="CANCELLED" color={C.danger} /><StateNode label="TO_BE_CORRECTED" color={C.warning} />
+            </div>
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.purple, marginBottom: 8 }}>HLVVO (5 states)</div>
+            <FlowRow justify="flex-start"><StateNode label="NEW" color={C.brand} active /></FlowRow>
+            <SmallArrowDown label="Date set" />
+            <FlowRow justify="flex-start"><StateNode label="PLAN" color={C.warning} active /></FlowRow>
+            <SmallArrowDown label="Authoring" />
+            <FlowRow justify="flex-start"><StateNode label="VVO_WRITING" color={C.brand} active /></FlowRow>
+            <SmallArrowDown label="Sent for review" />
+            <FlowRow justify="flex-start"><StateNode label="SUPPLIER_REVIEW" color={C.purple} active /></FlowRow>
+            <SmallArrowDown label="Approved" />
+            <FlowRow justify="flex-start"><StateNode label="AUTHORIZE" color={C.success} active /></FlowRow>
+          </div>
+        </div>
+      </DiagramCard>
 
       {/* ── 5. TechEvent M1668 Workflow ── */}
-      <MermaidBlock title="5. TechEvent M1668 Workflow (System Anomaly Management)" chart={`stateDiagram-v2
-    [*] --> OPEN: Anomaly detected during test
-    OPEN --> UNDER_ORIGINATOR_ANALYSIS: V&V team investigates
-    OPEN --> PROPOSED_FOR_CANCELLATION: Not a real defect
-    OPEN --> TO_BE_REFINED: Needs clarification
-
-    UNDER_ORIGINATOR_ANALYSIS --> UNDER_RESOLVER_ANALYSIS: Routed to resolver
-    UNDER_ORIGINATOR_ANALYSIS --> UNDER_TEST_MEAN_ANALYSIS: Bench issue suspected
-
-    UNDER_RESOLVER_ANALYSIS --> CLASSIFIED: Root cause identified
-    UNDER_RESOLVER_ANALYSIS --> READY_FOR_REVIEW: Awaiting review
-
-    CLASSIFIED --> TO_BE_ASSESSED: Fix proposed
-    TO_BE_ASSESSED --> RESOLVED_CORRECTED: Fix verified
-    TO_BE_ASSESSED --> RESOLVED_CONTAINED: Workaround applied
-    RESOLVED_CORRECTED --> CLOSED: Complete
-    RESOLVED_CONTAINED --> CLOSED: Complete
-
-    PROPOSED_FOR_CANCELLATION --> CANCELLED: Confirmed not a defect
-    TO_BE_REFINED --> UNDER_ORIGINATOR_ANALYSIS: Clarification provided
-
-    note right of UNDER_RESOLVER_ANALYSIS: "Supplier Analysis" button\\ncreates synced TechEvent\\nin supplier project
-    note right of CLASSIFIED: "Create Change" button\\ncreates Change Card in DO
-    note left of OPEN: "Link Problem Report"\\ncreates certification PR`} />
+      <DiagramCard title="5. TechEvent M1668 Workflow (System Anomaly Management)">
+        <FlowRow><StateNode label="OPEN" color={C.brand} active /><SmallArrow label="Investigate" /><StateNode label="ORIGINATOR ANALYSIS" color={C.warning} active /><SmallArrow label="Route" /><StateNode label="RESOLVER ANALYSIS" color={C.purple} active /></FlowRow>
+        <FlowRow><span /><span /><SmallArrowDown /><span /><SmallArrowDown /></FlowRow>
+        <FlowRow>
+          <StateNode label="TO_BE_REFINED" color={C.warning} /><span style={{ width: 30 }} />
+          <StateNode label="TEST MEAN ANALYSIS" color={C.teal} /><span style={{ width: 30 }} />
+          <StateNode label="CLASSIFIED" color={C.success} active />
+        </FlowRow>
+        <div style={{ display: 'flex', justifyContent: 'center' }}><SmallArrowDown label="Fix proposed" /></div>
+        <FlowRow><StateNode label="TO_BE_ASSESSED" color={C.warning} active /><SmallArrow label="Verified" /><StateNode label="RESOLVED" color={C.success} active /><SmallArrow /><StateNode label="CLOSED" color={C.subtle} active /></FlowRow>
+        <div style={{ borderTop: `1px dashed ${C.border}`, marginTop: 10, paddingTop: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.subtle, marginBottom: 6 }}>SIDE STATES:</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <StateNode label="ON_HOLD" color="#6b778c" /><StateNode label="REJECTED" color={C.danger} />
+            <StateNode label="CANCELLED" color={C.danger} /><StateNode label="DEFERRED" color="#6b778c" /><StateNode label="DUPLICATE" color="#6b778c" />
+          </div>
+        </div>
+      </DiagramCard>
 
       {/* ── 6. Master Data Cascading ── */}
-      <MermaidBlock title="6. Master Data Cascading Hierarchy (Data Hub)" chart={`graph TD
-    PROG["Aircraft Program\\n─────────────────\\nA320 CEO/NEO | A330 CEO/NEO\\nA350 | A380 | New Avionics (NAx)"]
-
-    PROG --> TM["Test Means (per program)\\n────────────────\\nSIB-1 | SIB-2 | FIB\\nSIMULATOR-A320 | IRON BIRD"]
-
-    PROG --> SYS["Aircraft Systems (per program)\\n──────────────────────\\nFMS | AP/FD | FADEC | ADIRS\\nEFIS | TCAS | TAWS"]
-
-    PROG --> ATA["ATA Chapters (per program)\\n───────────────────\\nATA 22 Auto Flight | ATA 23 Comms\\nATA 31 Indicating | ATA 34 Navigation\\nATA 42 IMA | ATA 46 Info Sys | ATA 73 Engine"]
-
-    SYS --> SUP["System Suppliers (per program + system)\\n────────────────────────────\\nFMS: Honeywell, Thales\\nAP/FD: Collins Aerospace\\nFADEC: Safran Electronics"]
-
-    SYS --> FN["System Functions (per system)\\n────────────────────────\\nFMS: Lateral Guidance, Vertical Guidance,\\nFlight Plan Mgmt, Performance Computation,\\nNavigation Database\\nAP/FD: Autopilot Control Laws"]
-
-    PROG --> RT["Reporter Teams\\n────────────\\nLAB nFMS 1V | DO nFMS 1PYC\\nFlight Test | Certification"]
-
-    PROG --> DO2["Defect Origins\\n─────────────\\nArchitecture | Facilities\\nInstrumentation & Tools\\nSimulation | Wiring | Hydraulic"]
-
-    style PROG fill:#0052cc,color:#fff
-    style TM fill:#00875a,color:#fff
-    style SYS fill:#00875a,color:#fff
-    style ATA fill:#00875a,color:#fff
-    style SUP fill:#00B8D9,color:#fff
-    style FN fill:#00B8D9,color:#fff
-    style RT fill:#6554C0,color:#fff
-    style DO2 fill:#6554C0,color:#fff`} />
+      <DiagramCard title="6. Master Data Cascading Hierarchy (Data Hub)">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <DiagramBox label="Aircraft Program" sub="A320, A330, A350, A380, NAx" color={C.brand} width={250} />
+          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {[
+              { label: 'Test Means', sub: 'SIB, FIB, SIMULATOR', color: C.success },
+              { label: 'Aircraft Systems', sub: 'FMS, AP/FD, FADEC, ADIRS', color: C.success },
+              { label: 'ATA Chapters', sub: 'ATA 22, 23, 31, 34, 42', color: C.success },
+              { label: 'Reporter Teams', sub: 'LAB, DO, Flight Test', color: C.purple },
+              { label: 'Defect Origins', sub: 'Architecture, Facilities', color: C.purple },
+            ].map((item) => (
+              <div key={item.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <ArrowDown label="1:N" />
+                <DiagramBox label={item.label} sub={item.sub} color={item.color} width={150} />
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 24, marginTop: 8, justifyContent: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <ArrowDown label="1:N" />
+              <DiagramBox label="System Suppliers" sub="Honeywell, Thales, Collins" color={C.teal} width={160} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <ArrowDown label="1:N" />
+              <DiagramBox label="System Functions" sub="Lateral Guidance, FP Mgmt" color={C.teal} width={170} />
+            </div>
+          </div>
+        </div>
+      </DiagramCard>
 
       {/* ── 7. Change Management Flow ── */}
-      <MermaidBlock title="7. Change Management Flow (DCL → Design Item → Change Card)" chart={`graph LR
-    subgraph "Specification Discussion"
-        DCL["DCL\\n(Design Clarification Log)\\n────────\\nBidirectional sync\\nwith supplier project"]
-    end
-
-    subgraph "Design Evolution"
-        DI["Design Item\\n────────\\nHigh-level change\\nOptional parent\\nCan share with supplier"]
-    end
-
-    subgraph "Change Implementation"
-        CC["Change Card (7 Tabs)\\n────────────────────\\nDesign: Type, Impact, Risk, Function\\nEIF: Engine functions, ICD impact\\nPlanning: Dates, Story Points\\nReview: QC, Code Gen, RAG status\\nCertification: EASA classification\\nMaturity Test: P1-P3 priority\\nSafety: DAL assessment"]
-    end
-
-    subgraph "Version Release"
-        SS["System Standard\\n(M1659.2)\\n────────────\\n17-state workflow\\n10 auto-created\\nReview Sub-Tasks"]
-        RST["Review Sub-Tasks\\n────────────\\nKoM | PR | FCR | PDR\\nDDR | CDR | LAR | FAR\\nFFR | CR\\n────────────\\nPASSED_RED → auto-clone"]
-    end
-
-    DCL -->|"evolution needed"| DI
-    DI -->|"is parent of"| CC
-    CC -->|"implemented in"| SS
-    SS -->|"auto-creates"| RST
-
-    TECH["TechEvent\\n(from DEFECT)"] -->|"Create Change"| CC
-    CC -->|"Classification"| EASA["EASA Part 21\\nType 0|1A|1B|2|3\\nSignificant CAT/HAZ\\nSignificant MAJ\\nFunctional|Process"]`} />
+      <DiagramCard title="7. Change Management Flow (DCL → Design Item → Change Card)">
+        <FlowRow>
+          <DiagramBox label="DCL" sub="Design Clarification Log" color={C.teal} width={140} />
+          <ArrowRight label="evolution needed" width={80} />
+          <DiagramBox label="Design Item" sub="High-level change" color={C.brand} width={130} />
+          <ArrowRight label="is parent of" width={70} />
+          <DiagramBox label="Change Card" sub="7 tabs" color={C.purple} width={120} />
+          <ArrowRight label="implemented in" width={80} />
+          <DiagramBox label="System Standard" sub="M1659.2" color={C.success} width={130} />
+          <ArrowRight label="auto-creates" width={70} />
+          <DiagramBox label="Review Sub-Tasks" sub="10 milestones" color={C.success} width={130} />
+        </FlowRow>
+        <FlowRow>
+          <DiagramBox label="TechEvent" sub="from DEFECT" color={C.danger} width={120} />
+          <ArrowRight label="Create Change" width={80} />
+          <span style={{ fontSize: 11, color: C.subtle }}>→ Change Card</span>
+          <span style={{ width: 40 }} />
+          <DiagramBox label="EASA Part 21" sub="Type 0|1A|1B|2|3" color={C.dark} width={130} />
+        </FlowRow>
+      </DiagramCard>
 
       {/* ── 8. Service Ownership ── */}
-      <MermaidBlock title="8. Microservice Ownership Map" chart={`graph TD
-    subgraph "avisys-test-service :8095"
-        V1["VvoController /api/vvo"]
-        V2["HlvvoController /api/hlvvo"]
-        V3["TechEventController /api/tech-events"]
-        V4["BenchDefectController /api/bench-defects"]
-        V5["ProblemReportController /api/problem-reports"]
-        V6["VvoBaselineController /api/vvo/baseline"]
-        V7["VvReportingController /api/vv-reports"]
-        V8["CampaignController /api/campaigns"]
-        V9["DocumentExportController /api/export-templates"]
-        V10["VvTestRequestController /api/test-requests"]
-        V11["WorkflowInternalController /api/issues"]
-    end
-
-    subgraph "avisys-admin-service :8093"
-        A1["MasterDataController /api/admin/master-data"]
-        A2["AssetController /api/admin/assets"]
-    end
-
-    subgraph "avisys-issue-service :8084"
-        I1["ChangeManagementController /api/issues/{id}/change-card"]
-        I2["ChangeManagementController /api/issues/{id}/design-item"]
-        I3["ChangeManagementController /api/issues/{id}/dcl"]
-        I4["ChangeManagementController /api/issues/{id}/deliverable"]
-        I5["ChangeManagementController /api/issues/{id}/system-standard"]
-        I6["ChangeManagementController /api/issues/{id}/review-sub-task"]
-        I7["ChangeManagementController /api/issues/{id}/modification"]
-    end
-
-    subgraph "avisys-workflow-service :8085"
-        W1["WorkflowDefinitions (V18-V22)"]
-        W2["AutomationRuleService"]
-        W3["WorkflowIntegrationClient"]
-    end
-
-    V11 <-->|"WorkflowBridgeService\\n(bidirectional REST)"| W3`} />
+      <DiagramCard title="8. Microservice Ownership Map">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <SubgraphBox title="test-service :8095" color={C.danger}>
+            {['/api/vvo', '/api/hlvvo', '/api/tech-events', '/api/bench-defects', '/api/problem-reports', '/api/vvo/baseline', '/api/vv-reports', '/api/campaigns', '/api/export-templates'].map((ep) => (
+              <MiniBox key={ep} label={ep} color={C.danger} />
+            ))}
+          </SubgraphBox>
+          <SubgraphBox title="issue-service :8084" color={C.success}>
+            {['/api/issues/change-card', '/api/issues/design-item', '/api/issues/dcl', '/api/issues/system-standard', '/api/issues/review-sub-task', '/api/issues/modification'].map((ep) => (
+              <MiniBox key={ep} label={ep} color={C.success} />
+            ))}
+          </SubgraphBox>
+          <SubgraphBox title="admin-service :8093" color={C.warning}>
+            <MiniBox label="/api/admin/master-data" color={C.warning} />
+            <MiniBox label="/api/admin/assets" color={C.warning} />
+          </SubgraphBox>
+          <SubgraphBox title="workflow-service :8085" color={C.purple}>
+            <MiniBox label="Workflow Engine" color={C.purple} />
+            <MiniBox label="Automation Rules" color={C.purple} />
+            <MiniBox label="Integration Client" color={C.purple} />
+          </SubgraphBox>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: C.subtle }}>
+          test-service ↔ workflow-service via WorkflowBridgeService (bidirectional REST)
+        </div>
+      </DiagramCard>
 
       {/* ── 9. 4-Step Baseline Process ── */}
-      <MermaidBlock title="9. VVO Baseline Process (4 Steps, 6 Use Cases)" chart={`graph TD
-    subgraph "Step 1: Prepare"
-        S1A["Clone VVOs needing new version\\n→ auto-increment Version field\\n→ clear Fix Version & HLVVO link\\n→ create clone link to original"]
-        S1B["Cancel removed VVOs\\n→ must still appear in baseline for DOORS"]
-        S1C["Create new VVOs"]
-    end
-
-    subgraph "Step 2: Review"
-        S2["HLVVO review process\\n→ Authorize transition\\n→ child VVOs auto-transition to Verified\\n→ old cloned versions → Superseded"]
-    end
-
-    subgraph "Step 3: Tag Baseline"
-        S3["Bulk update Fix Version\\nfor all Released + Verified + Cancelled VVOs\\n→ Tags them with baseline ID (e.g., STD-3.2)"]
-    end
-
-    subgraph "Step 4: Publish"
-        S4A["Bulk transition Verified → Released"]
-        S4B["Export to DOORS via XPorter CSV"]
-        S4C["Import DOORS IDs back\\n(6 validation rules)"]
-    end
-
-    S1A --> S2
-    S1B --> S2
-    S1C --> S2
-    S2 --> S3
-    S3 --> S4A
-    S4A --> S4B
-    S4B --> S4C
-
-    style S1A fill:#0052cc,color:#fff
-    style S2 fill:#ff8b00,color:#fff
-    style S3 fill:#00875a,color:#fff
-    style S4A fill:#36b37e,color:#fff
-    style S4B fill:#6554C0,color:#fff`} />
+      <DiagramCard title="9. VVO Baseline Process (4 Steps, 6 Use Cases)">
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start' }}>
+          <SubgraphBox title="Step 1: Prepare" color={C.brand}>
+            <MiniBox label="Clone VVOs" color={C.brand} />
+            <MiniBox label="Cancel removed" color={C.brand} />
+            <MiniBox label="Create new" color={C.brand} />
+          </SubgraphBox>
+          <div style={{ alignSelf: 'center' }}><ArrowRight width={40} /></div>
+          <SubgraphBox title="Step 2: Review" color={C.warning}>
+            <MiniBox label="HLVVO Authorize" color={C.warning} />
+          </SubgraphBox>
+          <div style={{ alignSelf: 'center' }}><ArrowRight width={40} /></div>
+          <SubgraphBox title="Step 3: Tag" color={C.success}>
+            <MiniBox label="Bulk update Fix Version" color={C.success} />
+          </SubgraphBox>
+          <div style={{ alignSelf: 'center' }}><ArrowRight width={40} /></div>
+          <SubgraphBox title="Step 4: Publish" color={C.purple}>
+            <MiniBox label="Transition → Released" color={C.purple} />
+            <MiniBox label="Export to DOORS" color={C.purple} />
+            <MiniBox label="Import DOORS IDs" color={C.purple} />
+          </SubgraphBox>
+        </div>
+      </DiagramCard>
 
       {/* ── 10. Campaign Automation ── */}
-      <MermaidBlock title="10. Test Campaign Automation (CSV-Driven)" chart={`sequenceDiagram
-    participant DO as Design Office
-    participant LTR as Test Request (LTR)
-    participant CSV as CSV / GSheet
-    participant LAB as LAB Project
-    participant TP as Test Plan
-    participant TE as Test Execution
-
-    DO->>LTR: Export VVO list via XPorter
-    Note over LTR: Columns: ID Doors, Summary,\\nApplicability, Version, Fix Version, Priority
-    LTR->>CSV: User selects applicabilities
-
-    CSV->>TP: Attach CSV to Test Plan
-    TP->>TP: Press "Create Campaign" button
-
-    loop For each VVO line in CSV
-        TP->>TP: Find Tests linked to VVO
-        alt Test status == APPROVED
-            alt No existing TestExecution for {test, applicability}
-                TP->>TE: Create Test Execution
-                Note over TE: testEnvironment = CSV.Applicability\\nfixVersion = TestPlan.FixVersion\\ncomponent = Test.Component\\npriority = MAX(linked VVO priorities)
-            end
-        end
-        TP->>TP: Associate VVO to TestPlan ("Relates" link)
-    end
-
-    TP->>DO: Email log with detailed actions`} />
+      <DiagramCard title="10. Test Campaign Automation (CSV-Driven)">
+        <SeqNote text="Export & Select" />
+        <SeqRow from="DO" to="LTR" label="Export VVO list via XPorter" />
+        <SeqRow from="LTR" to="CSV" label="User selects applicabilities" />
+        <SeqNote text="Campaign Creation" />
+        <SeqRow from="CSV" to="TP" label="Attach CSV to Test Plan" />
+        <SeqRow from="TP" to="TP" label='Press "Create Campaign" button' />
+        <SeqNote text="For each VVO line in CSV (loop)" color={C.warning} />
+        <SeqRow from="TP" to="TP" label="Find Tests linked to VVO" />
+        <SeqRow from="TP" to="TE" label="Create Test Execution (if APPROVED & no duplicate)" />
+        <SeqRow from="TP" to="TP" label='Associate VVO to TestPlan ("Relates" link)' />
+        <SeqNote text="Completion" color={C.success} />
+        <SeqRow from="TP" to="DO" label="Email log with detailed actions" />
+      </DiagramCard>
 
       {/* ── Summary Table ── */}
       <div className="ads-card" style={{ marginBottom: 20 }}>
@@ -4513,8 +4427,16 @@ export default function ArchitecturePage() {
     }
   }
 
+  const handlePrint = () => window.print();
+
   return (
     <div className="ads-page">
+      {/* Print-only header */}
+      <div className="ads-print-header" style={{ display: 'none' }}>
+        <h1>SYSDOPS Architecture Documentation</h1>
+        <p>Tab: {activeTab} — Generated {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+      </div>
+
       {/* Header */}
       <div className="ads-page-header">
         <div>
@@ -4527,6 +4449,12 @@ export default function ArchitecturePage() {
           <span style={{ fontSize: 12, color: C.subtle, padding: '6px 12px', background: C.bg, borderRadius: 4 }}>
             Last updated: July 2026
           </span>
+          <button className="ads-btn" onClick={handlePrint} title="Print or save as PDF (Ctrl+P)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" />
+            </svg>
+            Print / PDF
+          </button>
         </div>
       </div>
 

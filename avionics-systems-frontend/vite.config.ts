@@ -24,9 +24,6 @@ export default defineConfig(({ mode }) => {
     esbuild: {
       logOverride: { 'this-is-undefined-in-esm': 'silent' },
     },
-    optimizeDeps: {
-      include: ['mermaid'],
-    },
     resolve: {
       alias: { '@': path.resolve(__dirname, './src') },
     },

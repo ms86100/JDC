@@ -331,7 +331,20 @@ export const migrationApi = {
       { headers: migrationUserHeaders() }
     ),
 
-  // Jira DC API Import
+  // Systems DC API Import
+  discoverJiraDcFields: (params: {
+    jiraBaseUrl: string;
+    pat: string;
+    projectKeys?: string[];
+    trustAllCertificates?: boolean;
+  }) =>
+    apiClient.post<{
+      sourceFields: Array<{ key: string; name: string; type: string; custom: boolean }>;
+      totalFields: number;
+    }>('/api/migration/import/jira-dc-api/discover-fields', params, {
+      headers: { 'Content-Type': 'application/json', ...migrationUserHeaders() },
+    }),
+
   testJiraDcConnection: (params: {
     jiraBaseUrl: string;
     pat: string;
@@ -343,6 +356,7 @@ export const migrationApi = {
       jiraVersion?: string;
       userName?: string;
       projectCount?: number;
+      projects?: Array<{ key: string; name: string }>;
       issueCount?: number;
       error?: string;
     }>('/api/migration/import/jira-dc-api/test-connection', params, {

@@ -58,6 +58,8 @@ export const PROJECT_EXPORT_STEP_ORDER: MigrationStep[] = [
 export const JIRA_DC_API_STEP_ORDER: MigrationStep[] = [
   'source',
   'targetProject',
+  'map',
+  'configure',
   'review',
   'importing',
   'complete',

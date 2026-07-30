@@ -198,6 +198,7 @@ export interface JiraDcConnectionTestResult {
   jiraVersion?: string;
   userName?: string;
   projectCount?: number;
+  projects?: Array<{ key: string; name: string }>;
   issueCount?: number;
   error?: string;
 }

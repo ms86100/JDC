@@ -1391,6 +1391,13 @@ public class ImportJobProcessor {
 
             String targetProjectIdStr = options != null ? (String) options.get("targetProjectId") : null;
 
+            @SuppressWarnings("unchecked")
+            Map<String, String> fieldMappings = options != null && options.get("fieldMappings") instanceof Map
+                    ? (Map<String, String>) options.get("fieldMappings") : null;
+            if (fieldMappings != null && !fieldMappings.isEmpty()) {
+                com.avionics_systems.migration.jiradc.JiraDcEntityMapper.registerFieldMappings(fieldMappings);
+            }
+
             JiraDcApiImportOrchestrator.ImportResult result =
                     jiraDcApiImportOrchestrator.executeImport(jobId, config, userId, targetProjectIdStr);
 

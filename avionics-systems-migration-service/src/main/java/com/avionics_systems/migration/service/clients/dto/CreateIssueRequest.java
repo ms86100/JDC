@@ -47,6 +47,7 @@ public class CreateIssueRequest {
     private Long remainingEstimate;
     private Long timeSpent;
     private String originalIssueKey;
+    private String resolution;
     private Map<String, String> fieldMappings;
     private java.time.LocalDateTime migrationCreatedAt;
     private java.time.LocalDateTime migrationUpdatedAt;

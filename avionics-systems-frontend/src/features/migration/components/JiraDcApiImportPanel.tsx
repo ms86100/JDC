@@ -18,7 +18,6 @@ export default function JiraDcApiImportPanel({
   disabled = false,
 }: JiraDcApiImportPanelProps) {
   const [testing, setTesting] = useState(false);
-  const [projectKeysInput, setProjectKeysInput] = useState(config.projectKeys.join(', '));
 
   const handleTestConnection = async () => {
     setTesting(true);
@@ -27,16 +26,12 @@ export default function JiraDcApiImportPanel({
       const result = await migrationApi.testJiraDcConnection({
         jiraBaseUrl: config.jiraBaseUrl,
         pat: config.pat,
-        projectKeys: config.projectKeys,
         trustAllCertificates: config.trustAllCertificates,
       });
       onConnectionResult(result.data);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Connection failed';
-      onConnectionResult({
-        connected: false,
-        error: message,
-      });
+      onConnectionResult({ connected: false, error: message });
     } finally {
       setTesting(false);
     }
@@ -44,21 +39,30 @@ export default function JiraDcApiImportPanel({
 
   const updateConfig = (partial: Partial<JiraDcApiConfig>) => {
     onConfigChange({ ...config, ...partial });
-    if ('jiraBaseUrl' in partial || 'pat' in partial || 'projectKeys' in partial) {
+    if ('jiraBaseUrl' in partial || 'pat' in partial) {
       onConnectionResult(null);
     }
   };
 
-  const handleProjectKeysChange = (value: string) => {
-    setProjectKeysInput(value);
-    const keys = value
-      .split(',')
-      .map((k) => k.trim())
-      .filter(Boolean);
-    updateConfig({ projectKeys: keys });
+  const toggleProject = (key: string) => {
+    const current = config.projectKeys;
+    const next = current.includes(key)
+      ? current.filter((k) => k !== key)
+      : [...current, key];
+    onConfigChange({ ...config, projectKeys: next });
+  };
+
+  const selectAllProjects = () => {
+    const allKeys = (connectionResult?.projects ?? []).map((p) => p.key);
+    onConfigChange({ ...config, projectKeys: allKeys });
+  };
+
+  const clearAllProjects = () => {
+    onConfigChange({ ...config, projectKeys: [] });
   };
 
   const isConnectionReady = config.jiraBaseUrl.trim() !== '' && config.pat.trim() !== '';
+  const availableProjects = connectionResult?.projects ?? [];
 
   return (
     <div className="space-y-6">
@@ -87,7 +91,7 @@ export default function JiraDcApiImportPanel({
             type="url"
             value={config.jiraBaseUrl}
             onChange={(e) => updateConfig({ jiraBaseUrl: e.target.value })}
-            placeholder="https://jira.example.com"
+            placeholder="https://dc-instance.example.com"
             disabled={disabled}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm
                        focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-gray-100"
@@ -115,42 +119,6 @@ export default function JiraDcApiImportPanel({
           </p>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Project Keys
-          </label>
-          <input
-            type="text"
-            value={projectKeysInput}
-            onChange={(e) => handleProjectKeysChange(e.target.value)}
-            placeholder="e.g. PROJ, DEMO, ENG"
-            disabled={disabled}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm
-                       focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-gray-100"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Comma-separated project keys to import. Leave empty to import from all accessible projects.
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            JQL Filter (optional)
-          </label>
-          <input
-            type="text"
-            value={config.jqlFilter || ''}
-            onChange={(e) => updateConfig({ jqlFilter: e.target.value || undefined })}
-            placeholder="e.g. status != Done AND created >= -30d"
-            disabled={disabled}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm
-                       focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-gray-100"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Additional JQL clause to filter which issues to import
-          </p>
-        </div>
-
         {/* Test Connection Button */}
         <div className="flex items-center gap-3">
           <button
@@ -165,111 +133,164 @@ export default function JiraDcApiImportPanel({
                 <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
                 Testing...
               </>
+            ) : connectionResult?.connected ? (
+              'Re-test Connection'
             ) : (
               'Test Connection'
             )}
           </button>
 
-          {connectionResult && (
-            <div
-              className={`flex items-center gap-2 text-sm ${
-                connectionResult.connected ? 'text-green-600' : 'text-red-600'
-              }`}
-            >
-              <span>{connectionResult.connected ? '✓' : '✗'}</span>
-              {connectionResult.connected ? (
-                <span>
-                  Connected to DC {connectionResult.jiraVersion} as {connectionResult.userName}
-                  {connectionResult.issueCount !== undefined && (
-                    <> &middot; {connectionResult.issueCount.toLocaleString()} issues found</>
-                  )}
-                </span>
-              ) : (
-                <span>{connectionResult.error || 'Connection failed'}</span>
-              )}
+          {connectionResult && !connectionResult.connected && (
+            <div className="flex items-center gap-2 text-sm text-red-600">
+              <span>✗</span>
+              <span>{connectionResult.error || 'Connection failed'}</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Import Options */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-          Import Options
-        </h4>
-
-        <div className="grid grid-cols-2 gap-4">
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={config.includeComments}
-              onChange={(e) => updateConfig({ includeComments: e.target.checked })}
-              disabled={disabled}
-              className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
-            />
-            Include comments
-          </label>
-
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={config.includeAttachments}
-              onChange={(e) => updateConfig({ includeAttachments: e.target.checked })}
-              disabled={disabled}
-              className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
-            />
-            Include attachments
-          </label>
-
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={config.includeWorklogs}
-              onChange={(e) => updateConfig({ includeWorklogs: e.target.checked })}
-              disabled={disabled}
-              className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
-            />
-            Include worklogs
-          </label>
-
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={config.includeChangelog}
-              onChange={(e) => updateConfig({ includeChangelog: e.target.checked })}
-              disabled={disabled}
-              className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
-            />
-            Include change history
-          </label>
-        </div>
-      </div>
-
-      {/* Connection Summary */}
+      {/* Connection Success + Project Selection */}
       {connectionResult?.connected && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
-          <h4 className="text-sm font-semibold text-green-800">Connection Verified</h4>
-          <div className="grid grid-cols-2 gap-2 text-xs text-green-700">
-            <div>
-              <span className="font-medium">DC Version:</span> {connectionResult.jiraVersion}
-            </div>
-            <div>
-              <span className="font-medium">User:</span> {connectionResult.userName}
-            </div>
-            {connectionResult.projectCount !== undefined && (
+        <>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
+            <h4 className="text-sm font-semibold text-green-800">Connection Verified</h4>
+            <div className="grid grid-cols-3 gap-2 text-xs text-green-700">
               <div>
-                <span className="font-medium">Accessible Projects:</span>{' '}
-                {connectionResult.projectCount}
+                <span className="font-medium">DC Version:</span> {connectionResult.jiraVersion}
               </div>
-            )}
-            {connectionResult.issueCount !== undefined && (
               <div>
-                <span className="font-medium">Issues to Import:</span>{' '}
-                {connectionResult.issueCount.toLocaleString()}
+                <span className="font-medium">User:</span> {connectionResult.userName}
               </div>
-            )}
+              <div>
+                <span className="font-medium">Total Issues:</span>{' '}
+                {connectionResult.issueCount?.toLocaleString()}
+              </div>
+            </div>
           </div>
-        </div>
+
+          {/* Project Selection */}
+          {availableProjects.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  Select Projects to Import
+                </h4>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={selectAllProjects}
+                    className="text-xs text-cyan-600 hover:text-cyan-800"
+                  >
+                    Select all
+                  </button>
+                  <span className="text-xs text-gray-300">|</span>
+                  <button
+                    type="button"
+                    onClick={clearAllProjects}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto">
+                {availableProjects.map((project) => (
+                  <label
+                    key={project.key}
+                    className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors
+                      border-b border-gray-100 last:border-b-0 hover:bg-gray-50
+                      ${config.projectKeys.includes(project.key) ? 'bg-cyan-50' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={config.projectKeys.includes(project.key)}
+                      onChange={() => toggleProject(project.key)}
+                      disabled={disabled}
+                      className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                    />
+                    <span className="font-mono text-xs font-semibold text-gray-700 w-16">
+                      {project.key}
+                    </span>
+                    <span className="text-sm text-gray-600 truncate">{project.name}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500">
+                {config.projectKeys.length === 0
+                  ? 'No projects selected — all accessible projects will be imported'
+                  : `${config.projectKeys.length} project${config.projectKeys.length > 1 ? 's' : ''} selected`}
+              </p>
+            </div>
+          )}
+
+          {/* JQL Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              JQL Filter (optional)
+            </label>
+            <input
+              type="text"
+              value={config.jqlFilter || ''}
+              onChange={(e) => updateConfig({ jqlFilter: e.target.value || undefined })}
+              placeholder="e.g. status != Done AND created >= -30d"
+              disabled={disabled}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm
+                         focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-gray-100"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Additional JQL clause to filter which issues to import
+            </p>
+          </div>
+
+          {/* Import Options */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+              Import Options
+            </h4>
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={config.includeComments}
+                  onChange={(e) => onConfigChange({ ...config, includeComments: e.target.checked })}
+                  disabled={disabled}
+                  className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                />
+                Include comments
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={config.includeAttachments}
+                  onChange={(e) => onConfigChange({ ...config, includeAttachments: e.target.checked })}
+                  disabled={disabled}
+                  className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                />
+                Include attachments
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={config.includeWorklogs}
+                  onChange={(e) => onConfigChange({ ...config, includeWorklogs: e.target.checked })}
+                  disabled={disabled}
+                  className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                />
+                Include worklogs
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={config.includeChangelog}
+                  onChange={(e) => onConfigChange({ ...config, includeChangelog: e.target.checked })}
+                  disabled={disabled}
+                  className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                />
+                Include change history
+              </label>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

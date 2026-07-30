@@ -11,6 +11,14 @@ public final class JiraDcEntityMapper {
     private JiraDcEntityMapper() {}
 
     private static final Map<String, String> FIELD_NAME_BY_ID = new HashMap<>();
+    private static final Map<String, String> ACTIVE_FIELD_MAPPINGS = new HashMap<>();
+
+    public static void registerFieldMappings(Map<String, String> mappings) {
+        ACTIVE_FIELD_MAPPINGS.clear();
+        if (mappings != null) {
+            ACTIVE_FIELD_MAPPINGS.putAll(mappings);
+        }
+    }
 
     public static void registerFieldNames(List<Map<String, Object>> jiraFields) {
         FIELD_NAME_BY_ID.clear();

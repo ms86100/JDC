@@ -164,6 +164,10 @@ public class CustomFieldPersisterHandler {
         if (key == null || key.isBlank()) {
             return null;
         }
+        // Skip .name metadata keys
+        if (key.endsWith(".name")) {
+            return null;
+        }
         String normalized = key.trim().toLowerCase(Locale.ROOT)
                 .replace(" ", "_")
                 .replaceAll("[^a-z0-9_]", "");
@@ -174,11 +178,35 @@ public class CustomFieldPersisterHandler {
             return key;
         }
         if (key.startsWith("customfield_")) {
-            return fieldDefinitionRepository.findByFieldKey(key).map(FieldDefinition::getFieldKey).orElse(key);
+            Optional<FieldDefinition> found = fieldDefinitionRepository.findByFieldKey(key);
+            if (found.isPresent()) {
+                return found.get().getFieldKey();
+            }
         }
-        return fieldDefinitionRepository.findByFieldKey("customfield_" + normalized)
-                .map(FieldDefinition::getFieldKey)
-                .orElse(normalized);
+        Optional<FieldDefinition> prefixed = fieldDefinitionRepository.findByFieldKey("customfield_" + normalized);
+        if (prefixed.isPresent()) {
+            return prefixed.get().getFieldKey();
+        }
+        // Auto-provision: field definition not found, create it on demand
+        try {
+            String displayName = key;
+            if (key.startsWith("customfield_")) {
+                // Try to get human-readable name from the entity mapper's registry
+                String nameKey = key + ".name";
+                // The name is not directly available here, so use the key as-is
+                // or generate a readable name from the key
+                displayName = key.replace("customfield_", "Custom Field ");
+            }
+            FieldDefinition provisioned = fieldProvisioningService.provisionCustomField(
+                    displayName, "TEXT", SYSTEM_USER);
+            if (provisioned != null) {
+                log.info("Auto-provisioned custom field definition: {} -> {}", key, provisioned.getFieldKey());
+                return provisioned.getFieldKey();
+            }
+        } catch (Exception e) {
+            log.debug("Could not auto-provision field {}: {}", key, e.getMessage());
+        }
+        return normalized;
     }
 
     public static class CustomFieldPersistResult {

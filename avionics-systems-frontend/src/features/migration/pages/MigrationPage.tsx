@@ -209,6 +209,7 @@ export default function MigrationPage() {
     trustAllCertificates: true,
   });
   const [jiraDcConnectionResult, setJiraDcConnectionResult] = useState<JiraDcConnectionTestResult | null>(null);
+  const [jiraDcSourceFields, setJiraDcSourceFields] = useState<string[]>([]);
   const [detailJobImportType, setDetailJobImportType] = useState<ImportType | null>(null);
   const [detailJobResultMetadata, setDetailJobResultMetadata] = useState<Record<
     string,
@@ -568,6 +569,38 @@ export default function MigrationPage() {
           }));
         }
       }
+      if (
+        state.step === 'targetProject' &&
+        state.importType === 'jira-dc-api' &&
+        jiraDcConfig.jiraBaseUrl &&
+        jiraDcConfig.pat
+      ) {
+        try {
+          const res = await migrationApi.discoverJiraDcFields({
+            jiraBaseUrl: jiraDcConfig.jiraBaseUrl,
+            pat: jiraDcConfig.pat,
+            projectKeys: jiraDcConfig.projectKeys.length > 0 ? jiraDcConfig.projectKeys : undefined,
+            trustAllCertificates: jiraDcConfig.trustAllCertificates,
+          });
+          const sourceFieldNames = (res.data.sourceFields || [])
+            .filter((f: { custom: boolean }) => !f.custom)
+            .map((f: { name: string }) => f.name);
+          const customFieldNames = (res.data.sourceFields || [])
+            .filter((f: { custom: boolean }) => f.custom)
+            .map((f: { name: string }) => f.name);
+          const allNames = [...sourceFieldNames, ...customFieldNames];
+          setJiraDcSourceFields(allNames);
+          if (state.fieldMappings.length === 0) {
+            const mappings = generateFieldMappings(allNames, targetFields);
+            setState((prev) => ({ ...prev, fieldMappings: mappings }));
+          }
+        } catch (err: unknown) {
+          const detail = err instanceof Error ? err.message : String(err);
+          console.error('Discover fields failed:', err);
+          setWizardError('Failed to discover fields: ' + detail);
+          return;
+        }
+      }
       if (state.step === 'map' && state.fieldMappings.length > 0 && wizard.sessionId) {
         await wizard.saveFieldMappings.mutateAsync(state.fieldMappings);
       }
@@ -920,6 +953,10 @@ export default function MigrationPage() {
         job = { id: jobData.id, jobStatus: jobData.jobStatus || 'IN_PROGRESS' };
       } else if (state.importType === 'jira-dc-api') {
         if (!jiraDcConfig.jiraBaseUrl || !jiraDcConfig.pat) return;
+        const mappedFields: Record<string, string> = {};
+        state.fieldMappings
+          .filter((m) => m.mapped && m.targetField)
+          .forEach((m) => { mappedFields[m.sourceColumn] = m.targetField; });
         const res = await migrationApi.startJiraDcApiImport({
           jiraBaseUrl: jiraDcConfig.jiraBaseUrl,
           pat: jiraDcConfig.pat,
@@ -931,6 +968,7 @@ export default function MigrationPage() {
           includeWorklogs: jiraDcConfig.includeWorklogs,
           includeChangelog: jiraDcConfig.includeChangelog,
           trustAllCertificates: jiraDcConfig.trustAllCertificates,
+          options: { fieldMappings: mappedFields },
         });
         const jobData = res.data as { id: string; jobStatus?: string };
         job = { id: jobData.id, jobStatus: jobData.jobStatus || 'IN_PROGRESS' };
@@ -1459,9 +1497,11 @@ export default function MigrationPage() {
             )}
             <FieldMappingPanel
               sourceHeaders={
-                (state.validationResult?.headers?.length
-                  ? state.validationResult.headers
-                  : wizard.session?.detectedHeaders) ?? []
+                state.importType === 'jira-dc-api'
+                  ? jiraDcSourceFields
+                  : (state.validationResult?.headers?.length
+                      ? state.validationResult.headers
+                      : wizard.session?.detectedHeaders) ?? []
               }
               targetFields={targetFields}
               initialMappings={state.fieldMappings}
@@ -1541,6 +1581,29 @@ export default function MigrationPage() {
                 value={userMappingDrafts}
                 onChange={setUserMappingDrafts}
               />
+              <ConfigureImportPanel
+                importMode={state.importOptions.importMode}
+                onImportModeChange={(mode) =>
+                  setState((prev) => ({
+                    ...prev,
+                    importOptions: {
+                      ...prev.importOptions,
+                      importMode: mode as 'CREATE_ONLY' | 'UPDATE_ONLY' | 'CREATE_UPDATE',
+                    },
+                  }))
+                }
+                fieldDefaults={fieldDefaults}
+                onFieldDefaultsChange={setFieldDefaults}
+                workflowStatusMappings={workflowStatusMappings}
+                onWorkflowStatusMappingsChange={setWorkflowStatusMappings}
+                requiredTargetFields={targetFields}
+              />
+            </div>
+          );
+        }
+        if (state.importType === 'jira-dc-api') {
+          return (
+            <div className="space-y-6">
               <ConfigureImportPanel
                 importMode={state.importOptions.importMode}
                 onImportModeChange={(mode) =>

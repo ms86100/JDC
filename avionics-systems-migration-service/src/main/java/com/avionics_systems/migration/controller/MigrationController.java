@@ -259,16 +259,66 @@ public class MigrationController {
             com.avionics_systems.migration.jiradc.JiraDcRestClient.SearchResult search =
                     client.searchIssues(jql, 0, 1, null);
 
+            List<Map<String, Object>> projects = client.getProjects();
+            List<Map<String, String>> projectList = projects.stream()
+                    .map(p -> {
+                        Map<String, String> proj = new java.util.LinkedHashMap<>();
+                        proj.put("key", p.get("key") != null ? p.get("key").toString() : "");
+                        proj.put("name", p.get("name") != null ? p.get("name").toString() : "");
+                        return proj;
+                    })
+                    .toList();
+
             result.put("connected", true);
             result.put("jiraVersion", serverInfo.get("version"));
             result.put("userName", myself.get("displayName"));
-            result.put("projectCount", client.getProjects().size());
+            result.put("projectCount", projectList.size());
+            result.put("projects", projectList);
             result.put("issueCount", search.total());
         } catch (Exception e) {
             log.warn("DC API connection test failed: {}", e.getMessage());
             result.put("connected", false);
             result.put("error", e.getMessage() != null ? e.getMessage() : "Connection failed");
         }
+        return ResponseEntity.ok(result);
+    }
+
+    @SuppressWarnings("unchecked")
+    @PostMapping("/import/jira-dc-api/discover-fields")
+    public ResponseEntity<Map<String, Object>> discoverJiraDcFields(
+            @RequestBody Map<String, Object> request) {
+
+        String baseUrl = (String) request.get("jiraBaseUrl");
+        String pat = (String) request.get("pat");
+        boolean trustAll = Boolean.TRUE.equals(request.get("trustAllCertificates"));
+
+        JiraDcConnectionConfig config = JiraDcConnectionConfig.builder()
+                .baseUrl(baseUrl).pat(pat).trustAllCertificates(trustAll).build();
+
+        com.avionics_systems.migration.jiradc.JiraDcRestClient client =
+                new com.avionics_systems.migration.jiradc.JiraDcRestClient(config, objectMapper);
+
+        List<Map<String, Object>> jiraFields = client.getFields();
+        List<Map<String, Object>> sourceFields = new java.util.ArrayList<>();
+        for (Map<String, Object> f : jiraFields) {
+            String id = f.get("id") != null ? f.get("id").toString() : null;
+            String name = f.get("name") != null ? f.get("name").toString() : id;
+            boolean custom = Boolean.TRUE.equals(f.get("custom"));
+            if (id == null) continue;
+            Map<String, Object> sf = new java.util.LinkedHashMap<>();
+            sf.put("key", id);
+            sf.put("name", name);
+            sf.put("custom", custom);
+            Map<String, Object> schema = f.get("schema") instanceof Map<?,?> m
+                    ? (Map<String, Object>) m : null;
+            sf.put("type", schema != null && schema.get("type") != null
+                    ? schema.get("type").toString() : "string");
+            sourceFields.add(sf);
+        }
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("sourceFields", sourceFields);
+        result.put("totalFields", sourceFields.size());
         return ResponseEntity.ok(result);
     }
 

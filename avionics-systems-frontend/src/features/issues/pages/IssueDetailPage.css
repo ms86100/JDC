@@ -354,7 +354,7 @@
 }
 
 .idm-body--drawer-open {
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 1fr 360px;
   gap: 0;
 }
 
@@ -1021,7 +1021,7 @@
 }
 
 .idm-drawer--open {
-  width: 320px;
+  width: 360px;
   opacity: 1;
   padding: var(--sa-space-4) var(--sa-space-4);
   border-left-color: var(--sa-n200);
@@ -1098,12 +1098,11 @@
 
 .idm-drawer-row {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 2px;
   padding: var(--sa-space-2) var(--sa-space-3);
   border-bottom: 1px solid var(--sa-n50);
   transition: background var(--sa-motion-fast);
-  gap: var(--sa-space-2);
 }
 
 .idm-drawer-row:last-child {
@@ -1118,8 +1117,6 @@
   font-size: 11px;
   font-weight: 600;
   color: var(--sa-n500);
-  flex-shrink: 0;
-  padding-top: 2px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
@@ -1130,10 +1127,10 @@
   gap: 6px;
   font-size: var(--sa-fs-xs);
   color: var(--sa-n900);
-  text-align: right;
-  justify-content: flex-end;
+  text-align: left;
+  justify-content: flex-start;
   flex-wrap: wrap;
-  max-width: 180px;
+  word-break: break-word;
   font-weight: 500;
 }
 

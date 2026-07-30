@@ -113,6 +113,36 @@ public class IssueServicePayloadMapper {
             }
         }
 
+        if (request.getEnvironment() != null && !request.getEnvironment().isBlank()) {
+            payload.put("environment", request.getEnvironment());
+        }
+        if (request.getSprintId() != null && !request.getSprintId().isBlank()) {
+            UUID sprintUuid = parseUuid(request.getSprintId());
+            if (sprintUuid != null) {
+                payload.put("sprintId", sprintUuid);
+            }
+        }
+        if (request.getFixVersions() != null && !request.getFixVersions().isEmpty()) {
+            List<UUID> versionIds = new ArrayList<>();
+            for (String v : request.getFixVersions()) {
+                UUID id = parseUuid(v);
+                if (id != null) versionIds.add(id);
+            }
+            if (!versionIds.isEmpty()) {
+                payload.put("fixVersionIds", versionIds.toArray(new UUID[0]));
+            }
+        }
+        if (request.getAffectedVersions() != null && !request.getAffectedVersions().isEmpty()) {
+            List<UUID> versionIds = new ArrayList<>();
+            for (String v : request.getAffectedVersions()) {
+                UUID id = parseUuid(v);
+                if (id != null) versionIds.add(id);
+            }
+            if (!versionIds.isEmpty()) {
+                payload.put("affectsVersionIds", versionIds.toArray(new UUID[0]));
+            }
+        }
+
         return payload;
     }
 
