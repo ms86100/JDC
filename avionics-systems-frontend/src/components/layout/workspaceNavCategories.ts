@@ -205,7 +205,11 @@ export const WORKSPACE_NAV_CATEGORIES: WorkspaceNavCategory[] = [
 
       { label: 'Impact analysis', path: '/tests/impact', description: 'Change impact' },
 
+      { label: 'Exploratory testing', path: '/tests/exploratory', description: 'Charter-based sessions' },
+
       { label: 'Test settings', path: '/tests/settings', description: 'Project test config' },
+
+      { label: 'Test configuration', path: '/tests/admin-config', description: 'Statuses, types, execution statuses' },
 
     ],
 
@@ -238,6 +242,12 @@ export const WORKSPACE_NAV_CATEGORIES: WorkspaceNavCategory[] = [
       { label: 'Master Data Admin', path: '/aircraft-design/master-data', description: 'Programs, systems, test means' },
 
       { label: 'Architecture', path: '/aircraft-design/architecture', description: 'System architecture documentation' },
+
+      { label: 'VVM Cards (IFCS)', path: '/aircraft-design/vvm-cards', description: 'V&V Management strategy cards' },
+
+      { label: 'IVV Cards (IFCS)', path: '/aircraft-design/ivv-cards', description: 'Formal validation/verification items' },
+
+      { label: 'Groups (IFCS)', path: '/aircraft-design/groups', description: 'Activity packaging and deliverables' },
 
     ],
 

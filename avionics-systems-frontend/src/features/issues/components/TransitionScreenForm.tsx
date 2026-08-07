@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { resolutionApi, type Resolution } from '../../../api/issueApi';
+import { parseTimeInput } from '../../../api/worklogApi';
 import { useQuery } from '@tanstack/react-query';
 import './TransitionScreenForm.css';
 
@@ -50,6 +51,11 @@ function isResolutionField(field: TransitionScreenField): boolean {
 function isAssigneeField(field: TransitionScreenField): boolean {
   const key = normalizeFieldKey(field.fieldName);
   return key === 'assignee' || key === 'assigneeid' || field.fieldType === 'user';
+}
+
+function isLogWorkField(field: TransitionScreenField): boolean {
+  const key = normalizeFieldKey(field.fieldName);
+  return key === 'logwork' || key === 'timespent' || key === 'timespentseconds' || field.fieldType === 'worklog';
 }
 
 export default function TransitionScreenForm({
@@ -151,6 +157,39 @@ export default function TransitionScreenForm({
                 onChange={(e) => updateField(field, e.target.value)}
               />
             </label>
+          );
+        }
+
+        if (isLogWorkField(field)) {
+          return (
+            <div key={field.fieldId} className="transition-screen-field">
+              <label>
+                <span>Log Work{field.required ? ' *' : ''}</span>
+                <input
+                  type="text"
+                  placeholder="e.g. 2h 30m, 1d, 4h"
+                  value={String(localScreen.timeSpentInput ?? '')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const next: Record<string, unknown> = { ...localScreen, timeSpentInput: val };
+                    const seconds = parseTimeInput(val);
+                    if (seconds) next.timeSpentSeconds = seconds;
+                    setLocalScreen(next);
+                    onScreenInputChange(next);
+                  }}
+                />
+                <span style={{ fontSize: '11px', color: '#9ca3af' }}>w=weeks, d=days(8h), h=hours, m=minutes</span>
+              </label>
+              <label style={{ marginTop: '0.5rem' }}>
+                <span>Work Description</span>
+                <textarea
+                  rows={2}
+                  value={String(localScreen.workDescription ?? '')}
+                  onChange={(e) => updateField({ ...field, fieldId: 'workDescription', fieldName: 'workDescription' }, e.target.value)}
+                  placeholder="Describe work done during this transition"
+                />
+              </label>
+            </div>
           );
         }
 

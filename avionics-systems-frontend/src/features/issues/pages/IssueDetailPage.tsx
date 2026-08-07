@@ -87,6 +87,7 @@ interface FullIssueResponse extends Omit<IssueResponse, 'watchers'> {
   timeSpent?: number;
   aggregateTimeEstimate?: number;
   aggregateTimeSpent?: number;
+  aggregateRemainingEstimate?: number;
   workRatio?: number;
   securityLevelId?: string;
   securityLevelName?: string;
@@ -955,7 +956,7 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
               )}
 
               {activeTab === 'activity' && issueId && <ActivityTab issueId={issueId} />}
-              {activeTab === 'work' && issueId && <WorklogsTab issueId={issueId} />}
+              {activeTab === 'work' && issueId && <WorklogsTab issueId={issueId} originalEstimate={issue?.originalEstimate} remainingEstimate={issue?.remainingEstimate} timeSpent={issue?.timeSpent} />}
               {activeTab === 'links' && issueId && <IssueLinksTab issueId={issueId} />}
               {activeTab === 'labels' && issueId && <LabelsTab issueId={issueId} />}
               {activeTab === 'attachments' && issueId && <AttachmentsTab issueId={issueId} />}
@@ -1135,14 +1136,27 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
               Time Tracking
             </h4>
-            {(issue.originalEstimate || issue.timeSpent) && (
-              <div className="idm-time-bar">
-                <div className="idm-time-bar-track">
-                  <div className="idm-time-bar-fill" style={{ width: `${timeProgress}%` }} />
+            {(issue.originalEstimate || issue.timeSpent) && (() => {
+              const est = issue.originalEstimate ?? 0;
+              const spent = issue.timeSpent ?? 0;
+              const rem = issue.remainingEstimate ?? 0;
+              const total = Math.max(est, spent + rem, 1);
+              const spentPct = Math.min(100, (spent / total) * 100);
+              const remPct = Math.min(100 - spentPct, (rem / total) * 100);
+              const overBudget = est > 0 && spent > est;
+              return (
+                <div className="idm-time-bar">
+                  <div className="idm-time-bar-track" style={{ display: 'flex', height: '8px', background: 'var(--ab-gray-100, #f3f4f6)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${spentPct}%`, background: overBudget ? '#dc2626' : '#2563eb', transition: 'width 0.3s' }} />
+                    <div style={{ width: `${remPct}%`, background: '#93c5fd', transition: 'width 0.3s' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px', fontSize: '10px', color: 'var(--ab-gray-500)' }}>
+                    <span><span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#2563eb', marginRight: '3px' }} />Logged</span>
+                    <span><span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#93c5fd', marginRight: '3px' }} />Remaining</span>
+                  </div>
                 </div>
-                <span className="idm-time-bar-label">{timeProgress}%</span>
-              </div>
-            )}
+              );
+            })()}
             <div className="idm-drawer-rows">
               <div className="idm-drawer-row">
                 <span className="idm-drawer-label">Original Estimate</span>
@@ -1161,6 +1175,22 @@ export default function IssueDetailPage(props?: IssueDetailPageProps) {
                   <span className="idm-drawer-label">Work Ratio</span>
                   <div className="idm-drawer-value idm-mono">{issue.workRatio}%</div>
                 </div>
+              )}
+              {(issue.aggregateTimeEstimate != null || issue.aggregateTimeSpent != null) && (
+                <>
+                  <div className="idm-drawer-row" style={{ borderTop: '1px solid var(--ab-gray-100)', paddingTop: '6px', marginTop: '4px' }}>
+                    <span className="idm-drawer-label">Aggregate Estimate</span>
+                    <div className="idm-drawer-value idm-mono">{formatTimeWithDays(issue.aggregateTimeEstimate)}</div>
+                  </div>
+                  <div className="idm-drawer-row">
+                    <span className="idm-drawer-label">Aggregate Spent</span>
+                    <div className="idm-drawer-value idm-mono">{formatTimeWithDays(issue.aggregateTimeSpent)}</div>
+                  </div>
+                  <div className="idm-drawer-row">
+                    <span className="idm-drawer-label">Aggregate Remaining</span>
+                    <div className="idm-drawer-value idm-mono">{formatTimeWithDays(issue.aggregateRemainingEstimate)}</div>
+                  </div>
+                </>
               )}
             </div>
           </div>

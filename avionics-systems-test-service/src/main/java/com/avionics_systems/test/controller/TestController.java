@@ -80,4 +80,11 @@ public class TestController {
         testService.deleteTest(testId);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{testId}/clone")
+    @PreAuthorize("@projectSecurity.canCreateTests(authentication, #projectId)")
+    @Operation(summary = "Clone a test case")
+    public ResponseEntity<TestResponse> cloneTest(@PathVariable UUID testId, @RequestParam UUID projectId) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(testService.cloneTest(testId));
+    }
 }

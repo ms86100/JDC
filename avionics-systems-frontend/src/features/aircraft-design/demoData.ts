@@ -1,27 +1,29 @@
-const pid = 'a0000000-0000-0000-0000-000000000001';
+const pid = '10000000-0000-0000-0000-000000000001';
 
 export const DEMO_PROJECT_ID = pid;
 
 export const DEMO_VVOS = [
-  { id: 'v001', issueKey: 'NFMSDO-101', summary: 'Verify lateral guidance mode engagement on FMS CDU', status: 'RELEASED', fixVersionName: 'STD-3.2', idDoors: 'DOORS-VVO-2401', applicability: 'SA_CEONEO', assigneeName: 'P. Martin', hlvvoId: 'h001', projectId: pid, createdAt: '2025-11-15T10:00:00Z', vvoVersion: 3 },
-  { id: 'v002', issueKey: 'NFMSDO-102', summary: 'Validate vertical flight phase transitions (CLB/CRZ/DES)', status: 'VERIFIED', fixVersionName: 'STD-3.2', idDoors: 'DOORS-VVO-2402', applicability: 'SA_CEONEO, LR_CEONEO', assigneeName: 'S. Dupont', hlvvoId: 'h001', projectId: pid, createdAt: '2025-11-16T09:30:00Z', vvoVersion: 2 },
-  { id: 'v003', issueKey: 'NFMSDO-103', summary: 'Check HOLD pattern entry logic with wind correction', status: 'TO_BE_VERIFIED', fixVersionName: 'STD-3.3', idDoors: 'DOORS-VVO-2403', applicability: 'SA_CEONEO', assigneeName: 'A. Chen', hlvvoId: 'h001', projectId: pid, createdAt: '2025-12-01T14:20:00Z', vvoVersion: 1 },
-  { id: 'v004', issueKey: 'NFMSDO-104', summary: 'Verify OFFSET path computation accuracy (NM precision)', status: 'NEW', fixVersionName: '', idDoors: '', applicability: 'LR_CEONEO', assigneeName: 'M. Fischer', hlvvoId: 'h002', projectId: pid, createdAt: '2026-01-10T08:45:00Z', vvoVersion: 1 },
-  { id: 'v005', issueKey: 'NFMSDO-105', summary: 'Validate alternate FPLN insertion and activation sequence', status: 'RELEASED', fixVersionName: 'STD-3.2', idDoors: 'DOORS-VVO-2405', applicability: 'SA_CEONEO, SA_NewAvionics', assigneeName: 'P. Martin', hlvvoId: 'h002', projectId: pid, createdAt: '2025-10-05T11:00:00Z', vvoVersion: 4 },
-  { id: 'v006', issueKey: 'NFMSDO-106', summary: 'Verify DIR TO waypoint sequencing and leg transition', status: 'RELEASED', fixVersionName: 'STD-3.1', idDoors: 'DOORS-VVO-2406', applicability: 'SA_CEONEO', assigneeName: 'S. Dupont', hlvvoId: 'h001', projectId: pid, createdAt: '2025-09-20T16:00:00Z', vvoVersion: 2 },
-  { id: 'v007', issueKey: 'NFMSDO-107', summary: 'Check STRINGING procedure build from waypoint database', status: 'SUPERSEDED', fixVersionName: 'STD-3.0', idDoors: 'DOORS-VVO-2407', applicability: 'SA_CEONEO', assigneeName: 'A. Chen', hlvvoId: 'h001', projectId: pid, createdAt: '2025-06-12T10:30:00Z', vvoVersion: 1 },
-  { id: 'v008', issueKey: 'NFMSDO-108', summary: 'Validate INIT page fuel prediction computation', status: 'CANCELLED', fixVersionName: 'STD-3.2', idDoors: 'DOORS-VVO-2408', applicability: 'LR_CEONEO', assigneeName: 'M. Fischer', hlvvoId: 'h002', projectId: pid, createdAt: '2025-11-01T13:15:00Z', vvoVersion: 1 },
-  { id: 'v009', issueKey: 'NFMSDO-109', summary: 'Verify VNAV path descent with speed/altitude constraints', status: 'TO_BE_VERIFIED', fixVersionName: 'STD-3.3', idDoors: '', applicability: 'SA_CEONEO', assigneeName: 'P. Martin', hlvvoId: 'h001', projectId: pid, createdAt: '2026-02-18T09:00:00Z', vvoVersion: 1 },
-  { id: 'v010', issueKey: 'NFMSDO-110', summary: 'Check lateral revision on active leg (CF/TF/DF)', status: 'NEW', fixVersionName: '', idDoors: '', applicability: 'SA_NewAvionics', assigneeName: 'S. Dupont', hlvvoId: 'h002', projectId: pid, createdAt: '2026-03-01T07:30:00Z', vvoVersion: 1 },
-  { id: 'v011', issueKey: 'NFMSDO-111', summary: 'Validate RNP-AR approach procedure loading and monitoring', status: 'VERIFIED', fixVersionName: 'STD-3.3', idDoors: 'DOORS-VVO-2411', applicability: 'SA_CEONEO, LR_CEONEO', assigneeName: 'A. Chen', hlvvoId: 'h001', projectId: pid, createdAt: '2026-01-28T15:45:00Z', vvoVersion: 2 },
-  { id: 'v012', issueKey: 'NFMSDO-112', summary: 'Verify TCAS/TAWS integration with FMS flight plan', status: 'RELEASED', fixVersionName: 'STD-3.2', idDoors: 'DOORS-VVO-2412', applicability: 'SA_CEONEO', assigneeName: 'M. Fischer', hlvvoId: 'h002', projectId: pid, createdAt: '2025-08-10T10:00:00Z', vvoVersion: 3 },
+  { id: 'v001', issueKey: 'NFMSST-101', summary: '[VVO_nFMS_DIRTO_1.0] To check the lateral guidance mode engagement after DIR TO insertion', status: 'RELEASED', fixVersionName: 'STD-3.2', idDoors: 'VVO_nFMS_DIRTO_1.0', applicability: 'SA_CEONEO', assigneeName: 'P. Martin', hlvvoId: 'h001', projectId: pid, createdAt: '2025-11-15T10:00:00Z', vvoVersion: 3, labels: ['Change'], executionResponsible: ['Airbus Lab tests'], ptsMfclLinks: ['MPP-PTS-FMS-MFCL-355'], nDi: ['DI#004'], referenceDocuments: 'DTS Rev G', dtsBaselineVersion: 'Rev G' },
+  { id: 'v002', issueKey: 'NFMSST-102', summary: '[VVO_nFMS_VERT_1.0] To check the vertical flight phase transitions (CLB/CRZ/DES)', status: 'VERIFIED', fixVersionName: 'STD-3.2', idDoors: 'VVO_nFMS_VERT_1.0', applicability: 'SA_CEONEO, LR_CEONEO', assigneeName: 'S. Dupont', hlvvoId: 'h001', projectId: pid, createdAt: '2025-11-16T09:30:00Z', vvoVersion: 2, labels: ['Merge'], executionResponsible: ['Thales', 'Honeywell'], ptsMfclLinks: ['MPP-PTS-FMS-MFCL-230'], nDi: [], referenceDocuments: 'DTS Rev G', dtsBaselineVersion: 'Rev G' },
+  { id: 'v003', issueKey: 'NFMSST-103', summary: '[VVO_nFMS_HOLD_1.0] To check the HOLD pattern entry logic with wind correction', status: 'TO_BE_VERIFIED', fixVersionName: 'STD-3.3', idDoors: 'VVO_nFMS_HOLD_1.0', applicability: 'SA_CEONEO', assigneeName: 'A. Chen', hlvvoId: 'h001', projectId: pid, createdAt: '2025-12-01T14:20:00Z', vvoVersion: 1, labels: ['Change'], executionResponsible: ['Airbus Lab tests'], ptsMfclLinks: ['MPP-PTS-FMS-MFCL-370'], nDi: ['DI#112'], referenceDocuments: 'DTS Rev H', dtsBaselineVersion: 'Rev H' },
+  { id: 'v004', issueKey: 'NFMSST-104', summary: '[VVO_nFMS_OFFSET_1.0] To check the OFFSET path computation accuracy', status: 'NEW', fixVersionName: '', idDoors: '', applicability: 'LR_CEONEO', assigneeName: 'M. Fischer', hlvvoId: 'h002', projectId: pid, createdAt: '2026-01-10T08:45:00Z', vvoVersion: 1, labels: ['NoChange'], executionResponsible: ['Airbus Lab tests'], ptsMfclLinks: ['MPP-PTS-FMS-MFCL-400'], nDi: [], referenceDocuments: 'DTS Rev H', dtsBaselineVersion: 'Rev H' },
+  { id: 'v005', issueKey: 'NFMSST-105', summary: '[VVO_nFMS_LATFPLN_1.0] To check the alternate FPLN insertion and activation sequence', status: 'RELEASED', fixVersionName: 'STD-3.2', idDoors: 'VVO_nFMS_LATFPLN_1.0', applicability: 'SA_CEONEO, SA_NewAvionics', assigneeName: 'P. Martin', hlvvoId: 'h002', projectId: pid, createdAt: '2025-10-05T11:00:00Z', vvoVersion: 4, labels: ['Change', 'Merge'], executionResponsible: ['Airbus Lab tests'], ptsMfclLinks: ['MPP-PTS-FMS-MFCL-230'], nDi: ['DI#004'], referenceDocuments: 'DTS Rev G', dtsBaselineVersion: 'Rev G' },
+  { id: 'v006', issueKey: 'NFMSST-106', summary: '[VVO_nFMS_DIRTO_2.0] To check the DIR TO waypoint sequencing and leg transition', status: 'RELEASED', fixVersionName: 'STD-3.1', idDoors: 'VVO_nFMS_DIRTO_2.0', applicability: 'SA_CEONEO', assigneeName: 'S. Dupont', hlvvoId: 'h001', projectId: pid, createdAt: '2025-09-20T16:00:00Z', vvoVersion: 2, labels: ['Change'], executionResponsible: ['Honeywell'], ptsMfclLinks: ['MPP-PTS-FMS-MFCL-360'], nDi: ['DI#141'], referenceDocuments: 'DTS Rev G', dtsBaselineVersion: 'Rev G' },
+  { id: 'v007', issueKey: 'NFMSST-107', summary: '[VVO_nFMS_LATFPLN_2.0] To check the STRINGING procedure build from waypoint database', status: 'SUPERSEDED', fixVersionName: 'STD-3.0', idDoors: 'VVO_nFMS_LATFPLN_2.0', applicability: 'SA_CEONEO', assigneeName: 'A. Chen', hlvvoId: 'h001', projectId: pid, createdAt: '2025-06-12T10:30:00Z', vvoVersion: 1, labels: ['Clarification'], executionResponsible: ['Airbus Lab tests'], ptsMfclLinks: ['MPP-PTS-FMS-MFCL-410'], nDi: [], referenceDocuments: 'DTS Rev F', dtsBaselineVersion: 'Rev F' },
+  { id: 'v008', issueKey: 'NFMSST-108', summary: '[VVO_nFMS_VERTAPPR_1.0] To check the INIT page fuel prediction computation', status: 'CANCELLED', fixVersionName: 'STD-3.2', idDoors: 'VVO_nFMS_VERTAPPR_1.0', applicability: 'LR_CEONEO', assigneeName: 'M. Fischer', hlvvoId: 'h002', projectId: pid, createdAt: '2025-11-01T13:15:00Z', vvoVersion: 1, labels: ['NoChange'], executionResponsible: ['Thales'], ptsMfclLinks: [], nDi: [], referenceDocuments: 'DTS Rev G', dtsBaselineVersion: 'Rev G' },
+  { id: 'v009', issueKey: 'NFMSST-109', summary: '[VVO_nFMS_VERT_2.0] To check the VNAV path descent with speed/altitude constraints', status: 'TO_BE_VERIFIED', fixVersionName: 'STD-3.3', idDoors: '', applicability: 'SA_CEONEO', assigneeName: 'P. Martin', hlvvoId: 'h001', projectId: pid, createdAt: '2026-02-18T09:00:00Z', vvoVersion: 1, labels: ['Change'], executionResponsible: ['Airbus Lab tests'], ptsMfclLinks: ['MPP-PTS-FMS-MFCL-230'], nDi: ['DI#200'], referenceDocuments: 'DTS Rev H', dtsBaselineVersion: 'Rev H' },
+  { id: 'v010', issueKey: 'NFMSST-110', summary: '[VVO_nFMS_LATFPLN_3.0] To check the lateral revision on active leg (CF/TF/DF)', status: 'NEW', fixVersionName: '', idDoors: '', applicability: 'SA_NewAvionics', assigneeName: 'S. Dupont', hlvvoId: 'h002', projectId: pid, createdAt: '2026-03-01T07:30:00Z', vvoVersion: 1, labels: ['Pureflyt'], executionResponsible: ['Thales'], ptsMfclLinks: [], nDi: [], referenceDocuments: 'DTS Rev H', dtsBaselineVersion: 'Rev H' },
+  { id: 'v011', issueKey: 'NFMSST-111', summary: '[VVO_nFMS_MSF_RNPAR_1.0] To check the RNP-AR approach procedure loading and monitoring', status: 'VERIFIED', fixVersionName: 'STD-3.3', idDoors: 'VVO_nFMS_MSF_RNPAR_1.0', applicability: 'SA_CEONEO, LR_CEONEO', assigneeName: 'A. Chen', hlvvoId: 'h001', projectId: pid, createdAt: '2026-01-28T15:45:00Z', vvoVersion: 2, labels: ['Change'], executionResponsible: ['Airbus Lab tests'], ptsMfclLinks: ['MPP-PTS-FMS-MFCL-1205'], nDi: ['DI#089'], referenceDocuments: 'DTS Rev H', dtsBaselineVersion: 'Rev H' },
+  { id: 'v012', issueKey: 'NFMSST-112', summary: '[VVO_nFMS_IF_IFCS_FMS_1.0] To check the TCAS/TAWS integration with FMS flight plan', status: 'RELEASED', fixVersionName: 'STD-3.2', idDoors: 'VVO_nFMS_IF_IFCS_FMS_1.0', applicability: 'SA_CEONEO', assigneeName: 'M. Fischer', hlvvoId: 'h002', projectId: pid, createdAt: '2025-08-10T10:00:00Z', vvoVersion: 3, labels: ['Change'], executionResponsible: ['Airbus Lab tests', 'Airbus Flight tests'], ptsMfclLinks: ['MPP-PTS-FMS-MFCL-420'], nDi: ['DI#150'], referenceDocuments: 'DTS Rev G', dtsBaselineVersion: 'Rev G' },
 ];
 
 export const DEMO_HLVVOS = [
-  { id: 'h001', issueKey: 'NFMSDO-50', summary: 'HLVVO: Lateral Navigation & Guidance Package', status: 'AUTHORIZE', childVvoCount: 7, assigneeName: 'P. Martin', projectId: pid, createdAt: '2025-09-01T08:00:00Z' },
-  { id: 'h002', issueKey: 'NFMSDO-51', summary: 'HLVVO: Vertical Navigation & Performance Package', status: 'VVO_WRITING_IN_PROGRESS', childVvoCount: 5, assigneeName: 'S. Dupont', projectId: pid, createdAt: '2025-10-15T09:00:00Z' },
-  { id: 'h003', issueKey: 'NFMSDO-52', summary: 'HLVVO: Flight Plan Management & Database', status: 'PLAN', childVvoCount: 0, assigneeName: 'A. Chen', projectId: pid, createdAt: '2026-01-20T14:00:00Z' },
-  { id: 'h004', issueKey: 'NFMSDO-53', summary: 'HLVVO: System Integration & ARINC 429 Interfaces', status: 'NEW', childVvoCount: 0, assigneeName: 'M. Fischer', projectId: pid, createdAt: '2026-03-05T11:30:00Z' },
+  { id: 'h001', issueKey: 'NFMSST-5', summary: 'HLVVO_nFMS_FC_LATERAL_DIRTO - Provide DIR TO function', status: 'AUTHORIZE', childVvoCount: 7, assigneeName: 'P. Martin', projectId: pid, createdAt: '2025-09-01T08:00:00Z' },
+  { id: 'h002', issueKey: 'NFMSST-10', summary: 'HLVVO_nFMS_FC_VERT_APPR - Vertical approach management', status: 'LAB_IN_REVIEW', childVvoCount: 5, assigneeName: 'S. Dupont', projectId: pid, createdAt: '2025-10-15T09:00:00Z' },
+  { id: 'h003', issueKey: 'NFMSST-15', summary: 'HLVVO_nFMS_FC_LATFPLN_ALTERNATE - Flight plan alternate management', status: 'DESIGN_OFFICE_IN_REVIEW', childVvoCount: 0, assigneeName: 'A. Chen', projectId: pid, createdAt: '2026-01-20T14:00:00Z' },
+  { id: 'h004', issueKey: 'NFMSST-20', summary: 'HLVVO_nFMS_IF_IFCS_FMS - IFCS-FMS interface on SA New Avionics', status: 'VVO_WRITING_IN_PROGRESS', childVvoCount: 0, assigneeName: 'M. Fischer', projectId: pid, createdAt: '2026-03-05T11:30:00Z' },
+  { id: 'h005', issueKey: 'NFMSST-25', summary: 'HLVVO_nFMS_MSF_RNPAR - RNP AR approach', status: 'ON_HOLD', childVvoCount: 2, assigneeName: 'A. Chen', projectId: pid, createdAt: '2026-02-10T08:00:00Z' },
+  { id: 'h006', issueKey: 'NFMSST-30', summary: 'HLVVO_nFMS_FC_MFD_MCDU - MFD/MCDU display verification', status: 'CLOSED', childVvoCount: 12, assigneeName: 'P. Martin', projectId: pid, createdAt: '2025-06-01T08:00:00Z' },
 ];
 
 export const DEMO_HLVVO_CHILDREN: Record<string, typeof DEMO_VVOS> = {
@@ -205,3 +207,62 @@ export const DEMO_DASHBOARD = {
     { id: 'a5', type: 'CHANGE_CARD', summary: 'CC-2401 design review RAG set to Amber', timestamp: '2026-03-16T09:15:00Z', user: 'P. Martin' },
   ],
 };
+
+// ═══════ IFCS Issue Types ═══════
+
+export const DEMO_VVM_CARDS = [
+  {
+    id: 'vvm001', issueKey: 'IFCS-17653', summary: 'VVM / IFCS - SA / FMS data treatment V0 - X1.2.0',
+    status: 'CIA_FROZEN', projectId: pid, assigneeName: 'G. Bourdet', createdAt: '2026-04-15T14:34:00Z',
+    team: 'AFS', applicability: 'IFCS - SA', acType: 'SA', acVersion: 'A320-NEO, A321-ACF, A321-XLR',
+    engineType: 'CFM, PW', computer: 'IFCC', scope: 'AFS_FMS_Treatment',
+    pipelineStatus: 'Scope: KO, Integrity: KO, ValidMat: KO, CIA: KO',
+    ltrReference: 'SA27RP200053T',
+    expertReview: 'Done', testingReview: 'To do', safetyReview: 'To do',
+    validationCount: 4, verificationCount: 2,
+  },
+  {
+    id: 'vvm002', issueKey: 'IFCS-12704', summary: 'VVM / IFCS - SA / [PFCS_AirbrakeLever] V0 - RELEASE_1.0.4',
+    status: 'CIA_FROZEN', projectId: pid, assigneeName: 'C. Jaupître', createdAt: '2026-02-23T14:21:00Z',
+    team: 'PFCS', applicability: 'IFCS - SA', acType: 'SA', acVersion: 'A320-NEO, A321-ACF, A321-XLR',
+    engineType: 'None', computer: 'IFCC', scope: 'PFCS_AirbrakeLever',
+    pipelineStatus: 'Scope: TO DO, Integrity: TO DO, ValidMat: TO DO, CIA: TO DO',
+    ltrReference: 'SA27RP200053T',
+    expertReview: 'Done', testingReview: 'None', safetyReview: 'To do',
+    validationCount: 11, verificationCount: 18,
+  },
+  {
+    id: 'vvm003', issueKey: 'IFCS-14158', summary: 'VVM / SA / MMR function X1.0.0 traceability & requirements',
+    status: 'IN_PROGRESS', projectId: pid, assigneeName: 'G. Bourdet', createdAt: '2025-09-15T16:52:00Z',
+    team: 'AFS', applicability: 'IFCS - SA', acType: 'SA', acVersion: 'A320-NEO',
+    engineType: 'CFM', computer: 'IFCC', scope: 'AFS_MMR_Function',
+    pipelineStatus: '',
+    ltrReference: '',
+    expertReview: 'To do', testingReview: 'To do', safetyReview: 'To do',
+    validationCount: 0, verificationCount: 0,
+  },
+];
+
+export const DEMO_IVV_CARDS = [
+  { id: 'ivv001', issueKey: 'IFCS-16808', summary: 'IVV Validation / SA / AbLever_101_3515 / No Variant Specified / 2', status: 'BACKLOG', ivvType: 'VALIDATION', vvmCardId: 'vvm002', requirementImpact: 'AbLever_101_3515', level: 'L3', partitionName: 'AccuratePFC', testsStatus: 'UNCOVERED', assigneeName: 'Unassigned', createdAt: '2026-02-28T17:30:00Z' },
+  { id: 'ivv002', issueKey: 'IFCS-16809', summary: 'IVV Validation / SA / AbLever_101_3516 / No Variant Specified / 2', status: 'BACKLOG', ivvType: 'VALIDATION', vvmCardId: 'vvm002', requirementImpact: 'AbLever_101_3516', level: 'L3', partitionName: 'AccuratePFC', testsStatus: 'UNCOVERED', assigneeName: 'Unassigned', createdAt: '2026-02-28T17:30:00Z' },
+  { id: 'ivv003', issueKey: 'IFCS-16825', summary: 'IVV Verification / SA / AbLever_197_2590 / No Variant Specified / 1', status: 'BACKLOG', ivvType: 'VERIFICATION', vvmCardId: 'vvm002', requirementImpact: 'AbLever_197_2590', level: 'L2', partitionName: 'AccuratePFC', testsStatus: 'UNCOVERED', assigneeName: 'Unassigned', createdAt: '2026-02-24T10:53:00Z' },
+  { id: 'ivv004', issueKey: 'IFCS-16828', summary: 'IVV Verification / SA / AbLever_146_3246 / No Variant Specified / 1', status: 'BACKLOG', ivvType: 'VERIFICATION', vvmCardId: 'vvm002', requirementImpact: 'AbLever_146_3246', level: 'L2', partitionName: 'AccuratePFC', testsStatus: 'UNCOVERED', assigneeName: 'J. Penado', createdAt: '2026-02-24T10:53:00Z' },
+  { id: 'ivv005', issueKey: 'IFCS-16829', summary: 'IVV Verification / SA / AbLever_198_3185 / No Variant Specified / 1', status: 'PLANNED', ivvType: 'VERIFICATION', vvmCardId: 'vvm002', requirementImpact: 'AbLever_198_3185', level: 'L1', partitionName: 'AccuratePFC', testsStatus: 'UNCOVERED', assigneeName: 'Unassigned', createdAt: '2026-02-24T10:53:00Z' },
+  { id: 'ivv006', issueKey: 'NIST-2', summary: 'IVV Verification / SA / AbLever_177_2522 / No Variant Specified / 4', status: 'BACKLOG', ivvType: 'VERIFICATION', vvmCardId: 'vvm002', requirementImpact: 'AbLever_177_2522', level: 'L4', partitionName: 'AccuratePFC', testsStatus: 'UNCOVERED', assigneeName: 'Unassigned', createdAt: '2026-02-24T10:53:00Z' },
+  { id: 'ivv007', issueKey: 'NIST-3', summary: 'IVV Verification / SA / AbLever_178_2699 / No Variant Specified / 4', status: 'BACKLOG', ivvType: 'VERIFICATION', vvmCardId: 'vvm002', requirementImpact: 'AbLever_178_2699', level: 'L4', partitionName: 'AccuratePFC', testsStatus: 'UNCOVERED', assigneeName: 'Unassigned', createdAt: '2026-02-24T10:53:00Z' },
+  { id: 'ivv008', issueKey: 'IFCS-16830', summary: 'IVV Verification / SA / AbLever_83_1840 / No Variant Specified / 1', status: 'DONE', ivvType: 'VERIFICATION', vvmCardId: 'vvm002', requirementImpact: 'AbLever_83_1840', level: 'L1', partitionName: 'AccuratePFC', testsStatus: 'COVERED', assigneeName: 'S. Sausa', createdAt: '2026-02-24T10:53:00Z' },
+];
+
+export const DEMO_GROUPS = [
+  { id: 'grp001', issueKey: 'IFCS-10647', summary: 'PFCS BITE & Maintenance', status: 'IN_PROGRESS', impactedTeam: 'PFCS', childDeliverableCount: 3, assigneeName: 'Unassigned', createdAt: '2025-12-23T14:11:00Z' },
+  { id: 'grp002', issueKey: 'IFCS-821', summary: 'Functions', status: 'TO_DO', impactedTeam: 'PFCS', childDeliverableCount: 5, assigneeName: 'Unassigned', createdAt: '2025-12-23T14:11:00Z' },
+  { id: 'grp003', issueKey: 'IFCS-770', summary: 'MG3', status: 'DONE', impactedTeam: 'PFCS', childDeliverableCount: 2, assigneeName: 'Unassigned', createdAt: '2021-10-15T00:00:00Z' },
+  { id: 'grp004', issueKey: 'IFCS-911', summary: 'System Reviews Single Aisle', status: 'IN_PROGRESS', impactedTeam: 'All', childDeliverableCount: 15, assigneeName: 'Unassigned', createdAt: '2022-03-15T00:00:00Z' },
+];
+
+export const DEMO_SUB_CHANGES = [
+  { id: 'sc001', issueKey: 'IFCS-17728', summary: 'DFS - correct Defect', status: 'IN_PROGRESS', parentChangeCardId: 'cc001', gitBranch: 'IFCS-17728_DFS_correct', prStatus: 'OPEN', assigneeName: 'E. Stark', createdAt: '2026-04-20T10:00:00Z' },
+  { id: 'sc002', issueKey: 'IFCS-15099', summary: 'TOM - First implementation', status: 'IN_REVIEW', parentChangeCardId: 'cc001', gitBranch: 'IFCS-15099_TOM_impl', prStatus: 'REVIEW', assigneeName: 'E. Stark', createdAt: '2026-03-15T09:00:00Z' },
+  { id: 'sc003', issueKey: 'IFCS-17636', summary: 'MT PFCS - P0 - 1.2.0', status: 'TO_DO', parentChangeCardId: 'cc001', gitBranch: '', prStatus: '', assigneeName: 'R. Caravaca', createdAt: '2026-04-18T14:00:00Z' },
+];

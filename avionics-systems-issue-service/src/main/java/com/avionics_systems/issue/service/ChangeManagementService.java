@@ -4,16 +4,24 @@ import com.avionics_systems.issue.entity.ChangeCardMetadata;
 import com.avionics_systems.issue.entity.DclMetadata;
 import com.avionics_systems.issue.entity.DeliverableMetadata;
 import com.avionics_systems.issue.entity.DesignItemMetadata;
+import com.avionics_systems.issue.entity.GroupMetadata;
+import com.avionics_systems.issue.entity.IvvCardMetadata;
 import com.avionics_systems.issue.entity.ModificationMetadata;
 import com.avionics_systems.issue.entity.ReviewSubTaskMetadata;
+import com.avionics_systems.issue.entity.SubChangeMetadata;
 import com.avionics_systems.issue.entity.SystemStandardMetadata;
+import com.avionics_systems.issue.entity.VvmCardMetadata;
 import com.avionics_systems.issue.repository.ChangeCardMetadataRepository;
 import com.avionics_systems.issue.repository.DclMetadataRepository;
 import com.avionics_systems.issue.repository.DeliverableMetadataRepository;
 import com.avionics_systems.issue.repository.DesignItemMetadataRepository;
+import com.avionics_systems.issue.repository.GroupMetadataRepository;
+import com.avionics_systems.issue.repository.IvvCardMetadataRepository;
 import com.avionics_systems.issue.repository.ModificationMetadataRepository;
 import com.avionics_systems.issue.repository.ReviewSubTaskMetadataRepository;
+import com.avionics_systems.issue.repository.SubChangeMetadataRepository;
 import com.avionics_systems.issue.repository.SystemStandardMetadataRepository;
+import com.avionics_systems.issue.repository.VvmCardMetadataRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +46,10 @@ public class ChangeManagementService {
     private final SystemStandardMetadataRepository systemStandardRepo;
     private final ReviewSubTaskMetadataRepository reviewSubTaskRepo;
     private final ModificationMetadataRepository modificationRepo;
+    private final VvmCardMetadataRepository vvmCardRepo;
+    private final IvvCardMetadataRepository ivvCardRepo;
+    private final GroupMetadataRepository groupRepo;
+    private final SubChangeMetadataRepository subChangeRepo;
 
     /**
      * Standard review types created by autoCreateReviewSubTasks.
@@ -533,5 +545,126 @@ public class ChangeManagementService {
         log.info("Auto-created {} review sub-tasks for system standard {} (issue {})",
                 saved.size(), systemStandardId, parent.getIssueId());
         return saved;
+    }
+
+    // ========== VVM Card CRUD (IFCS) ==========
+
+    @Transactional
+    public VvmCardMetadata createVvmCard(UUID issueId, String scope, String ltrReference) {
+        VvmCardMetadata card = VvmCardMetadata.builder()
+                .issueId(issueId)
+                .scope(scope)
+                .ltrReference(ltrReference)
+                .build();
+        return vvmCardRepo.save(card);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<VvmCardMetadata> getVvmCard(UUID issueId) {
+        return vvmCardRepo.findByIssueId(issueId);
+    }
+
+    @Transactional
+    public VvmCardMetadata updateVvmCard(UUID issueId, String scope, String pipelineStatus,
+                                          String expertReview, String testingReview, String safetyReview) {
+        VvmCardMetadata card = vvmCardRepo.findByIssueId(issueId)
+                .orElseThrow(() -> new IllegalStateException("VVM Card not found for issue " + issueId));
+        if (scope != null) card.setScope(scope);
+        if (pipelineStatus != null) card.setPipelineStatus(pipelineStatus);
+        if (expertReview != null) card.setExpertReviewStatus(expertReview);
+        if (testingReview != null) card.setTestingReviewStatus(testingReview);
+        if (safetyReview != null) card.setSafetyReviewStatus(safetyReview);
+        return vvmCardRepo.save(card);
+    }
+
+    // ========== IVV Card CRUD (IFCS) ==========
+
+    @Transactional
+    public IvvCardMetadata createIvvCard(UUID issueId, UUID vvmCardId, String ivvType,
+                                          String requirementImpact, String level) {
+        IvvCardMetadata card = IvvCardMetadata.builder()
+                .issueId(issueId)
+                .vvmCardId(vvmCardId)
+                .ivvType(ivvType != null ? ivvType : "VALIDATION")
+                .requirementImpact(requirementImpact)
+                .level(level)
+                .build();
+        return ivvCardRepo.save(card);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<IvvCardMetadata> getIvvCard(UUID issueId) {
+        return ivvCardRepo.findByIssueId(issueId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<IvvCardMetadata> getIvvCardsByVvm(UUID vvmCardId) {
+        return ivvCardRepo.findByVvmCardId(vvmCardId);
+    }
+
+    @Transactional
+    public IvvCardMetadata updateIvvCard(UUID issueId, String testsStatus, String ivvPriority, String evidence) {
+        IvvCardMetadata card = ivvCardRepo.findByIssueId(issueId)
+                .orElseThrow(() -> new IllegalStateException("IVV Card not found for issue " + issueId));
+        if (testsStatus != null) card.setTestsStatus(testsStatus);
+        if (ivvPriority != null) card.setIvvPriority(ivvPriority);
+        if (evidence != null) card.setEvidence(evidence);
+        return ivvCardRepo.save(card);
+    }
+
+    // ========== Group CRUD (IFCS) ==========
+
+    @Transactional
+    public GroupMetadata createGroup(UUID issueId, String impactedTeam) {
+        GroupMetadata group = GroupMetadata.builder()
+                .issueId(issueId)
+                .impactedTeam(impactedTeam)
+                .build();
+        return groupRepo.save(group);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<GroupMetadata> getGroup(UUID issueId) {
+        return groupRepo.findByIssueId(issueId);
+    }
+
+    @Transactional
+    public GroupMetadata updateGroup(UUID issueId, String impactedTeam) {
+        GroupMetadata group = groupRepo.findByIssueId(issueId)
+                .orElseThrow(() -> new IllegalStateException("Group not found for issue " + issueId));
+        if (impactedTeam != null) group.setImpactedTeam(impactedTeam);
+        return groupRepo.save(group);
+    }
+
+    // ========== Sub-Change CRUD (IFCS) ==========
+
+    @Transactional
+    public SubChangeMetadata createSubChange(UUID issueId, UUID parentChangeCardId, String gitBranch) {
+        SubChangeMetadata sc = SubChangeMetadata.builder()
+                .issueId(issueId)
+                .parentChangeCardId(parentChangeCardId)
+                .gitBranch(gitBranch)
+                .build();
+        return subChangeRepo.save(sc);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<SubChangeMetadata> getSubChange(UUID issueId) {
+        return subChangeRepo.findByIssueId(issueId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubChangeMetadata> getSubChangesByParent(UUID parentChangeCardId) {
+        return subChangeRepo.findByParentChangeCardId(parentChangeCardId);
+    }
+
+    @Transactional
+    public SubChangeMetadata updateSubChange(UUID issueId, String gitBranch, String prStatus, String prUrl) {
+        SubChangeMetadata sc = subChangeRepo.findByIssueId(issueId)
+                .orElseThrow(() -> new IllegalStateException("Sub-Change not found for issue " + issueId));
+        if (gitBranch != null) sc.setGitBranch(gitBranch);
+        if (prStatus != null) sc.setPrStatus(prStatus);
+        if (prUrl != null) sc.setPrUrl(prUrl);
+        return subChangeRepo.save(sc);
     }
 }

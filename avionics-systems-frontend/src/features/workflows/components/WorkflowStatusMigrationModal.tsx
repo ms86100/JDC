@@ -131,6 +131,24 @@ export default function WorkflowStatusMigrationModal({ workflowId, statuses, onC
         )}
 
         <div className="flex justify-end gap-2">
+          {migrationStatus.data?.status === 'FAILED' && (
+            <button
+              type="button"
+              className="ab-btn ab-btn-warning"
+              onClick={() => workflowApi.retryStatusMigration(migrationId!).then(() => migrationStatus.refetch())}
+            >
+              Retry failed items
+            </button>
+          )}
+          {migrationStatus.data?.status === 'IN_PROGRESS' && (
+            <button
+              type="button"
+              className="ab-btn ab-btn-danger"
+              onClick={() => workflowApi.cancelStatusMigration(migrationId!).then(() => migrationStatus.refetch())}
+            >
+              Cancel migration
+            </button>
+          )}
           <button type="button" className="ab-btn ab-btn-secondary" onClick={onClose}>
             Close
           </button>

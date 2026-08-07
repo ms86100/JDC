@@ -514,7 +514,7 @@ const CoveragePage: React.FC = () => {
               <span className="text-sm text-gray-500">{alerts.length} alerts</span>
             </div>
             <div className="divide-y">
-              {alerts.slice(0, 5).map((alert) => (
+              {(Array.isArray(alerts) ? alerts : []).slice(0, 5).map((alert) => (
                 <div
                   key={alert.id}
                   className={`p-4 flex items-center justify-between ${alert.isRead ? 'bg-gray-50' : 'bg-white'}`}
@@ -657,7 +657,7 @@ const CoveragePage: React.FC = () => {
               <div className="bg-white rounded-lg border p-4">
                 <h3 className="font-semibold mb-4">Coverage Trend</h3>
                 <div className="h-40 flex items-end gap-1">
-                  {coverageTrend.slice(-14).map((point: any, index) => (
+                  {(Array.isArray(coverageTrend) ? coverageTrend : []).slice(-14).map((point: any, index) => (
                     <div
                       key={index}
                       className="flex-1 bg-blue-500 rounded-t"
@@ -680,7 +680,7 @@ const CoveragePage: React.FC = () => {
                   <h3 className="font-semibold">Coverage Drift</h3>
                 </div>
                 <div className="divide-y max-h-[300px] overflow-y-auto">
-                  {driftRecords.slice(0, 5).map((drift) => (
+                  {(Array.isArray(driftRecords) ? driftRecords : []).slice(0, 5).map((drift) => (
                     <div key={drift.requirementKey} className="p-4">
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-sm">{drift.requirementKey}</span>

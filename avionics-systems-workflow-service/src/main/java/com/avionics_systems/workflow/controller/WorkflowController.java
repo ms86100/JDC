@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -224,6 +225,36 @@ public class WorkflowController {
         request.setTransitionId(transitionId);
         PostFunctionResponse response = workflowService.addPostFunction(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @PutMapping("/transitions/{transitionId}/conditions/{conditionId}")
+    @Operation(summary = "Update condition on transition", description = "Updates an existing condition attached to a transition")
+    public ResponseEntity<?> updateCondition(
+            @PathVariable UUID transitionId,
+            @PathVariable UUID conditionId,
+            @RequestBody Map<String, Object> data) {
+        workflowService.updateCondition(transitionId, conditionId, data);
+        return ResponseEntity.ok(Map.of("message", "Condition updated"));
+    }
+
+    @PutMapping("/transitions/{transitionId}/validators/{validatorId}")
+    @Operation(summary = "Update validator on transition", description = "Updates an existing validator attached to a transition")
+    public ResponseEntity<?> updateValidator(
+            @PathVariable UUID transitionId,
+            @PathVariable UUID validatorId,
+            @RequestBody Map<String, Object> data) {
+        workflowService.updateValidator(transitionId, validatorId, data);
+        return ResponseEntity.ok(Map.of("message", "Validator updated"));
+    }
+
+    @PutMapping("/transitions/{transitionId}/post-functions/{functionId}")
+    @Operation(summary = "Update post-function on transition", description = "Updates an existing post-function attached to a transition")
+    public ResponseEntity<?> updatePostFunction(
+            @PathVariable UUID transitionId,
+            @PathVariable UUID functionId,
+            @RequestBody Map<String, Object> data) {
+        workflowService.updatePostFunction(transitionId, functionId, data);
+        return ResponseEntity.ok(Map.of("message", "Post-function updated"));
     }
 
     @DeleteMapping("/transitions/{transitionId}/conditions/{conditionId}")

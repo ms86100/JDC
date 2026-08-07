@@ -1,8 +1,10 @@
 package com.avionics_systems.workflow.controller;
 
+import com.avionics_systems.workflow.exception.ResourceNotFoundException;
 import com.avionics_systems.workflow.service.WorkflowAdministrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -770,5 +772,22 @@ public class WorkflowAdministrationController {
                                            @RequestParam(defaultValue = "50") int size) {
         var auditLog = workflowAdminService.getAllAuditLog(action, userId, startDate, endDate, page, size);
         return ResponseEntity.ok(auditLog);
+    }
+
+    // ==================== Exception Handlers ====================
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<?> handleBadRequest(IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<?> handleNotFound(ResourceNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<?> handleConflict(IllegalStateException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
     }
 }

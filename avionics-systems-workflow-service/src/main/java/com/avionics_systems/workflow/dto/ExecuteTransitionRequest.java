@@ -16,6 +16,8 @@ public class ExecuteTransitionRequest {
     private String comment;
     private UUID resolutionId;
     private Map<String, Object> screenInput;
+    private Long timeSpentSeconds;
+    private String workDescription;
     /** Client issue version for optimistic locking */
     private Long expectedVersion;
     /** Optional idempotency key — duplicate requests return cached success within TTL */

@@ -654,7 +654,7 @@ export const EnvironmentMatrixPage: React.FC<{ projectId?: string }> = ({ projec
 
                     {/* Dimensions */}
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {matrix.dimensions.slice(0, 3).map((dim, i) => (
+                      {(Array.isArray(matrix.dimensions) ? matrix.dimensions : []).slice(0, 3).map((dim, i) => (
                         <span key={i} className="px-2 py-0.5 bg-gray-100 rounded text-xs">
                           {dim.name}
                         </span>

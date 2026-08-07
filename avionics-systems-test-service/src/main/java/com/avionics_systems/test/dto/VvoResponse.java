@@ -40,6 +40,11 @@ public class VvoResponse {
     private Integer storyPoints;
     private List<String> labels;
     private List<UUID> componentIds;
+    private List<String> ptsMfclLinks;
+    private List<String> nDi;
+    private String referenceDocuments;
+    private String dtsBaselineVersion;
+    private Boolean baselineVerified;
     private Boolean archived;
     private UUID createdBy;
     private LocalDateTime createdAt;

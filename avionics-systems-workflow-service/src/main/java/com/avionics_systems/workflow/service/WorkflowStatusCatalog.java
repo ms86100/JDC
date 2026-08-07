@@ -9,6 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import com.avionics_systems.workflow.entity.WorkflowStatusDefinition;
+import com.avionics_systems.workflow.repository.WorkflowStatusDefinitionRepository;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -33,6 +36,9 @@ public class WorkflowStatusCatalog {
 
     private volatile Map<String, StatusMeta> cachedCatalog = new HashMap<>();
     private volatile long cachedAt = 0L;
+    private volatile boolean degraded = false;
+
+    public boolean isDegraded() { return degraded; }
 
     @Value("${app.workflow.status-catalog.known-status-names:00000000-0000-0000-0001-000000000001=Backlog,00000000-0000-0000-0001-000000000002=To Do,00000000-0000-0000-0001-000000000003=In Progress,00000000-0000-0000-0001-000000000004=In Review,00000000-0000-0000-0001-000000000005=Done,00000000-0000-0000-0001-000000000006=Open,00000000-0000-0000-0001-000000000007=Resolved,00000000-0000-0000-0001-000000000008=Closed,00000000-0000-0000-0001-000000000009=Defined}")
     private String knownStatusNamesStr;
@@ -53,6 +59,7 @@ public class WorkflowStatusCatalog {
     private String legacyFilterSuffix;
 
     private final RestTemplate restTemplate;
+    private final WorkflowStatusDefinitionRepository statusDefinitionRepository;
 
     @Value("${avionics-systems.services.issue-url:http://localhost:8084}")
     private String issueServiceUrl;
@@ -81,8 +88,10 @@ public class WorkflowStatusCatalog {
         );
     }
 
-    public WorkflowStatusCatalog(RestTemplate restTemplate) {
+    public WorkflowStatusCatalog(RestTemplate restTemplate,
+                                WorkflowStatusDefinitionRepository statusDefinitionRepository) {
         this.restTemplate = restTemplate;
+        this.statusDefinitionRepository = statusDefinitionRepository;
     }
 
     public Map<String, StatusMeta> loadCatalog() {
@@ -94,7 +103,9 @@ public class WorkflowStatusCatalog {
             if (!cachedCatalog.isEmpty() && (System.currentTimeMillis() - cachedAt) < cacheTtlMs) {
                 return cachedCatalog;
             }
+            degraded = false;
             Map<String, StatusMeta> catalog = new HashMap<>();
+            mergeLocalDefinitions(catalog);
             mergeIssueStatuses(catalog);
             mergeAdminStatuses(catalog);
             getKnownStatusNames().forEach((id, name) ->
@@ -143,6 +154,21 @@ public class WorkflowStatusCatalog {
         return new StatusMeta(name, category, colorFor(category));
     }
 
+    private void mergeLocalDefinitions(Map<String, StatusMeta> catalog) {
+        try {
+            List<WorkflowStatusDefinition> definitions = statusDefinitionRepository.findAll();
+            for (WorkflowStatusDefinition def : definitions) {
+                String id = def.getStatusId().toString();
+                String name = def.getName();
+                String category = def.getCategory() != null ? def.getCategory() : inferCategory(name);
+                String color = def.getColor() != null ? def.getColor() : colorFor(category);
+                catalog.putIfAbsent(id, new StatusMeta(name, category, color));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to load local workflow status definitions: {}", e.getMessage());
+        }
+    }
+
     private void mergeIssueStatuses(Map<String, StatusMeta> catalog) {
         try {
             ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
@@ -164,6 +190,7 @@ public class WorkflowStatusCatalog {
             }
         } catch (Exception e) {
             log.warn("Failed to load issue statuses catalog: {}", e.getMessage());
+            degraded = true;
         }
     }
 
@@ -183,6 +210,7 @@ public class WorkflowStatusCatalog {
             }
         } catch (Exception e) {
             log.warn("Failed to load admin statuses catalog: {}", e.getMessage());
+            degraded = true;
         }
     }
 

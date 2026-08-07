@@ -162,8 +162,8 @@ export const TraceabilityMatrix: React.FC<TraceabilityMatrixProps> = ({ projectI
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
-                      {row.tests.slice(0, 3).map((t) => t.issueKey).join(', ')}
-                      {row.tests.length > 3 && ` +${row.tests.length - 3} more`}
+                      {(Array.isArray(row.tests) ? row.tests : []).slice(0, 3).map((t) => t.issueKey).join(', ')}
+                      {Array.isArray(row.tests) && row.tests.length > 3 && ` +${row.tests.length - 3} more`}
                     </td>
                   </tr>
                   {expandedRows.has(row.requirementKey) && (
@@ -171,7 +171,7 @@ export const TraceabilityMatrix: React.FC<TraceabilityMatrixProps> = ({ projectI
                       <td colSpan={4} className="px-4 py-3">
                         <div className="tests-detail pl-6 space-y-2">
                           <h5 className="font-medium text-sm mb-2">Linked Tests:</h5>
-                          {row.tests.map((test) => (
+                          {(Array.isArray(row.tests) ? row.tests : []).map((test) => (
                             <div
                               key={test.testId}
                               className="flex items-center justify-between p-2 bg-white rounded border"

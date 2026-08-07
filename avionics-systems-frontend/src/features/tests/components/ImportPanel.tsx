@@ -7,7 +7,7 @@ interface ImportPanelProps {
 }
 
 export const ImportPanel: React.FC<ImportPanelProps> = ({ projectId, onImportComplete }) => {
-  const [importType, setImportType] = useState<'CUCUMBER' | 'JUNIT'>('CUCUMBER');
+  const [importType, setImportType] = useState<'CUCUMBER' | 'JUNIT' | 'TESTNG' | 'NUNIT' | 'ROBOT'>('CUCUMBER');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<TestImportResponse | null>(null);
@@ -47,9 +47,14 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({ projectId, onImportCom
     setError('');
 
     try {
-      const response = importType === 'CUCUMBER'
-        ? await combinedApi.importCucumber(projectId, selectedFile)
-        : await combinedApi.importJUnit(projectId, selectedFile);
+      const importFn = {
+        CUCUMBER: combinedApi.importCucumber,
+        JUNIT: combinedApi.importJUnit,
+        TESTNG: combinedApi.importTestNg,
+        NUNIT: combinedApi.importNUnit,
+        ROBOT: combinedApi.importRobot,
+      }[importType];
+      const response = await importFn(projectId, selectedFile);
       setImportResult(response);
       onImportComplete?.();
       loadHistory();
@@ -117,6 +122,60 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({ projectId, onImportCom
               <div className="text-sm text-gray-500">Import CI/CD test results</div>
             </div>
           </label>
+
+          <label className={`flex items-center p-3 border rounded cursor-pointer ${
+            importType === 'TESTNG' ? 'border-blue-500 bg-blue-50' : ''
+          }`}>
+            <input
+              type="radio"
+              name="importType"
+              value="TESTNG"
+              checked={importType === 'TESTNG'}
+              onChange={() => setImportType('TESTNG')}
+              className="mr-2"
+            />
+            <span className="text-2xl mr-2">🧪</span>
+            <div>
+              <div className="font-medium">TestNG XML</div>
+              <div className="text-sm text-gray-500">Import TestNG results</div>
+            </div>
+          </label>
+
+          <label className={`flex items-center p-3 border rounded cursor-pointer ${
+            importType === 'NUNIT' ? 'border-blue-500 bg-blue-50' : ''
+          }`}>
+            <input
+              type="radio"
+              name="importType"
+              value="NUNIT"
+              checked={importType === 'NUNIT'}
+              onChange={() => setImportType('NUNIT')}
+              className="mr-2"
+            />
+            <span className="text-2xl mr-2">🔷</span>
+            <div>
+              <div className="font-medium">NUnit XML</div>
+              <div className="text-sm text-gray-500">Import NUnit v2/v3 results</div>
+            </div>
+          </label>
+
+          <label className={`flex items-center p-3 border rounded cursor-pointer ${
+            importType === 'ROBOT' ? 'border-blue-500 bg-blue-50' : ''
+          }`}>
+            <input
+              type="radio"
+              name="importType"
+              value="ROBOT"
+              checked={importType === 'ROBOT'}
+              onChange={() => setImportType('ROBOT')}
+              className="mr-2"
+            />
+            <span className="text-2xl mr-2">🤖</span>
+            <div>
+              <div className="font-medium">Robot Framework</div>
+              <div className="text-sm text-gray-500">Import output.xml</div>
+            </div>
+          </label>
         </div>
       </div>
 
@@ -127,7 +186,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({ projectId, onImportCom
             ref={fileInputRef}
             type="file"
             onChange={handleFileSelect}
-            accept={importType === 'CUCUMBER' ? '.feature,.zip' : '.xml,.zip'}
+            accept={importType === 'CUCUMBER' ? '.feature,.zip' : '.xml,.zip,.json'}
             className="hidden"
           />
           {selectedFile ? (
@@ -161,7 +220,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({ projectId, onImportCom
         <p className="text-xs text-gray-500 mt-2">
           {importType === 'CUCUMBER'
             ? 'Accepts .feature files or .zip archives containing feature files'
-            : 'Accepts JUnit XML files or .zip archives containing XML files'}
+            : `Accepts ${importType} XML files or .zip archives`}
         </p>
       </div>
 
@@ -177,7 +236,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({ projectId, onImportCom
             Importing...
           </span>
         ) : (
-          `Import ${importType === 'CUCUMBER' ? 'Cucumber' : 'JUnit'} File`
+          `Import ${importType} File`
         )}
       </button>
 

@@ -42,9 +42,15 @@ public class TransitionPermissionEvaluator {
         String permission = transition.getPermissionCheck();
         if (permission != null && !permission.isBlank()) {
             String normalized = normalizePermissionKey(permission);
-            if (!projectPermissionClient.hasPermission(ctx.getUserId(), ctx.getProjectId(), normalized)) {
+            // Fast path: check pre-fetched permissions from WorkflowContextResolver (M13)
+            if (hasGrantedPermission(ctx, normalized)) {
+                log.debug("Transition {} permission {} satisfied from pre-fetched permissions", transition.getName(), normalized);
+            } else if (!projectPermissionClient.hasPermission(ctx.getUserId(), ctx.getProjectId(), normalized)) {
                 log.debug("Transition {} blocked: missing permission {}", transition.getName(), normalized);
                 return false;
+            } else {
+                log.debug("Transition {} permission {} resolved via HTTP fallback (not in pre-fetched set)",
+                        transition.getName(), normalized);
             }
         }
 

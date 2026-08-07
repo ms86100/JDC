@@ -2,9 +2,13 @@ package com.avionics_systems.workflow.service;
 
 import com.avionics_systems.workflow.entity.ProjectWorkflowScheme;
 import com.avionics_systems.workflow.entity.WorkflowScheme;
+import com.avionics_systems.workflow.entity.WorkflowSchemeMapping;
+import com.avionics_systems.workflow.entity.WorkflowStatus;
 import com.avionics_systems.workflow.exception.ResourceNotFoundException;
 import com.avionics_systems.workflow.repository.ProjectWorkflowSchemeRepository;
+import com.avionics_systems.workflow.repository.WorkflowSchemeMappingRepository;
 import com.avionics_systems.workflow.repository.WorkflowSchemeRepository;
+import com.avionics_systems.workflow.repository.WorkflowStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,10 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Canonical project ↔ workflow scheme assignment (jira_workflow) with sync to project-service.
@@ -31,6 +33,8 @@ public class ProjectWorkflowSchemeBridgeService {
 
     private final ProjectWorkflowSchemeRepository projectWorkflowSchemeRepository;
     private final WorkflowSchemeRepository workflowSchemeRepository;
+    private final WorkflowSchemeMappingRepository workflowSchemeMappingRepository;
+    private final WorkflowStatusRepository workflowStatusRepository;
     private final RestTemplate restTemplate;
 
     @Value("${avionics-systems.services.project-url:http://localhost:8083}")
@@ -41,7 +45,26 @@ public class ProjectWorkflowSchemeBridgeService {
         WorkflowScheme scheme = workflowSchemeRepository.findById(schemeId)
                 .orElseThrow(() -> new ResourceNotFoundException("WorkflowScheme", "id", schemeId));
 
-        ProjectWorkflowScheme link = projectWorkflowSchemeRepository.findById(projectId)
+        // C4: Check if the project already has a different scheme assigned
+        Optional<ProjectWorkflowScheme> existingLink = projectWorkflowSchemeRepository.findById(projectId);
+        if (existingLink.isPresent() && !existingLink.get().getSchemeId().equals(schemeId)) {
+            Map<String, Object> compatibility = validateSchemeCompatibility(existingLink.get().getSchemeId(), schemeId);
+            @SuppressWarnings("unchecked")
+            List<String> orphanedStatuses = (List<String>) compatibility.get("orphanedStatuses");
+            if (orphanedStatuses != null && !orphanedStatuses.isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("projectId", projectId.toString());
+                response.put("schemeId", schemeId.toString());
+                response.put("migrationRequired", true);
+                response.put("orphanedStatuses", orphanedStatuses);
+                response.put("message", "The new scheme is missing statuses used in the current scheme. "
+                        + "Migrate issues in these statuses before switching.");
+                log.warn("Scheme switch for project {} blocked: {} orphaned status(es)", projectId, orphanedStatuses.size());
+                return response;
+            }
+        }
+
+        ProjectWorkflowScheme link = existingLink
                 .orElse(ProjectWorkflowScheme.builder().projectId(projectId).build());
         link.setSchemeId(schemeId);
         link.setUpdatedAt(LocalDateTime.now());
@@ -49,6 +72,41 @@ public class ProjectWorkflowSchemeBridgeService {
 
         pushToProjectService(scheme, List.of(projectId.toString()));
         return Map.of("projectId", projectId.toString(), "schemeId", schemeId.toString());
+    }
+
+    /**
+     * Compares the statuses available in the old scheme's workflows against those
+     * in the new scheme's workflows, returning any "orphaned" status IDs that exist
+     * in the old scheme but not in the new one.
+     */
+    private Map<String, Object> validateSchemeCompatibility(UUID oldSchemeId, UUID newSchemeId) {
+        // Collect all status IDs across every workflow mapped in the old scheme
+        Set<UUID> oldStatusIds = collectSchemeStatusIds(oldSchemeId);
+
+        // Collect all status IDs across every workflow mapped in the new scheme
+        Set<UUID> newStatusIds = collectSchemeStatusIds(newSchemeId);
+
+        // Orphaned = statuses present in old but absent from new
+        Set<UUID> orphaned = new HashSet<>(oldStatusIds);
+        orphaned.removeAll(newStatusIds);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("orphanedStatuses", orphaned.stream().map(UUID::toString).collect(Collectors.toList()));
+        result.put("compatible", orphaned.isEmpty());
+        return result;
+    }
+
+    private Set<UUID> collectSchemeStatusIds(UUID schemeId) {
+        List<WorkflowSchemeMapping> mappings = workflowSchemeMappingRepository.findBySchemeId(schemeId);
+        Set<UUID> statusIds = new HashSet<>();
+        for (WorkflowSchemeMapping m : mappings) {
+            List<WorkflowStatus> statuses = workflowStatusRepository
+                    .findByWorkflowIdOrderBySequenceAsc(m.getWorkflow().getId());
+            for (WorkflowStatus s : statuses) {
+                statusIds.add(s.getStatusId());
+            }
+        }
+        return statusIds;
     }
 
     @Transactional
@@ -69,7 +127,7 @@ public class ProjectWorkflowSchemeBridgeService {
                 log.warn("Skipping invalid project id: {}", projectIdStr);
             }
         }
-        pushToProjectService(scheme, projectIds);
+        // Removed redundant pushToProjectService — each assignSchemeToProject() already pushes
         return count;
     }
 

@@ -2,10 +2,13 @@ package com.avionics_systems.workflow.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.avionics_systems.workflow.dto.ExecuteTransitionRequest;
+import com.avionics_systems.workflow.dto.TransitionExecutionResponse;
 import com.avionics_systems.workflow.dto.WorkflowTriggerRequest;
 import com.avionics_systems.workflow.dto.WorkflowTriggerResponse;
 import com.avionics_systems.workflow.engine.TriggerEvent;
 import com.avionics_systems.workflow.engine.TriggerEvaluator;
+import com.avionics_systems.workflow.engine.WorkflowExecutionEngine;
 import com.avionics_systems.workflow.entity.WorkflowTransition;
 import com.avionics_systems.workflow.entity.WorkflowTransitionHistory;
 import com.avionics_systems.workflow.entity.WorkflowTransitionTrigger;
@@ -15,7 +18,10 @@ import com.avionics_systems.workflow.repository.WorkflowTransitionRepository;
 import com.avionics_systems.workflow.repository.WorkflowTransitionTriggerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +42,10 @@ public class WorkflowTriggerService {
     private final WorkflowTransitionHistoryRepository historyRepository;
     private final TriggerEvaluator triggerEvaluator;
     private final ObjectMapper objectMapper;
+
+    @Autowired
+    @Lazy
+    private WorkflowExecutionEngine executionEngine;
 
     @Transactional
     public WorkflowTriggerResponse createTrigger(UUID transitionId, WorkflowTriggerRequest request) {
@@ -468,21 +478,30 @@ public class WorkflowTriggerService {
             return;
         }
 
-        // Build execution context
-        Map<String, Object> context = new HashMap<>();
-        context.put("triggerId", trigger.getId().toString());
-        context.put("eventType", event.getEventType());
-        context.put("issueId", event.getIssueId() != null ? event.getIssueId().toString() : null);
-        context.put("triggerType", trigger.getTriggerType());
-        if (event.getMetadata() != null) {
-            context.putAll(event.getMetadata());
+        UUID issueId = event.getIssueId();
+        if (issueId == null) {
+            log.warn("Cannot execute transition for trigger {}: event has no issueId", trigger.getId());
+            return;
         }
 
-        // Record trigger execution in history
         try {
-            recordTriggerExecution(trigger, transition, event, context);
+            ExecuteTransitionRequest req = new ExecuteTransitionRequest();
+            req.setIssueId(issueId);
+            req.setTransitionId(trigger.getTransitionId());
+            // Extract userId from event metadata if available
+            if (event.getMetadata() != null && event.getMetadata().get("userId") != null) {
+                req.setUserId(UUID.fromString(event.getMetadata().get("userId").toString()));
+            }
+
+            TransitionExecutionResponse result = executionEngine.execute(req);
+            if (!result.isSuccess()) {
+                log.warn("Trigger {} transition execution failed: {}", trigger.getId(), result.getError());
+            }
+
+            recordTriggerExecution(trigger, transition, event, Map.of("result", result.isSuccess()));
         } catch (Exception e) {
-            log.warn("Could not record trigger execution: {}", e.getMessage());
+            log.error("Trigger {} transition execution error: {}", trigger.getId(), e.getMessage());
+            recordTriggerExecution(trigger, transition, event, Map.of("error", e.getMessage()));
         }
     }
 
@@ -603,6 +622,109 @@ public class WorkflowTriggerService {
                 .createdAt(trigger.getCreatedAt())
                 .updatedAt(trigger.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * H9: Scheduled job to process date-based triggers.
+     * Runs every 60 seconds to evaluate DATE_BASED triggers whose configured date has been reached.
+     */
+    @Scheduled(fixedDelayString = "${avionics-systems.workflow.trigger.scheduled-interval-ms:60000}")
+    @Transactional
+    public void processScheduledTriggers() {
+        log.debug("Processing scheduled date-based triggers");
+
+        try {
+            List<WorkflowTransitionTrigger> dateTriggers =
+                    triggerRepository.findEnabledByTriggerType(WorkflowTransitionTrigger.TRIGGER_TYPE_DATE_BASED);
+
+            if (dateTriggers.isEmpty()) {
+                return;
+            }
+
+            LocalDateTime now = LocalDateTime.now();
+
+            for (WorkflowTransitionTrigger trigger : dateTriggers) {
+                try {
+                    // Check cooldown: skip if last triggered within cooldown period
+                    if (trigger.getLastTriggeredAt() != null
+                            && trigger.getCooldownSeconds() != null
+                            && trigger.getLastTriggeredAt().plusSeconds(trigger.getCooldownSeconds()).isAfter(now)) {
+                        continue;
+                    }
+
+                    // Check max fire count: skip if already at max (0 = unlimited)
+                    if (trigger.getMaxFireCount() != null
+                            && trigger.getMaxFireCount() > 0
+                            && trigger.getTriggerCount() != null
+                            && trigger.getTriggerCount() >= trigger.getMaxFireCount()) {
+                        continue;
+                    }
+
+                    // Parse trigger config to extract target date and issueId
+                    Map<String, Object> config = parseTriggerConfig(trigger);
+                    if (config == null) {
+                        continue;
+                    }
+
+                    // Check if the target date has been reached
+                    String targetDateStr = config.get("targetDate") != null
+                            ? config.get("targetDate").toString() : null;
+                    if (targetDateStr == null) {
+                        continue;
+                    }
+
+                    LocalDateTime targetDate;
+                    try {
+                        targetDate = LocalDateTime.parse(targetDateStr);
+                    } catch (Exception e) {
+                        log.warn("Invalid targetDate format in trigger {}: {}", trigger.getId(), targetDateStr);
+                        continue;
+                    }
+
+                    if (now.isBefore(targetDate)) {
+                        continue; // Not yet time
+                    }
+
+                    // Build the trigger event
+                    UUID issueId = config.get("issueId") != null
+                            ? UUID.fromString(config.get("issueId").toString()) : null;
+
+                    TriggerEvent event = TriggerEvent.create(TriggerEvent.TYPE_DATE_REACHED, issueId);
+                    event.withMeta("scheduledTrigger", true);
+                    event.withMeta("targetDate", targetDateStr);
+                    if (config.get("userId") != null) {
+                        event.withMeta("userId", config.get("userId").toString());
+                    }
+
+                    // Evaluate conditions and fire
+                    if (triggerEvaluator.evaluateTrigger(trigger, event)) {
+                        fireTrigger(trigger, event);
+                        log.info("Scheduled trigger {} fired for issue {}", trigger.getId(), issueId);
+                    }
+
+                } catch (Exception e) {
+                    log.error("Error processing scheduled trigger {}: {}", trigger.getId(), e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error in scheduled trigger processing: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Parse the trigger config JSON string into a Map.
+     */
+    private Map<String, Object> parseTriggerConfig(WorkflowTransitionTrigger trigger) {
+        if (trigger.getTriggerConfig() == null || trigger.getTriggerConfig().isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(trigger.getTriggerConfig(),
+                    new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            log.warn("Failed to parse trigger config for trigger {}: {}", trigger.getId(), e.getMessage());
+            return null;
+        }
     }
 
     // Thread-local for circular dependency detection

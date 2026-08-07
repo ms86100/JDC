@@ -38,6 +38,7 @@ public class JiraDcApiImportOrchestrator {
     private final VersionPersisterHandler versionPersisterHandler;
     private final IssueLinkPersisterHandler issueLinkPersisterHandler;
     private final LabelPersisterHandler labelPersisterHandler;
+    private final com.avionics_systems.migration.service.field.FieldProvisioningService fieldProvisioningService;
 
     public ImportResult executeImport(UUID jobId, JiraDcConnectionConfig config, UUID userId, String targetProjectId) {
         String userIdStr = userId != null ? userId.toString() : "system";
@@ -58,6 +59,24 @@ public class JiraDcApiImportOrchestrator {
             List<Map<String, Object>> jiraFields = client.getFields();
             JiraDcEntityMapper.registerFieldNames(jiraFields);
             log.info("Job {}: Loaded {} field definitions", jobId, jiraFields.size());
+
+            // Phase 2b: Pre-provision all custom field definitions
+            sendProgress(jobId, userIdStr, 0, 0, 0, "PROVISIONING_FIELDS");
+            int provisionedCount = 0;
+            UUID systemUser = UUID.fromString("00000000-0000-0000-0000-000000000001");
+            for (Map<String, Object> f : jiraFields) {
+                if (!Boolean.TRUE.equals(f.get("custom"))) continue;
+                String fieldId = f.get("id") != null ? f.get("id").toString() : null;
+                String fieldName = f.get("name") != null ? f.get("name").toString() : fieldId;
+                if (fieldId == null) continue;
+                try {
+                    fieldProvisioningService.provisionCustomField(fieldName, "TEXT", systemUser);
+                    provisionedCount++;
+                } catch (Exception e) {
+                    log.debug("Field {} already provisioned or failed: {}", fieldId, e.getMessage());
+                }
+            }
+            log.info("Job {}: Pre-provisioned {} custom field definitions", jobId, provisionedCount);
 
             // Phase 3: Build JQL and count total issues
             String jql = buildJql(config);

@@ -38,4 +38,8 @@ public class CreateVvoRequest {
     private Integer storyPoints;
     private List<String> labels;
     private List<UUID> componentIds;
+    private List<String> ptsMfclLinks;
+    private List<String> nDi;
+    private String referenceDocuments;
+    private String dtsBaselineVersion;
 }

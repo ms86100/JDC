@@ -54,6 +54,7 @@ export default defineConfig(({ mode }) => {
         '/workflow-schemes': apiProxy(env.VITE_WORKFLOW_SERVICE_URL || 'http://localhost:8085'),
         '/api/workflow-schemes': apiProxy(env.VITE_WORKFLOW_SERVICE_URL || 'http://localhost:8085'),
         '/api/admin/workflows': apiProxy(env.VITE_WORKFLOW_SERVICE_URL || 'http://localhost:8085'),
+        '/api/workflow': apiProxy(env.VITE_WORKFLOW_SERVICE_URL || 'http://localhost:8085'),
         '/api/admin': apiProxy(GATEWAY),
         // Users
         '/user-service': apiProxy(GATEWAY),
@@ -100,6 +101,30 @@ export default defineConfig(({ mode }) => {
         // Tests
         '/tests': apiProxy(GATEWAY),
         '/api/tests': apiProxy(GATEWAY),
+        // Test Admin Config + Xray REST API + Exploratory Sessions
+        '/api/test-admin': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/raven': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/exploratory-sessions': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/test-settings': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        // Advanced Test Management - direct to test-service
+        '/api/datasets': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/shared-steps': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/impact': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/flaky-tests': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/quarantine': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/evidence': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/environment-matrix': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/preconditions': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/reports': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/requirements': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/import': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/traceability': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/coverage': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/defects': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/screens': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/timeline': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/replay': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
+        '/api/executions': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
         // Aircraft Design System (SYSDOPS) - test-service endpoints
         '/api/vvo': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),
         '/api/hlvvo': apiProxy(env.VITE_TEST_SERVICE_URL || 'http://localhost:8095'),

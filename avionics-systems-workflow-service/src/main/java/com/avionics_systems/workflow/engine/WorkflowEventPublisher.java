@@ -20,10 +20,11 @@ public class WorkflowEventPublisher {
         Map<String, Object> payload = new HashMap<>();
         payload.put("issueId", ctx.getIssueId().toString());
         payload.put("projectId", ctx.getProjectId() != null ? ctx.getProjectId().toString() : null);
-        payload.put("transitionId", ctx.getTransition().getId().toString());
-        payload.put("transitionName", ctx.getTransition().getName());
-        payload.put("fromStatusId", ctx.getCurrentStatusId().toString());
-        payload.put("toStatusId", ctx.getTransition().getToStatusId().toString());
+        payload.put("transitionId", ctx.getTransition() != null ? ctx.getTransition().getId().toString() : null);
+        payload.put("transitionName", ctx.getTransition() != null ? ctx.getTransition().getName() : null);
+        payload.put("fromStatusId", ctx.getCurrentStatusId() != null ? ctx.getCurrentStatusId().toString() : null);
+        payload.put("toStatusId", ctx.getTransition() != null && ctx.getTransition().getToStatusId() != null
+                ? ctx.getTransition().getToStatusId().toString() : null);
         payload.put("userId", ctx.getUserId() != null ? ctx.getUserId().toString() : null);
         if (ctx.getIssueData() != null) {
             Map<String, Object> issue = ctx.getIssueData();

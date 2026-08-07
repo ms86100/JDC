@@ -246,6 +246,122 @@ public class TestService {
         return mapToTestPlanResponse(plan);
     }
 
+    // ==================== Clone ====================
+
+    @Transactional
+    public TestResponse cloneTest(UUID testId) {
+        log.info("Cloning test: {}", testId);
+        TestIssue original = testIssueRepository.findById(testId)
+                .orElseThrow(() -> new ResourceNotFoundException("Test", "id", testId));
+
+        TestIssue clone = TestIssue.builder()
+                .projectId(original.getProjectId())
+                .name("Copy of " + original.getName())
+                .description(original.getDescription())
+                .testType(original.getTestType())
+                .status("DRAFT")
+                .labels(original.getLabels() != null ? new java.util.ArrayList<>(original.getLabels()) : List.of())
+                .priority(original.getPriority())
+                .ownerId(original.getOwnerId())
+                .requirementKeys(original.getRequirementKeys() != null ? new java.util.ArrayList<>(original.getRequirementKeys()) : null)
+                .folderId(original.getFolderId())
+                .build();
+        clone = testIssueRepository.save(clone);
+
+        // Clone steps
+        List<TestStep> originalSteps = testStepRepository.findByTestIdOrderByStepOrderAsc(testId);
+        for (TestStep step : originalSteps) {
+            TestStep clonedStep = TestStep.builder()
+                    .testId(clone.getId())
+                    .stepOrder(step.getStepOrder())
+                    .stepType(step.getStepType())
+                    .description(step.getDescription())
+                    .testData(step.getTestData())
+                    .expectedResult(step.getExpectedResult())
+                    .build();
+            testStepRepository.save(clonedStep);
+        }
+
+        // Clone requirement links
+        List<RequirementLink> originalLinks = requirementLinkRepository.findByTestId(testId);
+        for (RequirementLink link : originalLinks) {
+            RequirementLink clonedLink = RequirementLink.builder()
+                    .requirementKey(link.getRequirementKey())
+                    .requirementType(link.getRequirementType())
+                    .testId(clone.getId())
+                    .projectId(link.getProjectId())
+                    .coverageStatus(link.getCoverageStatus())
+                    .build();
+            requirementLinkRepository.save(clonedLink);
+        }
+
+        log.info("Test cloned: {} -> {}", testId, clone.getId());
+        return mapToTestResponse(clone);
+    }
+
+    @Transactional
+    public TestSetResponse cloneTestSet(UUID setId) {
+        log.info("Cloning test set: {}", setId);
+        TestSet original = testSetRepository.findById(setId)
+                .orElseThrow(() -> new ResourceNotFoundException("TestSet", "id", setId));
+
+        TestSet clone = TestSet.builder()
+                .projectId(original.getProjectId())
+                .name("Copy of " + original.getName())
+                .description(original.getDescription())
+                .testType(original.getTestType())
+                .labels(original.getLabels() != null ? new java.util.ArrayList<>(original.getLabels()) : List.of())
+                .build();
+        clone = testSetRepository.save(clone);
+
+        // Clone test set items
+        List<TestSetItem> originalItems = testSetItemRepository.findByTestSetId(setId);
+        for (TestSetItem item : originalItems) {
+            TestSetItem clonedItem = TestSetItem.builder()
+                    .testSetId(clone.getId())
+                    .testId(item.getTestId())
+                    .build();
+            testSetItemRepository.save(clonedItem);
+        }
+        clone.setTestCount(originalItems.size());
+        clone = testSetRepository.save(clone);
+
+        log.info("Test set cloned: {} -> {}", setId, clone.getId());
+        return mapToTestSetResponse(clone);
+    }
+
+    @Transactional
+    public TestPlanResponse cloneTestPlan(UUID planId) {
+        log.info("Cloning test plan: {}", planId);
+        TestPlan original = testPlanRepository.findById(planId)
+                .orElseThrow(() -> new ResourceNotFoundException("TestPlan", "id", planId));
+
+        TestPlan clone = TestPlan.builder()
+                .projectId(original.getProjectId())
+                .name("Copy of " + original.getName())
+                .description(original.getDescription())
+                .startDate(original.getStartDate())
+                .endDate(original.getEndDate())
+                .labels(original.getLabels() != null ? new java.util.ArrayList<>(original.getLabels()) : List.of())
+                .createdBy(original.getCreatedBy())
+                .build();
+        clone = testPlanRepository.save(clone);
+
+        // Clone test plan items
+        List<TestPlanItem> originalItems = testPlanItemRepository.findByTestPlanIdOrderByExecutionOrderAsc(planId);
+        for (TestPlanItem item : originalItems) {
+            TestPlanItem clonedItem = TestPlanItem.builder()
+                    .testPlanId(clone.getId())
+                    .testSetId(item.getTestSetId())
+                    .executionOrder(item.getExecutionOrder())
+                    .build();
+            testPlanItemRepository.save(clonedItem);
+        }
+
+        log.info("Test plan cloned: {} -> {}", planId, clone.getId());
+        return mapToTestPlanResponse(clone);
+    }
+
     // ==================== Mapping ====================
 
     private TestResponse mapToTestResponse(TestIssue test) {

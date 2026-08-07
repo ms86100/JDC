@@ -38,6 +38,9 @@ export interface WorkflowComponent {
   description?: string;
   configuration?: Record<string, unknown>;
   sequence?: number;
+  value?: string;
+  validatorData?: string;
+  functionData?: string;
 }
 
 export interface Workflow {
@@ -138,6 +141,12 @@ export const workflowApi = {
     apiClient.delete(`/api/workflows/transitions/${transitionId}/validators/${validatorId}`),
   deletePostFunction: (transitionId: string, functionId: string) =>
     apiClient.delete(`/api/workflows/transitions/${transitionId}/post-functions/${functionId}`),
+  updateCondition: (transitionId: string, conditionId: string, data: Record<string, unknown>) =>
+    apiClient.put(`/api/workflows/transitions/${transitionId}/conditions/${conditionId}`, data),
+  updateValidator: (transitionId: string, validatorId: string, data: Record<string, unknown>) =>
+    apiClient.put(`/api/workflows/transitions/${transitionId}/validators/${validatorId}`, data),
+  updatePostFunction: (transitionId: string, functionId: string, data: Record<string, unknown>) =>
+    apiClient.put(`/api/workflows/transitions/${transitionId}/post-functions/${functionId}`, data),
 
   getConditionDefinitions: () => apiClient.get('/api/admin/workflows/conditions/definitions'),
   getValidatorDefinitions: () => apiClient.get('/api/admin/workflows/validators/definitions'),

@@ -55,4 +55,11 @@ public class TestPlanController {
         TestPlanResponse testPlan = testService.addTestSetToPlan(planId, request.getTestId());
         return ResponseEntity.ok(testPlan);
     }
+
+    @PostMapping("/{planId}/clone")
+    @PreAuthorize("@projectSecurity.canCreateTests(authentication, #projectId)")
+    @Operation(summary = "Clone a test plan")
+    public ResponseEntity<TestPlanResponse> cloneTestPlan(@PathVariable UUID planId, @RequestParam UUID projectId) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(testService.cloneTestPlan(planId));
+    }
 }

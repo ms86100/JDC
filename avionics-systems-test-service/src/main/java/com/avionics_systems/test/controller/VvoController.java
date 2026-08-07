@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -102,5 +103,26 @@ public class VvoController {
             @PathVariable UUID testRequestId) {
         vvoService.unlinkVvoFromTestRequest(vvoId, testRequestId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/baseline-check")
+    @Operation(summary = "Flag VVOs needing re-verification after DTS baseline change",
+               description = "Sets baseline_verified=false for all VVOs whose dts_baseline_version does not match the given version")
+    public ResponseEntity<Map<String, Object>> baselineCheck(@RequestParam String dtsVersion) {
+        int flagged = vvoService.flagBaselineMismatch(dtsVersion);
+        return ResponseEntity.ok(Map.of(
+                "dtsVersion", dtsVersion,
+                "flaggedCount", flagged
+        ));
+    }
+
+    @PostMapping("/suggest-labels")
+    @Operation(summary = "Suggest labels based on associated requirements and supplier applicability",
+               description = "Returns label suggestions per nFMS VVO Guidelines rules")
+    public ResponseEntity<List<String>> suggestLabels(
+            @RequestParam(required = false) List<String> associatedRequirements,
+            @RequestParam(required = false) String supplierApplicability) {
+        List<String> labels = vvoService.suggestLabels(associatedRequirements, supplierApplicability);
+        return ResponseEntity.ok(labels);
     }
 }

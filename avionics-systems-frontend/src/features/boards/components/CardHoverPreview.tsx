@@ -134,7 +134,7 @@ export default function CardHoverPreview({ issue, anchorRef, onClose, onOpenIssu
           </div>
         )}
 
-        {issue.labels && issue.labels.length > 0 && (
+        {Array.isArray(issue.labels) && issue.labels.length > 0 && (
           <div className="sa-card-preview-row">
             <span className="sa-card-preview-label">Labels</span>
             <span className="sa-card-preview-labels">

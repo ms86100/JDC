@@ -172,6 +172,10 @@ export default function CreateIssueModal({
     defaultValue: getFieldDefault(fieldName),
   });
 
+  const isFieldVisible = (fieldName: string) => fb(fieldName).visible;
+  const isFieldRequired = (fieldName: string) => fb(fieldName).required;
+  const getFieldLabel = (fieldName: string) => fb(fieldName).label;
+
   // Create Mutation
   const createMutation = useMutation({
     mutationFn: async (data: CreateIssueRequest & { linkedIssues: LinkedIssue[]; parentId?: string }) => {

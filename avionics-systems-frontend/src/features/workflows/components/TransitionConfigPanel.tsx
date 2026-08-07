@@ -21,6 +21,21 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
   const [selectedValidatorScript, setSelectedValidatorScript] = useState('');
   const [selectedPostFnScript, setSelectedPostFnScript] = useState('');
 
+  // Edit state for conditions
+  const [editingCondition, setEditingCondition] = useState<string | null>(null);
+  const [editConditionType, setEditConditionType] = useState('');
+  const [editConditionValue, setEditConditionValue] = useState('');
+
+  // Edit state for validators
+  const [editingValidator, setEditingValidator] = useState<string | null>(null);
+  const [editValidatorType, setEditValidatorType] = useState('');
+  const [editValidatorData, setEditValidatorData] = useState('');
+
+  // Edit state for post-functions
+  const [editingPostFn, setEditingPostFn] = useState<string | null>(null);
+  const [editPostFnType, setEditPostFnType] = useState('');
+  const [editPostFnData, setEditPostFnData] = useState('');
+
   const { data: conditionDefs = [] } = useQuery({
     queryKey: ['wf-condition-definitions'],
     queryFn: () => workflowApi.getConditionDefinitions().then((r) => Array.isArray(r.data) ? r.data : []),
@@ -110,6 +125,24 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
     onSuccess: invalidate,
   });
 
+  const updateConditionMutation = useMutation({
+    mutationFn: (params: { conditionId: string; data: Record<string, unknown> }) =>
+      workflowApi.updateCondition(transition.id, params.conditionId, params.data),
+    onSuccess: () => { invalidate(); setEditingCondition(null); },
+  });
+
+  const updateValidatorMutation = useMutation({
+    mutationFn: (params: { validatorId: string; data: Record<string, unknown> }) =>
+      workflowApi.updateValidator(transition.id, params.validatorId, params.data),
+    onSuccess: () => { invalidate(); setEditingValidator(null); },
+  });
+
+  const updatePostFnMutation = useMutation({
+    mutationFn: (params: { functionId: string; data: Record<string, unknown> }) =>
+      workflowApi.updatePostFunction(transition.id, params.functionId, params.data),
+    onSuccess: () => { invalidate(); setEditingPostFn(null); },
+  });
+
   const renderScriptPicker = (
     scripts: ScriptDefinition[],
     selected: string,
@@ -146,14 +179,47 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
         <ul className="wf-config-list">
           {(transition.conditions ?? []).map((c) => (
             <li key={c.id}>
-              <span>
-                {c.type}
-                {c.value && <span className="wf-script-badge"> ({c.value})</span>}
-              </span>
-              <button type="button" className="ab-btn ab-btn-ghost ab-btn-sm"
-                onClick={() => workflowApi.deleteCondition(transition.id, c.id).then(invalidate)}>
-                Remove
-              </button>
+              {editingCondition === c.id ? (
+                <div className="wf-config-edit-form">
+                  <label className="wf-config-edit-label">Type</label>
+                  <input className="ab-input ab-input-sm" value={editConditionType}
+                    onChange={(e) => setEditConditionType(e.target.value)} placeholder="Condition type" />
+                  <label className="wf-config-edit-label">Value</label>
+                  <input className="ab-input ab-input-sm" value={editConditionValue}
+                    onChange={(e) => setEditConditionValue(e.target.value)} placeholder="Value" />
+                  <div className="wf-config-edit-actions">
+                    <button type="button" className="ab-btn ab-btn-sm ab-btn-primary"
+                      disabled={updateConditionMutation.isPending}
+                      onClick={() => updateConditionMutation.mutate({
+                        conditionId: c.id,
+                        data: { conditionType: editConditionType, value: editConditionValue },
+                      })}>
+                      Save
+                    </button>
+                    <button type="button" className="ab-btn ab-btn-sm ab-btn-ghost"
+                      onClick={() => setEditingCondition(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <span>
+                    {c.type}
+                    {c.value && <span className="wf-script-badge"> ({c.value})</span>}
+                  </span>
+                  <div>
+                    <button type="button" className="ab-btn ab-btn-ghost ab-btn-sm"
+                      onClick={() => { setEditingCondition(c.id); setEditConditionType(c.type || ''); setEditConditionValue(c.value || ''); }}>
+                      Edit
+                    </button>
+                    <button type="button" className="ab-btn ab-btn-ghost ab-btn-sm"
+                      onClick={() => workflowApi.deleteCondition(transition.id, c.id).then(invalidate)}>
+                      Remove
+                    </button>
+                  </div>
+                </>
+              )}
             </li>
           ))}
         </ul>
@@ -179,14 +245,47 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
         <ul className="wf-config-list">
           {(transition.validators ?? []).map((v) => (
             <li key={v.id}>
-              <span>
-                {v.type}
-                {v.validatorData && <span className="wf-script-badge"> ({v.validatorData})</span>}
-              </span>
-              <button type="button" className="ab-btn ab-btn-ghost ab-btn-sm"
-                onClick={() => workflowApi.deleteValidator(transition.id, v.id).then(invalidate)}>
-                Remove
-              </button>
+              {editingValidator === v.id ? (
+                <div className="wf-config-edit-form">
+                  <label className="wf-config-edit-label">Type</label>
+                  <input className="ab-input ab-input-sm" value={editValidatorType}
+                    onChange={(e) => setEditValidatorType(e.target.value)} placeholder="Validator type" />
+                  <label className="wf-config-edit-label">Data</label>
+                  <input className="ab-input ab-input-sm" value={editValidatorData}
+                    onChange={(e) => setEditValidatorData(e.target.value)} placeholder="Validator data" />
+                  <div className="wf-config-edit-actions">
+                    <button type="button" className="ab-btn ab-btn-sm ab-btn-primary"
+                      disabled={updateValidatorMutation.isPending}
+                      onClick={() => updateValidatorMutation.mutate({
+                        validatorId: v.id,
+                        data: { validatorType: editValidatorType, validatorData: editValidatorData },
+                      })}>
+                      Save
+                    </button>
+                    <button type="button" className="ab-btn ab-btn-sm ab-btn-ghost"
+                      onClick={() => setEditingValidator(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <span>
+                    {v.type}
+                    {v.validatorData && <span className="wf-script-badge"> ({v.validatorData})</span>}
+                  </span>
+                  <div>
+                    <button type="button" className="ab-btn ab-btn-ghost ab-btn-sm"
+                      onClick={() => { setEditingValidator(v.id); setEditValidatorType(v.type || ''); setEditValidatorData(v.validatorData || ''); }}>
+                      Edit
+                    </button>
+                    <button type="button" className="ab-btn ab-btn-ghost ab-btn-sm"
+                      onClick={() => workflowApi.deleteValidator(transition.id, v.id).then(invalidate)}>
+                      Remove
+                    </button>
+                  </div>
+                </>
+              )}
             </li>
           ))}
         </ul>
@@ -212,14 +311,47 @@ export function TransitionConfigPanel({ transition, onClose }: Props) {
         <ul className="wf-config-list">
           {(transition.postFunctions ?? []).map((p) => (
             <li key={p.id}>
-              <span>
-                {p.type}
-                {p.functionData && <span className="wf-script-badge"> ({p.functionData})</span>}
-              </span>
-              <button type="button" className="ab-btn ab-btn-ghost ab-btn-sm"
-                onClick={() => workflowApi.deletePostFunction(transition.id, p.id).then(invalidate)}>
-                Remove
-              </button>
+              {editingPostFn === p.id ? (
+                <div className="wf-config-edit-form">
+                  <label className="wf-config-edit-label">Type</label>
+                  <input className="ab-input ab-input-sm" value={editPostFnType}
+                    onChange={(e) => setEditPostFnType(e.target.value)} placeholder="Function type" />
+                  <label className="wf-config-edit-label">Data</label>
+                  <input className="ab-input ab-input-sm" value={editPostFnData}
+                    onChange={(e) => setEditPostFnData(e.target.value)} placeholder="Function data" />
+                  <div className="wf-config-edit-actions">
+                    <button type="button" className="ab-btn ab-btn-sm ab-btn-primary"
+                      disabled={updatePostFnMutation.isPending}
+                      onClick={() => updatePostFnMutation.mutate({
+                        functionId: p.id,
+                        data: { functionType: editPostFnType, functionData: editPostFnData },
+                      })}>
+                      Save
+                    </button>
+                    <button type="button" className="ab-btn ab-btn-sm ab-btn-ghost"
+                      onClick={() => setEditingPostFn(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <span>
+                    {p.type}
+                    {p.functionData && <span className="wf-script-badge"> ({p.functionData})</span>}
+                  </span>
+                  <div>
+                    <button type="button" className="ab-btn ab-btn-ghost ab-btn-sm"
+                      onClick={() => { setEditingPostFn(p.id); setEditPostFnType(p.type || ''); setEditPostFnData(p.functionData || ''); }}>
+                      Edit
+                    </button>
+                    <button type="button" className="ab-btn ab-btn-ghost ab-btn-sm"
+                      onClick={() => workflowApi.deletePostFunction(transition.id, p.id).then(invalidate)}>
+                      Remove
+                    </button>
+                  </div>
+                </>
+              )}
             </li>
           ))}
         </ul>

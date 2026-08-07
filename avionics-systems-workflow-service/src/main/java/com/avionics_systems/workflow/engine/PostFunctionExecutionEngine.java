@@ -2,10 +2,13 @@ package com.avionics_systems.workflow.engine;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.avionics_systems.workflow.dto.ExecuteTransitionRequest;
+import com.avionics_systems.workflow.engine.plugin.WorkflowPluginRegistry;
 import com.avionics_systems.workflow.entity.WorkflowPostFunction;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
@@ -27,13 +30,29 @@ import java.util.concurrent.CompletableFuture;
  * - "fields" - Map of all issue fields
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class PostFunctionExecutionEngine {
 
+    private static final ThreadLocal<Integer> AUTO_TRANSITION_DEPTH = ThreadLocal.withInitial(() -> 0);
+    private static final int MAX_AUTO_TRANSITION_DEPTH = 5;
+
     private final WorkflowIntegrationClient integrationClient;
     private final WorkflowEventPublisher eventPublisher;
+    private final WorkflowPluginRegistry pluginRegistry;
+    private final WorkflowExecutionEngine executionEngine;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Autowired
+    public PostFunctionExecutionEngine(
+            WorkflowIntegrationClient integrationClient,
+            WorkflowEventPublisher eventPublisher,
+            WorkflowPluginRegistry pluginRegistry,
+            @Lazy WorkflowExecutionEngine executionEngine) {
+        this.integrationClient = integrationClient;
+        this.eventPublisher = eventPublisher;
+        this.pluginRegistry = pluginRegistry;
+        this.executionEngine = executionEngine;
+    }
 
     @Value("${app.workflow.post-function.max-retries:3}")
     private int maxRetries;
@@ -397,9 +416,11 @@ public class PostFunctionExecutionEngine {
 
         if (issueId != null && label != null) {
             if (add) {
-                log.info("Adding label '{}' to issue {}", label, issueId);
+                integrationClient.addLabel(issueId, label);
+                log.info("Added label '{}' to issue {}", label, issueId);
             } else {
-                log.info("Removing label '{}' from issue {}", label, issueId);
+                integrationClient.removeLabel(issueId, label);
+                log.info("Removed label '{}' from issue {}", label, issueId);
             }
         }
     }
@@ -419,11 +440,10 @@ public class PostFunctionExecutionEngine {
     private void executeCloneFunction(WorkflowPostFunction pf, Map<String, Object> ctx) {
         Map<String, Object> config = parseConfig(pf.getFunctionData());
         UUID issueId = parseUuid(ctx.get("issueId"));
-        UUID projectId = parseUuid(ctx.get("projectId"));
 
-        if (issueId != null && projectId != null) {
-            log.info("Cloning issue {} to project {}", issueId, projectId);
-            // Clone implementation would call issue service
+        if (issueId != null) {
+            Map<String, Object> clonedIssue = integrationClient.cloneIssue(issueId);
+            log.info("Cloned issue {} -> new issue {}", issueId, clonedIssue.get("id"));
         }
     }
 
@@ -449,8 +469,8 @@ public class PostFunctionExecutionEngine {
         UUID targetIssueId = parseUuid(config.get("targetIssueId"));
 
         if (issueId != null && targetIssueId != null) {
-            log.info("Unlinking issue {} from {}", issueId, targetIssueId);
-            // Unlink implementation
+            integrationClient.unlinkIssues(issueId, targetIssueId);
+            log.info("Unlinked issue {} from {}", issueId, targetIssueId);
         }
     }
 
@@ -469,9 +489,11 @@ public class PostFunctionExecutionEngine {
 
         if (issueId != null && watcherId != null) {
             if (add) {
-                log.info("Adding watcher {} to issue {}", watcherId, issueId);
+                integrationClient.addWatcher(issueId, watcherId);
+                log.info("Added watcher {} to issue {}", watcherId, issueId);
             } else {
-                log.info("Removing watcher {} from issue {}", watcherId, issueId);
+                integrationClient.removeWatcher(issueId, watcherId);
+                log.info("Removed watcher {} from issue {}", watcherId, issueId);
             }
         }
     }
@@ -535,6 +557,10 @@ public class PostFunctionExecutionEngine {
                     .replace("{toStatusName}", toStatusName)
                     .replace("{userName}", userName);
 
+            if (summary != null && !summary.isBlank()) {
+                integrationClient.patchIssueFields(issueId, Map.of("automatedSummary", summary));
+            }
+
             log.info("Generated automatic summary for issue {}: {}", issueId, summary);
         }
     }
@@ -560,16 +586,36 @@ public class PostFunctionExecutionEngine {
 
     private void autoTransition(Map<String, Object> ctx, Map<String, Object> config) {
         UUID transitionId = parseUuid(config.get("transitionId"));
-        if (transitionId != null) {
-            log.info("Auto-transition triggered: {}", transitionId);
-            // This would need the execution engine to avoid circular dependency
+        if (transitionId == null) {
+            return;
+        }
+
+        int depth = AUTO_TRANSITION_DEPTH.get();
+        if (depth >= MAX_AUTO_TRANSITION_DEPTH) {
+            log.error("AUTO_TRANSITION aborted: recursion depth {} reached max {} for issue {}",
+                    depth, MAX_AUTO_TRANSITION_DEPTH, ctx.get("issueId"));
+            return;
+        }
+
+        AUTO_TRANSITION_DEPTH.set(depth + 1);
+        try {
+            ExecuteTransitionRequest req = new ExecuteTransitionRequest();
+            req.setIssueId(parseUuid(ctx.get("issueId")));
+            req.setProjectId(parseUuid(ctx.get("projectId")));
+            req.setUserId(parseUuid(ctx.get("userId")));
+            req.setTransitionId(transitionId);
+            executionEngine.execute(req);
+            log.info("Auto-transition executed: {} for issue {}", transitionId, ctx.get("issueId"));
+        } finally {
+            AUTO_TRANSITION_DEPTH.set(depth);
         }
     }
 
     private void executeScript(Map<String, Object> ctx, Map<String, Object> config) {
         String scriptKey = stringVal(config.get("scriptKey"), stringVal(config.get("pluginKey"), null));
         if (scriptKey != null) {
-            log.info("Executing script post-function: {}", scriptKey);
+            pluginRegistry.executePostFunction(scriptKey, ctx);
+            log.info("Executed script post-function: {}", scriptKey);
         }
     }
 

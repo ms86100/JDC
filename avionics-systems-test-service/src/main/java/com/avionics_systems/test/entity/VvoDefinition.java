@@ -115,6 +115,24 @@ public class VvoDefinition {
     @Builder.Default
     private List<UUID> componentIds = List.of();
 
+    @Column(name = "pts_mfcl_links", columnDefinition = "TEXT[]")
+    @Builder.Default
+    private List<String> ptsMfclLinks = List.of();
+
+    @Column(name = "n_di", columnDefinition = "TEXT[]")
+    @Builder.Default
+    private List<String> nDi = List.of();
+
+    @Column(name = "reference_documents", columnDefinition = "TEXT")
+    private String referenceDocuments;
+
+    @Column(name = "dts_baseline_version")
+    private String dtsBaselineVersion;
+
+    @Column(name = "baseline_verified")
+    @Builder.Default
+    private Boolean baselineVerified = true;
+
     @Builder.Default
     private Boolean archived = false;
 

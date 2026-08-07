@@ -87,6 +87,8 @@ import GraphQLExplorerPage from './features/developer/pages/GraphQLExplorerPage'
 import TestScreenConfigHubPage from './features/tests/pages/TestScreenConfigHubPage';
 import PluginManagementPage from './features/tests/pages/PluginManagementPage';
 import FlakyTestDashboardPage from './features/tests/pages/FlakyTestDashboardPage';
+import TestAdminConfigPage from './features/tests/pages/TestAdminConfigPage';
+import ExploratoryTestingPage from './features/tests/pages/ExploratoryTestingPage';
 import VvoListPage from './features/aircraft-design/pages/VvoListPage';
 import VvoDetailPage from './features/aircraft-design/pages/VvoDetailPage';
 import HlvvoListPage from './features/aircraft-design/pages/HlvvoListPage';
@@ -98,6 +100,9 @@ import VvDashboardPage from './features/aircraft-design/pages/VvDashboardPage';
 import CampaignPage from './features/aircraft-design/pages/CampaignPage';
 import MasterDataAdminPage from './features/aircraft-design/pages/MasterDataAdminPage';
 import ArchitecturePage from './features/aircraft-design/pages/ArchitecturePage';
+import VvmCardListPage from './features/aircraft-design/pages/VvmCardListPage';
+import IvvCardListPage from './features/aircraft-design/pages/IvvCardListPage';
+import GroupListPage from './features/aircraft-design/pages/GroupListPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -256,6 +261,10 @@ function App() {
                 <Route path="tests/webhooks" element={<CiCdWebhooksPage />} />
                 <Route path="tests/import" element={<TestImportPage />} />
                 <Route path="tests/import/:projectId" element={<TestImportPage />} />
+                <Route path="tests/admin-config" element={<TestAdminConfigPage />} />
+                <Route path="tests/admin-config/:projectId" element={<TestAdminConfigPage />} />
+                <Route path="tests/exploratory" element={<ExploratoryTestingPage />} />
+                <Route path="tests/exploratory/:projectId" element={<ExploratoryTestingPage />} />
                 <Route path="tests/:testId/history" element={<TestExecutionHistoryPage />} />
                 <Route path="tests/:testId/execute" element={<TestDetailPage />} />
                 <Route path="tests/:testId" element={<TestDetailPage />} />
@@ -272,6 +281,9 @@ function App() {
                 <Route path="aircraft-design/campaigns" element={<CampaignPage />} />
                 <Route path="aircraft-design/master-data" element={<MasterDataAdminPage />} />
                 <Route path="aircraft-design/architecture" element={<ArchitecturePage />} />
+                <Route path="aircraft-design/vvm-cards" element={<VvmCardListPage />} />
+                <Route path="aircraft-design/ivv-cards" element={<IvvCardListPage />} />
+                <Route path="aircraft-design/groups" element={<GroupListPage />} />
               </Route>
               <Route
                 path="/admin/*"

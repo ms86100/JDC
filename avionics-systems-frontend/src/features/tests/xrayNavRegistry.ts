@@ -47,12 +47,14 @@ export const XRAY_CAPABILITIES: XrayCapability[] = [
   { id: 'req-versions', label: 'Requirement versions', path: 'requirement-versions', description: 'Version matrix', group: 'planning' },
   { id: 'env-matrix', label: 'Environment matrix', path: 'environment-matrix', description: 'Env × browser', group: 'planning' },
   { id: 'workflows', label: 'Test workflows', path: 'workflows', description: 'Test workflow builder', group: 'planning' },
-  { id: 'import', label: 'Import tests', path: 'import', description: 'Cucumber, JUnit XML', group: 'integration' },
+  { id: 'exploratory', label: 'Exploratory testing', path: 'exploratory', description: 'Charter-based sessions', group: 'quality' },
+  { id: 'import', label: 'Import tests', path: 'import', description: 'Cucumber, JUnit, TestNG, NUnit, Robot', group: 'integration' },
   { id: 'webhooks', label: 'CI/CD webhooks', path: 'webhooks', description: 'Pipeline integration', group: 'integration' },
   { id: 'ai', label: 'AI assistant', path: 'ai', description: 'AI test helpers', group: 'integration' },
   { id: 'screen-config', label: 'Screen configuration', path: 'screen-config', description: 'Schemes & fields', group: 'admin' },
   { id: 'plugins', label: 'Plugin registry', path: 'plugins', description: 'Xray plugin config', group: 'admin' },
   { id: 'settings', label: 'Test settings', path: 'settings', description: 'Project test config', group: 'admin' },
+  { id: 'admin-config', label: 'Test configuration', path: 'admin-config', description: 'Statuses, types, execution statuses', group: 'admin' },
 ];
 
 export const XRAY_GROUP_LABELS: Record<XrayCapability['group'], string> = {

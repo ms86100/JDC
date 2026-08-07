@@ -1,5 +1,7 @@
 package com.avionics_systems.workflow.service;
 
+import com.avionics_systems.workflow.dto.WorkflowMigrationResponse;
+import com.avionics_systems.workflow.engine.WorkflowIntegrationClient;
 import com.avionics_systems.workflow.engine.plugin.WorkflowPluginRegistry;
 import com.avionics_systems.workflow.entity.*;
 import com.avionics_systems.workflow.repository.*;
@@ -12,7 +14,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -35,6 +39,9 @@ public class WorkflowAdministrationService {
     private final WorkflowConditionRepository workflowConditionRepository2;
     private final WorkflowValidatorRepository workflowValidatorRepository;
     private final WorkflowPostFunctionRepository workflowPostFunctionRepository;
+    private final WorkflowTransitionHistoryRepository workflowTransitionHistoryRepository;
+    private final WorkflowMigrationService workflowMigrationService;
+    private final WorkflowIntegrationClient workflowIntegrationClient;
     private final ObjectMapper objectMapper;
 
     @Value("${app.workflow.status-category.color-todo:#6C757D}")
@@ -151,7 +158,20 @@ public class WorkflowAdministrationService {
             throw new IllegalStateException("Workflow is used by " + mappings.size() + " scheme(s)");
         }
 
-        // Delete versions first
+        // H6: Cascade delete transitions and their normalized dependencies
+        List<WorkflowTransition> transitions = workflowTransitionRepository.findByWorkflowId(workflowId);
+        for (WorkflowTransition t : transitions) {
+            workflowConditionRepository2.deleteByTransitionId(t.getId());
+            workflowValidatorRepository.deleteByTransitionId(t.getId());
+            workflowPostFunctionRepository.deleteByTransitionId(t.getId());
+        }
+        workflowTransitionRepository.deleteAll(transitions);
+
+        // Delete statuses
+        workflowStatusRepository.deleteAll(
+                workflowStatusRepository.findByWorkflowIdOrderBySequenceAsc(workflowId));
+
+        // Delete versions
         workflowVersionRepository.findByWorkflowIdOrderByVersionNumberDesc(workflowId)
                 .forEach(workflowVersionRepository::delete);
 
@@ -462,7 +482,8 @@ public class WorkflowAdministrationService {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> condition = (Map<String, Object>) conditionData;
-        condition.put("id", UUID.randomUUID().toString());
+        UUID generatedId = UUID.randomUUID();
+        condition.put("id", generatedId.toString());
         conditions.add(condition);
 
         try {
@@ -473,14 +494,52 @@ public class WorkflowAdministrationService {
 
         workflowTransitionRepository.save(transition);
 
+        // C9: Create normalized entity for runtime engine sync
+        try {
+            String condType = (String) conditionData.getOrDefault("type",
+                    (String) conditionData.getOrDefault("conditionType", "CUSTOM"));
+            WorkflowCondition normalizedCondition = WorkflowCondition.builder()
+                    .id(generatedId)
+                    .transitionId(transitionId)
+                    .conditionType(condType)
+                    .fieldName((String) conditionData.get("fieldName"))
+                    .operator((String) conditionData.get("operator"))
+                    .value(conditionData.get("value") != null ? String.valueOf(conditionData.get("value")) : null)
+                    .conditionData(serializeToJson(conditionData))
+                    .negate(Boolean.TRUE.equals(conditionData.get("negate")))
+                    .sequence(conditions.size() - 1)
+                    .build();
+            workflowConditionRepository2.save(normalizedCondition);
+        } catch (Exception e) {
+            log.warn("Failed to create normalized condition entity, JSON blob still saved", e);
+        }
+
         logAudit("ADD_CONDITION", "WORKFLOW_TRANSITION", transitionId, transition.getName(), "Condition added");
         return condition;
     }
 
     @Transactional
     public void removeCondition(UUID transitionId, UUID conditionId) {
-        WorkflowTransition transition = workflowTransitionRepository.findById(transitionId)
-                .orElseThrow(() -> new IllegalArgumentException("Transition not found: " + transitionId));
+        // C5: Resolve transitionId when controller passes null
+        UUID resolvedTransitionId = transitionId;
+        if (resolvedTransitionId == null) {
+            WorkflowCondition conditionEntity = workflowConditionRepository2.findById(conditionId).orElse(null);
+            if (conditionEntity != null) {
+                resolvedTransitionId = conditionEntity.getTransitionId();
+                workflowConditionRepository2.delete(conditionEntity);
+            }
+        } else {
+            // Also clean up normalized entity if it exists
+            workflowConditionRepository2.findById(conditionId).ifPresent(workflowConditionRepository2::delete);
+        }
+        if (resolvedTransitionId == null) {
+            log.warn("Cannot find transition for condition {}", conditionId);
+            return;
+        }
+
+        final UUID finalTransitionId = resolvedTransitionId;
+        WorkflowTransition transition = workflowTransitionRepository.findById(finalTransitionId)
+                .orElseThrow(() -> new IllegalArgumentException("Transition not found: " + finalTransitionId));
 
         List<Map<String, Object>> conditions = new ArrayList<>();
         try {
@@ -500,7 +559,7 @@ public class WorkflowAdministrationService {
 
         workflowTransitionRepository.save(transition);
 
-        logAudit("REMOVE_CONDITION", "WORKFLOW_TRANSITION", transitionId, transition.getName(), "Condition removed");
+        logAudit("REMOVE_CONDITION", "WORKFLOW_TRANSITION", resolvedTransitionId, transition.getName(), "Condition removed");
     }
 
     // ==================== VALIDATOR MANAGEMENT ====================
@@ -521,7 +580,8 @@ public class WorkflowAdministrationService {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> validator = (Map<String, Object>) validatorData;
-        validator.put("id", UUID.randomUUID().toString());
+        UUID generatedId = UUID.randomUUID();
+        validator.put("id", generatedId.toString());
         validators.add(validator);
 
         try {
@@ -532,14 +592,50 @@ public class WorkflowAdministrationService {
 
         workflowTransitionRepository.save(transition);
 
+        // C9: Create normalized entity for runtime engine sync
+        try {
+            String valType = (String) validatorData.getOrDefault("type",
+                    (String) validatorData.getOrDefault("validatorType", "CUSTOM"));
+            WorkflowValidator normalizedValidator = WorkflowValidator.builder()
+                    .id(generatedId)
+                    .transitionId(transitionId)
+                    .validatorType(valType)
+                    .fieldName((String) validatorData.get("fieldName"))
+                    .validatorData(serializeToJson(validatorData))
+                    .errorMessage((String) validatorData.get("errorMessage"))
+                    .sequence(validators.size() - 1)
+                    .build();
+            workflowValidatorRepository.save(normalizedValidator);
+        } catch (Exception e) {
+            log.warn("Failed to create normalized validator entity, JSON blob still saved", e);
+        }
+
         logAudit("ADD_VALIDATOR", "WORKFLOW_TRANSITION", transitionId, transition.getName(), "Validator added");
         return validator;
     }
 
     @Transactional
     public void removeValidator(UUID transitionId, UUID validatorId) {
-        WorkflowTransition transition = workflowTransitionRepository.findById(transitionId)
-                .orElseThrow(() -> new IllegalArgumentException("Transition not found: " + transitionId));
+        // C5: Resolve transitionId when controller passes null
+        UUID resolvedTransitionId = transitionId;
+        if (resolvedTransitionId == null) {
+            WorkflowValidator validatorEntity = workflowValidatorRepository.findById(validatorId).orElse(null);
+            if (validatorEntity != null) {
+                resolvedTransitionId = validatorEntity.getTransitionId();
+                workflowValidatorRepository.delete(validatorEntity);
+            }
+        } else {
+            // Also clean up normalized entity if it exists
+            workflowValidatorRepository.findById(validatorId).ifPresent(workflowValidatorRepository::delete);
+        }
+        if (resolvedTransitionId == null) {
+            log.warn("Cannot find transition for validator {}", validatorId);
+            return;
+        }
+
+        final UUID finalTransitionId = resolvedTransitionId;
+        WorkflowTransition transition = workflowTransitionRepository.findById(finalTransitionId)
+                .orElseThrow(() -> new IllegalArgumentException("Transition not found: " + finalTransitionId));
 
         List<Map<String, Object>> validators = new ArrayList<>();
         try {
@@ -559,7 +655,7 @@ public class WorkflowAdministrationService {
 
         workflowTransitionRepository.save(transition);
 
-        logAudit("REMOVE_VALIDATOR", "WORKFLOW_TRANSITION", transitionId, transition.getName(), "Validator removed");
+        logAudit("REMOVE_VALIDATOR", "WORKFLOW_TRANSITION", resolvedTransitionId, transition.getName(), "Validator removed");
     }
 
     // ==================== POST FUNCTION MANAGEMENT ====================
@@ -580,7 +676,8 @@ public class WorkflowAdministrationService {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> function = (Map<String, Object>) functionData;
-        function.put("id", UUID.randomUUID().toString());
+        UUID generatedId = UUID.randomUUID();
+        function.put("id", generatedId.toString());
         functions.add(function);
 
         try {
@@ -591,14 +688,49 @@ public class WorkflowAdministrationService {
 
         workflowTransitionRepository.save(transition);
 
+        // C9: Create normalized entity for runtime engine sync
+        try {
+            String funcType = (String) functionData.getOrDefault("type",
+                    (String) functionData.getOrDefault("functionType", "CUSTOM"));
+            WorkflowPostFunction normalizedPostFunction = WorkflowPostFunction.builder()
+                    .id(generatedId)
+                    .transitionId(transitionId)
+                    .functionType(funcType)
+                    .functionData(serializeToJson(functionData))
+                    .sequence(functions.size() - 1)
+                    .enabled(true)
+                    .build();
+            workflowPostFunctionRepository.save(normalizedPostFunction);
+        } catch (Exception e) {
+            log.warn("Failed to create normalized post-function entity, JSON blob still saved", e);
+        }
+
         logAudit("ADD_POST_FUNCTION", "WORKFLOW_TRANSITION", transitionId, transition.getName(), "Post function added");
         return function;
     }
 
     @Transactional
     public void removePostFunction(UUID transitionId, UUID functionId) {
-        WorkflowTransition transition = workflowTransitionRepository.findById(transitionId)
-                .orElseThrow(() -> new IllegalArgumentException("Transition not found: " + transitionId));
+        // C5: Resolve transitionId when controller passes null
+        UUID resolvedTransitionId = transitionId;
+        if (resolvedTransitionId == null) {
+            WorkflowPostFunction postFunctionEntity = workflowPostFunctionRepository.findById(functionId).orElse(null);
+            if (postFunctionEntity != null) {
+                resolvedTransitionId = postFunctionEntity.getTransitionId();
+                workflowPostFunctionRepository.delete(postFunctionEntity);
+            }
+        } else {
+            // Also clean up normalized entity if it exists
+            workflowPostFunctionRepository.findById(functionId).ifPresent(workflowPostFunctionRepository::delete);
+        }
+        if (resolvedTransitionId == null) {
+            log.warn("Cannot find transition for post function {}", functionId);
+            return;
+        }
+
+        final UUID finalTransitionId = resolvedTransitionId;
+        WorkflowTransition transition = workflowTransitionRepository.findById(finalTransitionId)
+                .orElseThrow(() -> new IllegalArgumentException("Transition not found: " + finalTransitionId));
 
         List<Map<String, Object>> functions = new ArrayList<>();
         try {
@@ -618,7 +750,7 @@ public class WorkflowAdministrationService {
 
         workflowTransitionRepository.save(transition);
 
-        logAudit("REMOVE_POST_FUNCTION", "WORKFLOW_TRANSITION", transitionId, transition.getName(), "Post function removed");
+        logAudit("REMOVE_POST_FUNCTION", "WORKFLOW_TRANSITION", resolvedTransitionId, transition.getName(), "Post function removed");
     }
 
     // ==================== WORKFLOW SCHEME MANAGEMENT ====================
@@ -938,21 +1070,12 @@ public class WorkflowAdministrationService {
 
     @Transactional
     public Map<String, Object> assignScreenToTransition(UUID transitionId, Map<String, Object> screenData) {
-        WorkflowTransition transition = workflowRepository.findAll().stream()
-                .flatMap(w -> w.getTransitions().stream())
-                .filter(t -> t.getId().equals(transitionId))
-                .findFirst()
+        WorkflowTransition transition = workflowTransitionRepository.findById(transitionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transition not found: " + transitionId));
 
         UUID screenId = UUID.fromString((String) screenData.get("screenId"));
         transition.setScreenId(screenId);
-
-        for (Workflow w : workflowRepository.findAll()) {
-            if (w.getTransitions().contains(transition)) {
-                workflowRepository.save(w);
-                break;
-            }
-        }
+        workflowTransitionRepository.save(transition);
 
         logAudit("ASSIGN_SCREEN", "WORKFLOW_TRANSITION", transitionId, transition.getName(), "Screen assigned to transition");
         return Map.of("transitionId", transitionId, "screenId", screenId);
@@ -960,56 +1083,150 @@ public class WorkflowAdministrationService {
 
     @Transactional
     public void removeScreenFromTransition(UUID transitionId) {
-        WorkflowTransition transition = workflowRepository.findAll().stream()
-                .flatMap(w -> w.getTransitions().stream())
-                .filter(t -> t.getId().equals(transitionId))
-                .findFirst()
+        WorkflowTransition transition = workflowTransitionRepository.findById(transitionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transition not found: " + transitionId));
 
         transition.setScreenId(null);
-
-        for (Workflow w : workflowRepository.findAll()) {
-            if (w.getTransitions().contains(transition)) {
-                workflowRepository.save(w);
-                break;
-            }
-        }
+        workflowTransitionRepository.save(transition);
 
         logAudit("REMOVE_SCREEN", "WORKFLOW_TRANSITION", transitionId, transition.getName(), "Screen removed from transition");
     }
 
     // ==================== MIGRATION & USAGE STATS ====================
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Map<String, Object> migrateIssues(UUID workflowId, UUID targetWorkflowId, Map<String, Object> filters) {
-        // This would integrate with the issue service to migrate issues
-        // For now, return a placeholder response
+        // H8: Delegate to WorkflowMigrationService for actual issue migration
         Map<String, Object> result = new HashMap<>();
         result.put("sourceWorkflowId", workflowId);
         result.put("targetWorkflowId", targetWorkflowId);
         result.put("filters", filters);
-        result.put("status", "migration_initiated");
-        result.put("message", "Issue migration has been initiated. Check the issue service for progress.");
+
+        try {
+            UUID oldStatusId = filters.get("oldStatusId") != null
+                    ? UUID.fromString(String.valueOf(filters.get("oldStatusId"))) : null;
+            UUID newStatusId = filters.get("newStatusId") != null
+                    ? UUID.fromString(String.valueOf(filters.get("newStatusId"))) : null;
+            String userId = filters.get("userId") != null ? String.valueOf(filters.get("userId")) : null;
+
+            if (oldStatusId != null && newStatusId != null) {
+                UUID migrationUserId = userId != null ? UUID.fromString(userId) : null;
+                WorkflowMigrationResponse migration = workflowMigrationService.createMigration(
+                        workflowId, oldStatusId, newStatusId, "WORKFLOW_SWITCH", migrationUserId);
+                result.put("migrationId", migration.getId());
+                result.put("migrationStatus", migration.getMigrationStatus());
+                result.put("issueCount", migration.getIssueCount());
+                result.put("status", "migration_created");
+                result.put("message", "Migration created. Call startMigration to begin processing.");
+            } else {
+                result.put("status", "migration_pending");
+                result.put("message", "Provide oldStatusId and newStatusId in filters to create a status migration");
+            }
+        } catch (Exception e) {
+            log.warn("Migration creation failed for workflow {}: {}", workflowId, e.getMessage());
+            result.put("status", "migration_failed");
+            result.put("message", "Migration creation failed: " + e.getMessage());
+        }
+
         return result;
     }
 
     @Transactional(readOnly = true)
     public Map<String, Object> previewMigration(UUID workflowId, Map<String, Object> filters) {
+        // H8: Use integration client to estimate affected issues via JQL search
+        Workflow workflow = workflowRepository.findById(workflowId)
+                .orElseThrow(() -> new IllegalArgumentException("Workflow not found: " + workflowId));
+
         Map<String, Object> preview = new HashMap<>();
         preview.put("workflowId", workflowId);
+        preview.put("workflowName", workflow.getName());
         preview.put("filters", filters);
-        preview.put("estimatedAffectedIssues", 0);
-        preview.put("warning", "Connect to issue service for accurate migration preview");
+
+        // Gather workflow statuses
+        List<WorkflowStatus> statuses = workflowStatusRepository.findByWorkflowIdOrderBySequenceAsc(workflowId);
+        List<String> statusIds = statuses.stream()
+                .map(s -> s.getStatusId().toString())
+                .collect(Collectors.toList());
+        preview.put("statusCount", statuses.size());
+        preview.put("statuses", statusIds);
+
+        // Gather transitions
+        List<WorkflowTransition> transitions = workflowTransitionRepository.findByWorkflowId(workflowId);
+        preview.put("transitionCount", transitions.size());
+
+        // Estimate affected issues via integration client JQL search
+        int estimatedAffectedIssues = 0;
+        try {
+            if (!statusIds.isEmpty()) {
+                String quotedIds = statusIds.stream()
+                        .map(id -> "\"" + id + "\"")
+                        .collect(Collectors.joining(","));
+                String jql = "statusId in (" + quotedIds + ")";
+                List<Map<String, Object>> issues = workflowIntegrationClient.searchIssuesJql(jql, 1000);
+                estimatedAffectedIssues = issues.size();
+            }
+        } catch (Exception e) {
+            log.warn("Could not estimate affected issues for workflow {}: {}", workflowId, e.getMessage());
+        }
+        preview.put("estimatedAffectedIssues", estimatedAffectedIssues);
+
         return preview;
     }
 
     @Transactional(readOnly = true)
     public Map<String, Object> getTransitionStats(UUID workflowId, String startDate, String endDate) {
+        // H8: Query transition history for real statistics
         Map<String, Object> stats = new HashMap<>();
         stats.put("workflowId", workflowId);
-        stats.put("totalTransitions", 0);
-        stats.put("topTransitions", List.of());
         stats.put("period", Map.of("start", startDate, "end", endDate));
+
+        try {
+            List<WorkflowTransitionHistory> historyRecords;
+            if (startDate != null && endDate != null) {
+                LocalDateTime start = LocalDate.parse(startDate).atStartOfDay();
+                LocalDateTime end = LocalDate.parse(endDate).atTime(LocalTime.MAX);
+                historyRecords = workflowTransitionHistoryRepository
+                        .findByWorkflowIdAndExecutedAtBetween(workflowId, start, end);
+            } else {
+                historyRecords = workflowTransitionHistoryRepository.findByWorkflowId(workflowId);
+            }
+
+            stats.put("totalTransitions", historyRecords.size());
+
+            // Group by transition name and count occurrences
+            Map<String, Long> transitionCounts = historyRecords.stream()
+                    .filter(h -> h.getTransitionName() != null)
+                    .collect(Collectors.groupingBy(
+                            WorkflowTransitionHistory::getTransitionName,
+                            Collectors.counting()));
+
+            // Sort by count descending and build top transitions list
+            List<Map<String, Object>> topTransitions = transitionCounts.entrySet().stream()
+                    .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                    .map(entry -> {
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("transitionName", entry.getKey());
+                        item.put("count", entry.getValue());
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            stats.put("topTransitions", topTransitions);
+
+            // Count successful vs failed transitions
+            long successCount = historyRecords.stream()
+                    .filter(h -> Boolean.TRUE.equals(h.getSuccess()))
+                    .count();
+            stats.put("successCount", successCount);
+            stats.put("failureCount", historyRecords.size() - successCount);
+
+        } catch (Exception e) {
+            log.warn("Failed to compute transition stats for workflow {}: {}", workflowId, e.getMessage());
+            stats.put("totalTransitions", 0);
+            stats.put("topTransitions", List.of());
+            stats.put("error", "Failed to compute stats: " + e.getMessage());
+        }
+
         return stats;
     }
 
@@ -1149,7 +1366,39 @@ public class WorkflowAdministrationService {
             throw new IllegalArgumentException("Workflow with name '" + name + "' already exists");
         }
 
-        return createWorkflow(workflowData);
+        // H5: Create the workflow, then also import its statuses and transitions
+        Map<String, Object> result = createWorkflow(workflowData);
+        UUID newWorkflowId = (UUID) result.get("id");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> statuses = (List<Map<String, Object>>) importData.get("statuses");
+        if (statuses != null) {
+            for (Map<String, Object> s : statuses) {
+                try {
+                    addStatus(newWorkflowId, s);
+                } catch (Exception e) {
+                    log.warn("Failed to import status into workflow {}: {}", newWorkflowId, e.getMessage());
+                }
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> transitions = (List<Map<String, Object>>) importData.get("transitions");
+        if (transitions != null) {
+            for (Map<String, Object> t : transitions) {
+                try {
+                    addTransition(newWorkflowId, t);
+                } catch (Exception e) {
+                    log.warn("Failed to import transition into workflow {}: {}", newWorkflowId, e.getMessage());
+                }
+            }
+        }
+
+        logAudit("IMPORT", "WORKFLOW", newWorkflowId, name,
+                "Imported with " + (statuses != null ? statuses.size() : 0) + " status(es) and "
+                + (transitions != null ? transitions.size() : 0) + " transition(s)");
+
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -1234,6 +1483,47 @@ public class WorkflowAdministrationService {
         int newVersion = maxVersion + 1;
 
         try {
+            // Collect all normalized conditions, validators, and post-functions for transitions in this workflow
+            List<WorkflowTransition> transitions = workflowTransitionRepository.findByWorkflowId(workflow.getId());
+            List<UUID> transitionIds = transitions.stream().map(WorkflowTransition::getId).collect(Collectors.toList());
+
+            List<Map<String, Object>> conditionsList = new ArrayList<>();
+            List<Map<String, Object>> validatorsList = new ArrayList<>();
+            List<Map<String, Object>> postFunctionsList = new ArrayList<>();
+            for (UUID tId : transitionIds) {
+                workflowConditionRepository2.findByTransitionIdOrderBySequenceAsc(tId).forEach(c -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", c.getId());
+                    m.put("transitionId", c.getTransitionId());
+                    m.put("conditionType", c.getConditionType());
+                    m.put("fieldName", c.getFieldName());
+                    m.put("operator", c.getOperator());
+                    m.put("value", c.getValue());
+                    m.put("negate", c.getNegate());
+                    m.put("sequence", c.getSequence());
+                    conditionsList.add(m);
+                });
+                workflowValidatorRepository.findByTransitionIdOrderBySequenceAsc(tId).forEach(v -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", v.getId());
+                    m.put("transitionId", v.getTransitionId());
+                    m.put("validatorType", v.getValidatorType());
+                    m.put("fieldName", v.getFieldName());
+                    m.put("errorMessage", v.getErrorMessage());
+                    m.put("sequence", v.getSequence());
+                    validatorsList.add(m);
+                });
+                workflowPostFunctionRepository.findByTransitionIdOrderBySequenceAsc(tId).forEach(pf -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", pf.getId());
+                    m.put("transitionId", pf.getTransitionId());
+                    m.put("functionType", pf.getFunctionType());
+                    m.put("sequence", pf.getSequence());
+                    m.put("enabled", pf.getEnabled());
+                    postFunctionsList.add(m);
+                });
+            }
+
             WorkflowVersion version = WorkflowVersion.builder()
                     .workflow(workflow)
                     .versionNumber(newVersion)
@@ -1242,6 +1532,9 @@ public class WorkflowAdministrationService {
                             workflow.getStatuses().stream().map(this::statusToMap).collect(Collectors.toList())))
                     .transitionsSnapshot(objectMapper.writeValueAsString(
                             workflow.getTransitions().stream().map(this::transitionToMap).collect(Collectors.toList())))
+                    .conditionsSnapshot(objectMapper.writeValueAsString(conditionsList))
+                    .validatorsSnapshot(objectMapper.writeValueAsString(validatorsList))
+                    .postFunctionsSnapshot(objectMapper.writeValueAsString(postFunctionsList))
                     .changeDescription(description)
                     .changeType(changeType)
                     .build();
@@ -1249,6 +1542,7 @@ public class WorkflowAdministrationService {
             workflowVersionRepository.save(version);
         } catch (Exception e) {
             log.error("Failed to create version snapshot", e);
+            throw new RuntimeException("Failed to create version snapshot", e);
         }
     }
 
@@ -1279,7 +1573,55 @@ public class WorkflowAdministrationService {
                     .validatorValidators(source.getValidatorValidators())
                     .postFunctionFunctions(source.getPostFunctionFunctions())
                     .build();
-            workflowTransitionRepository.save(clone);
+            WorkflowTransition savedClone = workflowTransitionRepository.save(clone);
+
+            // H7: Also clone normalized condition/validator/post-function entities
+            copyConditions(source.getId(), savedClone.getId());
+            copyValidators(source.getId(), savedClone.getId());
+            copyPostFunctions(source.getId(), savedClone.getId());
+        }
+    }
+
+    private void copyConditions(UUID fromTransitionId, UUID toTransitionId) {
+        for (WorkflowCondition src : workflowConditionRepository2.findByTransitionIdOrderBySequenceAsc(fromTransitionId)) {
+            WorkflowCondition copy = WorkflowCondition.builder()
+                    .transitionId(toTransitionId)
+                    .conditionType(src.getConditionType())
+                    .fieldName(src.getFieldName())
+                    .operator(src.getOperator())
+                    .value(src.getValue())
+                    .conditionData(src.getConditionData())
+                    .negate(src.getNegate())
+                    .sequence(src.getSequence())
+                    .build();
+            workflowConditionRepository2.save(copy);
+        }
+    }
+
+    private void copyValidators(UUID fromTransitionId, UUID toTransitionId) {
+        for (WorkflowValidator src : workflowValidatorRepository.findByTransitionIdOrderBySequenceAsc(fromTransitionId)) {
+            WorkflowValidator copy = WorkflowValidator.builder()
+                    .transitionId(toTransitionId)
+                    .validatorType(src.getValidatorType())
+                    .fieldName(src.getFieldName())
+                    .validatorData(src.getValidatorData())
+                    .errorMessage(src.getErrorMessage())
+                    .sequence(src.getSequence())
+                    .build();
+            workflowValidatorRepository.save(copy);
+        }
+    }
+
+    private void copyPostFunctions(UUID fromTransitionId, UUID toTransitionId) {
+        for (WorkflowPostFunction src : workflowPostFunctionRepository.findByTransitionIdOrderBySequenceAsc(fromTransitionId)) {
+            WorkflowPostFunction copy = WorkflowPostFunction.builder()
+                    .transitionId(toTransitionId)
+                    .functionType(src.getFunctionType())
+                    .functionData(src.getFunctionData())
+                    .sequence(src.getSequence())
+                    .enabled(src.getEnabled())
+                    .build();
+            workflowPostFunctionRepository.save(copy);
         }
     }
 

@@ -451,6 +451,52 @@ public class WorkflowService {
         log.info("Post-function deleted: {}", functionId);
     }
 
+    @Transactional
+    public void updateCondition(UUID transitionId, UUID conditionId, Map<String, Object> data) {
+        log.info("Updating condition {} on transition {}", conditionId, transitionId);
+        WorkflowCondition condition = workflowConditionRepository.findById(conditionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Condition", "id", conditionId));
+        if (data.containsKey("conditionType")) condition.setConditionType((String) data.get("conditionType"));
+        if (data.containsKey("fieldName")) condition.setFieldName((String) data.get("fieldName"));
+        if (data.containsKey("operator")) condition.setOperator((String) data.get("operator"));
+        if (data.containsKey("value")) condition.setValue((String) data.get("value"));
+        if (data.containsKey("conditionData")) condition.setConditionData((String) data.get("conditionData"));
+        if (data.containsKey("negate")) condition.setNegate((Boolean) data.get("negate"));
+        if (data.containsKey("sequence")) condition.setSequence((Integer) data.get("sequence"));
+        workflowConditionRepository.save(condition);
+        log.info("Condition updated: {}", conditionId);
+    }
+
+    @Transactional
+    public void updateValidator(UUID transitionId, UUID validatorId, Map<String, Object> data) {
+        log.info("Updating validator {} on transition {}", validatorId, transitionId);
+        WorkflowValidator validator = workflowValidatorRepository.findById(validatorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Validator", "id", validatorId));
+        if (data.containsKey("validatorType")) validator.setValidatorType((String) data.get("validatorType"));
+        if (data.containsKey("fieldName")) validator.setFieldName((String) data.get("fieldName"));
+        if (data.containsKey("validatorData")) validator.setValidatorData((String) data.get("validatorData"));
+        if (data.containsKey("errorMessage")) validator.setErrorMessage((String) data.get("errorMessage"));
+        if (data.containsKey("sequence")) validator.setSequence((Integer) data.get("sequence"));
+        if (data.containsKey("continueOnError")) validator.setContinueOnError((Boolean) data.get("continueOnError"));
+        workflowValidatorRepository.save(validator);
+        log.info("Validator updated: {}", validatorId);
+    }
+
+    @Transactional
+    public void updatePostFunction(UUID transitionId, UUID functionId, Map<String, Object> data) {
+        log.info("Updating post-function {} on transition {}", functionId, transitionId);
+        WorkflowPostFunction postFunction = workflowPostFunctionRepository.findById(functionId)
+                .orElseThrow(() -> new ResourceNotFoundException("PostFunction", "id", functionId));
+        if (data.containsKey("functionType")) postFunction.setFunctionType((String) data.get("functionType"));
+        if (data.containsKey("functionData")) postFunction.setFunctionData((String) data.get("functionData"));
+        if (data.containsKey("sequence")) postFunction.setSequence((Integer) data.get("sequence"));
+        if (data.containsKey("async")) postFunction.setAsync((Boolean) data.get("async"));
+        if (data.containsKey("failOnError")) postFunction.setFailOnError((Boolean) data.get("failOnError"));
+        if (data.containsKey("enabled")) postFunction.setEnabled((Boolean) data.get("enabled"));
+        workflowPostFunctionRepository.save(postFunction);
+        log.info("Post-function updated: {}", functionId);
+    }
+
     /**
      * Validate if a transition can be performed
      */

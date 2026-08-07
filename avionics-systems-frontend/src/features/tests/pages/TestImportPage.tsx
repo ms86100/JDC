@@ -22,7 +22,7 @@ export default function TestImportPage() {
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-2">Import Tests</h1>
       <p className="text-sm text-gray-500 mb-4">
-        Import Cucumber features or JUnit XML results. View batch history per project.
+        Import test results from Cucumber, JUnit, TestNG, NUnit, or Robot Framework. View batch history per project.
       </p>
       {!routeProjectId && (
         <input

@@ -184,7 +184,7 @@ export const TestReportsDashboard: React.FC<TestReportsDashboardProps> = ({ proj
       )}
 
       {/* Recent Executions */}
-      {report.recentExecutions && report.recentExecutions.length > 0 && (
+      {Array.isArray(report.recentExecutions) && report.recentExecutions.length > 0 && (
         <div className="recent-executions">
           <h3 className="text-lg font-semibold mb-3">Recent Executions</h3>
           <div className="space-y-2">

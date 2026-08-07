@@ -466,6 +466,7 @@ export default function WorkflowDesignerPage() {
   const { workflowId } = useParams<{ workflowId: string }>();
   const queryClient = useQueryClient();
   const [selectedTransition, setSelectedTransition] = useState<WorkflowTransitionDetail | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
 
   const { data: workflow } = useQuery({
     queryKey: ['workflow', workflowId],
@@ -489,6 +490,16 @@ export default function WorkflowDesignerPage() {
   const draftMutation = useMutation({
     mutationFn: () => workflowApi.createWorkflowDraft(workflowId!),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflow', workflowId] }),
+  });
+
+  const lockMutation = useMutation({
+    mutationFn: () => workflowApi.lockLayout(workflowId!),
+    onSuccess: () => { setIsLocked(true); },
+  });
+
+  const unlockMutation = useMutation({
+    mutationFn: () => workflowApi.unlockLayout(workflowId!),
+    onSuccess: () => { setIsLocked(false); },
   });
 
   if (!workflowId) {
@@ -520,17 +531,19 @@ export default function WorkflowDesignerPage() {
           </button>
           <button
             type="button"
-            className="ab-btn ab-btn-secondary"
-            onClick={() => workflowApi.lockLayout(workflowId!)}
+            className={`ab-btn ab-btn-secondary${isLocked ? ' ab-btn-active' : ''}`}
+            disabled={lockMutation.isPending || isLocked}
+            onClick={() => lockMutation.mutate()}
           >
-            Lock layout
+            {lockMutation.isPending ? 'Locking...' : isLocked ? 'Locked' : 'Lock layout'}
           </button>
           <button
             type="button"
             className="ab-btn ab-btn-secondary"
-            onClick={() => workflowApi.unlockLayout(workflowId!)}
+            disabled={unlockMutation.isPending || !isLocked}
+            onClick={() => unlockMutation.mutate()}
           >
-            Unlock layout
+            {unlockMutation.isPending ? 'Unlocking...' : 'Unlock layout'}
           </button>
           <button
             type="button"

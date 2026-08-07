@@ -288,6 +288,110 @@ public class WorkflowDraftService {
         data.put("description", workflow.getDescription());
         data.put("statusCategoryMapping", workflow.getStatusCategoryMapping());
         data.put("type", workflow.getType());
+
+        UUID wfId = workflow.getId();
+
+        // Serialize statuses
+        List<WorkflowStatus> statuses = workflowStatusRepository.findByWorkflowIdOrderBySequenceAsc(wfId);
+        data.put("statuses", statuses.stream().map(s -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("statusId", s.getStatusId().toString());
+            m.put("sequence", s.getSequence());
+            return m;
+        }).collect(Collectors.toList()));
+
+        // Serialize transitions with conditions, validators, post-functions, and properties
+        List<WorkflowTransition> transitions = workflowTransitionRepository.findByWorkflowId(wfId);
+        List<Map<String, Object>> transitionList = transitions.stream().map(t -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("name", t.getName());
+            m.put("description", t.getDescription());
+            m.put("fromStatusId", t.getFromStatusId() != null ? t.getFromStatusId().toString() : null);
+            m.put("toStatusId", t.getToStatusId() != null ? t.getToStatusId().toString() : null);
+            m.put("displayOrder", t.getDisplayOrder());
+            m.put("icon", t.getIcon());
+            m.put("type", t.getType());
+            m.put("triggerType", t.getTriggerType());
+            m.put("triggerConfig", t.getTriggerConfig());
+            m.put("origin", t.getOrigin());
+            m.put("requiresApproval", t.getRequiresApproval());
+            m.put("approvalGroupId", t.getApprovalGroupId() != null ? t.getApprovalGroupId().toString() : null);
+            m.put("allowAssigneeOverride", t.getAllowAssigneeOverride());
+            m.put("allowUnassign", t.getAllowUnassign());
+            m.put("fieldsRequired", t.getFieldsRequired());
+            m.put("fieldsUpdated", t.getFieldsUpdated());
+            m.put("fieldsHidden", t.getFieldsHidden());
+            m.put("fieldsAutoSubmit", t.getFieldsAutoSubmit());
+            m.put("permissionCheck", t.getPermissionCheck());
+            m.put("userGroupIds", t.getUserGroupIds());
+            m.put("remoteLinkTransition", t.getRemoteLinkTransition());
+            m.put("remoteLinkDirection", t.getRemoteLinkDirection());
+            m.put("remoteLinkIssueLinkType", t.getRemoteLinkIssueLinkType());
+            m.put("allowLoop", t.getAllowLoop());
+            m.put("maxLoopCount", t.getMaxLoopCount());
+            m.put("conditionConditions", t.getConditionConditions());
+            m.put("conditionOperator", t.getConditionOperator());
+            m.put("validatorValidators", t.getValidatorValidators());
+            m.put("postFunctionFunctions", t.getPostFunctionFunctions());
+            m.put("screenId", t.getScreenId() != null ? t.getScreenId().toString() : null);
+
+            // Serialize normalized conditions
+            List<WorkflowCondition> conditions = workflowConditionRepository.findByTransitionIdOrderBySequenceAsc(t.getId());
+            m.put("conditions", conditions.stream().map(c -> {
+                Map<String, Object> cm = new HashMap<>();
+                cm.put("conditionType", c.getConditionType());
+                cm.put("fieldName", c.getFieldName());
+                cm.put("operator", c.getOperator());
+                cm.put("value", c.getValue());
+                cm.put("conditionData", c.getConditionData());
+                cm.put("negate", c.getNegate());
+                cm.put("sequence", c.getSequence());
+                return cm;
+            }).collect(Collectors.toList()));
+
+            // Serialize normalized validators
+            List<WorkflowValidator> validators = workflowValidatorRepository.findByTransitionIdOrderBySequenceAsc(t.getId());
+            m.put("validators", validators.stream().map(v -> {
+                Map<String, Object> vm = new HashMap<>();
+                vm.put("validatorType", v.getValidatorType());
+                vm.put("fieldName", v.getFieldName());
+                vm.put("validatorData", v.getValidatorData());
+                vm.put("errorMessage", v.getErrorMessage());
+                vm.put("sequence", v.getSequence());
+                vm.put("continueOnError", v.getContinueOnError());
+                return vm;
+            }).collect(Collectors.toList()));
+
+            // Serialize normalized post-functions
+            List<WorkflowPostFunction> postFunctions = workflowPostFunctionRepository.findByTransitionIdOrderBySequenceAsc(t.getId());
+            m.put("postFunctions", postFunctions.stream().map(pf -> {
+                Map<String, Object> pm = new HashMap<>();
+                pm.put("functionType", pf.getFunctionType());
+                pm.put("functionData", pf.getFunctionData());
+                pm.put("sequence", pf.getSequence());
+                pm.put("enabled", pf.getEnabled());
+                pm.put("continueOnError", pf.getContinueOnError());
+                pm.put("async", pf.getAsync());
+                pm.put("failOnError", pf.getFailOnError());
+                return pm;
+            }).collect(Collectors.toList()));
+
+            // Serialize transition properties
+            List<WorkflowTransitionProperty> properties = workflowTransitionPropertyRepository.findByTransitionId(t.getId());
+            m.put("properties", properties.stream().map(p -> {
+                Map<String, Object> pp = new HashMap<>();
+                pp.put("propertyKey", p.getPropertyKey());
+                pp.put("propertyValue", p.getPropertyValue());
+                pp.put("propertyType", p.getPropertyType());
+                pp.put("isSystem", p.getIsSystem());
+                return pp;
+            }).collect(Collectors.toList()));
+
+            return m;
+        }).collect(Collectors.toList());
+
+        data.put("transitions", transitionList);
+
         return data;
     }
 
@@ -311,29 +415,32 @@ public class WorkflowDraftService {
                                        String changeDescription, UUID userId) {
         Map<String, Object> snapshot = buildDraftData(workflow);
 
-        String snapshotJson;
         try {
-            snapshotJson = objectMapper.writeValueAsString(snapshot);
+            String snapshotJson = objectMapper.writeValueAsString(snapshot);
+
+            WorkflowVersion version = WorkflowVersion.builder()
+                    .workflow(workflow)
+                    .versionNumber(versionNumber)
+                    .workflowSnapshot(snapshotJson)
+                    .statusesSnapshot(objectMapper.writeValueAsString(snapshot.get("statuses")))
+                    .transitionsSnapshot(objectMapper.writeValueAsString(snapshot.get("transitions")))
+                    .createdBy(userId)
+                    .changeDescription(changeDescription)
+                    .changeType("UPDATE")
+                    .build();
+
+            workflowVersionRepository.save(version);
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize workflow snapshot", e);
         }
-
-        WorkflowVersion version = WorkflowVersion.builder()
-                .workflow(workflow)
-                .versionNumber(versionNumber)
-                .workflowSnapshot(snapshotJson)
-                .createdBy(userId)
-                .changeDescription(changeDescription)
-                .changeType("UPDATE")
-                .build();
-
-        workflowVersionRepository.save(version);
     }
 
     @SuppressWarnings("unchecked")
     private void applyDraftChanges(Workflow workflow, String draftData) {
         try {
             Map<String, Object> data = objectMapper.readValue(draftData, Map.class);
+
+            // Restore metadata
             if (data.containsKey("name")) {
                 workflow.setName((String) data.get("name"));
             }
@@ -343,8 +450,148 @@ public class WorkflowDraftService {
             if (data.containsKey("statusCategoryMapping")) {
                 workflow.setStatusCategoryMapping((String) data.get("statusCategoryMapping"));
             }
+            if (data.containsKey("type")) {
+                workflow.setType((String) data.get("type"));
+            }
+            workflowRepository.save(workflow);
+
+            UUID wfId = workflow.getId();
+
+            // Restore statuses
+            if (data.containsKey("statuses")) {
+                workflowStatusRepository.deleteByWorkflowId(wfId);
+                List<Map<String, Object>> statuses = (List<Map<String, Object>>) data.get("statuses");
+                for (Map<String, Object> s : statuses) {
+                    WorkflowStatus status = WorkflowStatus.builder()
+                            .workflowId(wfId)
+                            .statusId(UUID.fromString((String) s.get("statusId")))
+                            .sequence((Integer) s.get("sequence"))
+                            .build();
+                    workflowStatusRepository.save(status);
+                }
+            }
+
+            // Restore transitions and their sub-entities
+            if (data.containsKey("transitions")) {
+                // Delete existing transitions and their sub-entities
+                List<WorkflowTransition> existingTransitions = workflowTransitionRepository.findByWorkflowId(wfId);
+                for (WorkflowTransition existing : existingTransitions) {
+                    workflowConditionRepository.deleteByTransitionId(existing.getId());
+                    workflowValidatorRepository.deleteByTransitionId(existing.getId());
+                    workflowPostFunctionRepository.deleteByTransitionId(existing.getId());
+                    workflowTransitionPropertyRepository.deleteByTransitionId(existing.getId());
+                }
+                workflowTransitionRepository.deleteByWorkflowId(wfId);
+
+                // Recreate transitions from draft data
+                List<Map<String, Object>> transitions = (List<Map<String, Object>>) data.get("transitions");
+                for (Map<String, Object> t : transitions) {
+                    WorkflowTransition transition = WorkflowTransition.builder()
+                            .workflowId(wfId)
+                            .name((String) t.get("name"))
+                            .description((String) t.get("description"))
+                            .fromStatusId(t.get("fromStatusId") != null ? UUID.fromString((String) t.get("fromStatusId")) : null)
+                            .toStatusId(t.get("toStatusId") != null ? UUID.fromString((String) t.get("toStatusId")) : null)
+                            .displayOrder((Integer) t.get("displayOrder"))
+                            .icon((String) t.get("icon"))
+                            .type((String) t.get("type"))
+                            .triggerType((String) t.get("triggerType"))
+                            .triggerConfig((Map<String, Object>) t.get("triggerConfig"))
+                            .origin((String) t.get("origin"))
+                            .requiresApproval((Boolean) t.get("requiresApproval"))
+                            .approvalGroupId(t.get("approvalGroupId") != null ? UUID.fromString((String) t.get("approvalGroupId")) : null)
+                            .allowAssigneeOverride((Boolean) t.get("allowAssigneeOverride"))
+                            .allowUnassign((Boolean) t.get("allowUnassign"))
+                            .fieldsRequired((List<String>) t.get("fieldsRequired"))
+                            .fieldsUpdated((List<Map<String, Object>>) t.get("fieldsUpdated"))
+                            .fieldsHidden((List<String>) t.get("fieldsHidden"))
+                            .fieldsAutoSubmit((Boolean) t.get("fieldsAutoSubmit"))
+                            .permissionCheck((String) t.get("permissionCheck"))
+                            .userGroupIds((List<String>) t.get("userGroupIds"))
+                            .remoteLinkTransition((Boolean) t.get("remoteLinkTransition"))
+                            .remoteLinkDirection((String) t.get("remoteLinkDirection"))
+                            .remoteLinkIssueLinkType((String) t.get("remoteLinkIssueLinkType"))
+                            .allowLoop((Boolean) t.get("allowLoop"))
+                            .maxLoopCount((Integer) t.get("maxLoopCount"))
+                            .conditionConditions((List<Map<String, Object>>) t.get("conditionConditions"))
+                            .conditionOperator((String) t.get("conditionOperator"))
+                            .validatorValidators((List<Map<String, Object>>) t.get("validatorValidators"))
+                            .postFunctionFunctions((List<Map<String, Object>>) t.get("postFunctionFunctions"))
+                            .screenId(t.get("screenId") != null ? UUID.fromString((String) t.get("screenId")) : null)
+                            .build();
+                    transition = workflowTransitionRepository.save(transition);
+
+                    // Restore normalized conditions
+                    if (t.containsKey("conditions")) {
+                        List<Map<String, Object>> conditions = (List<Map<String, Object>>) t.get("conditions");
+                        for (Map<String, Object> c : conditions) {
+                            WorkflowCondition condition = WorkflowCondition.builder()
+                                    .transitionId(transition.getId())
+                                    .conditionType((String) c.get("conditionType"))
+                                    .fieldName((String) c.get("fieldName"))
+                                    .operator((String) c.get("operator"))
+                                    .value((String) c.get("value"))
+                                    .conditionData((String) c.get("conditionData"))
+                                    .negate((Boolean) c.get("negate"))
+                                    .sequence((Integer) c.get("sequence"))
+                                    .build();
+                            workflowConditionRepository.save(condition);
+                        }
+                    }
+
+                    // Restore normalized validators
+                    if (t.containsKey("validators")) {
+                        List<Map<String, Object>> validators = (List<Map<String, Object>>) t.get("validators");
+                        for (Map<String, Object> v : validators) {
+                            WorkflowValidator validator = WorkflowValidator.builder()
+                                    .transitionId(transition.getId())
+                                    .validatorType((String) v.get("validatorType"))
+                                    .fieldName((String) v.get("fieldName"))
+                                    .validatorData((String) v.get("validatorData"))
+                                    .errorMessage((String) v.get("errorMessage"))
+                                    .sequence((Integer) v.get("sequence"))
+                                    .continueOnError((Boolean) v.get("continueOnError"))
+                                    .build();
+                            workflowValidatorRepository.save(validator);
+                        }
+                    }
+
+                    // Restore normalized post-functions
+                    if (t.containsKey("postFunctions")) {
+                        List<Map<String, Object>> postFunctions = (List<Map<String, Object>>) t.get("postFunctions");
+                        for (Map<String, Object> pf : postFunctions) {
+                            WorkflowPostFunction postFunction = WorkflowPostFunction.builder()
+                                    .transitionId(transition.getId())
+                                    .functionType((String) pf.get("functionType"))
+                                    .functionData((String) pf.get("functionData"))
+                                    .sequence((Integer) pf.get("sequence"))
+                                    .enabled((Boolean) pf.get("enabled"))
+                                    .continueOnError((Boolean) pf.get("continueOnError"))
+                                    .async((Boolean) pf.get("async"))
+                                    .failOnError((Boolean) pf.get("failOnError"))
+                                    .build();
+                            workflowPostFunctionRepository.save(postFunction);
+                        }
+                    }
+
+                    // Restore transition properties
+                    if (t.containsKey("properties")) {
+                        List<Map<String, Object>> properties = (List<Map<String, Object>>) t.get("properties");
+                        for (Map<String, Object> p : properties) {
+                            WorkflowTransitionProperty property = WorkflowTransitionProperty.builder()
+                                    .transitionId(transition.getId())
+                                    .propertyKey((String) p.get("propertyKey"))
+                                    .propertyValue((String) p.get("propertyValue"))
+                                    .propertyType((String) p.get("propertyType"))
+                                    .isSystem((Boolean) p.get("isSystem"))
+                                    .build();
+                            workflowTransitionPropertyRepository.save(property);
+                        }
+                    }
+                }
+            }
         } catch (Exception e) {
-            log.error("Failed to apply draft changes: {}", e.getMessage());
+            throw new RuntimeException("Failed to apply draft changes: " + e.getMessage(), e);
         }
     }
 

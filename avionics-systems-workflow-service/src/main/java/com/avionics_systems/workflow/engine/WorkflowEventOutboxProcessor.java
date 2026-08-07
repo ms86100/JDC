@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,13 +35,11 @@ public class WorkflowEventOutboxProcessor {
     @SchedulerLock(name = "WorkflowEventOutboxProcessor_processOutbox", lockAtMostFor = "PT4S", lockAtLeastFor = "PT2S")
     @Transactional
     public void processOutbox() {
-        List<WorkflowEventOutbox> pending = outboxRepository.findByPublishedFalseOrderByCreatedAtAsc();
+        List<WorkflowEventOutbox> pending = outboxRepository.findByPublishedFalseOrderByCreatedAtAsc(PageRequest.of(0, batchSize));
         if (pending.isEmpty()) {
             return;
         }
-        int limit = Math.min(batchSize, pending.size());
-        for (int i = 0; i < limit; i++) {
-            WorkflowEventOutbox event = pending.get(i);
+        for (WorkflowEventOutbox event : pending) {
             try {
                 dispatch(event);
                 event.setPublished(true);
@@ -48,6 +47,12 @@ public class WorkflowEventOutboxProcessor {
                 outboxRepository.save(event);
             } catch (Exception e) {
                 log.error("Outbox dispatch failed for event {} ({}): {}", event.getId(), event.getEventType(), e.getMessage());
+                // Dead-letter events older than 1 hour to prevent infinite retries
+                if (event.getCreatedAt() != null && event.getCreatedAt().isBefore(LocalDateTime.now().minusHours(1))) {
+                    log.warn("Dead-lettering event {} after 1 hour of failures", event.getId());
+                    event.setPublished(true);
+                    outboxRepository.save(event);
+                }
             }
         }
     }

@@ -987,7 +987,7 @@ const ReportingDashboardPage: React.FC<ReportingDashboardPageProps> = ({ project
               {/* Top failing tests */}
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-gray-600 mb-2">Top Failing Tests</h3>
-                {summaryReport?.topFailingTests && summaryReport.topFailingTests.length > 0 ? (
+                {Array.isArray(summaryReport?.topFailingTests) && summaryReport.topFailingTests.length > 0 ? (
                   <div className="space-y-2">
                     {summaryReport.topFailingTests.slice(0, 5).map((test, index) => (
                       <div key={index} className="flex items-start justify-between">

@@ -1070,13 +1070,25 @@ public class IssueService {
             builder.linkedIssues(linkedIssues);
         }
 
-        // Load subtasks
+        // Load subtasks and compute aggregate time
         List<Issue> subtasks = issueRepository.findByParentIssueId(issue.getId());
         if (!subtasks.isEmpty()) {
             builder.subTaskCount(subtasks.size())
                     .subtasks(subtasks.stream()
                             .map(this::mapToIssueResponse)
                             .collect(Collectors.toList()));
+
+            long aggEstimate = issue.getOriginalEstimate() != null ? issue.getOriginalEstimate() : 0;
+            long aggSpent = issue.getTimeSpent() != null ? issue.getTimeSpent() : 0;
+            long aggRemaining = issue.getRemainingEstimate() != null ? issue.getRemainingEstimate() : 0;
+            for (Issue sub : subtasks) {
+                aggEstimate += sub.getOriginalEstimate() != null ? sub.getOriginalEstimate() : 0;
+                aggSpent += sub.getTimeSpent() != null ? sub.getTimeSpent() : 0;
+                aggRemaining += sub.getRemainingEstimate() != null ? sub.getRemainingEstimate() : 0;
+            }
+            builder.aggregateTimeEstimate(aggEstimate)
+                    .aggregateTimeSpent(aggSpent)
+                    .aggregateRemainingEstimate(aggRemaining);
         }
 
         return builder.build();

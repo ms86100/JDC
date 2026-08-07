@@ -245,7 +245,7 @@ export default function SprintReportModal({ sprintId, sprintName, boardId, onClo
               {/* Gap 10: Enhanced report data — Scope Change & Punted Issues */}
               {activeTab === 'overview' && planReport && (
                 <div style={{ marginTop: '16px' }}>
-                  {planReport.puntedIssues && planReport.puntedIssues.length > 0 && (
+                  {Array.isArray(planReport.puntedIssues) && planReport.puntedIssues.length > 0 && (
                     <div style={{ marginBottom: '12px', padding: '12px', background: chartColors.dangerLight, borderRadius: '8px', border: `1px solid ${chartColors.danger}` }}>
                       <h4 style={{ margin: '0 0 8px', fontSize: '0.875rem', color: chartColors.danger }}>Punted Issues ({planReport.puntedIssues.length})</h4>
                       {planReport.puntedIssues.slice(0, 5).map(i => (

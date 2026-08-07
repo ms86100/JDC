@@ -1,6 +1,8 @@
 package com.avionics_systems.test.controller;
 
 import com.avionics_systems.test.dto.*;
+import com.avionics_systems.test.entity.TestRunIteration;
+import com.avionics_systems.test.repository.TestRunIterationRepository;
 import com.avionics_systems.test.service.TestRunService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -23,6 +25,7 @@ import java.util.UUID;
 public class TestRunController {
 
     private final TestRunService testRunService;
+    private final TestRunIterationRepository iterationRepository;
 
     @PostMapping
     @PreAuthorize("@projectSecurity.canExecuteTests(authentication, #request.projectId)")
@@ -146,5 +149,49 @@ public class TestRunController {
             @RequestParam LocalDateTime end) {
         List<TestRunResponse> response = testRunService.getRunsByProjectAndDateRange(projectId, start, end);
         return ResponseEntity.ok(response);
+    }
+
+    // ==================== Test Run Iterations ====================
+
+    @GetMapping("/{runId}/iterations")
+    @Operation(summary = "Get all iterations for a test run")
+    public ResponseEntity<List<TestRunIteration>> getIterations(@PathVariable UUID runId) {
+        List<TestRunIteration> iterations = iterationRepository.findByTestRunIdOrderByIterationIndexAsc(runId);
+        return ResponseEntity.ok(iterations);
+    }
+
+    @PutMapping("/{runId}/iterations/{iterationId}")
+    @Operation(summary = "Update an iteration's status")
+    public ResponseEntity<TestRunIteration> updateIteration(
+            @PathVariable UUID runId,
+            @PathVariable UUID iterationId,
+            @RequestBody java.util.Map<String, String> body) {
+        TestRunIteration iteration = iterationRepository.findById(iterationId)
+                .orElseThrow(() -> new com.avionics_systems.test.exception.ResourceNotFoundException("TestRunIteration", "id", iterationId));
+        if (body.containsKey("status")) iteration.setStatus(body.get("status"));
+        if (body.containsKey("comment")) iteration.setComment(body.get("comment"));
+        return ResponseEntity.ok(iterationRepository.save(iteration));
+    }
+
+    @PostMapping("/{runId}/iterations/{iterationId}/start")
+    @Operation(summary = "Start a test run iteration")
+    public ResponseEntity<TestRunIteration> startIteration(@PathVariable UUID runId, @PathVariable UUID iterationId) {
+        TestRunIteration iteration = iterationRepository.findById(iterationId)
+                .orElseThrow(() -> new com.avionics_systems.test.exception.ResourceNotFoundException("TestRunIteration", "id", iterationId));
+        iteration.setStatus("IN_PROGRESS");
+        iteration.setStartedAt(LocalDateTime.now());
+        return ResponseEntity.ok(iterationRepository.save(iteration));
+    }
+
+    @PostMapping("/{runId}/iterations/{iterationId}/complete")
+    @Operation(summary = "Complete a test run iteration")
+    public ResponseEntity<TestRunIteration> completeIteration(@PathVariable UUID runId, @PathVariable UUID iterationId) {
+        TestRunIteration iteration = iterationRepository.findById(iterationId)
+                .orElseThrow(() -> new com.avionics_systems.test.exception.ResourceNotFoundException("TestRunIteration", "id", iterationId));
+        iteration.setCompletedAt(LocalDateTime.now());
+        if (iteration.getStartedAt() != null) {
+            iteration.setDuration((int) java.time.Duration.between(iteration.getStartedAt(), iteration.getCompletedAt()).getSeconds());
+        }
+        return ResponseEntity.ok(iterationRepository.save(iteration));
     }
 }

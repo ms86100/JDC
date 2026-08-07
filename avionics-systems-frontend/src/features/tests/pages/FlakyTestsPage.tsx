@@ -506,7 +506,7 @@ export const FlakyTestsPage: React.FC<{ projectId?: string }> = ({ projectId: pr
                             <div className="mb-2">
                               <h5 className="text-sm font-medium">Execution Pattern (Last 20 runs)</h5>
                               <div className="flex gap-1 mt-2">
-                                {test.recentExecutions.slice(0, 20).map((exec, i) => (
+                                {(Array.isArray(test.recentExecutions) ? test.recentExecutions : []).slice(0, 20).map((exec, i) => (
                                   <div
                                     key={i}
                                     className={`w-8 h-8 rounded flex items-center justify-center text-xs text-white ${

@@ -66,4 +66,11 @@ public class TestSetController {
         testService.removeTestFromSet(setId, testId);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{setId}/clone")
+    @PreAuthorize("@projectSecurity.canCreateTests(authentication, #projectId)")
+    @Operation(summary = "Clone a test set")
+    public ResponseEntity<TestSetResponse> cloneTestSet(@PathVariable UUID setId, @RequestParam UUID projectId) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(testService.cloneTestSet(setId));
+    }
 }

@@ -8,7 +8,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.*;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 @Component
 @RequiredArgsConstructor
@@ -59,7 +62,7 @@ public class ValidatorExecutor {
     private String evaluate(WorkflowValidator validator, WorkflowContext ctx) {
         String type = validator.getValidatorType();
         if (type != null && !SUPPORTED_TYPES.contains(type)) {
-            log.debug("Skipping unsupported validator type: {}", type);
+            log.warn("Skipping unsupported validator type: {}", type);
             return null;
         }
 
@@ -95,10 +98,19 @@ public class ValidatorExecutor {
         if ("REGEX".equals(type) || WorkflowValidator.TYPE_REGEX.equals(type)) {
             String field = validator.getFieldName();
             Object val = screen.getOrDefault(field, issue.get(field));
-            if (val == null) return null;
+            if (val == null || val.toString().isBlank()) {
+                return customMessage != null ? customMessage : "Field " + field + " is required for pattern validation";
+            }
             String pattern = validator.getValidatorData();
-            if (pattern != null && !val.toString().matches(pattern)) {
-                return customMessage != null ? customMessage : "Field " + field + " does not match required format";
+            if (pattern != null) {
+                try {
+                    if (!Pattern.matches(pattern, val.toString())) {
+                        return customMessage != null ? customMessage : "Field " + field + " does not match required format";
+                    }
+                } catch (PatternSyntaxException e) {
+                    log.error("Invalid regex pattern '{}' for field {}: {}", pattern, field, e.getMessage());
+                    return "Invalid validation pattern configured for field " + field;
+                }
             }
             return null;
         }
@@ -132,9 +144,19 @@ public class ValidatorExecutor {
                 String data = validator.getValidatorData();
                 if (data != null && data.contains(",")) {
                     String[] parts = data.split(",", 2);
-                    String valStr = val.toString();
-                    if (valStr.compareTo(parts[0].trim()) < 0 || valStr.compareTo(parts[1].trim()) > 0) {
-                        return customMessage != null ? customMessage : "Field " + field + " must be between " + parts[0].trim() + " and " + parts[1].trim();
+                    try {
+                        LocalDate dateVal = LocalDate.parse(val.toString().trim());
+                        LocalDate startDate = LocalDate.parse(parts[0].trim());
+                        LocalDate endDate = LocalDate.parse(parts[1].trim());
+                        if (dateVal.isBefore(startDate) || dateVal.isAfter(endDate)) {
+                            return customMessage != null ? customMessage : "Field " + field + " must be between " + parts[0].trim() + " and " + parts[1].trim();
+                        }
+                    } catch (Exception e) {
+                        // Fallback to string comparison for non-standard formats
+                        String valStr = val.toString();
+                        if (valStr.compareTo(parts[0].trim()) < 0 || valStr.compareTo(parts[1].trim()) > 0) {
+                            return customMessage != null ? customMessage : "Field " + field + " must be between " + parts[0].trim() + " and " + parts[1].trim();
+                        }
                     }
                 }
             }

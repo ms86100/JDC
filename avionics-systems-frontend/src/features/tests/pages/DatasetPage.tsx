@@ -329,7 +329,7 @@ const DatasetDetailPanel: React.FC<DatasetDetailPanelProps> = ({ dataset, onClos
                 <tbody>
                   {(showAllRows ? dataset.rows : dataset.rows.slice(0, 5)).map((row, i) => (
                     <tr key={i}>
-                      {row.map((cell, j) => (
+                      {(Array.isArray(row) ? row : []).map((cell, j) => (
                         <td key={j} className="p-2 border-b">{cell}</td>
                       ))}
                     </tr>
@@ -646,16 +646,16 @@ export const DatasetPage: React.FC<{ projectId?: string }> = ({ projectId: propP
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {dataset.rows.slice(0, 5).map((row, i) => (
+                                  {(Array.isArray(dataset.rows) ? dataset.rows : []).slice(0, 5).map((row, i) => (
                                     <tr key={i}>
-                                      {row.map((cell, j) => (
+                                      {(Array.isArray(row) ? row : []).map((cell, j) => (
                                         <td key={j} className="p-2 border-r last:border-r-0">{cell}</td>
                                       ))}
                                     </tr>
                                   ))}
                                 </tbody>
                               </table>
-                              {dataset.rows.length > 5 && (
+                              {Array.isArray(dataset.rows) && dataset.rows.length > 5 && (
                                 <div className="p-2 text-center text-sm text-gray-500 bg-gray-100">
                                   Showing 5 of {dataset.rows.length} rows
                                 </div>

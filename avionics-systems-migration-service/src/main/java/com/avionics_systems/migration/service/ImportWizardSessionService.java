@@ -71,6 +71,8 @@ public class ImportWizardSessionService {
     private final TargetProjectValidator targetProjectValidator;
     private final LegacyDcImportApiService legacyDcImportApiService;
     private final ProjectServiceClient projectServiceClient;
+    private final com.avionics_systems.migration.service.field.FieldDiscoveryService fieldDiscoveryService;
+    private final com.avionics_systems.migration.service.field.FieldProvisioningService fieldProvisioningService;
 
     @Transactional
     public WizardSessionDto createSession(CreateWizardSessionRequest request, UUID userId) {
@@ -191,6 +193,27 @@ public class ImportWizardSessionService {
                 parseLegacyDcIntoSession(session, content, result);
             } else {
                 parseSpreadsheetIntoSession(session, content, fileName, result);
+            }
+
+            // Auto-discover and provision fields from detected headers
+            try {
+                var headers = session.getDetectedHeaders();
+                if (headers != null && !headers.isEmpty()) {
+                    var payload = new java.util.LinkedHashMap<String, Object>();
+                    headers.forEach(h -> payload.put(h, ""));
+                    fieldProvisioningService.initializeBuiltInFields(userId);
+                    var discovery = fieldDiscoveryService.discoverFields(payload);
+                    var toProvision = discovery.discoveredFields().stream()
+                            .filter(f -> f.requiresProvisioning() && !f.isKnown())
+                            .toList();
+                    if (!toProvision.isEmpty()) {
+                        fieldProvisioningService.provisionFields(toProvision, userId);
+                        log.info("Auto-provisioned {} custom fields from {} detected headers for session {}",
+                                toProvision.size(), headers.size(), sessionId);
+                    }
+                }
+            } catch (Exception discoverEx) {
+                log.warn("Auto field discovery failed for session {}: {}", sessionId, discoverEx.getMessage());
             }
 
             try {

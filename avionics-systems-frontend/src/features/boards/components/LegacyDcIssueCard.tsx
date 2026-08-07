@@ -48,7 +48,7 @@ export default function LegacyDcIssueCard({
         </span>
       )}
 
-      {issue.labels && issue.labels.length > 0 && (
+      {Array.isArray(issue.labels) && issue.labels.length > 0 && (
         <div className="jdc-kanban-card__labels">
           {issue.labels.slice(0, 4).map((label) => (
             <span key={label} className="jdc-kanban-card__label" style={labelStyle(label)}>

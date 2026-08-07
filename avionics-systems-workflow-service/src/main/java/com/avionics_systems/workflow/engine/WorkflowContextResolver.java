@@ -8,12 +8,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Component
 @RequiredArgsConstructor
@@ -81,12 +83,15 @@ public class WorkflowContextResolver {
             return userData;
         }
         List<String> projectPermissions = Arrays.asList(projectPermissionsStr.split(","));
-        List<String> granted = new ArrayList<>();
-        for (String perm : projectPermissions) {
-            if (projectPermissionClient.hasPermission(userId, projectId, perm)) {
-                granted.add(perm);
-            }
-        }
+        List<CompletableFuture<String>> futures = projectPermissions.stream()
+                .map(perm -> CompletableFuture.supplyAsync(() ->
+                        projectPermissionClient.hasPermission(userId, projectId, perm) ? perm : null))
+                .toList();
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        List<String> granted = futures.stream()
+                .map(CompletableFuture::join)
+                .filter(Objects::nonNull)
+                .toList();
         userData.put("permissions", granted);
         return userData;
     }
@@ -110,8 +115,13 @@ public class WorkflowContextResolver {
     }
 
     private Workflow globalDefaultWorkflow() {
-        return workflowRepository.findAll().stream().findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Workflow", "name", "default"));
+        return workflowRepository.findAll().stream()
+                .filter(w -> Boolean.TRUE.equals(w.getIsDefault()))
+                .findFirst()
+                .orElseGet(() -> workflowRepository.findAll().stream()
+                        .min(Comparator.comparing(Workflow::getCreatedAt,
+                                Comparator.nullsLast(Comparator.naturalOrder())))
+                        .orElseThrow(() -> new ResourceNotFoundException("Workflow", "name", "default")));
     }
 
     private WorkflowTransition resolveTransition(

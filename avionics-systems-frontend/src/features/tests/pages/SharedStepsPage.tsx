@@ -370,7 +370,7 @@ const SharedStepDetailPanel: React.FC<SharedStepDetailPanelProps> = ({ step, onC
           </div>
         </div>
 
-        {impact && impact.length > 0 && (
+        {Array.isArray(impact) && impact.length > 0 && (
           <div>
             <h5 className="text-sm font-medium mb-2">Used In</h5>
             <div className="space-y-2">

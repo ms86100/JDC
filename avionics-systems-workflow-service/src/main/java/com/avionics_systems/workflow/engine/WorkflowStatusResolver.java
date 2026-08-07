@@ -52,13 +52,26 @@ public class WorkflowStatusResolver {
             }
         }
 
+        UUID bestFallback = null;
+        int bestScore = -1;
         for (WorkflowStatus ws : workflowStatuses) {
-            if (hasOutgoing(workflowId, ws.getStatusId())) {
-                return ws.getStatusId();
+            if (!hasOutgoing(workflowId, ws.getStatusId())) {
+                continue;
+            }
+            int score = 0;
+            // Prefer earlier sequence (likely initial status)
+            if (ws.getSequence() != null && ws.getSequence() == 0) {
+                score += 10;
+            } else if (ws.getSequence() != null && ws.getSequence() <= 2) {
+                score += 5;
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                bestFallback = ws.getStatusId();
             }
         }
 
-        return issueStatusId;
+        return bestFallback != null ? bestFallback : issueStatusId;
     }
 
     private boolean hasOutgoing(UUID workflowId, UUID fromStatusId) {

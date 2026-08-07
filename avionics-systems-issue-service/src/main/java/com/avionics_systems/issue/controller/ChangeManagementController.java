@@ -4,9 +4,13 @@ import com.avionics_systems.issue.entity.ChangeCardMetadata;
 import com.avionics_systems.issue.entity.DclMetadata;
 import com.avionics_systems.issue.entity.DeliverableMetadata;
 import com.avionics_systems.issue.entity.DesignItemMetadata;
+import com.avionics_systems.issue.entity.GroupMetadata;
+import com.avionics_systems.issue.entity.IvvCardMetadata;
 import com.avionics_systems.issue.entity.ModificationMetadata;
 import com.avionics_systems.issue.entity.ReviewSubTaskMetadata;
+import com.avionics_systems.issue.entity.SubChangeMetadata;
 import com.avionics_systems.issue.entity.SystemStandardMetadata;
+import com.avionics_systems.issue.entity.VvmCardMetadata;
 import com.avionics_systems.issue.service.ChangeManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -298,5 +302,126 @@ public class ChangeManagementController {
             @Parameter(description = "System standard entity ID") @PathVariable UUID systemStandardId) {
         List<ReviewSubTaskMetadata> reviews = service.autoCreateReviewSubTasks(systemStandardId);
         return new ResponseEntity<>(reviews, HttpStatus.CREATED);
+    }
+
+    // ========== VVM Card Endpoints (IFCS) ==========
+
+    @PostMapping("/{issueId}/vvm-card")
+    @Operation(summary = "Create VVM Card metadata for an issue")
+    public ResponseEntity<VvmCardMetadata> createVvmCard(
+            @PathVariable UUID issueId,
+            @RequestParam(required = false) String scope,
+            @RequestParam(required = false) String ltrReference) {
+        return new ResponseEntity<>(service.createVvmCard(issueId, scope, ltrReference), HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{issueId}/vvm-card")
+    @Operation(summary = "Get VVM Card metadata for an issue")
+    public ResponseEntity<VvmCardMetadata> getVvmCard(@PathVariable UUID issueId) {
+        return service.getVvmCard(issueId).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{issueId}/vvm-card")
+    @Operation(summary = "Update VVM Card metadata")
+    public ResponseEntity<VvmCardMetadata> updateVvmCard(
+            @PathVariable UUID issueId,
+            @RequestParam(required = false) String scope,
+            @RequestParam(required = false) String pipelineStatus,
+            @RequestParam(required = false) String expertReview,
+            @RequestParam(required = false) String testingReview,
+            @RequestParam(required = false) String safetyReview) {
+        return ResponseEntity.ok(service.updateVvmCard(issueId, scope, pipelineStatus, expertReview, testingReview, safetyReview));
+    }
+
+    // ========== IVV Card Endpoints (IFCS) ==========
+
+    @PostMapping("/{issueId}/ivv-card")
+    @Operation(summary = "Create IVV Card metadata for an issue")
+    public ResponseEntity<IvvCardMetadata> createIvvCard(
+            @PathVariable UUID issueId,
+            @RequestParam(required = false) UUID vvmCardId,
+            @RequestParam(required = false) String ivvType,
+            @RequestParam(required = false) String requirementImpact,
+            @RequestParam(required = false) String level) {
+        return new ResponseEntity<>(service.createIvvCard(issueId, vvmCardId, ivvType, requirementImpact, level), HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{issueId}/ivv-card")
+    @Operation(summary = "Get IVV Card metadata for an issue")
+    public ResponseEntity<IvvCardMetadata> getIvvCard(@PathVariable UUID issueId) {
+        return service.getIvvCard(issueId).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/vvm-cards/{vvmCardId}/ivv-cards")
+    @Operation(summary = "Get all IVV Cards linked to a VVM Card")
+    public ResponseEntity<List<IvvCardMetadata>> getIvvCardsByVvm(@PathVariable UUID vvmCardId) {
+        return ResponseEntity.ok(service.getIvvCardsByVvm(vvmCardId));
+    }
+
+    @PutMapping("/{issueId}/ivv-card")
+    @Operation(summary = "Update IVV Card metadata")
+    public ResponseEntity<IvvCardMetadata> updateIvvCard(
+            @PathVariable UUID issueId,
+            @RequestParam(required = false) String testsStatus,
+            @RequestParam(required = false) String ivvPriority,
+            @RequestParam(required = false) String evidence) {
+        return ResponseEntity.ok(service.updateIvvCard(issueId, testsStatus, ivvPriority, evidence));
+    }
+
+    // ========== Group Endpoints (IFCS) ==========
+
+    @PostMapping("/{issueId}/group")
+    @Operation(summary = "Create Group metadata for an issue")
+    public ResponseEntity<GroupMetadata> createGroup(
+            @PathVariable UUID issueId,
+            @RequestParam(required = false) String impactedTeam) {
+        return new ResponseEntity<>(service.createGroup(issueId, impactedTeam), HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{issueId}/group")
+    @Operation(summary = "Get Group metadata for an issue")
+    public ResponseEntity<GroupMetadata> getGroup(@PathVariable UUID issueId) {
+        return service.getGroup(issueId).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{issueId}/group")
+    @Operation(summary = "Update Group metadata")
+    public ResponseEntity<GroupMetadata> updateGroup(
+            @PathVariable UUID issueId,
+            @RequestParam(required = false) String impactedTeam) {
+        return ResponseEntity.ok(service.updateGroup(issueId, impactedTeam));
+    }
+
+    // ========== Sub-Change Endpoints (IFCS) ==========
+
+    @PostMapping("/{issueId}/sub-change")
+    @Operation(summary = "Create Sub-Change Card metadata for an issue")
+    public ResponseEntity<SubChangeMetadata> createSubChange(
+            @PathVariable UUID issueId,
+            @RequestParam(required = false) UUID parentChangeCardId,
+            @RequestParam(required = false) String gitBranch) {
+        return new ResponseEntity<>(service.createSubChange(issueId, parentChangeCardId, gitBranch), HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{issueId}/sub-change")
+    @Operation(summary = "Get Sub-Change Card metadata for an issue")
+    public ResponseEntity<SubChangeMetadata> getSubChange(@PathVariable UUID issueId) {
+        return service.getSubChange(issueId).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/change-cards/{parentId}/sub-changes")
+    @Operation(summary = "Get all Sub-Change Cards linked to a Change Card")
+    public ResponseEntity<List<SubChangeMetadata>> getSubChangesByParent(@PathVariable UUID parentId) {
+        return ResponseEntity.ok(service.getSubChangesByParent(parentId));
+    }
+
+    @PutMapping("/{issueId}/sub-change")
+    @Operation(summary = "Update Sub-Change Card metadata")
+    public ResponseEntity<SubChangeMetadata> updateSubChange(
+            @PathVariable UUID issueId,
+            @RequestParam(required = false) String gitBranch,
+            @RequestParam(required = false) String prStatus,
+            @RequestParam(required = false) String prUrl) {
+        return ResponseEntity.ok(service.updateSubChange(issueId, gitBranch, prStatus, prUrl));
     }
 }

@@ -25,4 +25,13 @@ public class WorklogRequest {
     private String workDescription;
     private LocalDateTime startedAt;
     private UUID authorId;
+
+    @Builder.Default
+    private RemainingEstimateStrategy adjustEstimate = RemainingEstimateStrategy.AUTO;
+
+    @Min(value = 0, message = "Adjustment value cannot be negative")
+    private Long adjustmentSeconds;
+
+    private String visibility;
+    private UUID visibilityGroupId;
 }

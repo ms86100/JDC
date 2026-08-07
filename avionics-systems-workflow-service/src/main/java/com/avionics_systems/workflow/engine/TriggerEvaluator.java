@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -102,7 +103,7 @@ public class TriggerEvaluator {
                             eventType.equals(TriggerEvent.TYPE_BUILD_FAILED);
             case WorkflowTransitionTrigger.TRIGGER_TYPE_PULL_REQUEST ->
                     eventType.equals(TriggerEvent.TYPE_PULL_REQUEST_MERGED);
-            default -> true;
+            default -> false;
         };
     }
 
@@ -303,7 +304,7 @@ public class TriggerEvaluator {
             return true;
         } catch (Exception e) {
             log.warn("Error evaluating generic trigger conditions: {}", e.getMessage());
-            return true; // Default to fire on error
+            return false; // Fail-closed: do not fire on parse error
         }
     }
 
@@ -389,22 +390,22 @@ public class TriggerEvaluator {
         return current.toString().endsWith(expected.toString());
     }
 
-    @SuppressWarnings("unchecked")
     private boolean greaterThan(Object current, Object expected) {
         if (current == null || expected == null) return false;
-        if (current instanceof Comparable && expected instanceof Comparable) {
-            return ((Comparable) current).compareTo(expected) > 0;
+        try {
+            return Double.parseDouble(current.toString()) > Double.parseDouble(expected.toString());
+        } catch (NumberFormatException e) {
+            return current.toString().compareTo(expected.toString()) > 0;
         }
-        return false;
     }
 
-    @SuppressWarnings("unchecked")
     private boolean lessThan(Object current, Object expected) {
         if (current == null || expected == null) return false;
-        if (current instanceof Comparable && expected instanceof Comparable) {
-            return ((Comparable) current).compareTo(expected) < 0;
+        try {
+            return Double.parseDouble(current.toString()) < Double.parseDouble(expected.toString());
+        } catch (NumberFormatException e) {
+            return current.toString().compareTo(expected.toString()) < 0;
         }
-        return false;
     }
 
     private boolean isEmpty(Object value) {
@@ -421,10 +422,10 @@ public class TriggerEvaluator {
         if (trigger.getLastTriggeredAt() == null || trigger.getCooldownSeconds() == null || trigger.getCooldownSeconds() <= 0) {
             return false;
         }
-
-        LocalDateTime cooldownEnd = trigger.getLastTriggeredAt()
-                .plusSeconds(trigger.getCooldownSeconds());
-        return LocalDateTime.now().isBefore(cooldownEnd);
+        Instant cooldownEnd = trigger.getLastTriggeredAt()
+            .atZone(java.time.ZoneId.systemDefault()).toInstant()
+            .plusSeconds(trigger.getCooldownSeconds());
+        return Instant.now().isBefore(cooldownEnd);
     }
 
     /**

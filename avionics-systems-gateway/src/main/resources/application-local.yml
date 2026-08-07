@@ -326,6 +326,87 @@ spring:
           uri: http://localhost:8095
           predicates:
             - Path=/api/test-requests/**
+        # Advanced Test Service endpoints
+        - id: dataset-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/datasets/**
+        - id: shared-step-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/shared-steps/**
+        - id: impact-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/impact/**
+        - id: flaky-test-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/flaky-tests/**
+        - id: quarantine-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/quarantine/**
+        - id: evidence-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/evidence/**
+        - id: environment-matrix-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/environment-matrix/**
+        - id: precondition-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/preconditions/**
+        - id: test-report-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/reports/**
+        - id: requirement-link-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/requirements/**
+        - id: test-import-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/import/**
+        - id: test-traceability-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/traceability/**
+        - id: test-coverage-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/coverage/**
+        - id: test-defect-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/defects/**
+        - id: test-screen-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/screens/**
+        - id: test-timeline-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/timeline/**
+        - id: test-admin-config
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/test-admin/**
+        - id: xray-rest-api
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/raven/**
+        - id: exploratory-session-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/exploratory-sessions/**
+        - id: test-settings-service
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/test-settings/**
         - id: notification-service
           uri: http://localhost:8087
           predicates:

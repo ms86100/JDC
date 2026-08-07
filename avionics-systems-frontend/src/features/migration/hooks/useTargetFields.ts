@@ -8,20 +8,47 @@ import {
 } from '../../../api/fieldApi';
 import type { FieldMapping, MigrationTargetField } from '../types/migration';
 
-/** Fallback when field API is empty or unreachable */
+/** Fallback when field API is empty or unreachable — covers all standard Jira/Avionics Systems fields */
 export const DEFAULT_TARGET_FIELDS: MigrationTargetField[] = [
   { field: 'issueKey', displayName: 'Issue Key', dataType: 'STRING', required: false, description: 'External issue key (e.g. PROJ-1)' },
+  { field: 'issueId', displayName: 'Issue ID', dataType: 'STRING', required: false, description: 'Source system issue ID' },
   { field: 'summary', displayName: 'Summary', dataType: 'STRING', required: true, description: 'Issue title' },
   { field: 'description', displayName: 'Description', dataType: 'TEXT', required: false },
   { field: 'issuetype', displayName: 'Issue Type', dataType: 'ENUM', required: true },
   { field: 'priority', displayName: 'Priority', dataType: 'ENUM', required: false },
   { field: 'status', displayName: 'Status', dataType: 'ENUM', required: false },
+  { field: 'resolution', displayName: 'Resolution', dataType: 'ENUM', required: false },
   { field: 'project', displayName: 'Project Key', dataType: 'STRING', required: true },
+  { field: 'projectName', displayName: 'Project Name', dataType: 'STRING', required: false },
   { field: 'assignee', displayName: 'Assignee', dataType: 'USER', required: false },
   { field: 'reporter', displayName: 'Reporter', dataType: 'USER', required: false },
+  { field: 'creator', displayName: 'Creator', dataType: 'USER', required: false },
+  { field: 'created', displayName: 'Created Date', dataType: 'DATETIME', required: false },
+  { field: 'updated', displayName: 'Updated Date', dataType: 'DATETIME', required: false },
+  { field: 'dueDate', displayName: 'Due Date', dataType: 'DATE', required: false },
+  { field: 'resolutionDate', displayName: 'Resolution Date', dataType: 'DATETIME', required: false },
+  { field: 'environment', displayName: 'Environment', dataType: 'TEXT', required: false },
   { field: 'labels', displayName: 'Labels', dataType: 'ARRAY', required: false },
+  { field: 'components', displayName: 'Components', dataType: 'ARRAY', required: false },
+  { field: 'fixVersions', displayName: 'Fix Versions', dataType: 'VERSION', required: false },
+  { field: 'affectsVersions', displayName: 'Affects Versions', dataType: 'VERSION', required: false },
+  { field: 'securityLevel', displayName: 'Security Level', dataType: 'ENUM', required: false },
   { field: 'parent', displayName: 'Parent Issue', dataType: 'ISSUE', required: false },
-  { field: 'epic', displayName: 'Epic Link', dataType: 'ISSUE', required: false },
+  { field: 'epicLink', displayName: 'Epic Link', dataType: 'ISSUE', required: false },
+  { field: 'epicName', displayName: 'Epic Name', dataType: 'STRING', required: false },
+  { field: 'storyPoints', displayName: 'Story Points', dataType: 'NUMBER', required: false },
+  { field: 'rank', displayName: 'Rank', dataType: 'STRING', required: false },
+  { field: 'sprint', displayName: 'Sprint', dataType: 'STRING', required: false },
+  { field: 'originalEstimate', displayName: 'Original Estimate', dataType: 'NUMBER', required: false },
+  { field: 'remainingEstimate', displayName: 'Remaining Estimate', dataType: 'NUMBER', required: false },
+  { field: 'timeSpent', displayName: 'Time Spent', dataType: 'NUMBER', required: false },
+  { field: 'votes', displayName: 'Votes', dataType: 'NUMBER', required: false },
+  { field: 'watchers', displayName: 'Watchers', dataType: 'ARRAY', required: false },
+  { field: 'linkedIssues', displayName: 'Linked Issues', dataType: 'ARRAY', required: false },
+  { field: 'subtasks', displayName: 'Sub-Tasks', dataType: 'ARRAY', required: false },
+  { field: 'comments', displayName: 'Comments', dataType: 'ARRAY', required: false },
+  { field: 'attachments', displayName: 'Attachments', dataType: 'ARRAY', required: false },
+  { field: 'worklog', displayName: 'Work Log', dataType: 'ARRAY', required: false },
 ];
 
 function mapFieldType(fieldType: string): string {

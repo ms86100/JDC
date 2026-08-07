@@ -15,14 +15,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class VvoService {
+
+    private static final Pattern VVO_NAMING_PATTERN =
+            Pattern.compile("\\[VVO_nFMS_\\w+_\\d+\\.\\d+].*");
 
     private final VvoDefinitionRepository vvoRepo;
     private final HlvvoDefinitionRepository hlvvoRepo;
@@ -34,6 +36,9 @@ public class VvoService {
     @Transactional
     public VvoResponse createVvo(CreateVvoRequest request) {
         log.info("Creating VVO for project: {}", request.getProjectId());
+
+        // G3: Validate VVO naming convention (warn only, don't reject)
+        validateVvoNaming(request.getSummary());
 
         long sequence = vvoRepo.countByProjectId(request.getProjectId()) + 1;
         String issueKey = "VVO-" + sequence;
@@ -62,6 +67,10 @@ public class VvoService {
                 .storyPoints(request.getStoryPoints())
                 .labels(request.getLabels())
                 .componentIds(request.getComponentIds())
+                .ptsMfclLinks(request.getPtsMfclLinks())
+                .nDi(request.getNDi())
+                .referenceDocuments(request.getReferenceDocuments())
+                .dtsBaselineVersion(request.getDtsBaselineVersion())
                 .vvoVersion(1)
                 .archived(false)
                 .build();
@@ -174,6 +183,21 @@ public class VvoService {
         if (request.getStatus() != null) {
             entity.setStatus(request.getStatus());
         }
+        if (request.getPtsMfclLinks() != null) {
+            entity.setPtsMfclLinks(request.getPtsMfclLinks());
+        }
+        if (request.getNDi() != null) {
+            entity.setNDi(request.getNDi());
+        }
+        if (request.getReferenceDocuments() != null) {
+            entity.setReferenceDocuments(request.getReferenceDocuments());
+        }
+        if (request.getDtsBaselineVersion() != null) {
+            entity.setDtsBaselineVersion(request.getDtsBaselineVersion());
+        }
+        if (request.getBaselineVerified() != null) {
+            entity.setBaselineVerified(request.getBaselineVerified());
+        }
 
         entity = vvoRepo.save(entity);
         log.info("VVO updated: {}", id);
@@ -219,6 +243,10 @@ public class VvoService {
                 .storyPoints(original.getStoryPoints())
                 .labels(original.getLabels())
                 .componentIds(original.getComponentIds())
+                .ptsMfclLinks(original.getPtsMfclLinks())
+                .nDi(original.getNDi())
+                .referenceDocuments(original.getReferenceDocuments())
+                .dtsBaselineVersion(original.getDtsBaselineVersion())
                 .archived(false)
                 .createdBy(original.getCreatedBy())
                 .build();
@@ -488,6 +516,11 @@ public class VvoService {
                 .storyPoints(entity.getStoryPoints())
                 .labels(entity.getLabels())
                 .componentIds(entity.getComponentIds())
+                .ptsMfclLinks(entity.getPtsMfclLinks())
+                .nDi(entity.getNDi())
+                .referenceDocuments(entity.getReferenceDocuments())
+                .dtsBaselineVersion(entity.getDtsBaselineVersion())
+                .baselineVerified(entity.getBaselineVerified())
                 .archived(entity.getArchived())
                 .createdBy(entity.getCreatedBy())
                 .createdAt(entity.getCreatedAt())
@@ -538,5 +571,113 @@ public class VvoService {
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();
+    }
+
+    // ========== G3: VVO Naming Validation ==========
+
+    /**
+     * Validates that the VVO summary follows the nFMS naming convention:
+     * [VVO_nFMS_{function}_{version}] description
+     * Logs a warning if the naming convention is not followed (does not reject).
+     */
+    private void validateVvoNaming(String summary) {
+        if (summary == null || summary.isBlank()) {
+            return;
+        }
+        if (!VVO_NAMING_PATTERN.matcher(summary).matches()) {
+            log.warn("VVO summary does not follow nFMS naming convention " +
+                    "[VVO_nFMS_<function>_<version>]: '{}'", summary);
+        }
+    }
+
+    // ========== G7: Label Auto-Assignment Logic ==========
+
+    /**
+     * Suggests labels for a VVO based on associated requirements and supplier applicability,
+     * following nFMS VVO Guidelines rules:
+     * <ul>
+     *   <li>If any requirement has change_rational containing "Change" -> add "Change" label</li>
+     *   <li>If any requirement has "Merge" -> add "Merge" label</li>
+     *   <li>If all requirements are only "Clarification" and/or "No change" -> add "Clarification" label</li>
+     *   <li>If all requirements are only "No change" -> add "NoChange" label</li>
+     *   <li>If supplier applicability indicates Thales-specific deviation -> add "Pureflyt" label</li>
+     * </ul>
+     *
+     * @param associatedRequirements list of requirement change rationals (e.g., "Change", "Merge", "Clarification", "No change")
+     * @param supplierApplicability  supplier applicability string (e.g., "THALES", "PUREFLYT")
+     * @return list of suggested labels
+     */
+    public List<String> suggestLabels(List<String> associatedRequirements, String supplierApplicability) {
+        List<String> labels = new ArrayList<>();
+
+        if (associatedRequirements != null && !associatedRequirements.isEmpty()) {
+            boolean hasChange = false;
+            boolean hasMerge = false;
+            boolean allNoChange = true;
+            boolean allClarificationOrNoChange = true;
+
+            for (String req : associatedRequirements) {
+                if (req == null) continue;
+                String lower = req.toLowerCase();
+
+                if (lower.contains("change") && !lower.contains("no change")) {
+                    hasChange = true;
+                    allNoChange = false;
+                    allClarificationOrNoChange = false;
+                } else if (lower.contains("merge")) {
+                    hasMerge = true;
+                    allNoChange = false;
+                    allClarificationOrNoChange = false;
+                } else if (lower.contains("clarification")) {
+                    allNoChange = false;
+                } else if (lower.contains("no change")) {
+                    // remains compatible with allNoChange and allClarificationOrNoChange
+                } else {
+                    // Unknown rational - breaks the "all" conditions
+                    allNoChange = false;
+                    allClarificationOrNoChange = false;
+                }
+            }
+
+            if (hasChange) {
+                labels.add("Change");
+            }
+            if (hasMerge) {
+                labels.add("Merge");
+            }
+            if (allNoChange && !hasChange && !hasMerge) {
+                labels.add("NoChange");
+            } else if (allClarificationOrNoChange && !hasChange && !hasMerge) {
+                labels.add("Clarification");
+            }
+        }
+
+        // Thales-specific deviation
+        if (supplierApplicability != null) {
+            String lower = supplierApplicability.toLowerCase();
+            if (lower.contains("thales") || lower.contains("pureflyt")) {
+                labels.add("Pureflyt");
+            }
+        }
+
+        return labels;
+    }
+
+    // ========== G8: DTS Baseline Tracking ==========
+
+    /**
+     * Flags all VVOs whose dts_baseline_version does not match the given version
+     * by setting baseline_verified = false. This indicates those VVOs need re-verification
+     * against the new DTS baseline.
+     *
+     * @param dtsVersion the new DTS baseline version to check against
+     * @return the number of VVOs flagged for re-verification
+     */
+    @Transactional
+    public int flagBaselineMismatch(String dtsVersion) {
+        log.info("Flagging VVOs with DTS baseline version mismatch for version: {}", dtsVersion);
+        int count = vvoRepo.flagBaselineNotMatching(dtsVersion);
+        log.info("Flagged {} VVOs as baseline_verified=false for DTS version: {}", count, dtsVersion);
+        return count;
     }
 }

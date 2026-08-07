@@ -37,4 +37,9 @@ public class UpdateVvoRequest {
     private List<String> labels;
     private List<UUID> componentIds;
     private String status;
+    private List<String> ptsMfclLinks;
+    private List<String> nDi;
+    private String referenceDocuments;
+    private String dtsBaselineVersion;
+    private Boolean baselineVerified;
 }

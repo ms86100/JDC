@@ -663,6 +663,389 @@ function renderSysdopsRelations() {
           </table>
         </div>
       </div>
+
+      {/* ══════ IFCS (Flight Control System) SECTION ══════ */}
+      <div style={{ borderTop: `3px solid #0052cc`, marginTop: 32, paddingTop: 24 }}>
+        <SectionHeading>IFCS Integration — Flight Control System V&V Workflows</SectionHeading>
+        <Paragraph>
+          The IFCS (Integrated Flight Control System) project extends SYSDOPS with a three-lane
+          activity model for PFCS/AFS/HLS/Stab&amp;Ctrl work packages. It introduces VVM Cards
+          (V&amp;V Management strategy), IVV Cards (formal validation/verification items),
+          Groups (functionality packaging), and Sub-Change Cards with GIT/Jenkins pipeline automation.
+          These patterns are derived from the 1YC/1V IFCS System Development &amp; Testing project
+          and approximately 30 SIL scripts for customization.
+        </Paragraph>
+      </div>
+
+      {/* ── 11. IFCS Three-Lane Activity Model ── */}
+      <MermaidBlock title="11. IFCS Three-Lane Activity Model (Management / Design / V&V)" chart={`graph TD
+    subgraph MGMT["Management Lane (Project Leader + Work Package Leaders)"]
+        GRP["Group\\n(aircraft functionality)"] --> DEL["Deliverable\\n(expected output)"]
+        GRP --> TSK["Task\\n(specific activity)"]
+    end
+
+    subgraph DESIGN["Design Lane (Product Leader + System Designers)"]
+        DI2["Design Item\\n(high-level evolution)"] --> CC2["Change Card\\n(specific design change)"]
+        CC2 --> SCC["Sub-Change Card\\n(detailed breakdown)"]
+        CC2 -->|"after peer review"| VVM["VVM Card\\n(V&V strategy)"]
+        CC2 -->|"Create Defect"| DEF2["Defect"]
+        SCC -->|"GIT branch auto-creates"| GIT["GIT Branch"]
+        GIT -->|"PR merge → auto DONE"| SCC
+        CC2 -->|"Jenkins pipeline"| PR_REV["Peer Review\\n(DFS attachments)"]
+    end
+
+    subgraph VV["V&V Lane (V&V Manager + V&V Team + Test Team)"]
+        VVM -->|"Launch VVM Pipeline"| TG["Table Grid\\n(Change Impact Analysis)"]
+        TG -->|"Update IVVs (Validation)"| IVV_VAL["IVV Validation Cards"]
+        TG -->|"Update IVVs (Verification)"| IVV_VER["IVV Verification Cards"]
+        IVV_VER --> TEST2["Test\\n(Xray)"]
+        TEST2 --> TEXEC["Test Execution"]
+    end
+
+    DEL -.->|"design work triggers"| DI2
+    DEF2 -.->|"Create Change"| CC2
+    VVM -.->|"handoff artifact\\nDesign → V&V"| TG
+
+    style MGMT fill:#e3fcef,stroke:#00875a
+    style DESIGN fill:#deebff,stroke:#0052cc
+    style VV fill:#fff0e1,stroke:#ff8b00`} />
+
+      {/* ── 12. IFCS Item Relations (from document page 27) ── */}
+      <MermaidBlock title="12. IFCS Item Relations Diagram" chart={`graph LR
+    GRP2["Group"] -->|"is parent of"| DEL2["Deliverable"]
+    GRP2 -->|"is parent of"| TSK2["Task"]
+
+    DI3["Design Item"] -->|"is parent of"| CC3["Change Card"]
+    CC3 -->|"is parent of"| SCC2["Sub-Change Card"]
+    CC3 -->|"Create VVM"| VVM2["VVM Card"]
+    CC3 -->|"tested by"| TEST3["Test"]
+
+    VVM2 -->|"covers"| IVV2["IVV Validation"]
+    VVM2 -->|"covers"| IVV3["IVV Verification"]
+
+    DEF3["Defect"] -->|"created by"| TEST3
+    DEF3 -->|"originating from"| CC3
+    TEXEC2["Test Execution"] -->|"executes"| TEST3
+    TEXEC2 -->|"found defect"| DEF3
+
+    style GRP2 fill:#253858,color:#fff
+    style DEL2 fill:#FF991F,color:#fff
+    style DI3 fill:#00B8D9,color:#fff
+    style CC3 fill:#FF991F,color:#fff
+    style VVM2 fill:#6554C0,color:#fff
+    style IVV2 fill:#FF5630,color:#fff
+    style IVV3 fill:#FF5630,color:#fff
+    style DEF3 fill:#DE350B,color:#fff
+    style TEST3 fill:#00875a,color:#fff`} />
+
+      {/* ── 13. IFCS Change Card Workflow (9-state) ── */}
+      <MermaidBlock title="13. IFCS Change Card Workflow (9-State with GIT/Jenkins)" chart={`stateDiagram-v2
+    [*] --> DRAFT
+    DRAFT --> NEW: Initialize
+    NEW --> PLANNED: Schedule
+    PLANNED --> IN_PROGRESS: Start work
+
+    IN_PROGRESS --> NO_CHANGE_PROPOSAL: No spec change needed
+    NO_CHANGE_PROPOSAL --> NO_CHANGE: Confirm
+
+    IN_PROGRESS --> IN_REVIEW: Spec complete, peer review
+    IN_REVIEW --> IN_PROGRESS: Review rejected
+    IN_REVIEW --> SPEC_FROZEN: Review passed
+    SPEC_FROZEN --> CLOSED: All verification done
+
+    note right of IN_PROGRESS: Action buttons visible:\\n• Create Sub-Change\\n• Create VVM\\n• Create Defect\\n• Create GIT Branch
+    note right of SPEC_FROZEN: "Create Sub-Change" hidden\\n"Create VVM" + "Create Defect" remain\\nDFS/IntegrityCheck attachments\\nfrom Jenkins peer review pipeline
+    note left of CLOSED: "Resolved by" auto-set\\non transition to terminal state`} />
+
+      {/* ── 14. VVM Card Pipeline Integration ── */}
+      <MermaidBlock title="14. VVM Card Pipeline Integration (Jenkins + Table Grid)" chart={`sequenceDiagram
+    participant SD as System Designer
+    participant CC as Change Card
+    participant VVM as VVM Card
+    participant JK as Jenkins Pipeline
+    participant TG as Table Grid
+    participant VM as V&V Manager
+    participant IVV as IVV Cards
+
+    SD->>CC: Complete spec changes, peer review passed
+    SD->>VVM: "Create VVM" button from Change Card
+    Note over VVM: Status: TO DO\\nFields: Team, Applicability, AC Type,\\nAC Version, Engine Type, Computer,\\nPartition, Function, Scope
+
+    VM->>VVM: Transition to IN PROGRESS
+    VM->>JK: "Launch VVM Pipeline" button
+    JK->>TG: Fill Validation Table Grid\\n(requirement IDs, levels, titles,\\nchange tags, partitions, products)
+    JK->>TG: Fill Verification Table Grid\\n(same structure + SHA, checksums)
+    JK->>VVM: Attach IntegrityChecks_Report + SimBA files
+
+    VM->>IVV: "Update IVVs (Validation)" button
+    Note over IVV: Creates one IVV Card per row\\nin Validation Table Grid
+    VM->>IVV: "Update IVVs (Verification)" button
+    Note over IVV: Creates one IVV Card per row\\nin Verification Table Grid\\n(may create in different project: NIST-*)
+
+    VM->>VVM: Transition to CIA FROZEN
+    Note over VVM: Pipeline Status shows:\\nScope: OK|KO, Integrity: OK|KO,\\nValidMat: OK|KO, CIA: OK|KO
+
+    VM->>VVM: Transition to DONE\\n(when all IVVs are DONE/CANCELLED)`} />
+
+      {/* ── 15. GIT/Jenkins Automation ── */}
+      <MermaidBlock title="15. GIT/Jenkins Automation Flow (Branch → PR → Pipeline)" chart={`sequenceDiagram
+    participant SD as System Designer
+    participant CC as Change Card
+    participant SCC as Sub-Change Card
+    participant GIT as GIT Repository
+    participant JK as Jenkins
+    participant JIRA as JIRA Ticket
+
+    SD->>CC: Create branch from "Git Integration" section
+    Note over CC: Branch name: IFCS-17519_LAWS_FaLAFReg
+
+    SD->>SCC: Create branch from Sub-Change Card
+    Note over SCC: Auto-transition: TO DO → IN PROGRESS\\n(triggered by branch creation)
+
+    SD->>GIT: Commit specification changes
+    SD->>GIT: Create Pull Request
+
+    GIT->>JK: PR triggers Jenkins pipeline
+    JK->>JK: Generate DFS (Diff Specification) documents
+    JK->>JK: Run IntegrityChecks_Report
+    JK->>JK: Generate SimBA analysis
+    JK->>JIRA: Attach generated files to Change Card:\\n• DIFF_IFCS_*.html\\n• Extracted_DFSNodes_*.xml\\n• IntegrityChecks_Report_*.html\\n• SimBA_*.xml
+
+    GIT->>GIT: Reviewer approves PR
+    GIT->>SCC: PR merge detected
+    Note over SCC: Auto-transition: IN PROGRESS → DONE\\n(triggered by PR merge event)
+
+    Note over CC: Change Card stays in current status\\n(parent does not auto-transition)`} />
+
+      {/* ── 16. IFCS Defect Workflow ── */}
+      <MermaidBlock title="16. IFCS Defect Workflow (9-State)" chart={`stateDiagram-v2
+    [*] --> OPEN
+    OPEN --> DO_ANALYSIS: Investigate
+
+    DO_ANALYSIS --> READY_FOR_REVIEW: Analysis complete
+    READY_FOR_REVIEW --> SOLUTION_REQUESTED: Fix needed
+    READY_FOR_REVIEW --> TO_BE_REFINED: Needs clarification
+    READY_FOR_REVIEW --> CANCELLED: Not a defect
+
+    TO_BE_REFINED --> DO_ANALYSIS: Clarified
+
+    SOLUTION_REQUESTED --> TO_BE_ASSESSED: Solution proposed
+    TO_BE_ASSESSED --> RESOLVED: Fix verified
+    TO_BE_ASSESSED --> UNRESOLVED: Cannot fix
+
+    RESOLVED --> CLOSED: Complete
+    UNRESOLVED --> CLOSED: Accepted
+
+    note right of OPEN: Action buttons:\\n• Create Change\\n• Create Defect (child)
+    note right of SOLUTION_REQUESTED: Link to Change Card\\nfor design fix tracking
+    note left of CANCELLED: Reachable from any state`} />
+
+      {/* ── 17. IFCS Test Workflow ── */}
+      <MermaidBlock title="17. IFCS Test Workflow (9-State, Xray)" chart={`stateDiagram-v2
+    [*] --> DRAFT
+    DRAFT --> IMPACT_ANALYSIS: Scope assessment
+    IMPACT_ANALYSIS --> TO_DO: Impact assessed
+    TO_DO --> IN_PROGRESS: Start writing
+    TO_DO --> DESCOPED: Not needed
+    IN_PROGRESS --> INTERNAL_REVIEW: Test procedure complete
+    INTERNAL_REVIEW --> DESIGN_REVIEW: Internal review passed
+    INTERNAL_REVIEW --> TO_BE_REFINED: Needs rework
+    DESIGN_REVIEW --> DONE: Design review passed
+    DESIGN_REVIEW --> TO_BE_REFINED: Review failed
+    TO_BE_REFINED --> IN_PROGRESS: Rework started
+    DONE --> CANCELLED: Descoped later
+
+    note right of DRAFT: Transition screens show\\nmandatory fields per transition
+    note right of DESIGN_REVIEW: Peer review by Design Office\\nbefore formal verification`} />
+
+      {/* ── IFCS vs SYSDOPS Comparison ── */}
+      <div className="ads-card" style={{ marginBottom: 20 }}>
+        <h4 className="ads-card-title">IFCS vs SYSDOPS Feature Comparison</h4>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead>
+              <tr><th>IFCS Feature</th><th>SYSDOPS Status</th><th>Gap</th></tr>
+            </thead>
+            <tbody>
+              {[
+                ['Group (activity packaging)', 'Planned', 'New issue type needed'],
+                ['Deliverable (output tracking)', 'Implemented', 'Entity exists in issue-service'],
+                ['Task (activity breakdown)', 'Native Jira', 'Standard sub-task'],
+                ['Design Item', 'Implemented', 'DesignItemMetadata in issue-service'],
+                ['Change Card (9-state IFCS)', 'Partial (5-state)', 'IFCS adds DRAFT, NEW, PLANNED, SPEC FROZEN states'],
+                ['Sub-Change Card', 'Planned', 'New type with GIT auto-transition'],
+                ['VVM Card (V&V strategy)', 'Planned', 'New type with Jenkins/Table Grid pipeline'],
+                ['IVV Card (validation/verification)', 'Planned', 'Auto-generated from VVM Table Grid'],
+                ['Defect (9-state)', 'Implemented (TechEvent 12-state)', 'IFCS Defect maps to TechEvent workflow'],
+                ['Test (9-state Xray)', 'Implemented (6-state)', 'IFCS adds IMPACT_ANALYSIS, DESIGN_REVIEW, DESCOPED'],
+                ['Test Execution', 'Implemented', 'Standard Xray test execution'],
+                ['BigPicture (Gantt)', 'Implemented', 'Plan service with goals and roadmaps'],
+                ['GIT branch auto-transition', 'Planned', 'Sub-Change → IN PROGRESS on branch create'],
+                ['Jenkins peer review pipeline', 'Planned', 'DFS/IntegrityCheck attachment generation'],
+                ['Jenkins VVM pipeline', 'Planned', 'Table Grid fill + IVV auto-generation'],
+                ['Table Grid (impact analysis)', 'Planned', 'Validation + Verification matrices on VVM Card'],
+              ].map(([feat, status, gap], i) => (
+                <tr key={i}>
+                  <td style={{ fontWeight: 500 }}>{feat}</td>
+                  <td><span className={`ads-badge ads-badge--${status === 'Implemented' ? 'verified' : status === 'Partial (5-state)' ? 'to_be_verified' : 'new'}`}>{status}</span></td>
+                  <td style={{ fontSize: 12 }}>{gap}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {/* ══════ nFMS VVO GUIDELINES SECTION ══════ */}
+      <div style={{ borderTop: '3px solid #00875a', marginTop: 32, paddingTop: 24 }}>
+        <SectionHeading>nFMS VVO Guidelines — Verification &amp; Validation Objective Authoring</SectionHeading>
+        <Paragraph>
+          The nFMS VVO Guidelines (X2270RP2215975 Issue 2) define the detailed process for writing,
+          reviewing, and releasing Verification &amp; Validation Objectives for the next-generation
+          Flight Management System. VVOs cover all A/C configurations (SA Family, A330, A350) with
+          two suppliers (Honeywell and Thales). At certification level, nFMS is a new product — Airbus
+          must show V&amp;V evidence for ALL system requirements.
+        </Paragraph>
+      </div>
+
+      {/* ── 18. HLVVO Authoring Process ── */}
+      <MermaidBlock title="18. HLVVO Authoring Process (4 Phases, ~11 Weeks)" chart={`sequenceDiagram
+    participant KOM as Phase 0: Kick-Off
+    participant DO as Phase 1: DO Review (5 wks)
+    participant LAB as Phase 2: LAB Review (3 wks)
+    participant SUP as Phase 3: Supplier Review (3 wks)
+
+    Note over KOM: Contact design focal\\nOrganize meeting with:\\n- Design specialist (1YAXD)\\n- HLVVO writing responsible\\n- LAB specialist (1VVAN)\\nRecord meeting, build review package
+
+    KOM->>DO: 1st HLVVO issue (2 weeks writing)
+    DO->>DO: DO + MSF owner proofreading (2 weeks)
+    DO->>DO: HLVVO updates (1 week)
+    Note over DO: NOK → return to writing\\nOK → proceed
+
+    DO->>LAB: Provide review package to LAB team
+    LAB->>LAB: LAB proofreading (2 weeks)
+    LAB->>LAB: HLVVO updates (1 week)
+    Note over LAB: NOK → return to writing\\nOK → VVO Allocation phase\\n(checklist review)
+
+    LAB->>SUP: Send to Supplier(s)
+    SUP->>SUP: Supplier review (2 weeks)
+    SUP->>SUP: HLVVO updates (1 week)
+    Note over SUP: NOK → return to writing\\nOK → HLVVO Release version\\n(Airbus + Supplier copies)`} />
+
+      {/* ── 19. HLVVO Workflow (10 States) ── */}
+      <MermaidBlock title="19. HLVVO Workflow — Full 10-State (per VVO Guidelines p.36)" chart={`stateDiagram-v2
+    [*] --> NEW
+    NEW --> PLANNED: Start Planning (target_date required)
+    PLANNED --> VVO_WRITING_IN_PROGRESS: Begin VVO Writing
+
+    VVO_WRITING_IN_PROGRESS --> DESIGN_OFFICE_IN_REVIEW: Send for DO Review
+    DESIGN_OFFICE_IN_REVIEW --> VVO_WRITING_IN_PROGRESS: DO Review NOK
+    DESIGN_OFFICE_IN_REVIEW --> LAB_IN_REVIEW: DO Review OK
+
+    LAB_IN_REVIEW --> VVO_WRITING_IN_PROGRESS: LAB Review NOK
+    LAB_IN_REVIEW --> SUPPLIER_AIRBUS_VVO_ASSIGNMENT: LAB Review OK (VVO Allocation)
+
+    SUPPLIER_AIRBUS_VVO_ASSIGNMENT --> SUPPLIER_IN_REVIEW: Send to Supplier
+    SUPPLIER_IN_REVIEW --> VVO_WRITING_IN_PROGRESS: Supplier NOK
+    SUPPLIER_IN_REVIEW --> AUTHORIZE: Supplier OK
+
+    AUTHORIZE --> CLOSED: Close HLVVO
+
+    note right of ON_HOLD: Reachable from any active state\\nResumes to VVO_WRITING
+    note right of CANCELLED: Reachable from any state
+
+    state ON_HOLD
+    state CANCELLED`} />
+
+      {/* ── 20. HLVVO Global Architecture ── */}
+      <MermaidBlock title="20. HLVVO Global Architecture — Requirement Traceability" chart={`graph TD
+    MFCL["MFCL Requirements\\n(Functional part of SRD)"]
+    DTS["DTS Requirements\\n(Detailed Technical Spec)"]
+    DI["Design Items / Design Logs\\n(Design changes from JDP)"]
+    SID["SID Requirements\\n(System Interface Documents)"]
+
+    MFCL -->|"No Design Change"| GF_VVO["Good Functioning VVOs\\n(Low granularity)\\nLabels: NoChange, Clarification"]
+    MFCL -->|"Design Change"| CM_VVO["Change/Merge VVOs\\n(High granularity)\\nLabels: Change, Merge"]
+    DTS -->|"change/merge reqs"| CM_VVO
+    DI -->|"linked via nDi field"| CM_VVO
+    SID -->|"interface changes"| IF_VVO["Interface VVOs\\nLabels: Change"]
+
+    GF_VVO --> HLVVO_FC["HLVVO_nFMS_FC_<domain>\\n(Functional Cluster)"]
+    CM_VVO --> HLVVO_FC
+    IF_VVO --> HLVVO_IF["HLVVO_nFMS_IF_<interface>\\n(Interface)"]
+    CM_VVO --> HLVVO_MSF["HLVVO_nFMS_MSF_<name>\\n(Multi-System Function)"]
+
+    HLVVO_FC --> LTR["LTR / FTR\\n(Test Request)"]
+    HLVVO_IF --> LTR
+    HLVVO_MSF --> LTR
+    LTR --> TP["Test Procedures\\n(written by LAB)"]
+    TP --> TRA["TRA\\n(Test Report Analysis)"]
+
+    style GF_VVO fill:#36b37e,color:#fff
+    style CM_VVO fill:#ff5630,color:#fff
+    style IF_VVO fill:#6554c0,color:#fff
+    style HLVVO_FC fill:#0052cc,color:#fff
+    style HLVVO_IF fill:#0052cc,color:#fff
+    style HLVVO_MSF fill:#0052cc,color:#fff`} />
+
+      {/* ── 21. VVO Naming Convention ── */}
+      <div className="ads-card" style={{ marginBottom: 20 }}>
+        <h4 className="ads-card-title">21. VVO Naming Convention &amp; Granularity Rules</h4>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead>
+              <tr><th>VVO Type</th><th>Supplier</th><th>Summary Format</th><th>Labels</th><th>Granularity</th></tr>
+            </thead>
+            <tbody>
+              {[
+                ['Basic functional', 'Both', '[VVO_nFMS_DIRTO_1.0] To check the display of DIR TO path on ND', 'Change or Merge', 'High'],
+                ['Basic functional', 'Honeywell', '[VVO_nFMS_DIRTO_2.0] To check the display on abeam points - Honeywell', 'Change', 'High'],
+                ['Basic functional', 'Thales', '[VVO_nFMS_DIRTO_3.0] To check the display on abeam points - Thales', 'Pureflyt', 'High'],
+                ['Robustness case', 'Both', '[VVO_nFMS_DIRTO_1.1] To check the display of DIR TO path - Robustness', 'Change', 'High'],
+                ['Good Functioning', 'Both', '[VVO_nFMS_DIRTO_4.0] To check the basic DIR TO waypoint insertion', 'NoChange', 'Low'],
+                ['MFD-MCDU HMI', 'Both', '[VVO_nFMS_MFD_FPLN_PAGE] To check F-PLN page display fields', 'NoChange', 'Low'],
+              ].map(([type, sup, fmt, lbl, gran], i) => (
+                <tr key={i}>
+                  <td style={{ fontWeight: 500 }}>{type}</td>
+                  <td>{sup}</td>
+                  <td style={{ fontFamily: 'monospace', fontSize: 11 }}>{fmt}</td>
+                  <td><span className={`ads-badge ads-badge--${lbl === 'Change' ? 'cancelled' : lbl === 'NoChange' ? 'verified' : 'to_be_verified'}`}>{lbl}</span></td>
+                  <td>{gran}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <Paragraph>
+          Rules: Unit increments on new VVOs regardless of supplier. Decimal increments for specific
+          test cases (robustness, corner, failure) linked to a parent VVO. Summaries must begin with
+          &quot;To check...&quot;. Good Functioning VVOs are written FIRST before Change/Merge VVOs.
+        </Paragraph>
+      </div>
+
+      {/* ── 22. nFMS A/C Configurations ── */}
+      <div className="ads-card" style={{ marginBottom: 20 }}>
+        <h4 className="ads-card-title">22. nFMS Target Aircraft Configurations</h4>
+        <div className="ads-table-wrap">
+          <table className="ads-table">
+            <thead>
+              <tr><th>Family</th><th>Configurations</th><th>Suppliers</th></tr>
+            </thead>
+            <tbody>
+              {[
+                ['SA Family', 'A319 NEO, A320 NEO, A321 ACF NEO, A321 XLR, A320/A321 New Avionics', 'Honeywell + Thales'],
+                ['A330 Family', 'A330 CEO (-200/-300), A330 NEO (-800/-900)', 'Honeywell + Thales'],
+                ['A350 Family', 'A350-900, A350-1000, A350F', 'Honeywell only'],
+              ].map(([fam, cfg, sup], i) => (
+                <tr key={i}>
+                  <td style={{ fontWeight: 600 }}>{fam}</td>
+                  <td style={{ fontSize: 12 }}>{cfg}</td>
+                  <td>{sup}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

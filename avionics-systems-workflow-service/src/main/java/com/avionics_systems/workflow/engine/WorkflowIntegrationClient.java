@@ -19,6 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+// TODO [L10]: Add circuit breaker (e.g. resilience4j @CircuitBreaker) around HTTP calls to downstream
+//  services (issue-service, project-service, notification-service, etc.) to prevent cascading failures
+//  when a downstream service is unavailable. Requires adding resilience4j dependency to pom.xml.
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -93,7 +96,7 @@ public class WorkflowIntegrationClient {
             log.error("Failed to fetch issue {} from both issue-service and test-service: {}", issueId, e.getMessage());
         }
 
-        return new HashMap<>();
+        throw new RuntimeException("Failed to fetch issue " + issueId + " from both issue-service and test-service");
     }
 
     @SuppressWarnings("unchecked")
@@ -125,7 +128,7 @@ public class WorkflowIntegrationClient {
             return response != null ? castMap(response) : new HashMap<>();
         } catch (Exception e) {
             log.warn("Failed to fetch user {}: {}", userId, e.getMessage());
-            return new HashMap<>();
+            throw new RuntimeException("Failed to fetch user " + userId);
         }
     }
 
@@ -301,6 +304,29 @@ public class WorkflowIntegrationClient {
                     Map.class);
         } catch (Exception e) {
             log.warn("Could not add transition comment: {}", e.getMessage());
+        }
+    }
+
+    public void logWorkOnIssue(UUID issueId, UUID userId, long timeSpentSeconds, String description) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            if (userId != null) {
+                headers.set("X-User-Id", userId.toString());
+            }
+            Map<String, Object> body = new HashMap<>();
+            body.put("timeSpentSeconds", timeSpentSeconds);
+            if (description != null) {
+                body.put("workDescription", description);
+            }
+            body.put("adjustEstimate", "AUTO");
+            restTemplate().postForObject(
+                    issueServiceUrl + "/api/issues/" + issueId + "/worklogs",
+                    new HttpEntity<>(body, headers),
+                    Map.class);
+            log.info("Logged {}s work on issue {} via transition", timeSpentSeconds, issueId);
+        } catch (Exception e) {
+            log.warn("Could not log work on issue {}: {}", issueId, e.getMessage());
         }
     }
 

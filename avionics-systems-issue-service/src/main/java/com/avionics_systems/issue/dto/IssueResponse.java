@@ -85,6 +85,7 @@ public class IssueResponse {
     private Double workRatio;
     private Long aggregateTimeEstimate;
     private Long aggregateTimeSpent;
+    private Long aggregateRemainingEstimate;
 
     // Organization (sidebar details)
     private UUID[] componentIds;

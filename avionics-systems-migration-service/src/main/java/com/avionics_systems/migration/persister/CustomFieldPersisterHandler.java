@@ -187,25 +187,7 @@ public class CustomFieldPersisterHandler {
         if (prefixed.isPresent()) {
             return prefixed.get().getFieldKey();
         }
-        // Auto-provision: field definition not found, create it on demand
-        try {
-            String displayName = key;
-            if (key.startsWith("customfield_")) {
-                // Try to get human-readable name from the entity mapper's registry
-                String nameKey = key + ".name";
-                // The name is not directly available here, so use the key as-is
-                // or generate a readable name from the key
-                displayName = key.replace("customfield_", "Custom Field ");
-            }
-            FieldDefinition provisioned = fieldProvisioningService.provisionCustomField(
-                    displayName, "TEXT", SYSTEM_USER);
-            if (provisioned != null) {
-                log.info("Auto-provisioned custom field definition: {} -> {}", key, provisioned.getFieldKey());
-                return provisioned.getFieldKey();
-            }
-        } catch (Exception e) {
-            log.debug("Could not auto-provision field {}: {}", key, e.getMessage());
-        }
+        // Field not found — return normalized key; the orchestrator pre-provisions fields before import
         return normalized;
     }
 

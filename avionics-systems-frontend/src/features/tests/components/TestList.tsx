@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import combinedApi, { TestResponse } from '../../../api/testApi';
 import { TestStatusBadge, TestTypeBadge } from './TestComponents';
-import { Trash2, X, AlertTriangle, Loader2 } from 'lucide-react';
+import { Trash2, X, AlertTriangle, Loader2, Copy, Download, FolderInput, Tags, UserPlus } from 'lucide-react';
 
 interface TestListProps {
   projectId: string;
@@ -82,6 +82,50 @@ export const TestList: React.FC<TestListProps> = ({ projectId, folderId, filter 
     },
   });
 
+  // Clone mutation
+  const cloneMutation = useMutation({
+    mutationFn: (testId: string) => combinedApi.cloneTest(testId, projectId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tests'] });
+      loadTests();
+    },
+  });
+
+  // Bulk status update
+  const bulkStatusMutation = useMutation({
+    mutationFn: (status: string) => combinedApi.bulkUpdateStatus({ testIds: Array.from(selectedTests), status }, projectId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tests'] });
+      loadTests();
+      setSelectedTests(new Set());
+    },
+  });
+
+  // Export tests as CSV
+  const handleExport = () => {
+    const testsToExport = selectedTests.size > 0 ? tests.filter(t => selectedTests.has(t.id)) : tests;
+    const headers = ['Key', 'Name', 'Type', 'Status', 'Priority', 'Labels', 'Description'];
+    const rows = testsToExport.map(t => [
+      t.issueKey || '',
+      t.name,
+      t.testType,
+      t.testStatus,
+      t.priority || '',
+      (t.labels || []).join('; '),
+      (t.description || '').replace(/"/g, '""'),
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(f => `"${f}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `tests-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleDeleteClick = (testId: string, testName?: string) => {
     setDeleteConfirm({ open: true, testId, testName });
   };
@@ -117,15 +161,44 @@ export const TestList: React.FC<TestListProps> = ({ projectId, folderId, filter 
 
   return (
     <div className="test-list">
+      {/* Toolbar */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="text-sm text-gray-500">{tests.length} test(s)</div>
+        <button onClick={handleExport} className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
+          <Download className="w-4 h-4" /> Export CSV
+        </button>
+      </div>
+
       {selectedTests.size > 0 && (
         <div className="bulk-actions mb-4 p-3 bg-blue-50 rounded-lg flex items-center justify-between">
-          <span>{selectedTests.size} test(s) selected</span>
-          <div className="flex gap-2">
-            <button className="btn btn-sm btn-secondary">Add to Test Set</button>
-            <button className="btn btn-sm btn-secondary">Add to Test Plan</button>
-            <button onClick={handleBulkDelete} disabled={bulkDeleteMutation.isPending} className="btn btn-sm btn-danger flex items-center gap-1">
+          <span className="font-medium">{selectedTests.size} test(s) selected</span>
+          <div className="flex gap-2 flex-wrap">
+            <select
+              onChange={(e) => { if (e.target.value) bulkStatusMutation.mutate(e.target.value); e.target.value = ''; }}
+              className="text-sm border border-gray-300 rounded px-2 py-1"
+              defaultValue=""
+            >
+              <option value="" disabled>Update Status...</option>
+              <option value="DRAFT">Draft</option>
+              <option value="READY">Ready</option>
+              <option value="APPROVED">Approved</option>
+              <option value="DEPRECATED">Deprecated</option>
+            </select>
+            <button className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1">
+              <FolderInput className="w-3 h-3" /> Move to Folder
+            </button>
+            <button className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1">
+              <Tags className="w-3 h-3" /> Add Labels
+            </button>
+            <button className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1">
+              <UserPlus className="w-3 h-3" /> Assign
+            </button>
+            <button onClick={handleBulkDelete} disabled={bulkDeleteMutation.isPending} className="px-3 py-1 text-sm bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100 flex items-center gap-1">
               {bulkDeleteMutation.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
-              Delete Selected
+              <Trash2 className="w-3 h-3" /> Delete
+            </button>
+            <button onClick={() => setSelectedTests(new Set())} className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700">
+              <X className="w-3 h-3" />
             </button>
           </div>
         </div>
@@ -192,12 +265,12 @@ export const TestList: React.FC<TestListProps> = ({ projectId, folderId, filter 
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
-                    {test.labels?.slice(0, 3).map((label, i) => (
+                    {(Array.isArray(test.labels) ? test.labels : []).slice(0, 3).map((label, i) => (
                       <span key={i} className="px-2 py-0.5 bg-gray-100 rounded text-xs">
                         {label}
                       </span>
                     ))}
-                    {test.labels?.length > 3 && (
+                    {Array.isArray(test.labels) && test.labels.length > 3 && (
                       <span className="px-2 py-0.5 bg-gray-100 rounded text-xs">
                         +{test.labels.length - 3}
                       </span>
@@ -218,6 +291,14 @@ export const TestList: React.FC<TestListProps> = ({ projectId, folderId, filter 
                     >
                       Execute
                     </Link>
+                    <button
+                      onClick={() => cloneMutation.mutate(test.id)}
+                      disabled={cloneMutation.isPending}
+                      className="text-purple-600 hover:text-purple-800 text-sm flex items-center gap-1"
+                      aria-label="Clone test"
+                    >
+                      <Copy className="w-3 h-3" /> Clone
+                    </button>
                     <button
                       onClick={() => handleDeleteClick(test.id, test.name)}
                       className="text-red-600 hover:text-red-800 text-sm"

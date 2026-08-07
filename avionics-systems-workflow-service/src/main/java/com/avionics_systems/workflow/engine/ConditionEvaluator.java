@@ -12,6 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Evaluates workflow conditions for transitions.
@@ -173,12 +176,23 @@ public class ConditionEvaluator {
             List<Map<String, Object>> raw = objectMapper.readValue(json, List.class);
             List<WorkflowCondition> result = new ArrayList<>();
             for (Map<String, Object> m : raw) {
+                String conditionData = null;
+                if (m.get("conditionData") != null) {
+                    Object cd = m.get("conditionData");
+                    if (cd instanceof Map || cd instanceof List) {
+                        try { conditionData = objectMapper.writeValueAsString(cd); }
+                        catch (Exception ignored) { conditionData = String.valueOf(cd); }
+                    } else {
+                        conditionData = String.valueOf(cd);
+                    }
+                }
                 result.add(WorkflowCondition.builder()
                         .conditionType(String.valueOf(m.get("conditionType")))
                         .fieldName(m.get("fieldName") != null ? String.valueOf(m.get("fieldName")) : null)
                         .operator(m.get("operator") != null ? String.valueOf(m.get("operator")) : null)
                         .value(m.get("value") != null ? String.valueOf(m.get("value")) : null)
                         .negate(Boolean.TRUE.equals(m.get("negate")))
+                        .conditionData(conditionData)
                         .build());
             }
             return result;
@@ -189,8 +203,8 @@ public class ConditionEvaluator {
     }
 
     private boolean userInGroup(String requiredGroup, Map<String, Object> userData) {
-        if (requiredGroup == null) {
-            return true;
+        if (requiredGroup == null || requiredGroup.isBlank()) {
+            return false;
         }
         Object groups = userData.get("groups");
         if (groups instanceof List<?> list) {
@@ -259,7 +273,26 @@ public class ConditionEvaluator {
             case WorkflowCondition.OP_NOT_CONTAINS -> !actualStr.toLowerCase().contains(expected.toLowerCase());
             case WorkflowCondition.OP_IN -> Arrays.stream(expected.split(",")).map(String::trim)
                     .anyMatch(v -> actualStr.equalsIgnoreCase(v));
-            default -> actualStr.equalsIgnoreCase(expected);
+            case "GREATER_THAN", ">" -> {
+                try { yield Double.parseDouble(actualStr) > Double.parseDouble(expected); }
+                catch (NumberFormatException e) { yield actualStr.compareTo(expected) > 0; }
+            }
+            case "LESS_THAN", "<" -> {
+                try { yield Double.parseDouble(actualStr) < Double.parseDouble(expected); }
+                catch (NumberFormatException e) { yield actualStr.compareTo(expected) < 0; }
+            }
+            case "STARTS_WITH" -> actualStr.toLowerCase().startsWith(expected.toLowerCase());
+            case "ENDS_WITH" -> actualStr.toLowerCase().endsWith(expected.toLowerCase());
+            case "REGEX" -> {
+                try { yield java.util.regex.Pattern.matches(expected, actualStr); }
+                catch (Exception e) { log.warn("Invalid regex pattern: {}", expected); yield false; }
+            }
+            case "NOT_IN" -> java.util.Arrays.stream(expected.split(",")).map(String::trim)
+                .noneMatch(v -> actualStr.equalsIgnoreCase(v));
+            default -> {
+                log.warn("Unknown condition operator: {}", operator);
+                yield actualStr.equalsIgnoreCase(expected);
+            }
         };
     }
 
@@ -271,7 +304,13 @@ public class ConditionEvaluator {
         String direction = stringVal(config.get("direction"), "ANY").toUpperCase();
         boolean requireAll = Boolean.TRUE.equals(config.get("requireAll"));
 
-        List<Map<String, Object>> links = integrationClient.fetchLinkedIssuesForWorkflow(ctx.getIssueId());
+        List<Map<String, Object>> links;
+        try {
+            links = integrationClient.fetchLinkedIssuesForWorkflow(ctx.getIssueId());
+        } catch (Exception e) {
+            log.error("Failed to fetch linked issues for condition evaluation: {}", e.getMessage());
+            return false; // fail-closed
+        }
         if (links.isEmpty()) {
             return !requireAll;
         }
@@ -372,7 +411,16 @@ public class ConditionEvaluator {
         pluginCtx.put("screenInput", ctx.getScreenInput() != null ? ctx.getScreenInput() : Map.of());
         pluginCtx.put("comment", ctx.getComment());
         pluginCtx.put("resolutionId", ctx.getResolutionId() != null ? ctx.getResolutionId().toString() : null);
-        return pluginRegistry.evaluateCondition(key, pluginCtx);
+        try {
+            return CompletableFuture.supplyAsync(() -> pluginRegistry.evaluateCondition(key, pluginCtx))
+                .get(10, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            log.error("Script condition '{}' timed out after 10s", key);
+            return false;
+        } catch (Exception e) {
+            log.error("Script condition '{}' failed: {}", key, e.getMessage());
+            return false;
+        }
     }
 
     private UUID parseUuid(Object value) {

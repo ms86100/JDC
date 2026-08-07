@@ -267,7 +267,7 @@ export const TestExecutionPanel: React.FC<TestExecutionPanelProps> = ({
         <div className="execution-history mt-8">
           <h4 className="font-medium mb-3">Execution History</h4>
           <div className="space-y-2">
-            {executions.slice(0, 5).map((exec) => (
+            {(Array.isArray(executions) ? executions : []).slice(0, 5).map((exec) => (
               <div
                 key={exec.id}
                 className="flex items-center justify-between p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer"

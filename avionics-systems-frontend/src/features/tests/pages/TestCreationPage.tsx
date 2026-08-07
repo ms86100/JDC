@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import combinedApi, { CreateTestRequest, TestStep } from '../../../api/testApi';
-import advancedApi from '../../../api/testApi';
 import { projectApi } from '../../../api/projectApi';
 import { searchApi } from '../../../api/serviceApi';
 import {
@@ -44,8 +43,8 @@ const WIZARD_STEPS: StepConfig[] = [
   { id: 'review', title: 'Review', icon: <Check className="w-4 h-4" />, description: 'Review and create test' },
 ];
 
-// Test types
-const TEST_TYPES = [
+// Fallback test types (used when API is unavailable)
+const FALLBACK_TEST_TYPES = [
   { value: 'MANUAL', label: 'Manual Test', description: 'Manual step-by-step execution' },
   { value: 'AUTOMATED', label: 'Automated Test', description: 'CI/CD integrated automated test' },
   { value: 'BDD', label: 'BDD / Cucumber', description: 'Behavior-driven development scenario' },
@@ -100,6 +99,20 @@ export const TestCreationPage: React.FC = () => {
   const [newRequirement, setNewRequirement] = useState('');
   const [searchRequirements, setSearchRequirements] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Fetch dynamic test types from admin config (fallback to hardcoded)
+  const { data: dynamicTestTypes } = useQuery({
+    queryKey: ['test-admin', 'test-types'],
+    queryFn: () => combinedApi.getTestTypes(),
+    staleTime: 60000,
+  });
+  const TEST_TYPES = dynamicTestTypes?.length
+    ? dynamicTestTypes.filter(t => t.isActive).map(t => ({
+        value: t.name,
+        label: t.displayName,
+        description: t.description || t.displayName,
+      }))
+    : FALLBACK_TEST_TYPES;
 
   // Fetch projects from API
   const { data: availableProjects = [], isLoading: projectsLoading } = useQuery({
@@ -264,11 +277,17 @@ export const TestCreationPage: React.FC = () => {
   const handleSubmit = () => {
     if (!validateStep(currentStep)) return;
 
+    const { testSteps, ...rest } = formData;
     const cleanData = {
-      ...formData,
-      testSteps: formData.testSteps.filter(
-        (s) => s.description.trim() || s.expectedResult.trim()
-      ),
+      ...rest,
+      steps: testSteps
+        .filter((s) => s.description.trim() || s.expectedResult.trim())
+        .map((s) => ({
+          stepOrder: s.index,
+          description: s.description,
+          expectedResult: s.expectedResult,
+          testData: s.testData,
+        })),
     };
 
     createTestMutation.mutate(cleanData);

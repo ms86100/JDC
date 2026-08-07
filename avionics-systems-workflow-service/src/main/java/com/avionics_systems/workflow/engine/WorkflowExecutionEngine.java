@@ -84,6 +84,8 @@ public class WorkflowExecutionEngine {
 
     private final TransitionIdempotencyService idempotencyService;
 
+    private final WorkflowEventPublisher eventPublisher;
+
 
 
     @Value("${avionics-systems.workflow.transition-fallback:false}")
@@ -248,6 +250,36 @@ public class WorkflowExecutionEngine {
 
             log.error("Transition execution failed for issue {}: {}", issueId, e.getMessage());
 
+            try {
+
+                if (request.getTransitionId() != null) {
+
+                    historyRepository.save(WorkflowTransitionHistory.builder()
+
+                            .issueId(issueId)
+
+                            .projectId(request.getProjectId())
+
+                            .transitionId(request.getTransitionId())
+
+                            .userId(request.getUserId())
+
+                            .success(false)
+
+                            .errorMessage(e.getMessage())
+
+                            .executedAt(LocalDateTime.now())
+
+                            .build());
+
+                }
+
+            } catch (Exception historyEx) {
+
+                log.warn("Failed to record error history: {}", historyEx.getMessage());
+
+            }
+
             return TransitionExecutionResponse.builder()
 
                     .success(false)
@@ -284,7 +316,15 @@ public class WorkflowExecutionEngine {
 
         ctx.setResolutionId(request.getResolutionId());
 
-        ctx.setScreenInput(request.getScreenInput());
+        Map<String, Object> mergedScreenInput = request.getScreenInput() != null
+                ? new java.util.HashMap<>(request.getScreenInput()) : new java.util.HashMap<>();
+        if (request.getTimeSpentSeconds() != null && request.getTimeSpentSeconds() > 0) {
+            mergedScreenInput.put("timeSpentSeconds", request.getTimeSpentSeconds());
+        }
+        if (request.getWorkDescription() != null) {
+            mergedScreenInput.put("workDescription", request.getWorkDescription());
+        }
+        ctx.setScreenInput(mergedScreenInput);
 
         return ctx;
 
@@ -628,6 +668,26 @@ public class WorkflowExecutionEngine {
 
         UUID issueId = request.getIssueId();
 
+        UUID userId = request.getUserId();
+
+
+
+        // Permission check: require EDIT_ISSUES permission
+
+        if (userId != null && request.getProjectId() != null
+
+                && !projectPermissionClient.hasPermission(userId, request.getProjectId(), bypassEditPermission)
+
+                && !projectPermissionClient.isFailOpen()) {
+
+            return fail("User lacks EDIT_ISSUES permission for catalog status change",
+
+                    start, issueId, request.getTransitionId(), Map.of());
+
+        }
+
+
+
         Map<String, Object> extra = new java.util.HashMap<>();
 
         if (request.getComment() != null) {
@@ -652,7 +712,75 @@ public class WorkflowExecutionEngine {
 
                 issueId, request.getProjectId(), request.getStatusId(), extra);
 
-        return TransitionExecutionResponse.builder()
+
+
+        // Record transition history for the catalog fallback path
+
+        try {
+
+            historyRepository.save(WorkflowTransitionHistory.builder()
+
+                    .issueId(issueId)
+
+                    .projectId(request.getProjectId())
+
+                    .workflowId(request.getTransitionId()) // use transitionId as workflow reference for catalog path
+
+                    .transitionId(request.getTransitionId())
+
+                    .transitionName("Catalog Status Change")
+
+                    .fromStatusId(request.getStatusId()) // best-effort: actual from-status not known in catalog path
+
+                    .toStatusId(request.getStatusId())
+
+                    .userId(userId)
+
+                    .comment(request.getComment())
+
+                    .screenInput(request.getScreenInput())
+
+                    .success(true)
+
+                    .executedAt(LocalDateTime.now())
+
+                    .build());
+
+        } catch (Exception e) {
+
+            log.warn("Failed to record catalog status change history: {}", e.getMessage());
+
+        }
+
+
+
+        // Publish event via generic publish (no transition object available in catalog path)
+
+        try {
+
+            Map<String, Object> payload = new java.util.HashMap<>();
+
+            payload.put("issueId", issueId.toString());
+
+            payload.put("projectId", request.getProjectId() != null ? request.getProjectId().toString() : null);
+
+            payload.put("statusId", request.getStatusId() != null ? request.getStatusId().toString() : null);
+
+            payload.put("userId", userId != null ? userId.toString() : null);
+
+            payload.put("catalogFallback", true);
+
+            eventPublisher.publish(issueId, "CATALOG_STATUS_CHANGED", payload);
+
+        } catch (Exception e) {
+
+            log.warn("Failed to publish catalog status change event: {}", e.getMessage());
+
+        }
+
+
+
+        TransitionExecutionResponse success = TransitionExecutionResponse.builder()
 
                 .success(true)
 
@@ -663,6 +791,20 @@ public class WorkflowExecutionEngine {
                 .executionTimeMs(System.currentTimeMillis() - start)
 
                 .build();
+
+
+
+        // Cache in idempotencyService if the request has an idempotency key
+
+        if (request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank()) {
+
+            idempotencyService.store(request.getIdempotencyKey(), success);
+
+        }
+
+
+
+        return success;
 
     }
 

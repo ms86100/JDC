@@ -23,6 +23,7 @@ public class Worklog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private UUID id;
 
     @Column(name = "issue_id", nullable = false)
@@ -43,6 +44,12 @@ public class Worklog {
     @Column(name = "work_description", columnDefinition = "TEXT")
     private String workDescription;
 
+    @Column(name = "visibility", length = 50)
+    private String visibility;
+
+    @Column(name = "visibility_group_id")
+    private UUID visibilityGroupId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -53,13 +60,16 @@ public class Worklog {
 
     public String getFormattedTimeSpent() {
         if (timeSpentSeconds == null) return "";
-        long seconds = timeSpentSeconds;
-        long days = seconds / (24 * 3600);
-        seconds = seconds % (24 * 3600);
-        long hours = seconds / 3600;
-        seconds = seconds % 3600;
-        long minutes = seconds / 60;
+        long s = timeSpentSeconds;
+        long weeks = s / (5 * 8 * 3600);
+        s = s % (5 * 8 * 3600);
+        long days = s / (8 * 3600);
+        s = s % (8 * 3600);
+        long hours = s / 3600;
+        s = s % 3600;
+        long minutes = s / 60;
         StringBuilder sb = new StringBuilder();
+        if (weeks > 0) sb.append(weeks).append("w ");
         if (days > 0) sb.append(days).append("d ");
         if (hours > 0) sb.append(hours).append("h ");
         if (minutes > 0) sb.append(minutes).append("m");

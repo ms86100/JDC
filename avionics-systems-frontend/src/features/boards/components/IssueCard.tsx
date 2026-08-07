@@ -215,7 +215,7 @@ export default function IssueCard({
       <div className="ab-card-title">{issue.title || issue.issueKey}</div>
 
       {/* Labels */}
-      {issue.labels && issue.labels.length > 0 && (
+      {Array.isArray(issue.labels) && issue.labels.length > 0 && (
         <div className="ab-card-labels">
           {issue.labels.slice(0, 3).map((label, idx) => (
             <span key={idx} className="ab-label-tag">{label}</span>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { workflowAdminApi } from '../../../api/workflowAdminApi';
+import { workflowApi } from '../../../api/workflowApi';
 
 export default function WorkflowAdminSchemesPage() {
   const queryClient = useQueryClient();
@@ -8,6 +9,8 @@ export default function WorkflowAdminSchemesPage() {
   const [description, setDescription] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [newMappingIssueTypeId, setNewMappingIssueTypeId] = useState('');
+  const [newMappingWorkflowId, setNewMappingWorkflowId] = useState('');
 
   const { data: schemes = [], isLoading } = useQuery({
     queryKey: ['workflow-admin', 'schemes'],
@@ -41,6 +44,35 @@ export default function WorkflowAdminSchemesPage() {
       setSelectedId(null);
       setMessage('Scheme deleted');
       queryClient.invalidateQueries({ queryKey: ['workflow-admin', 'schemes'] });
+    },
+    onError: (e: Error) => setMessage(e.message),
+  });
+
+  const { data: workflows = [] } = useQuery({
+    queryKey: ['workflows'],
+    queryFn: () => workflowApi.getAll().then((r) => Array.isArray(r.data) ? r.data : []),
+  });
+
+  const addMapping = useMutation({
+    mutationFn: () =>
+      workflowApi.addSchemeMapping(selectedId!, {
+        issueTypeId: newMappingIssueTypeId,
+        workflowId: newMappingWorkflowId,
+      }),
+    onSuccess: () => {
+      setNewMappingIssueTypeId('');
+      setNewMappingWorkflowId('');
+      setMessage('Mapping added');
+      queryClient.invalidateQueries({ queryKey: ['workflow-admin', 'scheme', selectedId] });
+    },
+    onError: (e: Error) => setMessage(e.message),
+  });
+
+  const removeMapping = useMutation({
+    mutationFn: (mappingId: string) => workflowApi.removeSchemeMapping(selectedId!, mappingId),
+    onSuccess: () => {
+      setMessage('Mapping removed');
+      queryClient.invalidateQueries({ queryKey: ['workflow-admin', 'scheme', selectedId] });
     },
     onError: (e: Error) => setMessage(e.message),
   });
@@ -114,12 +146,92 @@ export default function WorkflowAdminSchemesPage() {
         </div>
       </div>
 
-      {selectedId && (
-        <div className="bg-white border rounded-lg p-4">
-          <h2 className="font-semibold text-sm mb-2">Scheme detail</h2>
-          <pre className="text-xs overflow-auto max-h-80 bg-gray-50 p-3 rounded">
-            {JSON.stringify(schemeDetail ?? {}, null, 2)}
-          </pre>
+      {selectedId && schemeDetail && (
+        <div className="bg-white border rounded-lg p-4 space-y-4">
+          <div>
+            <h2 className="font-semibold text-sm mb-1">Scheme detail</h2>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+              <dt className="text-gray-500">Name</dt>
+              <dd>{String(schemeDetail.name ?? '-')}</dd>
+              <dt className="text-gray-500">Description</dt>
+              <dd>{String(schemeDetail.description ?? '-')}</dd>
+              <dt className="text-gray-500">Default workflow</dt>
+              <dd>{String(schemeDetail.defaultWorkflowId ?? 'None')}</dd>
+            </dl>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-sm mb-2">Issue-type to workflow mappings</h3>
+            {Array.isArray(schemeDetail.mappings) && schemeDetail.mappings.length > 0 ? (
+              <table className="w-full text-sm border rounded">
+                <thead>
+                  <tr className="bg-gray-50 text-left">
+                    <th className="px-3 py-2 border-b">Issue type</th>
+                    <th className="px-3 py-2 border-b">Workflow</th>
+                    <th className="px-3 py-2 border-b w-20"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {schemeDetail.mappings.map((m: Record<string, unknown>) => {
+                    const mId = String(m.id ?? '');
+                    return (
+                      <tr key={mId} className="border-b last:border-b-0">
+                        <td className="px-3 py-2">{String(m.issueTypeName ?? m.issueTypeId ?? '-')}</td>
+                        <td className="px-3 py-2">{String(m.workflowName ?? m.workflowId ?? '-')}</td>
+                        <td className="px-3 py-2 text-right">
+                          <button
+                            type="button"
+                            className="text-xs text-red-600 hover:underline"
+                            disabled={removeMapping.isPending}
+                            onClick={() => removeMapping.mutate(mId)}
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-sm text-gray-500">No mappings configured.</p>
+            )}
+
+            <div className="mt-3 flex items-end gap-2">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Issue type ID</label>
+                <input
+                  className="border rounded px-2 py-1 text-sm w-48"
+                  placeholder="Issue type ID"
+                  value={newMappingIssueTypeId}
+                  onChange={(e) => setNewMappingIssueTypeId(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Workflow</label>
+                <select
+                  className="border rounded px-2 py-1 text-sm w-48"
+                  value={newMappingWorkflowId}
+                  onChange={(e) => setNewMappingWorkflowId(e.target.value)}
+                >
+                  <option value="">Select workflow...</option>
+                  {workflows.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                className="px-3 py-1 bg-avisys-blue text-white text-sm rounded disabled:opacity-50"
+                disabled={!newMappingIssueTypeId || !newMappingWorkflowId || addMapping.isPending}
+                onClick={() => addMapping.mutate()}
+              >
+                Add mapping
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
